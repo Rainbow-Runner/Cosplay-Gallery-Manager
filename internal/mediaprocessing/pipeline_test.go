@@ -68,3 +68,20 @@ func TestCacheWriterUsesOpaqueIdentityPathAndRejectsTraversalAndSymlinks(t *test
 		}
 	}
 }
+
+func TestCacheWriterPreservesExtensionForPathGenerators(t *testing.T) {
+	writer := CacheWriter{Root: t.TempDir()}
+	const relative = "items/12/example/r1/profile/card-480.jpg"
+	filename, size, err := writer.WriteAtomicPath(relative, func(destination string) error {
+		if filepath.Ext(destination) != ".jpg" {
+			t.Fatalf("temporary path extension = %q", filepath.Ext(destination))
+		}
+		return os.WriteFile(destination, []byte("generated jpeg"), 0o600)
+	})
+	if err != nil || size != int64(len("generated jpeg")) {
+		t.Fatalf("atomic path write = %q, %d, %v", filename, size, err)
+	}
+	if filepath.Ext(filename) != ".jpg" {
+		t.Fatalf("published path extension = %q", filepath.Ext(filename))
+	}
+}

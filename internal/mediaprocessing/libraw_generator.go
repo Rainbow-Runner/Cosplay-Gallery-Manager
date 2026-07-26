@@ -44,7 +44,7 @@ func (generator LibRawGenerator) Generate(ctx context.Context, request GenerateR
 	if !generator.Supports(request) {
 		return GenerateResult{}, errors.New("LibRaw generator does not support request")
 	}
-	command := exec.CommandContext(ctx, generator.Executable, "-c", "-w", "-W", "-o", "1", "-q", "3", request.SourcePath)
+	command := exec.CommandContext(ctx, generator.Executable, "-T", "-c", "-w", "-W", "-o", "1", "-q", "3", request.SourcePath)
 	stdout, err := command.StdoutPipe()
 	if err != nil {
 		return GenerateResult{}, err

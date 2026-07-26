@@ -66,7 +66,7 @@ export function SetupPage() {
     <main className="setup-shell" data-testid="setup-shell">
       <form className="setup-card" onSubmit={complete}>
         <header><p>Cosplay Gallery Manager</p><h1>{intl.formatMessage({ id: "setup.title" })}</h1>
-          <div className="setup-progress" aria-label={`${step} / 5`}>{[1, 2, 3, 4, 5].map((value) => <span key={value} className={value <= step ? "is-active" : ""} />)}</div>
+          <div className="setup-progress" role="progressbar" aria-label="Setup progress" aria-valuemin={1} aria-valuemax={5} aria-valuenow={step}>{[1, 2, 3, 4, 5].map((value) => <span key={value} className={value <= step ? "is-active" : ""} />)}</div>
         </header>
         {step === 1 ? <section><h2>{intl.formatMessage({ id: "setup.environment" })}</h2>
           <label><input type="radio" checked={input.runtimeEnvironment === "NATIVE"} onChange={() => setInput({ ...input, runtimeEnvironment: "NATIVE" })} /> {intl.formatMessage({ id: "setup.native" })}</label>

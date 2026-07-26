@@ -19,6 +19,7 @@ export function BrowseShell() {
         <div className="site-header__actions">
           <NavLink to="/search" aria-label={intl.formatMessage({ id: "nav.search" })}>⌕</NavLink>
           <NavLink to="/favorites" aria-label={intl.formatMessage({ id: "nav.favorites" })}>♡</NavLink>
+          <NavLink to="/legal" aria-label={intl.formatMessage({ id: "nav.legal" })}>ⓘ</NavLink>
           <NavLink to="/manage" aria-label={intl.formatMessage({ id: "nav.manage" })}>⚙</NavLink>
         </div>
       </header>

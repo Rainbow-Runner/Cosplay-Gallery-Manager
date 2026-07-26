@@ -1,0 +1,22 @@
+services:
+  cgm:
+    build:
+      context: ../..
+      dockerfile: docker/cgm/Dockerfile
+    image: cosplay-gallery-manager:local
+    ports:
+      - "127.0.0.1:9999:9999"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    volumes:
+      - cgm-state:/var/lib/cgm
+      - cgm-cache:/var/cache/cgm
+      - ${CGM_MEDIA_ROOT:?set CGM_MEDIA_ROOT to an absolute host directory}:/media:ro
+    restart: unless-stopped
+
+volumes:
+  cgm-state:
+  cgm-cache:

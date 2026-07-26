@@ -64,3 +64,8 @@ node_modules
 dist
 .DS_Store
 /.local*
+
+# Cosplay Gallery Manager browser-test output
+/ui/web/e2e/.runtime/
+/ui/web/e2e/test-results/
+/ui/web/playwright-report/

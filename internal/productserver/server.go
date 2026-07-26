@@ -122,6 +122,7 @@ func (s *Server) rebuildHandler() {
 		}
 		response.WriteHeader(http.StatusNoContent)
 	})
+	mux.Handle("/about.json", aboutHandler())
 	mux.Handle("/session/login", sameOrigin(auth.LoginHandler()))
 	mux.Handle("/session/logout", sameOrigin(auth.LogoutHandler()))
 	mux.Handle("/session/status", auth.SessionStatusHandler())

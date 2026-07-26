@@ -1,0 +1,170 @@
+name: CGM CI
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/cgm-*.yml"
+      - "cmd/cgm/**"
+      - "docker/cgm/**"
+      - "docs/**"
+      - "internal/**"
+      - "scripts/*cgm*"
+      - "ui/web/**"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+      - "LICENSE"
+      - "THIRD_PARTY_NOTICES.md"
+  push:
+    branches: [master, develop, "releases/**"]
+    paths:
+      - ".github/workflows/cgm-*.yml"
+      - "cmd/cgm/**"
+      - "docker/cgm/**"
+      - "docs/**"
+      - "internal/**"
+      - "scripts/*cgm*"
+      - "ui/web/**"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+      - "LICENSE"
+      - "THIRD_PARTY_NOTICES.md"
+  workflow_dispatch:
+
+concurrency:
+  group: cgm-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 1.25.12
+          cache: true
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+        with:
+          package_json_file: ui/web/package.json
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ui/web/pnpm-lock.yaml
+      - name: Enable pinned pnpm
+        run: corepack enable
+      - name: Install web dependencies
+        working-directory: ui/web
+        run: corepack pnpm install --frozen-lockfile
+      - name: Validate and build React application
+        working-directory: ui/web
+        run: |
+          corepack pnpm run check
+          corepack pnpm run test
+          corepack pnpm run build
+      - name: Test CGM product packages
+        run: |
+          go test ./internal/archivecheck ./internal/browse ./internal/coserasset \
+            ./internal/gallery ./internal/manifest ./internal/mediaaccess \
+            ./internal/mediaprocessing ./internal/mediaresource \
+            ./internal/persistence/productdb ./internal/portableid \
+            ./internal/processingworker ./internal/product ./internal/productapi \
+            ./internal/productauth ./internal/productserver ./internal/sourcescan \
+            ./cmd/cgm ./ui/web
+          go test -tags cgm_web_embed ./internal/productserver ./cmd/cgm ./ui/web
+      - name: Install media gate dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends dcraw ffmpeg
+      - name: Run real media and archive gates
+        run: |
+          CGM_GO="$(command -v go)" CGM_FFMPEG_BIN="$(command -v ffmpeg)" \
+            CGM_LIBRAW_BIN="$(command -v dcraw)" scripts/test-cgm-media-matrix.sh
+          go test ./internal/archivecheck ./internal/sourcescan
+      - name: Verify legal inventory is deterministic
+        run: |
+          CGM_GO="$(command -v go)" scripts/generate-cgm-legal-metadata.mjs
+          git diff --exit-code -- THIRD_PARTY_NOTICES.md docs/legal/cgm.spdx.json
+      - name: Verify binary and corresponding source archive
+        run: CGM_GO="$(command -v go)" CGM_VERSION=0.1.0-dev scripts/verify-cgm-release.sh
+      - name: Install Chromium
+        working-directory: ui/web
+        run: corepack pnpm exec playwright install --with-deps chrome
+      - name: Run offline Chromium lifecycle
+        working-directory: ui/web
+        run: corepack pnpm exec playwright test
+
+  linux-platforms:
+    needs: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 1.25.12
+          cache: true
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+        with:
+          package_json_file: ui/web/package.json
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ui/web/pnpm-lock.yaml
+      - name: Build embedded web application
+        working-directory: ui/web
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm run build
+      - name: Build Linux amd64 and arm64 CGO binaries
+        run: CGM_GOMODCACHE="$(go env GOMODCACHE)" scripts/test-cgm-platform-builds.sh
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v3
+      - name: Build Linux Docker manifest
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/cgm/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          outputs: type=oci,dest=/tmp/cgm-linux.oci.tar
+          build-args: |
+            CGM_VERSION=0.1.0-dev
+            CGM_GIT_HASH=${{ github.sha }}
+          sbom: true
+          provenance: true
+          cache-from: type=gha,scope=cgm-linux
+          cache-to: type=gha,mode=max,scope=cgm-linux
+      - name: Build and health-check amd64 image
+        run: |
+          docker buildx build --platform linux/amd64 --load \
+            --build-arg CGM_VERSION=0.1.0-dev \
+            --build-arg CGM_GIT_HASH="${GITHUB_SHA}" \
+            -f docker/cgm/Dockerfile -t cgm:ci .
+          docker run --rm -d --name cgm-ci -p 127.0.0.1:3211:9999 cgm:ci
+          for attempt in $(seq 1 30); do
+            if test "$(docker inspect --format '{{.State.Health.Status}}' cgm-ci)" = healthy; then
+              break
+            fi
+            if [[ "${attempt}" == 30 ]]; then
+              docker logs cgm-ci
+              exit 1
+            fi
+            sleep 1
+          done
+          test "$(docker inspect --format '{{.State.Health.Status}}' cgm-ci)" = healthy
+          test "$(curl --output /dev/null --silent --write-out '%{http_code}' http://127.0.0.1:3211/healthz)" = 204
+          docker stop cgm-ci

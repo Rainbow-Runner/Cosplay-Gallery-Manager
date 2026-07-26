@@ -4,7 +4,7 @@
 > 上游需求：[COSPLAY_DEVELOPMENT_MEMO.md](./COSPLAY_DEVELOPMENT_MEMO.md)  
 > 适用范围：从当前 Stash 代码基线启动独立产品开发，直至 `1.0.0` 发行  
 > 工作名：Cosplay Gallery Manager  
-> 最后更新：2026-07-21
+> 最后更新：2026-07-27
 
 ## 1. 计划目标
 
@@ -16,7 +16,7 @@
 2. 在不删除用户媒体文件的前提下完成扫描、对账、分类、排序、排除和媒体派生处理。
 3. 管理 Coser、Work、Character、Tag、Credit、Cast、Manifest 和个人状态。
 4. 提供全新的 React 19 BrowseShell 与 ManageShell。
-5. 在 Linux amd64/arm64、Docker 双架构和 Windows amd64 上完成正式验收。
+5. 在 Linux amd64/arm64 和 Docker 双架构上完成正式验收。
 6. 以 AGPLv3 发布，并提供对应源码和第三方许可证清单。
 
 ## 2. 执行原则
@@ -748,7 +748,6 @@ flowchart LR
 
 - Linux amd64/arm64 原生包验收。
 - Docker amd64/arm64 镜像与健康检查验收。
-- Windows amd64 安装、路径、SQLite、LibRaw、ffmpeg 和备份恢复验收。
 - 媒体库只读、操作系统级网络挂载和 Manifest Push 无写权限场景验收。
 - CPU 处理是第一版基线，不把 GPU 可用性作为正确性前提。
 
@@ -761,7 +760,7 @@ flowchart LR
 ### 15.4 退出门禁 G9
 
 - 性能 p95 目标全部达标或有经批准的阻断豁免记录。
-- 三个正式平台均完成安装、导入、浏览、备份恢复和升级测试。
+- Linux amd64/arm64 与 Docker 双架构均完成安装、导入、浏览、备份恢复和升级测试。
 - 离线环境下核心功能完整可用，服务端无主动外联。
 
 ## 16. 阶段 11：RC 与 1.0 发行
@@ -800,7 +799,7 @@ flowchart LR
 
 ### 16.4 1.0 发行物
 
-- Linux amd64/arm64、Windows amd64 和 Docker 双架构产物。
+- Linux amd64/arm64 和 Docker 双架构产物。
 - 对应发行提交的完整 AGPLv3 源码归档。
 - Stash 归属说明、第三方许可证和依赖清单。
 - 数据库、Manifest、媒体 profile 和产品版本说明。
@@ -883,7 +882,7 @@ flowchart LR
 | SQLite 写竞争 | 扫描或任务导致 Browse 超时 | 短事务、staging、原子提交、租约队列、查询计划测试 | G9 |
 | 扫描产生半状态 | 中断后大量误报 MISSING | source staging + 完整成功后提交 | G2 |
 | Manifest 冲突造成覆盖 | 外部编辑后 Push 丢字段 | 基线快照、成员级三方比较、显式冲突 | G3 |
-| 媒体依赖跨平台困难 | arm64/Windows 缺 LibRaw/ffmpeg | 阶段 4 即建立平台构建冒烟，不等 RC | G4/G9 |
+| 媒体依赖跨平台困难 | arm64 缺 LibRaw/ffmpeg | 阶段 4 即建立平台构建冒烟，不等 RC | G4/G9 |
 | React 重写范围失控 | 页面各自实现 scope/卡片/权限 | 先建共用 DTO、设计 token 和组件契约 | G5-UI |
 | Gallery卡片Scrubber产生请求风暴 | 快速横移触发大量并发查询/派生任务 | 专用静态资源、ordinal序列缓存、节流、取消过期请求、客户端私有缓存 | G6/G9 |
 | 归档攻击或资源耗尽 | 特制 ZIP 逃逸或解压炸弹 | 不可关闭结构校验、资源阈值、恶意样本回归 | G2 |

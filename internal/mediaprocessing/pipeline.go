@@ -147,7 +147,11 @@ func (writer CacheWriter) writeAtomic(relative string, pathProducer bool, produc
 	if err := ensureRealDirectory(root, filepath.Dir(target)); err != nil {
 		return "", 0, err
 	}
-	temporary, err := os.CreateTemp(filepath.Dir(target), ".derivative-*.tmp")
+	temporaryPattern := ".derivative-*.tmp"
+	if pathProducer {
+		temporaryPattern = ".derivative-*" + filepath.Ext(target)
+	}
+	temporary, err := os.CreateTemp(filepath.Dir(target), temporaryPattern)
 	if err != nil {
 		return "", 0, err
 	}

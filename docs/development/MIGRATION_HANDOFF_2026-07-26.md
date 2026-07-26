@@ -335,3 +335,18 @@ GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
 ```
 
 结果：通过，生成约24MiB单文件验证产物。下一项未完成开发任务现为Setup→导入→审核→激活→浏览→Manifest→备份恢复的离线Playwright E2E及无障碍矩阵。
+
+2026-07-27继续完成阶段10/11本地发行加固：
+
+- 新增完全离线的Playwright主流程，覆盖Setup→导入→审核→激活→Browse→Manifest→完整备份恢复→路径映射→显式恢复→重扫；Linux Chromium下axe A/AA检查、键盘焦点和1440/390截图回归通过。
+- 新增运行时合成DNG/GIF/MP4/JPEG真实媒体矩阵，实际执行dcraw和FFmpeg；修正dcraw TIFF输出以及原子临时文件丢失目标扩展名导致的格式选择问题。
+- 扩展危险归档边界样本；新增10,000 Gallery/1,000,000 Item固定4核性能门禁，全部p95目标通过，最接近上限的是Gallery列表约493ms和时间线约477ms。
+- 固定Go 1.25.12的CGO交叉构建通过Linux amd64、Linux arm64和Windows amd64。新增Docker发行配置，Linux amd64镜像实际构建、非root启动、Docker健康检查和宿主`/healthz` 204通过。
+- 新增About/Legal与公开构建信息、精确提交源码入口、AGPL/无担保/Stash归属、52项应用依赖清单、SPDX 2.3 SBOM、安装/升级/反向代理与恢复文档、干净提交源码对应校验脚本。
+- 当前仍不得宣称G9或1.0完成：Firefox/WebKit/Edge/真实移动浏览器、真实Linux arm64与Windows安装运行、arm64 Docker健康启动、网络挂载、真实读屏/200%缩放、正式CI/RC产物和容器平台SBOM尚未执行。宿主机arm64 binfmt注册需要特权且被安全策略拒绝，本轮只记录真实已通过的交叉构建结果。
+
+下一项未完成任务更新为：在正式目标runner建立CI/夜间/RC矩阵，执行真实Linux arm64、Windows amd64、Docker arm64和完整浏览器/无障碍验收；所有通过后才能冻结0.9并运行正式发行源码对应门禁。
+
+2026-07-27产品范围调整：第一版取消Windows平台构建、安装和运行验收，Windows原生支持整体移入后续版本；已完成的Windows交叉构建仅保留为历史技术证据，不再属于G9或1.0门禁。平台脚本和交叉工具链已移除MinGW/Windows目标。当前下一项改为真实Linux arm64、Docker arm64和完整浏览器/无障碍验收。
+
+同日新增独立`CGM CI`与`CGM Nightly Gates`定义：提交门禁覆盖产品Go/React、真实媒体、归档、法律资料确定性、源码对应、Chromium离线E2E、Linux双架构CGO与Docker多架构构建；夜间门禁覆盖固定4核百万Item性能和Firefox/WebKit离线E2E。工作流尚未在远端runner执行，首次结果仍需逐项核实，不能在当前本地记录中标记为通过。

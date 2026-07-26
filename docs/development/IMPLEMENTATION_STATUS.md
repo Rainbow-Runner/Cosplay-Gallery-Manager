@@ -1,8 +1,8 @@
 # Cosplay Gallery Manager 实施状态
 
-> 当前里程碑：0.6 运维、安全与恢复
+> 当前里程碑：0.7 性能、跨平台与发行加固
 > 状态：进行中
-> 更新日期：2026-07-26
+> 更新日期：2026-07-27
 
 ## 已完成
 
@@ -91,10 +91,19 @@
 - P09（CLI）：`cgm -create-backup`、`-restore-backup <uuid>`、`-map-restored-paths`与`-resume-maintenance`要求交互式所有者重新认证；恢复输入`RESTORE`，逐库映射或禁用后再输入`MAP`，与Web复用同一事务、校验和审计。
 - P09（审计）：新增无用户画像管理审计表和50项分页；记录状态切换、导入/扫描、规则/设置、任务操作、Manifest、备份/恢复和计划摘要，不记录浏览、搜索、收藏或评分。
 - P09（扫描计划）：默认关闭的自动扫描在启用后于启动和每24小时执行；发现与来源对账复用人工操作的确定性发现、原子扫描和归档安全限制，并使用持久化租约。
+- P10（离线E2E）：新增运行时生成真实JPEG/GIF的Playwright夹具，覆盖Setup、登录、Coser、媒体库/规则、发现、DRAFT、扫描处理、Cast、激活、Manifest Push、Browse、完整备份恢复、异机路径映射、显式恢复与重扫；E2E不访问外网。
+- P10（无障碍与截图）：Chromium中对Setup、Browse、Gallery移动布局与Operations执行WCAG 2.0/2.1 A/AA axe检查，验证键盘焦点并提交桌面1440与移动390基准截图。
+- P10（真实媒体）：新增可重复合成DNG、动画GIF、MP4与JPEG的opt-in媒体门禁，实际经过内容分类、dcraw TIFF代理和FFmpeg Poster生成；修正dcraw TIFF输出及原子临时文件保留目标扩展名。
+- P10（归档安全）：危险归档矩阵补齐绝对/Windows路径、非NFC、特殊设备、加密Entry、条目数、总大小和压缩比边界。
+- P10（性能）：新增10,000 Gallery/1,000,000 GalleryItem、约503MiB SQLite的可重复性能门禁，固定4核并覆盖主页、列表、详情、实体、搜索、时间线、推荐、Tag、随机与Manifest diff。
+- P10（平台与容器）：新增固定Go 1.25.12的CGO交叉构建环境，Linux amd64与Linux arm64产品二进制均可构建；新增非root、只读根文件系统、内置FFmpeg/dcraw与健康检查的Dockerfile/Compose。Windows原生支持已由产品决策延期，不属于第一版门禁。
+- P11（许可证与源码）：新增公开About/Legal页面和`/about.json`，显示构建版本、提交、AGPL、无担保、Stash归属与精确对应源码链接；发行构建可注入完整Git提交。
+- P11（发行资料）：新增52项应用生产依赖清单、SPDX 2.3 SBOM及确定性生成器；新增原生/Docker安装、媒体库、反向代理、升级和备份恢复手册，以及干净提交上的二进制/源码归档对应校验脚本。
+- P11（CI/夜间定义）：新增独立CGM工作流；提交门禁覆盖React、CGM产品包、真实媒体、归档、许可证确定性、源码对应、Chromium离线E2E、Linux双架构CGO和Docker双架构构建，夜间门禁覆盖百万Item性能及Firefox/WebKit离线E2E。工作流不包含已延期的Windows目标。
 
 ## 当前验证结果
 
-- Go 1.25.12临时工具链下，`internal/persistence/productdb`、`internal/productapi`与`internal/productserver`当前单元/SQLite集成测试通过。
+- Go 1.25.12临时工具链下，CGM全部产品包单元/SQLite/API集成回归当前通过。
 - DIRECTORY重复扫描、来源失联、危险归档、父子媒体库、两阶段导入、set_id重绑定候选、成员排除/忘记/排序均有回归测试。
 - 媒体内容替换、任务恢复、原子缓存、双层封面、认证Range资源、Scrubber ordinal、分页/scope、时间线、推荐、随机、搜索和成员索引均有回归测试。
 - Gallery关系批量保存验证了多人、多角色、Tag、单次revision递增、过期revision拒绝且不产生部分写入。
@@ -102,8 +111,8 @@
 - 运维集成测试验证每日快照到期租约/保留、自动扫描opt-in、完整恢复、Session撤销、任务取消、安全备份注册、异机路径映射门槛、人工恢复，以及数据库交换后故障的自动回滚。
 - 完整备份损坏矩阵验证POSIX/Windows路径穿越、重复/大小写/NFC碰撞、保留名、符号链接、未知Entry、畸形JSON、缺项、无效SQLite产品身份、压缩炸弹和截断ZIP均在替换前拒绝。
 - Operations GraphQL测试验证备份/恢复由Server服务执行且响应不泄漏数据库或存储根。
-- React 19 TypeScript `--noEmit`通过；Vitest当前8个文件、14项测试全部通过。
-- Vite生产构建通过，共转换660个模块；当前主JS minify后、gzip前约470KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。
+- React 19 TypeScript `--noEmit`通过；Vitest当前8个文件、15项测试全部通过。
+- Vite生产构建通过，共转换661个模块；当前主JS minify后、gzip前约471KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。
 - `cgm_web_embed`标签下的产品UI嵌入和Server回归测试通过；`make build-cgm`生成约24MiB单文件验证产物，深层SPA路由、哈希资源immutable缓存和旧UI依赖隔离均已验证。
 - 实体生命周期回归验证了按关系类型返回删除阻断、合并冲突时禁用提交、明确确认词、GraphQL预览/提交、永久Alias/Tombstone和管理审计。
 - Gallery删除回归验证了归档前阻断、过期revision拒绝、密码与确认词双重门禁、Item/Link/Set UUID Tombstone、任务取消保留、IgnoredGallerySource建立，以及来源媒体和Manifest字节不变。
@@ -111,18 +120,27 @@
 - Coser未引用资源回归验证了现用组排除、已替换/已删除分组、未知文件与符号链接跳过、引用变化后过期审阅拒绝、密码/确认词/同源门禁、选择性清理、Manifest保留和无路径审计。
 - BLAKE3依赖固定为`github.com/zeebo/blake3 v0.2.4`并记录模块校验和。
 - 用户来源能力审计未发现删除调用；应用删除仅限失败备份、缓存、临时文件等明确生成数据。
+- Chromium离线Playwright主流程通过，Setup/Browse/Gallery/Operations axe扫描无WCAG A/AA违规，桌面与390px移动截图回归通过。
+- 真实媒体门禁通过：合成标准DNG由dcraw实际生成代理，动画GIF与FFmpeg生成MP4实际生成Poster，内容分类与扩展名无关。
+- 危险归档单元矩阵通过；完整备份损坏矩阵继续在替换前拒绝危险输入。
+- 固定`GOMAXPROCS=4`的百万Item性能门禁通过：最慢Gallery列表p95约493ms、时间线约477ms，均低于500ms；Tag未缓存约141ms、缓存约143ms，其他目标均通过。
+- 固定工具链CGO构建通过Linux amd64与Linux arm64；Linux amd64 Docker镜像实际构建、非root启动和`/healthz` 204通过。
+- About/Legal后端、前端、产品版本/源码URL测试通过；SPDX文件可解析且包含1个产品包与52项应用依赖。
 
 ## 尚未通过的门禁
 
-- 主机仍没有正式安装的Go 1.25工具链；当前依赖`/tmp/cgm-go1.25.12`，需纳入开发镜像与CI。
-- G4的真实FFmpeg/LibRaw跨平台样本矩阵尚未执行；当前仅完成适配器、规划器、图片实际样本和伪生成器处理闭环。
-- Playwright端到端、截图、键盘/读屏、目标浏览器与响应宽度矩阵尚未执行。
-- 前端路由分包已消除单入口构建警告，但低性能移动设备首屏仍需在目标浏览器/设备矩阵中验证。
+- 主机仍没有系统级Go 1.25；本轮使用校验过的`/tmp/cgm-go1.25.12`，交叉构建镜像和新增CI均固定1.25.12。
+- Firefox、WebKit、Edge及真实iOS Safari/Android Chrome最近两版尚未执行；当前Playwright证据仅为Linux Chromium、1440/390视口与axe自动检查，不能代替真实读屏/浏览器/设备验收。
+- Linux arm64已通过CGO构建，尚未在真实arm64系统完成安装、路径、SQLite、FFmpeg/LibRaw、升级和备份恢复运行验收。
+- Docker linux/amd64已实际健康启动；linux/arm64镜像运行需要宿主机全局binfmt或原生arm64 runner。本轮特权binfmt注册被安全策略拒绝，故双架构Docker门禁尚未全部通过。
+- 只读媒体源由E2E和容器挂载覆盖基础流程；真实操作系统网络挂载、Manifest Push无写权限和低性能移动设备首屏仍需目标环境验收。
+- 新增CI/夜间工作流尚未在远端runner执行，不能根据本地语法和子门禁结果推定通过。
+- RC版本/API/schema冻结、正式多平台产物签名/校验和、容器平台SBOM以及干净发行提交的源码归档对应脚本尚未执行。
 
 ## 下一批工作
 
-1. 增加Setup→导入→审核→激活→浏览→Manifest→备份恢复的Playwright离线E2E及无障碍矩阵。
-2. 准备真实RAW/GIF/Video与危险归档样本，执行FFmpeg/LibRaw、平台、性能和安全发布门禁。
-3. 完成AGPLv3源码对应、第三方许可证清单和安装/恢复文档。
+1. 在Linux arm64及arm64 Docker runner执行安装、媒体、升级和完整恢复验收，并发布各平台容器SBOM。
+2. 在Firefox、WebKit、Edge及真实移动浏览器执行目标宽度、键盘、读屏、200%缩放与低性能首屏矩阵。
+3. 在远端执行新增CI/夜间工作流并修复runner差异；随后冻结0.9接口与schema，从干净提交执行`verify-cgm-release`并生成签名发行物。
 
 任何未执行的测试不得在状态记录或发布说明中标记为通过。

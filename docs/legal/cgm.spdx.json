@@ -1,0 +1,1153 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "Cosplay Gallery Manager application dependency SBOM",
+  "documentNamespace": "https://github.com/Rainbow-Runner/Cosplay-Gallery-Manager/sbom/application-dependencies/v1",
+  "creationInfo": {
+    "created": "1970-01-01T00:00:00Z",
+    "creators": [
+      "Tool: scripts/generate-cgm-legal-metadata.mjs"
+    ]
+  },
+  "packages": [
+    {
+      "name": "Cosplay Gallery Manager",
+      "SPDXID": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "versionInfo": "0.1.0-dev",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "AGPL-3.0-or-later",
+      "licenseDeclared": "AGPL-3.0-or-later",
+      "supplier": "Organization: Cosplay Gallery Manager contributors",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:github/Rainbow-Runner/Cosplay-Gallery-Manager"
+        }
+      ]
+    },
+    {
+      "name": "github.com/99designs/gqlgen",
+      "SPDXID": "SPDXRef-Package-Go-1",
+      "versionInfo": "v0.17.73",
+      "downloadLocation": "https://proxy.golang.org/github.com/99designs/gqlgen/@v/v0.17.73.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/99designs/gqlgen@v0.17.73"
+        }
+      ]
+    },
+    {
+      "name": "github.com/agnivade/levenshtein",
+      "SPDXID": "SPDXRef-Package-Go-2",
+      "versionInfo": "v1.2.1",
+      "downloadLocation": "https://proxy.golang.org/github.com/agnivade/levenshtein/@v/v1.2.1.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/agnivade/levenshtein@v1.2.1"
+        }
+      ]
+    },
+    {
+      "name": "github.com/corona10/goimagehash",
+      "SPDXID": "SPDXRef-Package-Go-3",
+      "versionInfo": "v1.1.0",
+      "downloadLocation": "https://proxy.golang.org/github.com/corona10/goimagehash/@v/v1.1.0.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-2-Clause",
+      "licenseDeclared": "BSD-2-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/corona10/goimagehash@v1.1.0"
+        }
+      ]
+    },
+    {
+      "name": "github.com/disintegration/imaging",
+      "SPDXID": "SPDXRef-Package-Go-4",
+      "versionInfo": "v1.6.2",
+      "downloadLocation": "https://proxy.golang.org/github.com/disintegration/imaging/@v/v1.6.2.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/disintegration/imaging@v1.6.2"
+        }
+      ]
+    },
+    {
+      "name": "github.com/go-viper/mapstructure/v2",
+      "SPDXID": "SPDXRef-Package-Go-5",
+      "versionInfo": "v2.4.0",
+      "downloadLocation": "https://proxy.golang.org/github.com/go-viper/mapstructure/v2/@v/v2.4.0.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/go-viper/mapstructure/v2@v2.4.0"
+        }
+      ]
+    },
+    {
+      "name": "github.com/google/uuid",
+      "SPDXID": "SPDXRef-Package-Go-6",
+      "versionInfo": "v1.6.0",
+      "downloadLocation": "https://proxy.golang.org/github.com/google/uuid/@v/v1.6.0.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/google/uuid@v1.6.0"
+        }
+      ]
+    },
+    {
+      "name": "github.com/gorilla/websocket",
+      "SPDXID": "SPDXRef-Package-Go-7",
+      "versionInfo": "v1.5.0",
+      "downloadLocation": "https://proxy.golang.org/github.com/gorilla/websocket/@v/v1.5.0.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-2-Clause",
+      "licenseDeclared": "BSD-2-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/gorilla/websocket@v1.5.0"
+        }
+      ]
+    },
+    {
+      "name": "github.com/hashicorp/golang-lru/v2",
+      "SPDXID": "SPDXRef-Package-Go-8",
+      "versionInfo": "v2.0.7",
+      "downloadLocation": "https://proxy.golang.org/github.com/hashicorp/golang-lru/v2/@v/v2.0.7.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MPL-2.0",
+      "licenseDeclared": "MPL-2.0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/hashicorp/golang-lru/v2@v2.0.7"
+        }
+      ]
+    },
+    {
+      "name": "github.com/klauspost/cpuid/v2",
+      "SPDXID": "SPDXRef-Package-Go-9",
+      "versionInfo": "v2.0.12",
+      "downloadLocation": "https://proxy.golang.org/github.com/klauspost/cpuid/v2/@v/v2.0.12.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/klauspost/cpuid/v2@v2.0.12"
+        }
+      ]
+    },
+    {
+      "name": "github.com/mattn/go-sqlite3",
+      "SPDXID": "SPDXRef-Package-Go-10",
+      "versionInfo": "v1.14.22",
+      "downloadLocation": "https://proxy.golang.org/github.com/mattn/go-sqlite3/@v/v1.14.22.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/mattn/go-sqlite3@v1.14.22"
+        }
+      ]
+    },
+    {
+      "name": "github.com/nfnt/resize",
+      "SPDXID": "SPDXRef-Package-Go-11",
+      "versionInfo": "v0.0.0-20180221191011-83c6a9932646",
+      "downloadLocation": "https://proxy.golang.org/github.com/nfnt/resize/@v/v0.0.0-20180221191011-83c6a9932646.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "ISC",
+      "licenseDeclared": "ISC",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/nfnt/resize@v0.0.0-20180221191011-83c6a9932646"
+        }
+      ]
+    },
+    {
+      "name": "github.com/sirupsen/logrus",
+      "SPDXID": "SPDXRef-Package-Go-12",
+      "versionInfo": "v1.9.3",
+      "downloadLocation": "https://proxy.golang.org/github.com/sirupsen/logrus/@v/v1.9.3.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/sirupsen/logrus@v1.9.3"
+        }
+      ]
+    },
+    {
+      "name": "github.com/sosodev/duration",
+      "SPDXID": "SPDXRef-Package-Go-13",
+      "versionInfo": "v1.3.1",
+      "downloadLocation": "https://proxy.golang.org/github.com/sosodev/duration/@v/v1.3.1.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/sosodev/duration@v1.3.1"
+        }
+      ]
+    },
+    {
+      "name": "github.com/vektah/gqlparser/v2",
+      "SPDXID": "SPDXRef-Package-Go-14",
+      "versionInfo": "v2.5.27",
+      "downloadLocation": "https://proxy.golang.org/github.com/vektah/gqlparser/v2/@v/v2.5.27.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/vektah/gqlparser/v2@v2.5.27"
+        }
+      ]
+    },
+    {
+      "name": "github.com/zeebo/blake3",
+      "SPDXID": "SPDXRef-Package-Go-15",
+      "versionInfo": "v0.2.4",
+      "downloadLocation": "https://proxy.golang.org/github.com/zeebo/blake3/@v/v0.2.4.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "CC0-1.0",
+      "licenseDeclared": "CC0-1.0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/zeebo/blake3@v0.2.4"
+        }
+      ]
+    },
+    {
+      "name": "github.com/zencoder/go-dash/v3",
+      "SPDXID": "SPDXRef-Package-Go-16",
+      "versionInfo": "v3.0.2",
+      "downloadLocation": "https://proxy.golang.org/github.com/zencoder/go-dash/v3/@v/v3.0.2.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/zencoder/go-dash/v3@v3.0.2"
+        }
+      ]
+    },
+    {
+      "name": "golang.org/x/crypto",
+      "SPDXID": "SPDXRef-Package-Go-17",
+      "versionInfo": "v0.48.0",
+      "downloadLocation": "https://proxy.golang.org/golang.org/x/crypto/@v/v0.48.0.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/golang.org/x/crypto@v0.48.0"
+        }
+      ]
+    },
+    {
+      "name": "golang.org/x/image",
+      "SPDXID": "SPDXRef-Package-Go-18",
+      "versionInfo": "v0.38.0",
+      "downloadLocation": "https://proxy.golang.org/golang.org/x/image/@v/v0.38.0.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/golang.org/x/image@v0.38.0"
+        }
+      ]
+    },
+    {
+      "name": "golang.org/x/sys",
+      "SPDXID": "SPDXRef-Package-Go-19",
+      "versionInfo": "v0.41.0",
+      "downloadLocation": "https://proxy.golang.org/golang.org/x/sys/@v/v0.41.0.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/golang.org/x/sys@v0.41.0"
+        }
+      ]
+    },
+    {
+      "name": "golang.org/x/term",
+      "SPDXID": "SPDXRef-Package-Go-20",
+      "versionInfo": "v0.40.0",
+      "downloadLocation": "https://proxy.golang.org/golang.org/x/term/@v/v0.40.0.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/golang.org/x/term@v0.40.0"
+        }
+      ]
+    },
+    {
+      "name": "golang.org/x/text",
+      "SPDXID": "SPDXRef-Package-Go-21",
+      "versionInfo": "v0.35.0",
+      "downloadLocation": "https://proxy.golang.org/golang.org/x/text/@v/v0.35.0.zip",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/golang.org/x/text@v0.35.0"
+        }
+      ]
+    },
+    {
+      "name": "@apollo/client",
+      "SPDXID": "SPDXRef-Package-npm-22",
+      "versionInfo": "4.2.7",
+      "downloadLocation": "https://registry.npmjs.org/@apollo/client/-/client-4.2.7.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://www.apollographql.com/docs/react/",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@apollo/client@4.2.7"
+        }
+      ]
+    },
+    {
+      "name": "@formatjs/ecma402-abstract",
+      "SPDXID": "SPDXRef-Package-npm-23",
+      "versionInfo": "2.3.6",
+      "downloadLocation": "https://registry.npmjs.org/@formatjs/ecma402-abstract/-/ecma402-abstract-2.3.6.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/formatjs/formatjs",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@formatjs/ecma402-abstract@2.3.6"
+        }
+      ]
+    },
+    {
+      "name": "@formatjs/fast-memoize",
+      "SPDXID": "SPDXRef-Package-npm-24",
+      "versionInfo": "2.2.7",
+      "downloadLocation": "https://registry.npmjs.org/@formatjs/fast-memoize/-/fast-memoize-2.2.7.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/formatjs/formatjs#readme",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@formatjs/fast-memoize@2.2.7"
+        }
+      ]
+    },
+    {
+      "name": "@formatjs/icu-messageformat-parser",
+      "SPDXID": "SPDXRef-Package-npm-25",
+      "versionInfo": "2.11.4",
+      "downloadLocation": "https://registry.npmjs.org/@formatjs/icu-messageformat-parser/-/icu-messageformat-parser-2.11.4.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@formatjs/icu-messageformat-parser@2.11.4"
+        }
+      ]
+    },
+    {
+      "name": "@formatjs/icu-skeleton-parser",
+      "SPDXID": "SPDXRef-Package-npm-26",
+      "versionInfo": "1.8.16",
+      "downloadLocation": "https://registry.npmjs.org/@formatjs/icu-skeleton-parser/-/icu-skeleton-parser-1.8.16.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@formatjs/icu-skeleton-parser@1.8.16"
+        }
+      ]
+    },
+    {
+      "name": "@formatjs/intl",
+      "SPDXID": "SPDXRef-Package-npm-27",
+      "versionInfo": "3.1.8",
+      "downloadLocation": "https://registry.npmjs.org/@formatjs/intl/-/intl-3.1.8.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://formatjs.github.io",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@formatjs/intl@3.1.8"
+        }
+      ]
+    },
+    {
+      "name": "@formatjs/intl-localematcher",
+      "SPDXID": "SPDXRef-Package-npm-28",
+      "versionInfo": "0.6.2",
+      "downloadLocation": "https://registry.npmjs.org/@formatjs/intl-localematcher/-/intl-localematcher-0.6.2.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/formatjs/formatjs#readme",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@formatjs/intl-localematcher@0.6.2"
+        }
+      ]
+    },
+    {
+      "name": "@graphql-typed-document-node/core",
+      "SPDXID": "SPDXRef-Package-npm-29",
+      "versionInfo": "3.2.0",
+      "downloadLocation": "https://registry.npmjs.org/@graphql-typed-document-node/core/-/core-3.2.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@graphql-typed-document-node/core@3.2.0"
+        }
+      ]
+    },
+    {
+      "name": "@types/hoist-non-react-statics",
+      "SPDXID": "SPDXRef-Package-npm-30",
+      "versionInfo": "3.3.7",
+      "downloadLocation": "https://registry.npmjs.org/@types/hoist-non-react-statics/-/hoist-non-react-statics-3.3.7.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/hoist-non-react-statics",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@types/hoist-non-react-statics@3.3.7"
+        }
+      ]
+    },
+    {
+      "name": "@types/react",
+      "SPDXID": "SPDXRef-Package-npm-31",
+      "versionInfo": "19.2.17",
+      "downloadLocation": "https://registry.npmjs.org/@types/react/-/react-19.2.17.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@types/react@19.2.17"
+        }
+      ]
+    },
+    {
+      "name": "@wry/caches",
+      "SPDXID": "SPDXRef-Package-npm-32",
+      "versionInfo": "1.0.1",
+      "downloadLocation": "https://registry.npmjs.org/@wry/caches/-/caches-1.0.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/benjamn/wryware",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@wry/caches@1.0.1"
+        }
+      ]
+    },
+    {
+      "name": "@wry/context",
+      "SPDXID": "SPDXRef-Package-npm-33",
+      "versionInfo": "0.7.4",
+      "downloadLocation": "https://registry.npmjs.org/@wry/context/-/context-0.7.4.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/benjamn/wryware",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@wry/context@0.7.4"
+        }
+      ]
+    },
+    {
+      "name": "@wry/equality",
+      "SPDXID": "SPDXRef-Package-npm-34",
+      "versionInfo": "0.5.7",
+      "downloadLocation": "https://registry.npmjs.org/@wry/equality/-/equality-0.5.7.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/benjamn/wryware",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@wry/equality@0.5.7"
+        }
+      ]
+    },
+    {
+      "name": "@wry/trie",
+      "SPDXID": "SPDXRef-Package-npm-35",
+      "versionInfo": "0.5.0",
+      "downloadLocation": "https://registry.npmjs.org/@wry/trie/-/trie-0.5.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/benjamn/wryware",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@wry/trie@0.5.0"
+        }
+      ]
+    },
+    {
+      "name": "cookie",
+      "SPDXID": "SPDXRef-Package-npm-36",
+      "versionInfo": "1.1.1",
+      "downloadLocation": "https://registry.npmjs.org/cookie/-/cookie-1.1.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/cookie@1.1.1"
+        }
+      ]
+    },
+    {
+      "name": "csstype",
+      "SPDXID": "SPDXRef-Package-npm-37",
+      "versionInfo": "3.2.3",
+      "downloadLocation": "https://registry.npmjs.org/csstype/-/csstype-3.2.3.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/csstype@3.2.3"
+        }
+      ]
+    },
+    {
+      "name": "decimal.js",
+      "SPDXID": "SPDXRef-Package-npm-38",
+      "versionInfo": "10.6.0",
+      "downloadLocation": "https://registry.npmjs.org/decimal.js/-/decimal.js-10.6.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/decimal.js@10.6.0"
+        }
+      ]
+    },
+    {
+      "name": "graphql",
+      "SPDXID": "SPDXRef-Package-npm-39",
+      "versionInfo": "16.14.2",
+      "downloadLocation": "https://registry.npmjs.org/graphql/-/graphql-16.14.2.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/graphql/graphql-js",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/graphql@16.14.2"
+        }
+      ]
+    },
+    {
+      "name": "graphql-tag",
+      "SPDXID": "SPDXRef-Package-npm-40",
+      "versionInfo": "2.12.7",
+      "downloadLocation": "https://registry.npmjs.org/graphql-tag/-/graphql-tag-2.12.7.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/apollographql/graphql-tag#readme",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/graphql-tag@2.12.7"
+        }
+      ]
+    },
+    {
+      "name": "hoist-non-react-statics",
+      "SPDXID": "SPDXRef-Package-npm-41",
+      "versionInfo": "3.3.2",
+      "downloadLocation": "https://registry.npmjs.org/hoist-non-react-statics/-/hoist-non-react-statics-3.3.2.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/hoist-non-react-statics@3.3.2"
+        }
+      ]
+    },
+    {
+      "name": "intl-messageformat",
+      "SPDXID": "SPDXRef-Package-npm-42",
+      "versionInfo": "10.7.18",
+      "downloadLocation": "https://registry.npmjs.org/intl-messageformat/-/intl-messageformat-10.7.18.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "homepage": "https://github.com/formatjs/formatjs",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/intl-messageformat@10.7.18"
+        }
+      ]
+    },
+    {
+      "name": "optimism",
+      "SPDXID": "SPDXRef-Package-npm-43",
+      "versionInfo": "0.18.1",
+      "downloadLocation": "https://registry.npmjs.org/optimism/-/optimism-0.18.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/benjamn/optimism#readme",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/optimism@0.18.1"
+        }
+      ]
+    },
+    {
+      "name": "react",
+      "SPDXID": "SPDXRef-Package-npm-44",
+      "versionInfo": "19.2.8",
+      "downloadLocation": "https://registry.npmjs.org/react/-/react-19.2.8.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://react.dev/",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/react@19.2.8"
+        }
+      ]
+    },
+    {
+      "name": "react-dom",
+      "SPDXID": "SPDXRef-Package-npm-45",
+      "versionInfo": "19.2.8",
+      "downloadLocation": "https://registry.npmjs.org/react-dom/-/react-dom-19.2.8.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://react.dev/",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/react-dom@19.2.8"
+        }
+      ]
+    },
+    {
+      "name": "react-intl",
+      "SPDXID": "SPDXRef-Package-npm-46",
+      "versionInfo": "7.1.14",
+      "downloadLocation": "https://registry.npmjs.org/react-intl/-/react-intl-7.1.14.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "homepage": "https://formatjs.github.io/docs/react-intl",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/react-intl@7.1.14"
+        }
+      ]
+    },
+    {
+      "name": "react-is",
+      "SPDXID": "SPDXRef-Package-npm-47",
+      "versionInfo": "16.13.1",
+      "downloadLocation": "https://registry.npmjs.org/react-is/-/react-is-16.13.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://reactjs.org/",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/react-is@16.13.1"
+        }
+      ]
+    },
+    {
+      "name": "react-router",
+      "SPDXID": "SPDXRef-Package-npm-48",
+      "versionInfo": "7.18.1",
+      "downloadLocation": "https://registry.npmjs.org/react-router/-/react-router-7.18.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/react-router@7.18.1"
+        }
+      ]
+    },
+    {
+      "name": "react-router-dom",
+      "SPDXID": "SPDXRef-Package-npm-49",
+      "versionInfo": "7.18.1",
+      "downloadLocation": "https://registry.npmjs.org/react-router-dom/-/react-router-dom-7.18.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/react-router-dom@7.18.1"
+        }
+      ]
+    },
+    {
+      "name": "scheduler",
+      "SPDXID": "SPDXRef-Package-npm-50",
+      "versionInfo": "0.27.0",
+      "downloadLocation": "https://registry.npmjs.org/scheduler/-/scheduler-0.27.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://react.dev/",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/scheduler@0.27.0"
+        }
+      ]
+    },
+    {
+      "name": "set-cookie-parser",
+      "SPDXID": "SPDXRef-Package-npm-51",
+      "versionInfo": "2.7.2",
+      "downloadLocation": "https://registry.npmjs.org/set-cookie-parser/-/set-cookie-parser-2.7.2.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/nfriedly/set-cookie-parser",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/set-cookie-parser@2.7.2"
+        }
+      ]
+    },
+    {
+      "name": "tslib",
+      "SPDXID": "SPDXRef-Package-npm-52",
+      "versionInfo": "2.8.1",
+      "downloadLocation": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "0BSD",
+      "licenseDeclared": "0BSD",
+      "homepage": "https://www.typescriptlang.org/",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/tslib@2.8.1"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-Cosplay-Gallery-Manager"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-5"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-7"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-9"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-10"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-11"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-12"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-13"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-14"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-15"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-16"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-17"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-18"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-19"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-20"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Go-21"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-22"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-23"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-24"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-25"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-26"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-27"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-28"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-29"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-30"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-31"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-32"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-33"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-34"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-35"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-36"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-37"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-38"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-39"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-40"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-41"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-42"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-43"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-44"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-45"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-46"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-47"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-48"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-49"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-50"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-51"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-52"
+    }
+  ]
+}

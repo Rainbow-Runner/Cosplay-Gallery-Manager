@@ -1,7 +1,7 @@
 # Cosplay Gallery Manager 开发备忘录
 
-> 状态：第一版产品与架构基线；0.1～0.6 主干功能已进入实现与联调
-> 最后更新：2026-07-26
+> 状态：第一版产品与架构基线；0.1～0.7 主干功能已进入实现与联调
+> 最后更新：2026-07-27
 > 原始代码基线：Stash `develop` / `c7d2fe4f97b99c6a2aac968ac8a2aad3adf5b800`  
 > 分支策略：独立产品，不考虑与 Stash 上游合并  
 > 工作名：Cosplay Gallery Manager；最终品牌名延期决定  
@@ -773,9 +773,9 @@ SocialAccount：
 
 ### 25.3 平台
 
-- 正式支持Linux amd64/arm64、Docker双架构、Windows amd64；CPU处理为验收基线。
+- 第一版正式支持Linux amd64/arm64与Docker双架构；CPU处理为验收基线。
 - Docker包含固定FFmpeg/FFprobe和LibRaw；libvips可选加速。
-- 不承诺macOS原生、Windows ARM、32位、GPU硬件转码或移动原生App。
+- Windows原生支持整体延期；第一版不承诺macOS原生、32位、GPU硬件转码或移动原生App。
 - Manifest和备份在正式支持平台间可迁移。
 
 ### 25.4 离线与插件
@@ -854,7 +854,7 @@ SocialAccount：
 - Manifest冲突静默覆盖；半扫描批量MISSING；Tag成环；OVER_LIMIT进入Browse。
 - LIST/MAGIC范围错误；原Stash/未知DB被转换；核心p95不达标。
 - Scrubber播放动画/Video、回退读取大原图、泄漏不可见Gallery资源、设置关闭后仍请求资源，或其Hover行为错误记录浏览历史。
-- Linux amd64跑全套；Linux arm64/Windows跑核心数据库/路径/媒体契约；Docker双架构启动健康检查；CI禁外网。
+- Linux amd64跑全套；Linux arm64跑核心数据库/路径/媒体契约；Docker双架构启动健康检查；CI禁外网。
 
 ## 33. 产品、许可证与版本
 
@@ -875,7 +875,7 @@ SocialAccount：
 - 字幕/多音轨UI、视频进度、硬件转码、360°/VR、Dolby Vision专用处理。
 - 应用内加密备份、SQLCipher、内置TLS、外部数据库和多用户。
 - Gallery级运行时插件API；未来设计也不兼容原Stash插件。
-- macOS原生发行、Windows ARM和移动原生应用。
+- Windows原生发行（含amd64/ARM）、macOS原生发行和移动原生应用。
 
 ## 35. 当前结论
 

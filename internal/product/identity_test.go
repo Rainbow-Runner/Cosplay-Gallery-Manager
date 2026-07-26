@@ -41,3 +41,14 @@ func TestCurrentVersions(t *testing.T) {
 		})
 	}
 }
+
+func TestSourceCodeURL(t *testing.T) {
+	if got := SourceCodeURL("0123abc"); got != SourceRepositoryURL+"/tree/0123abc" {
+		t.Fatalf("commit source URL = %q", got)
+	}
+	for _, invalid := range []string{"", "123456", "0123ABC", "not-a-commit"} {
+		if got := SourceCodeURL(invalid); got != SourceRepositoryURL {
+			t.Fatalf("invalid hash %q source URL = %q", invalid, got)
+		}
+	}
+}

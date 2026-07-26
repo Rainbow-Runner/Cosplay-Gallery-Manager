@@ -157,6 +157,10 @@ cgm: web-ui build-flags
 .PHONY: build-cgm
 build-cgm: verify-cgm-ui-boundary cgm
 
+.PHONY: verify-cgm-release
+verify-cgm-release:
+	CGM_GO="$(CGM_GO)" scripts/verify-cgm-release.sh
+
 # builds dynamically-linked debug binaries
 .PHONY: build
 build: stash

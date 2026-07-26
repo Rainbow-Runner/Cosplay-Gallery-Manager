@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MockedProvider } from "@apollo/client/testing/react";
 
 import { messages } from "../i18n/messages";
@@ -35,5 +35,17 @@ describe("AppRoutes", () => {
   ])("renders %s in the expected shell", async (path, testID) => {
     renderRoute(path);
     expect(await screen.findByTestId(testID)).toBeInTheDocument();
+  });
+
+  it("renders public build, licence and corresponding source information", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({
+      product: "Cosplay Gallery Manager", version: "1.0.0", gitHash: "0123abc",
+      sourceCodeURL: "https://github.com/Rainbow-Runner/Cosplay-Gallery-Manager/tree/0123abc",
+      exactSourceAvailable: true, license: "AGPL-3.0-or-later", warranty: "No warranty.", attribution: "Derived from Stash.",
+    }) }));
+    renderRoute("/legal");
+    expect(await screen.findByText("AGPL-3.0-or-later")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Cosplay-Gallery-Manager\/tree\/0123abc/ })).toBeInTheDocument();
+    vi.unstubAllGlobals();
   });
 });

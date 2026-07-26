@@ -2,12 +2,14 @@ package productserver
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/productauth"
@@ -26,6 +28,23 @@ func TestHealthIsPublicButGraphQLRequiresSession(t *testing.T) {
 	server.Handler.ServeHTTP(graphql, request)
 	if graphql.Code != http.StatusUnauthorized {
 		t.Fatalf("GraphQL status = %d", graphql.Code)
+	}
+}
+
+func TestAboutIsPublicAndReportsLicenseAndSource(t *testing.T) {
+	server := testServer(t)
+	response := httptest.NewRecorder()
+	server.Handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/about.json", nil))
+	if response.Code != http.StatusOK || response.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("about status/cache = %d/%q", response.Code, response.Header().Get("Cache-Control"))
+	}
+	var about aboutResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &about); err != nil {
+		t.Fatal(err)
+	}
+	if about.Product != "Cosplay Gallery Manager" || !strings.Contains(about.License, "AGPL-3.0") ||
+		!strings.HasPrefix(about.SourceCodeURL, "https://github.com/Rainbow-Runner/Cosplay-Gallery-Manager") {
+		t.Fatalf("about = %#v", about)
 	}
 }
 
@@ -100,6 +119,36 @@ func TestSPAHandlerDoesNotExposeFilesOutsideItsRoot(t *testing.T) {
 	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/../ui/v2.5/build/index.html", nil))
 	if response.Code != http.StatusOK || response.Body.String() != "product entry" {
 		t.Fatalf("legacy path did not stay inside product SPA: %d %q", response.Code, response.Body.String())
+	}
+}
+
+func TestMaintenanceGateKeepsRecoveryUIReachable(t *testing.T) {
+	server := testServer(t)
+	if err := server.Database.Operations().SetMaintenance(context.Background(),
+		productdb.MaintenanceWaitingValidation, "", productdb.RestorePathMappingRequired, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	next := http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		response.WriteHeader(http.StatusNoContent)
+	})
+	handler := server.maintenanceGate(server.Database, next)
+	for _, path := range []string{"/", "/login", "/legal", "/maintenance", "/assets/application.js", "/about.json", "/session/status", "/maintenance/status"} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
+		if response.Code != http.StatusNoContent {
+			t.Fatalf("recovery path %s = %d", path, response.Code)
+		}
+	}
+	for _, request := range []*http.Request{
+		httptest.NewRequest(http.MethodPost, "/login", nil),
+		httptest.NewRequest(http.MethodPost, "/graphql", nil),
+		httptest.NewRequest(http.MethodGet, "/manage", nil),
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusServiceUnavailable {
+			t.Fatalf("blocked maintenance request %s %s = %d", request.Method, request.URL.Path, response.Code)
+		}
 	}
 }
 

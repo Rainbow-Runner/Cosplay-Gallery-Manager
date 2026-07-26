@@ -23,12 +23,13 @@ export function SessionBoundary({ children }: PropsWithChildren) {
   }, [location.key]);
   useEffect(() => {
     if (!status) return;
+    if (location.pathname === "/legal") return;
     if (!status.setupComplete && !location.pathname.startsWith("/setup")) navigate("/setup", { replace: true });
     else if (status.setupComplete && !status.authenticated && location.pathname !== "/login") navigate("/login", { replace: true });
     else if (status.setupComplete && status.authenticated && status.maintenanceState && status.maintenanceState !== "NORMAL" && location.pathname !== "/maintenance") navigate("/maintenance", { replace: true });
     else if (status.setupComplete && status.authenticated && status.maintenanceState === "NORMAL" && location.pathname === "/maintenance") navigate("/manage/operations", { replace: true });
     else if (status.setupComplete && status.authenticated && (location.pathname === "/login" || location.pathname.startsWith("/setup"))) navigate("/", { replace: true });
   }, [location.pathname, navigate, status]);
-  if (!status && location.pathname !== "/login" && !location.pathname.startsWith("/setup")) return <div className="session-loading" aria-busy="true" />;
+  if (!status && location.pathname !== "/login" && location.pathname !== "/legal" && !location.pathname.startsWith("/setup")) return <div className="session-loading" aria-busy="true" />;
   return <>{children}</>;
 }

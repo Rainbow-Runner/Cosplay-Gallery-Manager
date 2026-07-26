@@ -13,6 +13,7 @@ const (
 
 	DefaultConfigDirectoryName = "cosplay-gallery-manager"
 	DefaultDatabaseFileName    = "cosplay-gallery-manager.sqlite"
+	SourceRepositoryURL        = "https://github.com/Rainbow-Runner/Cosplay-Gallery-Manager"
 
 	// DevelopmentVersion is used when no product version is injected by the
 	// release build. Product SemVer is independent of the compatibility
@@ -40,6 +41,21 @@ type Versions struct {
 	DatabaseSchema  uint
 	ManifestSchema  uint
 	MediaProcessing uint
+}
+
+// SourceCodeURL returns the source tree corresponding to a release build.
+// Development builds without a valid injected Git commit link to the
+// repository root and describe that limitation in the About response.
+func SourceCodeURL(gitHash string) string {
+	if len(gitHash) < 7 || len(gitHash) > 40 {
+		return SourceRepositoryURL
+	}
+	for _, character := range gitHash {
+		if (character < '0' || character > '9') && (character < 'a' || character > 'f') {
+			return SourceRepositoryURL
+		}
+	}
+	return SourceRepositoryURL + "/tree/" + gitHash
 }
 
 // CurrentVersions returns the current compatibility versions. A blank build

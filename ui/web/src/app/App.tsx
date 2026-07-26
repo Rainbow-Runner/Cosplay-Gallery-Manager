@@ -5,6 +5,7 @@ import { SessionBoundary } from "../auth/SessionBoundary";
 import { Providers } from "./Providers";
 
 const LoginPage = lazy(() => import("../auth/LoginPage").then((module) => ({ default: module.LoginPage })));
+const LegalPage = lazy(() => import("./LegalPage").then((module) => ({ default: module.LegalPage })));
 const BrowseShell = lazy(() => import("../browse/BrowseShell").then((module) => ({ default: module.BrowseShell })));
 const GalleryDetailPage = lazy(() => import("../browse/GalleryDetailPage").then((module) => ({ default: module.GalleryDetailPage })));
 const GalleryIndexPage = lazy(() => import("../browse/GalleryIndexPage").then((module) => ({ default: module.GalleryIndexPage })));
@@ -47,6 +48,7 @@ export function AppRoutes() {
         </Route>
         <Route path="/setup/*" element={<SetupPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/legal" element={<LegalPage />} />
         <Route path="/maintenance" element={<MaintenancePage />} />
         <Route element={<BrowseShell />}>
           <Route index element={<GalleryIndexPage home />} />

@@ -13,6 +13,7 @@ import (
 	"time"
 	_ "time/tzdata"
 
+	"github.com/stashapp/stash/internal/build"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/product"
 	"github.com/stashapp/stash/internal/productserver"
@@ -29,7 +30,12 @@ func main() {
 	resumeMaintenance := flag.Bool("resume-maintenance", false, "validate the environment, resume schedules and exit")
 	flag.Parse()
 	if *showVersion {
-		fmt.Println(product.WorkingName, product.DevelopmentVersion)
+		version, gitHash, _ := build.Version()
+		if gitHash != "" {
+			fmt.Printf("%s %s (%s)\n", product.WorkingName, product.CurrentVersions(version).Product, gitHash)
+		} else {
+			fmt.Println(product.WorkingName, product.CurrentVersions(version).Product)
+		}
 		return
 	}
 	config, err := productserver.LoadConfig(*configPath)

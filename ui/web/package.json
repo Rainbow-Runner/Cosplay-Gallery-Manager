@@ -11,8 +11,10 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "check": "tsc --noEmit",
+    "e2e": "corepack pnpm run build && playwright test",
+    "e2e:update": "corepack pnpm run build && playwright test --update-snapshots",
     "test": "vitest run",
-    "validate": "pnpm run check && pnpm run test && pnpm run build"
+    "validate": "corepack pnpm run check && corepack pnpm run test && corepack pnpm run build && corepack pnpm run e2e"
   },
   "dependencies": {
     "@apollo/client": "^4.0.0",
@@ -23,6 +25,8 @@
     "react-router-dom": "^7.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.11.1",
+    "@playwright/test": "1.58.2",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "^16.0.0",
     "@types/react": "^19.0.0",

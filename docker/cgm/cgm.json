@@ -1,0 +1,8 @@
+{
+  "listen": "0.0.0.0:9999",
+  "database_path": "/var/lib/cgm/product.sqlite",
+  "cache_path": "/var/cache/cgm",
+  "ffmpeg_path": "/usr/bin/ffmpeg",
+  "libraw_path": "/usr/bin/dcraw",
+  "worker_count": 2
+}

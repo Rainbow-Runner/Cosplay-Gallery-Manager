@@ -128,6 +128,16 @@
 - About/Legal后端、前端、产品版本/源码URL测试通过；SPDX文件可解析且包含1个产品包与52项应用依赖。
 - `verify-cgm-release`已在干净本地提交上通过：嵌入式Linux amd64二进制报告完整Git revision，Go VCS元数据为`modified=false`，同提交AGPL源码归档包含`LICENSE`并生成独立SHA-256。
 
+## 本机实际业务应用测试部署（2026-07-27）
+
+- 在干净提交`3dc86fb6be38216349fb039a6b3253fb392ae422`上重新运行TypeScript、8文件/15项Vitest、661模块生产构建和主要Go/SQLite/API包回归，结果通过。
+- 构建并安装Linux amd64原生单文件到`~/.local/bin/cgm`；二进制报告完整提交，SHA-256为`ef2dc87446daaee84ddc8c187aebfb877e6419545d4782ee987a5d6c688e918a`，且依赖边界未包含旧Stash UI。
+- 建立私有配置、数据库、缓存、Coser元数据和备份目录；用户级`cosplay-gallery-manager.service`已启用并运行，仅监听`127.0.0.1:9999`。
+- `/healthz`、`/readyz`为204，Setup/Legal为200，About显示精确源码提交；真实systemd重启后数据库inode和未完成Setup状态保持不变。
+- 按产品流程没有在部署时预置媒体库根、所有者密码或扫描任务；当前`setupComplete=false`，下一步由所有者在Setup完成后从Manage → Libraries配置真实绝对路径。
+- 本机dcraw可用；FFmpeg/FFprobe尚未安装，交互式sudo门禁阻止自动安装，当前原生配置明确留空`ffmpeg_path`。Video Poster/代理真实业务验收必须等待所有者安装官方`ffmpeg`包后执行，不能标记为通过。
+- 详细路径、首次初始化、服务操作和第一轮业务验收清单见[本机实际业务应用测试部署](LOCAL_BUSINESS_TEST_DEPLOYMENT_2026-07-27.md)。
+
 ## 尚未通过的门禁
 
 - 主机仍没有系统级Go 1.25；本轮使用校验过的`/tmp/cgm-go1.25.12`，交叉构建镜像和新增CI均固定1.25.12。

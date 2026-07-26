@@ -1,0 +1,9 @@
+{
+  "listen": "127.0.0.1:9999",
+  "database_path": "/var/lib/cgm/cosplay-gallery-manager.sqlite",
+  "cache_path": "/var/cache/cgm",
+  "web_root": "/opt/cgm/web",
+  "ffmpeg_path": "/usr/bin/ffmpeg",
+  "libraw_path": "/usr/bin/dcraw_emu",
+  "worker_count": 1
+}

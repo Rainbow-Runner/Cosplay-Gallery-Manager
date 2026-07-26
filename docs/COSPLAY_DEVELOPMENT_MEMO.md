@@ -1,7 +1,7 @@
 # Cosplay Gallery Manager 开发备忘录
 
-> 状态：第一版产品与架构基线，尚未进入业务实现  
-> 最后更新：2026-07-21  
+> 状态：第一版产品与架构基线；0.1～0.6 主干功能已进入实现与联调
+> 最后更新：2026-07-26
 > 原始代码基线：Stash `develop` / `c7d2fe4f97b99c6a2aac968ac8a2aad3adf5b800`  
 > 分支策略：独立产品，不考虑与 Stash 上游合并  
 > 工作名：Cosplay Gallery Manager；最终品牌名延期决定  

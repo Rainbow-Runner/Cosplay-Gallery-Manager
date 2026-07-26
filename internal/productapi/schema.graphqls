@@ -1,0 +1,380 @@
+enum BrowseScope { LIST MAGIC ALL }
+enum GallerySort { RECENTLY_ADDED NAME SHOOT_DATE RATING }
+enum CollectionType { ALBUM COSPLAY }
+enum ContentRating { NON_ADULT ADULT }
+enum ShootDatePrecision { DAY MONTH UNKNOWN }
+enum MediaKind { STATIC_IMAGE ANIMATED_IMAGE VIDEO }
+enum ImageCategory { PHOTO SELFIE }
+enum ContentFormat { IMAGE VIDEO RAW }
+enum ProcessingState { PENDING PROCESSING READY ERROR }
+enum RandomMediaFilter { ALL PHOTO SELFIE GIF VIDEO }
+enum SearchEntityKind { GALLERY COSER WORK CHARACTER TAG }
+enum EntitySort { NAME RECENTLY_ADDED }
+enum GalleryState { DRAFT ACTIVE ARCHIVED }
+scalar Int64
+
+type EntitySummary { uuid: ID! name: String! }
+
+type ResourceIdentity {
+  itemUUID: ID!
+  contentRevision: Int64!
+  profileHash: String!
+  variant: String!
+  mimeType: String!
+}
+
+type GalleryCover {
+  kind: String!
+  revision: Int64!
+  managed: Boolean!
+  warning: Boolean!
+  resource: ResourceIdentity
+}
+
+type MediaCounts { photo: Int! selfie: Int! gif: Int! video: Int! }
+
+type BrowseGalleryCard {
+  setID: ID!
+  slug: String!
+  title: String!
+  collectionType: CollectionType!
+  contentRating: ContentRating!
+  cover: GalleryCover!
+  credits: [EntitySummary!]!
+  creditCount: Int!
+  characters: [EntitySummary!]!
+  characterCount: Int!
+  works: [EntitySummary!]!
+  workCount: Int!
+  shootDate: String!
+  shootDatePrecision: ShootDatePrecision!
+  addedAtUTC: String!
+  media: MediaCounts!
+  favorite: Boolean!
+  ratingHalfSteps: Int
+  scrubberCount: Int!
+  scrubberRevision: Int64!
+}
+
+type GalleryPage {
+  items: [BrowseGalleryCard!]!
+  page: Int!
+  pageSize: Int!
+  totalItems: Int!
+  totalPages: Int!
+}
+
+type HomeGalleryPage { scope: BrowseScope! page: GalleryPage! }
+
+type GalleryCreditDetail {
+  coser: EntitySummary!
+  characters: [EntitySummary!]!
+  works: [EntitySummary!]!
+}
+
+type ExternalLink { uuid: ID! type: String! label: String! url: String! }
+
+type GalleryDetail {
+  card: BrowseGalleryCard!
+  description: String!
+  photographerName: String!
+  studioName: String!
+  availableBytes: Int64!
+  credits: [GalleryCreditDetail!]!
+  tags: [EntitySummary!]!
+  externalLinks: [ExternalLink!]!
+  redirected: Boolean!
+}
+
+type GalleryMember {
+  itemUUID: ID!
+  mediaKind: MediaKind!
+  contentFormat: ContentFormat!
+  imageCategory: ImageCategory
+  position: String!
+  caption: String!
+  processingState: ProcessingState!
+  cardResource: ResourceIdentity
+  largeResource: ResourceIdentity
+  favorite: Boolean!
+  ratingHalfSteps: Int
+}
+
+type GalleryMemberIndex {
+  setID: ID!
+  metadataRevision: Int64!
+  scanRevision: Int64!
+  items: [GalleryMember!]!
+}
+
+type GalleryRecommendation {
+  card: BrowseGalleryCard!
+  score: Float!
+  reasons: [String!]!
+}
+
+type RandomMediaItem {
+  itemUUID: ID!
+  mediaKind: MediaKind!
+  imageCategory: ImageCategory
+  resource: ResourceIdentity!
+  gallerySetID: ID!
+  gallerySlug: String!
+  characters: [EntitySummary!]!
+  cosers: [EntitySummary!]!
+  favorite: Boolean!
+  ratingHalfSteps: Int
+}
+
+type BrowseUISettings {
+  settingsRevision: Int64!
+  galleryScrubberEnabled: Boolean!
+  detailMediaFilterEnabled: Boolean!
+  cardFavoriteControlVisible: Boolean!
+  cardRatingSummaryVisible: Boolean!
+  detailRatingControlVisible: Boolean!
+}
+
+type EntityIndexItem {
+  kind: SearchEntityKind!
+  uuid: ID!
+  slug: String!
+  name: String!
+  aliases: [String!]!
+}
+
+type EntityPage {
+  items: [EntityIndexItem!]!
+  page: Int!
+  pageSize: Int!
+  totalItems: Int!
+  totalPages: Int!
+}
+
+type SearchHit {
+  kind: SearchEntityKind!
+  uuid: ID!
+  slug: String!
+  name: String!
+  matchLevel: Int!
+}
+
+type SearchPreview {
+  scope: BrowseScope!
+  query: String!
+  galleries: [SearchHit!]!
+  cosers: [SearchHit!]!
+  works: [SearchHit!]!
+  characters: [SearchHit!]!
+  tags: [SearchHit!]!
+}
+
+type SocialAccount {
+  uuid: ID!
+  platformKey: String!
+  label: String!
+  handle: String!
+  url: String!
+  status: String!
+  position: String!
+}
+
+type CoserDetail {
+  entity: EntityIndexItem!
+  profileSummary: String!
+  biography: String!
+  countryOrRegion: String!
+  socialAccounts: [SocialAccount!]!
+  galleries: GalleryPage!
+  redirected: Boolean!
+}
+
+type WorkDetail {
+  entity: EntityIndexItem!
+  characters: [EntityIndexItem!]!
+  redirected: Boolean!
+}
+
+type CharacterDetail {
+  entity: EntityIndexItem!
+  work: EntityIndexItem!
+  galleries: GalleryPage!
+  redirected: Boolean!
+}
+
+type TagDetail {
+  entity: EntityIndexItem!
+  galleries: GalleryPage!
+  redirected: Boolean!
+}
+
+type MediaDetail {
+  item: GalleryMember!
+  displayResource: ResourceIdentity
+  gallery: BrowseGalleryCard!
+  metadataRevision: Int64!
+}
+
+type MediaPage {
+  items: [RandomMediaItem!]!
+  page: Int!
+  pageSize: Int!
+  totalItems: Int!
+  totalPages: Int!
+}
+
+type PersonalStateResult { metadataRevision: Int64! }
+
+type ManageIssueSummary { draft: Int! overLimit: Int! unavailable: Int! blocking: Int! missingItem: Int! }
+type ManageGalleryRow {
+  setID: ID! slug: String! state: GalleryState! title: String! contentRating: ContentRating
+  metadataRevision: Int64! scanRevision: Int64! browsable: Boolean!
+  sourceType: String! sourcePath: String! sourceAvailability: String! reconcileState: String! overLimit: Boolean!
+  itemCount: Int! missingCount: Int! pendingCount: Int! errorCount: Int! blockingIssues: Int!
+}
+type ManageGalleryPage { items: [ManageGalleryRow!]! summary: ManageIssueSummary! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
+type ManageGalleryItem {
+  uuid: ID! relativePath: String! mediaKind: MediaKind! contentFormat: ContentFormat! imageCategory: ImageCategory
+  position: String! caption: String! excluded: Boolean! availability: String! processingState: ProcessingState! byteSize: Int64!
+}
+type ManageGalleryDetail {
+  row: ManageGalleryRow! aliases: [String!]! description: String! shootDate: String! shootDatePrecision: ShootDatePrecision!
+  photographerName: String! studioName: String! items: [ManageGalleryItem!]! credits: [ManageGalleryCredit!]! tags: [ManageGalleryTag!]! externalLinks: [ManageGalleryExternalLink!]!
+}
+type ManageGalleryCast { characterUUID: ID! characterName: String! workUUID: ID! workName: String! position: String! }
+type ManageGalleryCredit { coserUUID: ID! coserName: String! position: String! cast: [ManageGalleryCast!]! }
+type ManageGalleryTag { uuid: ID! name: String! position: String! }
+type ManageGalleryExternalLink { uuid: ID! type: String! label: String! url: String! position: String! }
+type ManageManifestConflict { path: String! baselineJSON: String! databaseJSON: String! fileJSON: String! }
+type ManageGalleryManifestState { status: String! path: String! manifestRevision: Int! metadataRevision: Int64! conflicts: [ManageManifestConflict!]! }
+type ManageCoserManifestState { status: String! path: String! manifestRevision: Int! metadataRevision: Int64! conflicts: [ManageManifestConflict!]! }
+input UpdateGalleryMetadataInput {
+  title: String! aliases: [String!]! description: String! shootDate: String! shootDatePrecision: ShootDatePrecision!
+  contentRating: ContentRating! photographerName: String! studioName: String!
+}
+input UpdateGalleryItemInput { imageCategory: ImageCategory caption: String! }
+input ReplaceGalleryCastInput { characterUUID: ID! position: String! }
+input ReplaceGalleryCreditInput { coserUUID: ID! position: String! cast: [ReplaceGalleryCastInput!]! }
+input ReplaceGalleryTagInput { tagUUID: ID! position: String! }
+input ReplaceGalleryRelationsInput { credits: [ReplaceGalleryCreditInput!]! tags: [ReplaceGalleryTagInput!]! }
+input GalleryExternalLinkInput { type: String! label: String! url: String! position: String! }
+input ManifestConflictChoiceInput { path: String! choice: String! }
+type ManageRecognitionRule { id: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }
+type ManageLibrary { id: Int64! name: String! rootPath: String! enabled: Boolean! readOnly: Boolean! captureTimezone: String! rules: [ManageRecognitionRule!]! }
+type ManageSuggestion { field: String! value: String! }
+type ManageCandidate { id: Int64! rootPath: String! sourceType: String! method: String! manifestSetID: ID status: String! autoCreateDraft: Boolean! hasConflict: Boolean! overLimit: Boolean! mediaCount: Int! suggestions: [ManageSuggestion!]! }
+type ManageUnassignedDiagnostic { parentPath: String! mediaCount: Int! }
+type ManageDiscoverySnapshot { id: Int64! libraryID: Int64! completedAt: String! candidates: [ManageCandidate!]! unassigned: [ManageUnassignedDiagnostic!]! }
+input CreateMediaLibraryInput { name: String! rootPath: String! enabled: Boolean! readOnly: Boolean! captureTimezone: String! }
+input CreateRecognitionRuleInput { libraryID: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }
+type ManageRuntimeSettings {
+  settingsRevision: Int64! homeScope: BrowseScope! galleryCardScrubberEnabled: Boolean! galleryDetailMediaFilterEnabled: Boolean!
+  galleryCardControlsVisible: Boolean! mediaCardControlsVisible: Boolean! detailPersonalControlsVisible: Boolean!
+  relatedLimit: Int! tagParentWeight: Float! tagMinimumScore: Float! tagMaximumDepth: Int!
+  randomLimit: Int! randomStaticQuota: Float! randomGIFQuota: Float! randomVideoQuota: Float! randomGalleryRepeatDecay: Float!
+  enhancedCacheMaximumBytes: Int64! minimumFreeBytes: Int64! minimumFreePercent: Float! automaticScanEnabled: Boolean! automaticSchedulesSuspended: Boolean!
+  dailyBackupEnabled: Boolean! dailyBackupRetention: Int!
+  archiveMaxEntries: Int! archiveMaxEntryBytes: Int64! archiveMaxTotalBytes: Int64! archiveMaxCompressionRatio: Float! archiveMaxImagePixels: Int64!
+}
+input RuntimeSettingsInput {
+  homeScope: BrowseScope! galleryCardScrubberEnabled: Boolean! galleryDetailMediaFilterEnabled: Boolean!
+  galleryCardControlsVisible: Boolean! mediaCardControlsVisible: Boolean! detailPersonalControlsVisible: Boolean!
+  relatedLimit: Int! tagParentWeight: Float! tagMinimumScore: Float! tagMaximumDepth: Int!
+  randomLimit: Int! randomStaticQuota: Float! randomGIFQuota: Float! randomVideoQuota: Float! randomGalleryRepeatDecay: Float!
+  enhancedCacheMaximumBytes: Int64! minimumFreeBytes: Int64! minimumFreePercent: Float! automaticScanEnabled: Boolean! automaticSchedulesSuspended: Boolean!
+  dailyBackupEnabled: Boolean! dailyBackupRetention: Int!
+  archiveMaxEntries: Int! archiveMaxEntryBytes: Int64! archiveMaxTotalBytes: Int64! archiveMaxCompressionRatio: Float! archiveMaxImagePixels: Int64!
+}
+type ManageProcessingJob { id: Int64! kind: String! galleryID: Int64 itemUUID: ID variant: String! status: String! priority: Int! attemptCount: Int! maxAttempts: Int! lastErrorCode: String! structuralFailure: Boolean! createdAt: String! updatedAt: String! }
+type ManageProcessingJobPage { items: [ManageProcessingJob!]! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
+type ManageBackupRecord {
+  id: ID! kind: String! fileName: String! status: String! byteSize: Int64! archiveSHA256: String!
+  productVersion: String! databaseSchemaVersion: Int! manifestSchemaVersion: Int! mediaProcessingVersion: Int!
+  createdAt: String! completedAt: String lastErrorCode: String!
+}
+type ManageMaintenanceState { state: String! restoreBackupID: ID lastErrorCode: String! updatedAt: String! }
+type ManageAuditEvent {
+  id: Int64! eventCode: String! targetKind: String! targetID: String!
+  outcome: String! errorCode: String! summaryJSON: String! createdAt: String!
+}
+type ManageAuditPage { items: [ManageAuditEvent!]! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
+type ManageSocialAccount { uuid: ID! platformKey: String! label: String! handle: String! url: String! status: String! visible: Boolean! position: String! }
+type ManageCoreEntityRef { uuid: ID! name: String! metadataRevision: Int64! }
+type ManageCoreEntity { kind: SearchEntityKind! uuid: ID! name: String! sortName: String! aliases: [String!]! slug: String! metadataRevision: Int64! workUUID: ID profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean! socialAccounts: [ManageSocialAccount!]! parents: [ManageCoreEntityRef!]! }
+type ManageCoreEntityPage { items: [ManageCoreEntity!]! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
+input CoreEntityInput { kind: SearchEntityKind! name: String! sortName: String! aliases: [String!]! workUUID: ID profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean! }
+input SocialAccountInput { platformKey: String! label: String! handle: String! url: String! status: String! visible: Boolean! position: String! }
+input ReplaceTagParentInput { uuid: ID! position: String! }
+input ExpectedTagRevisionInput { uuid: ID! metadataRevision: Int64! }
+
+type Query {
+  homeGalleries(page: Int!): HomeGalleryPage!
+  browseGalleries(scope: BrowseScope!, page: Int!, sort: GallerySort!): GalleryPage!
+  timelineGalleries(scope: BrowseScope!, page: Int!, coserUUID: ID): GalleryPage!
+  galleryDetail(slug: String!, scope: BrowseScope! = ALL): GalleryDetail!
+  galleryMemberIndex(setID: ID!): GalleryMemberIndex!
+  relatedGalleries(setID: ID!, scope: BrowseScope! = ALL): [GalleryRecommendation!]!
+  randomMedia(scope: BrowseScope! = LIST, filter: RandomMediaFilter! = ALL): [RandomMediaItem!]!
+  entityIndex(kind: SearchEntityKind!, scope: BrowseScope!, page: Int!, sort: EntitySort! = NAME): EntityPage!
+  searchPreview(query: String!, scope: BrowseScope!): SearchPreview!
+  coserDetail(slug: String!, scope: BrowseScope! = ALL, page: Int! = 1): CoserDetail!
+  workDetail(slug: String!, scope: BrowseScope! = ALL): WorkDetail!
+  characterDetail(slug: String!, scope: BrowseScope! = ALL, page: Int! = 1): CharacterDetail!
+  tagDetail(slug: String!, scope: BrowseScope! = ALL, page: Int! = 1): TagDetail!
+  mediaDetail(itemUUID: ID!): MediaDetail!
+  favoriteGalleries(scope: BrowseScope! = LIST, page: Int! = 1): GalleryPage!
+  galleryHistory(scope: BrowseScope! = LIST, page: Int! = 1): GalleryPage!
+  favoriteMedia(scope: BrowseScope! = LIST, page: Int! = 1, ratingSort: Boolean! = false): MediaPage!
+  manageGalleries(page: Int! = 1): ManageGalleryPage!
+  manageGallery(setID: ID!): ManageGalleryDetail!
+  manageGalleryManifest(setID: ID!): ManageGalleryManifestState!
+  manageCoserManifest(coserUUID: ID!): ManageCoserManifestState!
+  manageLibraries: [ManageLibrary!]!
+  manageDiscovery(libraryID: Int64!): ManageDiscoverySnapshot!
+  manageRuntimeSettings: ManageRuntimeSettings!
+  manageProcessingJobs(status: String! = "ALL", page: Int! = 1): ManageProcessingJobPage!
+  manageBackups: [ManageBackupRecord!]!
+  manageMaintenance: ManageMaintenanceState!
+  manageAudit(page: Int! = 1): ManageAuditPage!
+  manageCoreEntities(kind: SearchEntityKind!, page: Int! = 1): ManageCoreEntityPage!
+  manageCoreEntity(kind: SearchEntityKind!, uuid: ID!): ManageCoreEntity!
+  manageCoreEntityOptions(kind: SearchEntityKind!, query: String! = "", limit: Int! = 20): [ManageCoreEntity!]!
+  browseUISettings: BrowseUISettings!
+}
+
+type Mutation {
+  setGalleryFavorite(setID: ID!, favorite: Boolean!): PersonalStateResult!
+  setGalleryRating(setID: ID!, ratingHalfSteps: Int, expectedMetadataRevision: Int64!): PersonalStateResult!
+  setItemFavorite(itemUUID: ID!, favorite: Boolean!): PersonalStateResult!
+  setItemRating(itemUUID: ID!, ratingHalfSteps: Int, expectedMetadataRevision: Int64!): PersonalStateResult!
+  recordGalleryView(setID: ID!, itemUUID: ID): Boolean!
+  updateGalleryMetadata(setID: ID!, expectedMetadataRevision: Int64!, input: UpdateGalleryMetadataInput!): ManageGalleryDetail!
+  setGalleryState(setID: ID!, expectedMetadataRevision: Int64!, state: GalleryState!): ManageGalleryDetail!
+  updateGalleryItem(setID: ID!, itemUUID: ID!, expectedMetadataRevision: Int64!, input: UpdateGalleryItemInput!): ManageGalleryDetail!
+  setGalleryItemExcluded(setID: ID!, itemUUID: ID!, excluded: Boolean!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
+  moveGalleryItem(setID: ID!, itemUUID: ID!, beforeItemUUID: ID, expectedMetadataRevision: Int64!): ManageGalleryDetail!
+  setGalleryCoverItem(setID: ID!, itemUUID: ID!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
+  resetGalleryCover(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
+  createMediaLibrary(input: CreateMediaLibraryInput!): ManageLibrary!
+  createRecognitionRule(input: CreateRecognitionRuleInput!): ManageRecognitionRule!
+  discoverMediaLibrary(libraryID: Int64!): ManageDiscoverySnapshot!
+  importGalleryCandidate(candidateID: Int64!): ManageGalleryDetail!
+  scanGallerySource(setID: ID!): ManageGalleryDetail!
+  updateRuntimeSettings(expectedSettingsRevision: Int64!, input: RuntimeSettingsInput!): ManageRuntimeSettings!
+  cancelProcessingJob(id: Int64!): ManageProcessingJobPage!
+  retryProcessingJob(id: Int64!): ManageProcessingJobPage!
+  createFullBackup: ManageBackupRecord!
+  restoreBackup(backupID: ID!): ManageMaintenanceState!
+  createCoreEntity(input: CoreEntityInput!): ManageCoreEntity!
+  updateCoreEntity(uuid: ID!, expectedMetadataRevision: Int64!, input: CoreEntityInput!): ManageCoreEntity!
+  addCoserSocialAccount(coserUUID: ID!, expectedMetadataRevision: Int64!, input: SocialAccountInput!): ManageCoreEntity!
+  replaceTagParents(childUUID: ID!, expectedChildRevision: Int64!, parents: [ReplaceTagParentInput!]!, expectedParents: [ExpectedTagRevisionInput!]!): ManageCoreEntity!
+  replaceGalleryRelations(setID: ID!, expectedMetadataRevision: Int64!, input: ReplaceGalleryRelationsInput!): ManageGalleryDetail!
+  addGalleryExternalLink(setID: ID!, expectedMetadataRevision: Int64!, input: GalleryExternalLinkInput!): ManageGalleryDetail!
+  pushGalleryManifest(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryManifestState!
+  pullGalleryManifest(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryManifestState!
+  resolveGalleryManifest(setID: ID!, expectedMetadataRevision: Int64!, choices: [ManifestConflictChoiceInput!]!): ManageGalleryManifestState!
+  pushCoserManifest(coserUUID: ID!, expectedMetadataRevision: Int64!): ManageCoserManifestState!
+  pullCoserManifest(coserUUID: ID!, expectedMetadataRevision: Int64!): ManageCoserManifestState!
+  resolveCoserManifest(coserUUID: ID!, expectedMetadataRevision: Int64!, choices: [ManifestConflictChoiceInput!]!): ManageCoserManifestState!
+}

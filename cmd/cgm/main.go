@@ -1,0 +1,126 @@
+package main
+
+import (
+	"bufio"
+	"context"
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+	_ "time/tzdata"
+
+	"github.com/stashapp/stash/internal/product"
+	"github.com/stashapp/stash/internal/productserver"
+	"golang.org/x/term"
+)
+
+func main() {
+	configPath := flag.String("config", "cgm.json", "startup configuration JSON")
+	showVersion := flag.Bool("version", false, "print the product version")
+	setupTicket := flag.Bool("setup-ticket", false, "generate a one-time 15-minute Docker Setup ticket")
+	createBackup := flag.Bool("create-backup", false, "create a consistent full backup package and exit")
+	restoreBackup := flag.String("restore-backup", "", "restore a backup UUID through maintenance mode and exit")
+	resumeMaintenance := flag.Bool("resume-maintenance", false, "validate the environment, resume schedules and exit")
+	flag.Parse()
+	if *showVersion {
+		fmt.Println(product.WorkingName, product.DevelopmentVersion)
+		return
+	}
+	config, err := productserver.LoadConfig(*configPath)
+	if err != nil {
+		fatal("CGM_CONFIG_INVALID")
+	}
+	server, err := productserver.Open(config)
+	if err != nil {
+		fatal("CGM_DATABASE_OPEN_FAILED")
+	}
+	defer server.Close()
+	actionCount := 0
+	for _, selected := range []bool{*setupTicket, *createBackup, *restoreBackup != "", *resumeMaintenance} {
+		if selected {
+			actionCount++
+		}
+	}
+	if actionCount > 1 {
+		fatal("CGM_CLI_ACTION_CONFLICT")
+	}
+	if *setupTicket {
+		ticket, expires, err := server.Auth.CreateSetupTicket(context.Background())
+		if err != nil {
+			fatal("CGM_SETUP_TICKET_FAILED")
+		}
+		fmt.Printf("%s\nexpires %s\n", ticket, expires.Local().Format(time.RFC3339))
+		return
+	}
+	if *createBackup || *restoreBackup != "" || *resumeMaintenance {
+		if err := authenticateOwner(server); err != nil {
+			fatal("CGM_OWNER_REAUTH_FAILED")
+		}
+	}
+	if *createBackup {
+		record, err := server.CreateFullBackup(context.Background())
+		if err != nil {
+			fatal("CGM_BACKUP_CREATE_FAILED")
+		}
+		fmt.Printf("backup %s ready (%s)\n", record.ID, record.FileName)
+		return
+	}
+	if *restoreBackup != "" {
+		fmt.Fprint(os.Stderr, "Type RESTORE to create a safety snapshot and replace the live database: ")
+		confirmation, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+		if strings.TrimSpace(confirmation) != "RESTORE" {
+			fatal("CGM_RESTORE_NOT_CONFIRMED")
+		}
+		state, err := server.RestoreBackup(context.Background(), *restoreBackup)
+		if err != nil {
+			fatal("CGM_RESTORE_FAILED")
+		}
+		fmt.Printf("restore completed; maintenance state %s; sign in again and validate before resuming\n", state.Mode)
+		return
+	}
+	if *resumeMaintenance {
+		if err := server.ResumeMaintenance(context.Background()); err != nil {
+			fatal("CGM_MAINTENANCE_RESUME_FAILED")
+		}
+		fmt.Println("environment validated; automatic schedules resumed")
+		return
+	}
+	httpServer := server.HTTPServer()
+	stop, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	if err := server.RunWorkers(stop); err != nil {
+		fatal("CGM_WORKER_START_FAILED")
+	}
+	go func() {
+		<-stop.Done()
+		ctx, release := context.WithTimeout(context.Background(), 15*time.Second)
+		defer release()
+		_ = httpServer.Shutdown(ctx)
+	}()
+	log.Printf("%s listening on http://%s", product.WorkingName, config.Listen)
+	if err := httpServer.ListenAndServe(); err != nil && err.Error() != "http: Server closed" {
+		fatal("CGM_HTTP_SERVER_FAILED")
+	}
+}
+
+func authenticateOwner(server *productserver.Server) error {
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return fmt.Errorf("owner reauthentication requires an interactive terminal")
+	}
+	fmt.Fprint(os.Stderr, "Owner password: ")
+	password, err := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Fprintln(os.Stderr)
+	if err != nil {
+		return err
+	}
+	return server.Auth.VerifyPassword(context.Background(), string(password))
+}
+
+func fatal(code string) {
+	log.Print(code)
+	os.Exit(1)
+}

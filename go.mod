@@ -57,6 +57,7 @@ require (
 	github.com/vektah/gqlparser/v2 v2.5.27
 	github.com/vektra/mockery/v2 v2.10.0
 	github.com/xWTF/chardet v0.0.0-20230208095535-c780f2ac244e
+	github.com/zeebo/blake3 v0.2.4
 	github.com/zencoder/go-dash/v3 v3.0.2
 	golang.org/x/crypto v0.48.0
 	golang.org/x/image v0.38.0
@@ -100,6 +101,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.5 // indirect
+	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect

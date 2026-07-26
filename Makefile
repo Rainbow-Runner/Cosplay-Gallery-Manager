@@ -37,6 +37,12 @@ endif
 ifdef PHASHER_OUTPUT
   PHASHER_OUTPUT := -o $(PHASHER_OUTPUT)
 endif
+ifdef CGM_OUTPUT
+  CGM_BINARY := $(CGM_OUTPUT)
+  CGM_OUTPUT := -o $(CGM_OUTPUT)
+else
+  CGM_BINARY := cgm
+endif
 
 # set GO_BUILD_FLAGS environment variable to any extra build flags required
 GO_BUILD_FLAGS := $(GO_BUILD_FLAGS)
@@ -137,6 +143,13 @@ stash: build-flags
 .PHONY: phasher
 phasher: build-flags
 	go build $(PHASHER_OUTPUT) $(BUILD_FLAGS) ./cmd/phasher
+
+.PHONY: cgm
+cgm: build-flags
+	go build $(CGM_OUTPUT) $(BUILD_FLAGS) ./cmd/cgm
+
+.PHONY: build-cgm
+build-cgm: cgm web-ui
 
 # builds dynamically-linked debug binaries
 .PHONY: build
@@ -404,6 +417,28 @@ fmt-ui:
 .PHONY: validate-ui
 validate-ui:
 	cd ui/v2.5 && pnpm run validate
+
+# React 19 product UI. These targets remain separate from the legacy UI until
+# the new BrowseShell and ManageShell satisfy the replacement gates.
+.PHONY: pre-web-ui
+pre-web-ui:
+	cd ui/web && pnpm install
+
+.PHONY: web-ui
+web-ui:
+	cd ui/web && pnpm run build
+
+.PHONY: web-ui-start
+web-ui-start:
+	cd ui/web && pnpm run dev --host
+
+.PHONY: test-web-ui
+test-web-ui:
+	cd ui/web && pnpm run test
+
+.PHONY: validate-web-ui
+validate-web-ui:
+	cd ui/web && pnpm run validate
 
 # these targets run the same steps as fmt-ui and validate-ui, but only on files that have changed
 fmt-ui-quick:

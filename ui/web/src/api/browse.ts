@@ -1,0 +1,222 @@
+import { gql } from "@apollo/client";
+
+export const GALLERY_CARD_FIELDS = gql`
+  fragment GalleryCardFields on BrowseGalleryCard {
+    setID slug title collectionType contentRating
+    cover {
+      kind revision managed warning
+      resource { itemUUID contentRevision profileHash variant mimeType }
+    }
+    credits { uuid name }
+    creditCount
+    characters { uuid name }
+    characterCount
+    works { uuid name }
+    workCount
+    shootDate
+    shootDatePrecision
+    addedAtUTC
+    media { photo selfie gif video }
+    favorite
+    ratingHalfSteps
+    scrubberCount
+    scrubberRevision
+  }
+`;
+
+export const BROWSE_GALLERIES = gql`
+  ${GALLERY_CARD_FIELDS}
+  query BrowseGalleries($scope: BrowseScope!, $page: Int!, $sort: GallerySort!) {
+    browseGalleries(scope: $scope, page: $page, sort: $sort) {
+      page pageSize totalItems totalPages
+      items { ...GalleryCardFields }
+    }
+  }
+`;
+
+export const HOME_GALLERIES = gql`
+  ${GALLERY_CARD_FIELDS}
+  query HomeGalleries($page: Int!) {
+    homeGalleries(page: $page) {
+      scope
+      page {
+        page pageSize totalItems totalPages
+        items { ...GalleryCardFields }
+      }
+    }
+  }
+`;
+
+export const BROWSE_UI_SETTINGS = gql`
+  query BrowseUISettings {
+    browseUISettings {
+      settingsRevision
+      galleryScrubberEnabled
+      detailMediaFilterEnabled
+      cardFavoriteControlVisible
+      cardRatingSummaryVisible
+      detailRatingControlVisible
+    }
+  }
+`;
+
+export const GALLERY_DETAIL = gql`
+  ${GALLERY_CARD_FIELDS}
+  query GalleryDetail($slug: String!) {
+    galleryDetail(slug: $slug, scope: ALL) {
+      card { ...GalleryCardFields }
+      description photographerName studioName availableBytes redirected
+      credits { coser { uuid name } characters { uuid name } works { uuid name } }
+      tags { uuid name }
+      externalLinks { uuid type label url }
+    }
+  }
+`;
+
+export const GALLERY_MEMBER_INDEX = gql`
+  query GalleryMemberIndex($setID: ID!) {
+    galleryMemberIndex(setID: $setID) {
+      setID metadataRevision scanRevision
+      items {
+        itemUUID mediaKind contentFormat imageCategory position caption processingState favorite ratingHalfSteps
+        cardResource { itemUUID contentRevision profileHash variant mimeType }
+        largeResource { itemUUID contentRevision profileHash variant mimeType }
+      }
+    }
+  }
+`;
+
+export const RELATED_GALLERIES = gql`
+  ${GALLERY_CARD_FIELDS}
+  query RelatedGalleries($setID: ID!) {
+    relatedGalleries(setID: $setID, scope: ALL) {
+      score reasons card { ...GalleryCardFields }
+    }
+  }
+`;
+
+export const TIMELINE_GALLERIES = gql`
+  ${GALLERY_CARD_FIELDS}
+  query TimelineGalleries($scope: BrowseScope!, $page: Int!, $coserUUID: ID) {
+    timelineGalleries(scope: $scope, page: $page, coserUUID: $coserUUID) {
+      page pageSize totalItems totalPages items { ...GalleryCardFields }
+    }
+  }
+`;
+
+export const RANDOM_MEDIA = gql`
+  query RandomMedia($scope: BrowseScope!, $filter: RandomMediaFilter!) {
+    randomMedia(scope: $scope, filter: $filter) {
+      itemUUID mediaKind imageCategory gallerySetID gallerySlug favorite ratingHalfSteps
+      resource { itemUUID contentRevision profileHash variant mimeType }
+      characters { uuid name }
+      cosers { uuid name }
+    }
+  }
+`;
+
+export const ENTITY_INDEX = gql`
+  query EntityIndex($kind: SearchEntityKind!, $scope: BrowseScope!, $page: Int!, $sort: EntitySort!) {
+    entityIndex(kind: $kind, scope: $scope, page: $page, sort: $sort) {
+      page pageSize totalItems totalPages
+      items { kind uuid slug name aliases }
+    }
+  }
+`;
+
+export const SEARCH_PREVIEW = gql`
+  query SearchPreview($query: String!, $scope: BrowseScope!) {
+    searchPreview(query: $query, scope: $scope) {
+      scope query
+      galleries { kind uuid slug name matchLevel }
+      cosers { kind uuid slug name matchLevel }
+      works { kind uuid slug name matchLevel }
+      characters { kind uuid slug name matchLevel }
+      tags { kind uuid slug name matchLevel }
+    }
+  }
+`;
+
+export const COSER_DETAIL = gql`
+  ${GALLERY_CARD_FIELDS}
+  query CoserDetail($slug: String!, $scope: BrowseScope!, $page: Int!) {
+    coserDetail(slug: $slug, scope: $scope, page: $page) {
+      entity { kind uuid slug name aliases }
+      profileSummary biography countryOrRegion redirected
+      socialAccounts { uuid platformKey label handle url status position }
+      galleries { page pageSize totalItems totalPages items { ...GalleryCardFields } }
+    }
+  }
+`;
+
+export const WORK_DETAIL = gql`
+  query WorkDetail($slug: String!, $scope: BrowseScope!) {
+    workDetail(slug: $slug, scope: $scope) {
+      entity { kind uuid slug name aliases }
+      characters { kind uuid slug name aliases }
+      redirected
+    }
+  }
+`;
+
+export const CHARACTER_DETAIL = gql`
+  ${GALLERY_CARD_FIELDS}
+  query CharacterDetail($slug: String!, $scope: BrowseScope!, $page: Int!) {
+    characterDetail(slug: $slug, scope: $scope, page: $page) {
+      entity { kind uuid slug name aliases }
+      work { kind uuid slug name aliases }
+      galleries { page pageSize totalItems totalPages items { ...GalleryCardFields } }
+      redirected
+    }
+  }
+`;
+
+export const TAG_DETAIL = gql`
+  ${GALLERY_CARD_FIELDS}
+  query TagDetail($slug: String!, $scope: BrowseScope!, $page: Int!) {
+    tagDetail(slug: $slug, scope: $scope, page: $page) {
+      entity { kind uuid slug name aliases }
+      galleries { page pageSize totalItems totalPages items { ...GalleryCardFields } }
+      redirected
+    }
+  }
+`;
+
+export const MEDIA_DETAIL = gql`
+  ${GALLERY_CARD_FIELDS}
+  query MediaDetail($itemUUID: ID!) {
+    mediaDetail(itemUUID: $itemUUID) {
+      item { itemUUID mediaKind contentFormat imageCategory position caption processingState favorite ratingHalfSteps
+        cardResource { itemUUID contentRevision profileHash variant mimeType }
+        largeResource { itemUUID contentRevision profileHash variant mimeType } }
+      displayResource { itemUUID contentRevision profileHash variant mimeType }
+      metadataRevision
+      gallery { ...GalleryCardFields }
+    }
+  }
+`;
+
+export const FAVORITE_GALLERIES = gql`
+  ${GALLERY_CARD_FIELDS}
+  query FavoriteGalleries($scope: BrowseScope!, $page: Int!) {
+    favoriteGalleries(scope: $scope, page: $page) { page pageSize totalItems totalPages items { ...GalleryCardFields } }
+  }
+`;
+export const GALLERY_HISTORY = gql`
+  ${GALLERY_CARD_FIELDS}
+  query GalleryHistory($scope: BrowseScope!, $page: Int!) {
+    galleryHistory(scope: $scope, page: $page) { page pageSize totalItems totalPages items { ...GalleryCardFields } }
+  }
+`;
+export const FAVORITE_MEDIA = gql`
+  query FavoriteMedia($scope: BrowseScope!, $page: Int!, $ratingSort: Boolean!) {
+    favoriteMedia(scope: $scope, page: $page, ratingSort: $ratingSort) { page pageSize totalItems totalPages items {
+      itemUUID mediaKind imageCategory gallerySetID gallerySlug favorite ratingHalfSteps
+      resource { itemUUID contentRevision profileHash variant mimeType } characters { uuid name } cosers { uuid name }
+    } }
+  }
+`;
+export const SET_GALLERY_FAVORITE = gql`mutation SetGalleryFavorite($setID: ID!, $favorite: Boolean!) { setGalleryFavorite(setID: $setID, favorite: $favorite) { metadataRevision } }`;
+export const SET_ITEM_FAVORITE = gql`mutation SetItemFavorite($itemUUID: ID!, $favorite: Boolean!) { setItemFavorite(itemUUID: $itemUUID, favorite: $favorite) { metadataRevision } }`;
+export const SET_ITEM_RATING = gql`mutation SetItemRating($itemUUID: ID!, $ratingHalfSteps: Int, $expectedMetadataRevision: Int64!) { setItemRating(itemUUID: $itemUUID, ratingHalfSteps: $ratingHalfSteps, expectedMetadataRevision: $expectedMetadataRevision) { metadataRevision } }`;
+export const RECORD_GALLERY_VIEW = gql`mutation RecordGalleryView($setID: ID!, $itemUUID: ID) { recordGalleryView(setID: $setID, itemUUID: $itemUUID) }`;

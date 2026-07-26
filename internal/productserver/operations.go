@@ -18,6 +18,33 @@ import (
 	"github.com/stashapp/stash/internal/productauth"
 )
 
+type maintenanceLibraryMapping struct {
+	LibraryID int64  `json:"library_id"`
+	Name      string `json:"name"`
+	RootPath  string `json:"root_path"`
+	Enabled   bool   `json:"enabled"`
+}
+
+type maintenanceStatusResponse struct {
+	State               productdb.MaintenanceMode   `json:"state"`
+	RequiresValidation  bool                        `json:"requiresValidation"`
+	RequiresPathMapping bool                        `json:"requiresPathMapping"`
+	Libraries           []maintenanceLibraryMapping `json:"libraries"`
+}
+
+type restorePathMappingRequest struct {
+	Mappings     []restorePathMappingDecision `json:"mappings"`
+	Password     string                       `json:"password"`
+	Confirmation string                       `json:"confirmation"`
+}
+
+type restorePathMappingDecision struct {
+	LibraryID        int64  `json:"library_id"`
+	ExpectedRootPath string `json:"expected_root_path"`
+	RootPath         string `json:"root_path"`
+	Disable          bool   `json:"disable"`
+}
+
 func (s *Server) CreateFullBackup(ctx context.Context) (productdb.BackupRecord, error) {
 	s.operationMu.Lock()
 	defer s.operationMu.Unlock()
@@ -141,7 +168,7 @@ func (s *Server) RestoreBackup(ctx context.Context, backupID string) (productdb.
 	if err != nil {
 		return s.rollbackRestore(ctx, current, nil, roots, backupID, safety, rollbackDatabase, rollbackCoser, databaseSwapped, coserSwapped, "RESTORE_DATABASE_REOPEN_FAILED", err)
 	}
-	if _, err := replacement.ExecContext(ctx, `UPDATE product_setup SET coser_metadata_root=?,backup_root=? WHERE id=1`, roots.CoserMetadataRoot, roots.BackupRoot); err != nil {
+	if err := replacement.Operations().PreserveRestoredStorageRoots(ctx, roots, time.Now()); err != nil {
 		return s.rollbackRestore(ctx, current, replacement, roots, backupID, safety, rollbackDatabase, rollbackCoser, databaseSwapped, coserSwapped, "RESTORE_ENVIRONMENT_PRESERVE_FAILED", err)
 	}
 	if err := replacement.Backups().RegisterExisting(ctx, safety); err != nil {
@@ -211,7 +238,7 @@ func (s *Server) restartWorkers() {
 func (s *Server) maintenanceGate(database *productdb.Database, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		switch request.URL.Path {
-		case "/healthz", "/readyz", "/session/login", "/session/logout", "/session/status", "/maintenance/status", "/maintenance/resume":
+		case "/healthz", "/readyz", "/session/login", "/session/logout", "/session/status", "/maintenance/status", "/maintenance/path-mappings", "/maintenance/resume":
 			next.ServeHTTP(response, request)
 			return
 		}
@@ -235,10 +262,135 @@ func (s *Server) maintenanceStatusHandler(database *productdb.Database, auth *pr
 			http.Error(response, "maintenance status unavailable", http.StatusInternalServerError)
 			return
 		}
+		result := maintenanceStatusResponse{
+			State: state.Mode, RequiresValidation: state.Mode == productdb.MaintenanceWaitingValidation,
+			RequiresPathMapping: state.Mode == productdb.MaintenanceWaitingValidation && state.LastErrorCode == productdb.RestorePathMappingRequired,
+			Libraries:           []maintenanceLibraryMapping{},
+		}
+		if result.RequiresPathMapping {
+			libraries, err := database.Libraries().List(request.Context())
+			if err != nil {
+				http.Error(response, "maintenance paths unavailable", http.StatusInternalServerError)
+				return
+			}
+			for _, value := range libraries {
+				result.Libraries = append(result.Libraries, maintenanceLibraryMapping{
+					LibraryID: value.ID, Name: value.Name, RootPath: value.RootPath, Enabled: value.Enabled,
+				})
+			}
+		}
 		response.Header().Set("Content-Type", "application/json")
 		response.Header().Set("Cache-Control", "no-store")
-		_ = json.NewEncoder(response).Encode(map[string]any{"state": state.Mode, "requiresValidation": state.Mode == productdb.MaintenanceWaitingValidation})
+		_ = json.NewEncoder(response).Encode(result)
 	})
+}
+
+func (s *Server) maintenancePathMappingsHandler() http.Handler {
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Cache-Control", "no-store")
+		if request.Method != http.MethodPost {
+			response.Header().Set("Allow", "POST")
+			http.Error(response, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if !s.Auth.AuthorizeRequest(request) {
+			http.Error(response, "authentication required", http.StatusUnauthorized)
+			return
+		}
+		request.Body = http.MaxBytesReader(response, request.Body, 1024*1024)
+		var input restorePathMappingRequest
+		decoder := json.NewDecoder(request.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil {
+			s.auditRestorePathMapping(request.Context(), "FAILURE", "RESTORE_PATH_MAPPING_INPUT_FAILED", len(input.Mappings), 0)
+			http.Error(response, "invalid restore path mapping request", http.StatusBadRequest)
+			return
+		}
+		var trailing any
+		if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+			s.auditRestorePathMapping(request.Context(), "FAILURE", "RESTORE_PATH_MAPPING_INPUT_FAILED", len(input.Mappings), 0)
+			http.Error(response, "path mapping request must contain exactly one JSON object", http.StatusBadRequest)
+			return
+		}
+		if input.Confirmation != "MAP" {
+			s.auditRestorePathMapping(request.Context(), "FAILURE", "RESTORE_PATH_MAPPING_CONFIRMATION_FAILED", len(input.Mappings), 0)
+			http.Error(response, "confirmation phrase does not match", http.StatusBadRequest)
+			return
+		}
+		if err := s.Auth.VerifyPassword(request.Context(), input.Password); err != nil {
+			s.auditRestorePathMapping(request.Context(), "FAILURE", "RESTORE_PATH_MAPPING_PASSWORD_FAILED", len(input.Mappings), 0)
+			http.Error(response, "owner password verification failed", http.StatusForbidden)
+			return
+		}
+		mappings := make([]productdb.RestorePathMapping, 0, len(input.Mappings))
+		for _, value := range input.Mappings {
+			mappings = append(mappings, productdb.RestorePathMapping{
+				LibraryID: value.LibraryID, ExpectedRootPath: value.ExpectedRootPath, RootPath: value.RootPath, Disable: value.Disable,
+			})
+		}
+		err := s.ApplyRestorePathMappings(request.Context(), mappings)
+		if err != nil {
+			http.Error(response, "restore path mapping failed", http.StatusConflict)
+			return
+		}
+		response.WriteHeader(http.StatusNoContent)
+	})
+}
+
+func (s *Server) ApplyRestorePathMappings(ctx context.Context, mappings []productdb.RestorePathMapping) error {
+	normalized := make([]productdb.RestorePathMapping, 0, len(mappings))
+	disabled := 0
+	for _, value := range mappings {
+		if value.Disable {
+			value.RootPath = ""
+			disabled++
+		} else {
+			root, err := validateRestoreMediaRoot(value.RootPath)
+			if err != nil {
+				s.auditRestorePathMapping(ctx, "FAILURE", "RESTORE_PATH_MAPPING_ROOT_INVALID", len(mappings), disabled)
+				return err
+			}
+			value.RootPath = root
+		}
+		normalized = append(normalized, value)
+	}
+	s.operationMu.Lock()
+	err := s.Database.Operations().ApplyRestorePathMappings(ctx, normalized, time.Now())
+	s.operationMu.Unlock()
+	if err != nil {
+		s.auditRestorePathMapping(ctx, "FAILURE", "RESTORE_PATH_MAPPING_FAILED", len(mappings), disabled)
+		return err
+	}
+	s.auditRestorePathMapping(ctx, "SUCCESS", "", len(mappings), disabled)
+	return nil
+}
+
+func validateRestoreMediaRoot(value string) (string, error) {
+	if value == "" || !filepath.IsAbs(value) {
+		return "", errors.New("media library root must be absolute")
+	}
+	absolute, err := filepath.Abs(value)
+	if err != nil {
+		return "", err
+	}
+	absolute = filepath.Clean(absolute)
+	if len([]rune(absolute)) > 4096 {
+		return "", errors.New("media library root exceeds 4096 characters")
+	}
+	info, err := os.Lstat(absolute)
+	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return "", errors.New("media library root must be an existing real directory")
+	}
+	resolved, err := filepath.EvalSymlinks(absolute)
+	if err != nil || filepath.Clean(resolved) != absolute {
+		return "", errors.New("media library root cannot traverse symbolic links")
+	}
+	return absolute, nil
+}
+
+func (s *Server) auditRestorePathMapping(ctx context.Context, outcome, errorCode string, count, disabled int) {
+	_ = s.Database.Operations().Audit(ctx, "RESTORE_PATH_MAPPING", "SYSTEM", "", outcome, errorCode,
+		map[string]any{"library_count": count, "disabled_count": disabled}, time.Now())
 }
 
 func (s *Server) maintenanceResumeHandler() http.Handler {
@@ -311,6 +463,18 @@ func (s *Server) validateRuntimeEnvironment() error {
 		info, err := os.Stat(executable)
 		if err != nil || !info.Mode().IsRegular() || info.Mode()&0o111 == 0 {
 			return errors.New("configured media executable is unavailable")
+		}
+	}
+	libraries, err := s.Database.Libraries().List(context.Background())
+	if err != nil {
+		return err
+	}
+	for _, value := range libraries {
+		if !value.Enabled {
+			continue
+		}
+		if _, err := validateRestoreMediaRoot(value.RootPath); err != nil {
+			return errors.New("enabled media library root is unavailable or unsafe")
 		}
 	}
 	return nil

@@ -111,10 +111,9 @@ make build-cgm
 
 ## 7. 下一批开发优先级
 
-1. 恢复中的异机路径映射提示与完整备份跨平台损坏样本演练。
-2. Setup→导入→审核→激活→浏览→Manifest→备份恢复的离线 Playwright E2E。
-3. 真实媒体、危险归档、跨平台和性能门禁。
-4. AGPLv3 发行源码对应、第三方许可证清单和安装/恢复文档。
+1. Setup→导入→审核→激活→浏览→Manifest→备份恢复的离线 Playwright E2E。
+2. 真实媒体、危险归档、跨平台和性能门禁。
+3. AGPLv3 发行源码对应、第三方许可证清单和安装/恢复文档。
 
 ## 8. 安全与仓库注意事项
 
@@ -293,4 +292,46 @@ GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
 
 结果：通过。`ui/web/build`仍为可再生忽略输出，未加入提交范围。
 
-迁移备忘录中的下一项未完成开发任务现为恢复中的异机路径映射提示，以及完整备份跨平台损坏样本演练。
+随后完成了恢复异机路径映射与完整备份跨平台损坏演练：
+
+- 恢复最终化写入独立的`RESTORE_PATH_MAPPING_REQUIRED`维护门槛；在所有媒体库完成决策前，Web与CLI均不能恢复任务或自动计划。
+- 维护页逐库显示恢复根，要求映射到本机现存、无符号链接的绝对目录，或明确在本机禁用；提交要求恢复旧根并发校验、所有者密码及精确确认词`MAP`。
+- 路径映射事务支持Windows盘符、UNC和POSIX旧路径，同步改写GallerySource、IgnoredGallerySource与Gallery Manifest，清空发现快照，并把来源标记为`MISSING / NEEDS_RESCAN`；事务不读取媒体、不触发发现或扫描。
+- 恢复包中的Coser Manifest路径自动映射到当前机器保留的Coser元数据根，并进入重新校验状态。
+- CLI新增`-map-restored-paths`交互动作，与Web共用同一映射服务、路径校验和无路径审计；逐库输入新根或留空禁用，最后输入`MAP`。
+- 完整备份写入端与恢复端共用平台中立ZIP路径规则，拒绝路径穿越、反斜杠/盘符路径、非NFC名称、大小写碰撞、Windows保留名、符号链接、特殊文件与未知Entry。
+- 恢复解包额外校验条目总量/总大小/单项大小/压缩比、精确版本清单、必要Entry及单一JSON对象，并继续在替换前验证SQLite产品身份。
+- 表驱动损坏样本覆盖路径、重复项、JSON、缺项、无效SQLite、压缩炸弹和截断ZIP；前端回归覆盖逐库决策、密码与`MAP`门禁及提交载荷。
+
+本阶段验证结果：
+
+```bash
+GOMAXPROCS=2 GOTOOLCHAIN=local \
+  GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
+  /tmp/cgm-go1.25.12/bin/go test \
+  ./internal/persistence/productdb ./internal/coserasset \
+  ./internal/productapi ./internal/productserver ./ui/web ./cmd/cgm
+GOMAXPROCS=2 GOTOOLCHAIN=local \
+  GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
+  /tmp/cgm-go1.25.12/bin/go test -tags cgm_web_embed \
+  ./internal/coserasset ./internal/productserver ./ui/web
+```
+
+结果：通过。覆盖异机路径映射门槛、Windows/UNC/POSIX路径改写、Coser Manifest根迁移、显式禁用、不自动扫描，以及15类跨平台损坏备份样本。
+
+```bash
+cd ui/web
+corepack pnpm run test
+corepack pnpm run check
+corepack pnpm run build
+```
+
+结果：Vitest 8个测试文件、14项测试通过；TypeScript与Vite生产构建通过，共转换660个模块，主JS约470KiB。
+
+```bash
+GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
+  /tmp/cgm-go1.25.12/bin/go build -tags cgm_web_embed \
+  -o /tmp/cgm-embedded-check ./cmd/cgm
+```
+
+结果：通过，生成约24MiB单文件验证产物。下一项未完成开发任务现为Setup→导入→审核→激活→浏览→Manifest→备份恢复的离线Playwright E2E及无障碍矩阵。

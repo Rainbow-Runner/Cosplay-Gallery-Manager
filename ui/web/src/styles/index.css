@@ -418,6 +418,12 @@ a { color: inherit; text-decoration: none; }
 .maintenance-page h1 { margin: .5rem 0 1rem; font: 400 2.4rem Georgia, serif; }
 .maintenance-page p, .maintenance-page li { color: var(--ink-muted); font-size: .72rem; line-height: 1.7; }
 .maintenance-page button { margin-top: 1rem; border-color: var(--accent); }
+.restore-path-mapping { margin-top: 1.5rem; }
+.restore-path-mapping h2 { font: 400 1.4rem Georgia, serif; }
+.restore-path-mapping fieldset { margin: 1rem 0; padding: 1rem; border: 1px solid var(--line); }
+.restore-path-mapping legend { padding: 0 .4rem; color: #fff; }
+.restore-path-mapping code { overflow-wrap: anywhere; color: #d6b7a7; }
+.restore-path-mapping fieldset > label:last-child { display: flex; gap: .6rem; align-items: center; color: var(--ink-muted); font-size: .7rem; }
 .entity-manage-layout { display: grid; grid-template-columns: minmax(14rem, 22rem) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
 .entity-manage-list { display: grid; max-height: calc(100vh - 13rem); overflow-y: auto; border: 1px solid var(--line); background: var(--surface); }
 .entity-manage-list > button { display: grid; gap: .3rem; padding: .8rem; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: #fff; text-align: left; cursor: pointer; }

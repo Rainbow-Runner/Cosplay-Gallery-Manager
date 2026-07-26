@@ -83,11 +83,12 @@
 - P07（Manifest UI）：Gallery与Coser均可检查同步状态、显式Push/Pull，并对三方冲突逐字段选择DATABASE/FILE；Coser资料使用Setup完成后保存在产品数据库中的单一元数据根。
 - P07（外部链接）：Gallery仅保存人工HTTP(S)链接，Manage可显式新增，Browse详情末尾弱化展示且服务端不抓取外部内容。
 - P09（备份）：每日SQLite Online Backup默认开启并保留7份，保留数量可配置；持久化调度租约保证启动、定时和异常重启时不会并发重复执行。
-- P09（完整包）：手工完整备份包含一致性数据库、Coser托管元数据、必要启动配置和四套版本清单；不包含媒体、缓存或日志，持久化SHA-256并在恢复解包前校验，归档解包禁止路径穿越和未知Entry。
+- P09（完整包）：手工完整备份包含一致性数据库、Coser托管元数据、必要启动配置和四套版本清单；不包含媒体、缓存或日志，持久化SHA-256并在恢复解包前校验。写入与解包共用平台中立ZIP路径约束，拒绝路径穿越、反斜杠/盘符绝对路径、NFC/大小写碰撞、Windows保留名、符号链接、未知Entry、缺项、异常压缩比及版本清单不一致。
 - P09（恢复）：Web与CLI共用维护恢复服务；替换前创建安全完整包，数据库与Coser元数据分阶段交换，任一交换/重开失败自动回滚原状态。
-- P09（恢复后状态）：成功恢复撤销全部Session、取消旧可执行任务、清除调度租约并暂停自动计划；重新登录后必须显式完成路径、写权限和媒体工具校验才能恢复。
+- P09（恢复后状态）：成功恢复撤销全部Session、取消旧可执行任务、清除调度租约并暂停自动计划；每个恢复媒体库必须以旧根并发校验后显式映射到本机真实绝对目录或在本机禁用，来源与Manifest只标记待重新对账且不自动扫描；完成路径、写权限和媒体工具校验后才能恢复。
+- P09（异机路径）：路径映射使用平台中立词法处理Windows盘符、UNC与POSIX旧路径；同步改写所属GallerySource、IgnoredGallerySource与Gallery Manifest路径，清空可再生成的发现快照；备份内Coser Manifest自动映射到本机保留的Coser元数据根。
 - P09（Operations UI/API）：新增备份/恢复/维护状态/审计GraphQL契约、Operations管理页、二次输入确认和专用维护页；DTO不返回备份根或媒体物理路径。
-- P09（CLI）：`cgm -create-backup`、`-restore-backup <uuid>`与`-resume-maintenance`要求交互式所有者重新认证，恢复另需输入`RESTORE`。
+- P09（CLI）：`cgm -create-backup`、`-restore-backup <uuid>`、`-map-restored-paths`与`-resume-maintenance`要求交互式所有者重新认证；恢复输入`RESTORE`，逐库映射或禁用后再输入`MAP`，与Web复用同一事务、校验和审计。
 - P09（审计）：新增无用户画像管理审计表和50项分页；记录状态切换、导入/扫描、规则/设置、任务操作、Manifest、备份/恢复和计划摘要，不记录浏览、搜索、收藏或评分。
 - P09（扫描计划）：默认关闭的自动扫描在启用后于启动和每24小时执行；发现与来源对账复用人工操作的确定性发现、原子扫描和归档安全限制，并使用持久化租约。
 
@@ -98,9 +99,10 @@
 - 媒体内容替换、任务恢复、原子缓存、双层封面、认证Range资源、Scrubber ordinal、分页/scope、时间线、推荐、随机、搜索和成员索引均有回归测试。
 - Gallery关系批量保存验证了多人、多角色、Tag、单次revision递增、过期revision拒绝且不产生部分写入。
 - GraphQL集成测试验证Gallery与Coser Manifest只能通过显式Mutation写入各自确定路径，并返回CLEAN状态。
-- 运维集成测试验证每日快照到期租约/保留、自动扫描opt-in、完整恢复、Session撤销、任务取消、安全备份注册、人工恢复，以及数据库交换后故障的自动回滚。
+- 运维集成测试验证每日快照到期租约/保留、自动扫描opt-in、完整恢复、Session撤销、任务取消、安全备份注册、异机路径映射门槛、人工恢复，以及数据库交换后故障的自动回滚。
+- 完整备份损坏矩阵验证POSIX/Windows路径穿越、重复/大小写/NFC碰撞、保留名、符号链接、未知Entry、畸形JSON、缺项、无效SQLite产品身份、压缩炸弹和截断ZIP均在替换前拒绝。
 - Operations GraphQL测试验证备份/恢复由Server服务执行且响应不泄漏数据库或存储根。
-- React 19 TypeScript `--noEmit`通过；Vitest当前7个文件、13项测试全部通过。
+- React 19 TypeScript `--noEmit`通过；Vitest当前8个文件、14项测试全部通过。
 - Vite生产构建通过，共转换660个模块；当前主JS minify后、gzip前约470KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。
 - `cgm_web_embed`标签下的产品UI嵌入和Server回归测试通过；`make build-cgm`生成约24MiB单文件验证产物，深层SPA路由、哈希资源immutable缓存和旧UI依赖隔离均已验证。
 - 实体生命周期回归验证了按关系类型返回删除阻断、合并冲突时禁用提交、明确确认词、GraphQL预览/提交、永久Alias/Tombstone和管理审计。
@@ -119,8 +121,8 @@
 
 ## 下一批工作
 
-1. 完善恢复中的异机路径映射提示与完整备份跨平台损坏样本演练。
-2. 增加Setup→导入→审核→激活→浏览→Manifest→备份恢复的Playwright离线E2E及无障碍矩阵。
-3. 准备真实RAW/GIF/Video与危险归档样本，执行FFmpeg/LibRaw、平台、性能和安全发布门禁。
+1. 增加Setup→导入→审核→激活→浏览→Manifest→备份恢复的Playwright离线E2E及无障碍矩阵。
+2. 准备真实RAW/GIF/Video与危险归档样本，执行FFmpeg/LibRaw、平台、性能和安全发布门禁。
+3. 完成AGPLv3源码对应、第三方许可证清单和安装/恢复文档。
 
 任何未执行的测试不得在状态记录或发布说明中标记为通过。

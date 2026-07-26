@@ -135,6 +135,7 @@ func (s *Server) rebuildHandler() {
 	mux.Handle(coserAssetUploadPrefix, sameOrigin(s.coserAssetUploadHandler(database)))
 	mux.Handle(coserAssetResourcePrefix, s.coserAssetResourceHandler(database))
 	mux.Handle("/maintenance/status", s.maintenanceStatusHandler(database, auth))
+	mux.Handle("/maintenance/path-mappings", sameOrigin(s.maintenancePathMappingsHandler()))
 	mux.Handle("/maintenance/resume", sameOrigin(s.maintenanceResumeHandler()))
 	resourceHandler := mediaresource.Handler{Database: database, Cache: mediaprocessing.CacheWriter{Root: s.Config.CachePath},
 		Access: func(request *http.Request) (productdb.ResourceAccess, error) {

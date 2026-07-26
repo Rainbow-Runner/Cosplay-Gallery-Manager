@@ -11,13 +11,35 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/stashapp/stash/internal/portableid"
 	"github.com/stashapp/stash/internal/product"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/unicode/norm"
 )
+
+const (
+	maxFullBackupEntries          = 100005
+	maxFullBackupUncompressedSize = uint64(10 * 1024 * 1024 * 1024)
+	maxFullBackupJSONSize         = uint64(1024 * 1024)
+	maxFullBackupCompressionRatio = uint64(1000)
+)
+
+var requiredFullBackupIncludes = []string{"database.sqlite", "coser-metadata", "startup-config.json"}
+
+type fullBackupManifest struct {
+	Format    string           `json:"format"`
+	BackupID  string           `json:"backup_id"`
+	CreatedAt string           `json:"created_at"`
+	Versions  product.Versions `json:"versions"`
+	Includes  []string         `json:"includes"`
+}
 
 type BackupKind string
 
@@ -345,9 +367,19 @@ func writeFullBackupArchive(ctx context.Context, target, databasePath string, op
 		}
 	}()
 	versions := product.CurrentVersions(options.ProductVersion)
-	manifestData, err := json.MarshalIndent(map[string]any{"format": "cgm-full-backup-v1", "backup_id": backupID, "created_at": normalisedTime(now).Format(time.RFC3339), "versions": versions, "includes": []string{"database.sqlite", "coser-metadata", "startup-config.json"}}, "", "  ")
+	manifestData, err := json.MarshalIndent(fullBackupManifest{
+		Format: "cgm-full-backup-v1", BackupID: backupID,
+		CreatedAt: normalisedTime(now).Format(time.RFC3339),
+		Versions:  versions, Includes: requiredFullBackupIncludes,
+	}, "", "  ")
 	if err != nil {
 		return err
+	}
+	seenNames := make(map[string]string)
+	for _, name := range []string{"backup.json", "startup-config.json", "database.sqlite"} {
+		if err := registerPortableArchiveName(seenNames, name, false); err != nil {
+			return err
+		}
 	}
 	if err := writeZipBytes(archive, "backup.json", append(manifestData, '\n')); err != nil {
 		return err
@@ -355,6 +387,9 @@ func writeFullBackupArchive(ctx context.Context, target, databasePath string, op
 	configData, err := json.MarshalIndent(options.StartupConfig, "", "  ")
 	if err != nil {
 		return err
+	}
+	if err := validateJSONObject(configData); err != nil {
+		return errors.New("startup config must encode as one JSON object")
 	}
 	if err := writeZipBytes(archive, "startup-config.json", append(configData, '\n')); err != nil {
 		return err
@@ -381,10 +416,7 @@ func writeFullBackupArchive(ctx context.Context, target, databasePath string, op
 			return ctx.Err()
 		}
 		if entry.Type()&os.ModeSymlink != 0 {
-			if entry.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
+			return errors.New("Coser metadata tree contains a symbolic link")
 		}
 		if entry.IsDir() {
 			return nil
@@ -394,7 +426,7 @@ func writeFullBackupArchive(ctx context.Context, target, databasePath string, op
 			return err
 		}
 		if !info.Mode().IsRegular() {
-			return nil
+			return errors.New("Coser metadata tree contains a non-regular file")
 		}
 		count++
 		total += info.Size()
@@ -406,8 +438,8 @@ func writeFullBackupArchive(ctx context.Context, target, databasePath string, op
 			return err
 		}
 		name := "coser-metadata/" + filepath.ToSlash(relative)
-		if strings.Contains(name, "../") {
-			return errors.New("invalid Coser metadata relative path")
+		if err := registerPortableArchiveName(seenNames, name, false); err != nil {
+			return err
 		}
 		return writeZipFile(archive, name, path)
 	})
@@ -419,24 +451,39 @@ func extractFullBackup(source, destination string, record BackupRecord) error {
 		return err
 	}
 	defer archive.Close()
-	if len(archive.File) > 100005 {
+	if len(archive.File) > maxFullBackupEntries {
 		return errors.New("backup archive has too many entries")
 	}
-	var manifestFound, databaseFound bool
+	var manifestFound, databaseFound, configFound bool
+	var total uint64
+	seenNames := make(map[string]string, len(archive.File))
 	for _, entry := range archive.File {
-		name := filepath.ToSlash(entry.Name)
-		clean := filepath.ToSlash(filepath.Clean(name))
-		if name == "" || strings.HasPrefix(name, "/") || clean != name || clean == ".." || strings.HasPrefix(clean, "../") || entry.FileInfo().Mode()&os.ModeSymlink != 0 {
-			return errors.New("backup archive contains an unsafe path")
+		isDirectory := entry.FileInfo().IsDir()
+		name := strings.TrimSuffix(entry.Name, "/")
+		if err := registerPortableArchiveName(seenNames, name, isDirectory); err != nil {
+			return err
 		}
-		if name != "backup.json" && name != "database.sqlite" && name != "startup-config.json" && !strings.HasPrefix(name, "coser-metadata/") {
+		if name != "backup.json" && name != "database.sqlite" && name != "startup-config.json" &&
+			name != "coser-metadata" && !strings.HasPrefix(name, "coser-metadata/") {
 			return errors.New("backup archive contains an unsupported entry")
 		}
-		if entry.UncompressedSize64 > 10*1024*1024*1024 {
+		mode := entry.FileInfo().Mode()
+		if mode&os.ModeSymlink != 0 || !isDirectory && !mode.IsRegular() {
+			return errors.New("backup archive contains a non-regular entry")
+		}
+		if entry.UncompressedSize64 > maxFullBackupUncompressedSize || total > maxFullBackupUncompressedSize-entry.UncompressedSize64 {
 			return errors.New("backup archive entry is too large")
 		}
+		total += entry.UncompressedSize64
+		if entry.UncompressedSize64 > 0 &&
+			(entry.CompressedSize64 == 0 || entry.UncompressedSize64/entry.CompressedSize64 > maxFullBackupCompressionRatio) {
+			return errors.New("backup archive entry compression ratio exceeds safety limit")
+		}
+		if (name == "backup.json" || name == "startup-config.json") && entry.UncompressedSize64 > maxFullBackupJSONSize {
+			return errors.New("backup archive JSON entry is too large")
+		}
 		target := filepath.Join(destination, filepath.FromSlash(name))
-		if entry.FileInfo().IsDir() {
+		if isDirectory {
 			if err := os.MkdirAll(target, 0o700); err != nil {
 				return err
 			}
@@ -454,36 +501,121 @@ func extractFullBackup(source, destination string, record BackupRecord) error {
 			input.Close()
 			return err
 		}
-		_, copyErr := io.Copy(output, io.LimitReader(input, 10*1024*1024*1024+1))
+		written, copyErr := io.Copy(output, io.LimitReader(input, int64(entry.UncompressedSize64)+1))
 		closeErr := output.Close()
-		input.Close()
+		inputCloseErr := input.Close()
 		if copyErr != nil {
 			return copyErr
 		}
 		if closeErr != nil {
 			return closeErr
 		}
+		if inputCloseErr != nil {
+			return inputCloseErr
+		}
+		if written != int64(entry.UncompressedSize64) {
+			return errors.New("backup archive entry size does not match its header")
+		}
 		if name == "backup.json" {
 			data, err := os.ReadFile(target)
 			if err != nil {
 				return err
 			}
-			var value struct {
-				Format   string `json:"format"`
-				BackupID string `json:"backup_id"`
-			}
-			if err := json.Unmarshal(data, &value); err != nil || value.Format != "cgm-full-backup-v1" || value.BackupID != record.ID {
+			if err := validateFullBackupManifest(data, record); err != nil {
 				return errors.New("backup manifest does not match selected backup")
 			}
 			manifestFound = true
+		}
+		if name == "startup-config.json" {
+			data, err := os.ReadFile(target)
+			if err != nil {
+				return err
+			}
+			if err := validateJSONObject(data); err != nil {
+				return errors.New("backup startup config is not one JSON object")
+			}
+			configFound = true
 		}
 		if name == "database.sqlite" {
 			databaseFound = true
 		}
 	}
-	if !manifestFound || !databaseFound {
+	if !manifestFound || !databaseFound || !configFound {
 		return errors.New("backup archive is incomplete")
 	}
+	return nil
+}
+
+func validateFullBackupManifest(data []byte, record BackupRecord) error {
+	var value fullBackupManifest
+	decoder := json.NewDecoder(strings.NewReader(string(data)))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&value); err != nil {
+		return err
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return errors.New("backup manifest must contain one JSON object")
+	}
+	if value.Format != "cgm-full-backup-v1" || value.BackupID != record.ID {
+		return errors.New("backup identity mismatch")
+	}
+	if _, err := time.Parse(time.RFC3339, value.CreatedAt); err != nil {
+		return errors.New("backup creation time is invalid")
+	}
+	expectedVersions := product.Versions{
+		Product: record.ProductVersion, DatabaseSchema: uint(record.DatabaseSchemaVersion),
+		ManifestSchema: uint(record.ManifestSchemaVersion), MediaProcessing: uint(record.MediaProcessingVersion),
+	}
+	if value.Versions != expectedVersions || !reflect.DeepEqual(value.Includes, requiredFullBackupIncludes) {
+		return errors.New("backup compatibility manifest mismatch")
+	}
+	return nil
+}
+
+func validateJSONObject(data []byte) error {
+	decoder := json.NewDecoder(strings.NewReader(string(data)))
+	var value map[string]json.RawMessage
+	if err := decoder.Decode(&value); err != nil || value == nil {
+		return errors.New("JSON value is not an object")
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return errors.New("JSON document must contain one value")
+	}
+	return nil
+}
+
+func registerPortableArchiveName(seen map[string]string, name string, directory bool) error {
+	if name == "" || !utf8.ValidString(name) || name != norm.NFC.String(name) || strings.Contains(name, `\`) ||
+		strings.HasPrefix(name, "/") || path.Clean(name) != name || name == "." || name == ".." ||
+		strings.HasPrefix(name, "../") || len([]rune(name)) > 4096 {
+		return errors.New("backup archive contains a non-portable path")
+	}
+	if directory && name != "coser-metadata" && !strings.HasPrefix(name, "coser-metadata/") {
+		return errors.New("backup archive contains an unsupported directory")
+	}
+	for _, segment := range strings.Split(name, "/") {
+		if segment == "" || len([]rune(segment)) > 255 || strings.HasSuffix(segment, " ") || strings.HasSuffix(segment, ".") {
+			return errors.New("backup archive contains a non-portable path component")
+		}
+		for _, character := range segment {
+			if character < 0x20 || character == 0x7f || strings.ContainsRune(`<>:"|?*`, character) {
+				return errors.New("backup archive path contains a platform-reserved character")
+			}
+		}
+		base := strings.ToUpper(strings.SplitN(segment, ".", 2)[0])
+		if base == "CON" || base == "PRN" || base == "AUX" || base == "NUL" ||
+			len(base) == 4 && (strings.HasPrefix(base, "COM") || strings.HasPrefix(base, "LPT")) &&
+				base[3] >= '1' && base[3] <= '9' {
+			return errors.New("backup archive path contains a platform-reserved name")
+		}
+	}
+	canonical := cases.Fold().String(norm.NFC.String(name))
+	if previous, exists := seen[canonical]; exists {
+		return errors.New("backup archive contains duplicate or cross-platform-colliding paths: " + previous)
+	}
+	seen[canonical] = name
 	return nil
 }
 

@@ -87,6 +87,22 @@ func TestFullRestoreRevokesSessionsCancelsJobsAndRequiresValidation(t *testing.T
 	if loginResponse.Code != http.StatusNoContent || len(loginResponse.Result().Cookies()) != 1 {
 		t.Fatalf("restored login = %d %s", loginResponse.Code, loginResponse.Body.String())
 	}
+	resumeBeforeMapping := httptest.NewRequest(http.MethodPost, "/maintenance/resume", nil)
+	resumeBeforeMapping.AddCookie(loginResponse.Result().Cookies()[0])
+	resumeBeforeMappingResponse := httptest.NewRecorder()
+	server.Handler.ServeHTTP(resumeBeforeMappingResponse, resumeBeforeMapping)
+	if resumeBeforeMappingResponse.Code != http.StatusConflict {
+		t.Fatalf("maintenance resumed before mapping = %d %s", resumeBeforeMappingResponse.Code, resumeBeforeMappingResponse.Body.String())
+	}
+	mapping := httptest.NewRequest(http.MethodPost, "/maintenance/path-mappings",
+		strings.NewReader(`{"mappings":[],"password":"`+password+`","confirmation":"MAP"}`))
+	mapping.Header.Set("Content-Type", "application/json")
+	mapping.AddCookie(loginResponse.Result().Cookies()[0])
+	mappingResponse := httptest.NewRecorder()
+	server.Handler.ServeHTTP(mappingResponse, mapping)
+	if mappingResponse.Code != http.StatusNoContent {
+		t.Fatalf("maintenance path mapping = %d %s", mappingResponse.Code, mappingResponse.Body.String())
+	}
 	resume := httptest.NewRequest(http.MethodPost, "/maintenance/resume", nil)
 	resume.AddCookie(loginResponse.Result().Cookies()[0])
 	resumeResponse := httptest.NewRecorder()

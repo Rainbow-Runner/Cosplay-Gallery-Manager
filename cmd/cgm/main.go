@@ -13,6 +13,7 @@ import (
 	"time"
 	_ "time/tzdata"
 
+	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/product"
 	"github.com/stashapp/stash/internal/productserver"
 	"golang.org/x/term"
@@ -24,6 +25,7 @@ func main() {
 	setupTicket := flag.Bool("setup-ticket", false, "generate a one-time 15-minute Docker Setup ticket")
 	createBackup := flag.Bool("create-backup", false, "create a consistent full backup package and exit")
 	restoreBackup := flag.String("restore-backup", "", "restore a backup UUID through maintenance mode and exit")
+	mapRestoredPaths := flag.Bool("map-restored-paths", false, "map or disable every restored media library and exit")
 	resumeMaintenance := flag.Bool("resume-maintenance", false, "validate the environment, resume schedules and exit")
 	flag.Parse()
 	if *showVersion {
@@ -40,7 +42,7 @@ func main() {
 	}
 	defer server.Close()
 	actionCount := 0
-	for _, selected := range []bool{*setupTicket, *createBackup, *restoreBackup != "", *resumeMaintenance} {
+	for _, selected := range []bool{*setupTicket, *createBackup, *restoreBackup != "", *mapRestoredPaths, *resumeMaintenance} {
 		if selected {
 			actionCount++
 		}
@@ -56,7 +58,7 @@ func main() {
 		fmt.Printf("%s\nexpires %s\n", ticket, expires.Local().Format(time.RFC3339))
 		return
 	}
-	if *createBackup || *restoreBackup != "" || *resumeMaintenance {
+	if *createBackup || *restoreBackup != "" || *mapRestoredPaths || *resumeMaintenance {
 		if err := authenticateOwner(server); err != nil {
 			fatal("CGM_OWNER_REAUTH_FAILED")
 		}
@@ -79,7 +81,14 @@ func main() {
 		if err != nil {
 			fatal("CGM_RESTORE_FAILED")
 		}
-		fmt.Printf("restore completed; maintenance state %s; sign in again and validate before resuming\n", state.Mode)
+		fmt.Printf("restore completed; maintenance state %s; sign in again, run -map-restored-paths, then validate before resuming\n", state.Mode)
+		return
+	}
+	if *mapRestoredPaths {
+		if err := mapRestoredMediaLibraries(server); err != nil {
+			fatal("CGM_RESTORE_PATH_MAPPING_FAILED")
+		}
+		fmt.Println("restored media library decisions saved; no media scan was started")
 		return
 	}
 	if *resumeMaintenance {
@@ -105,6 +114,45 @@ func main() {
 	if err := httpServer.ListenAndServe(); err != nil && err.Error() != "http: Server closed" {
 		fatal("CGM_HTTP_SERVER_FAILED")
 	}
+}
+
+func mapRestoredMediaLibraries(server *productserver.Server) error {
+	ctx := context.Background()
+	state, err := server.Database.Operations().Maintenance(ctx)
+	if err != nil {
+		return err
+	}
+	if state.Mode != productdb.MaintenanceWaitingValidation || state.LastErrorCode != productdb.RestorePathMappingRequired {
+		return fmt.Errorf("restore path mapping is not pending")
+	}
+	libraries, err := server.Database.Libraries().List(ctx)
+	if err != nil {
+		return err
+	}
+	reader := bufio.NewReader(os.Stdin)
+	mappings := make([]productdb.RestorePathMapping, 0, len(libraries))
+	for _, mediaLibrary := range libraries {
+		fmt.Fprintf(os.Stderr, "\n%s\nRestored root: %s\nNew absolute root on this machine (leave empty to disable): ",
+			mediaLibrary.Name, mediaLibrary.RootPath)
+		value, err := reader.ReadString('\n')
+		if err != nil && len(value) == 0 {
+			return err
+		}
+		value = strings.TrimSpace(value)
+		mappings = append(mappings, productdb.RestorePathMapping{
+			LibraryID: mediaLibrary.ID, ExpectedRootPath: mediaLibrary.RootPath,
+			RootPath: value, Disable: value == "",
+		})
+	}
+	fmt.Fprint(os.Stderr, "Type MAP to confirm every restored media library decision: ")
+	confirmation, err := reader.ReadString('\n')
+	if err != nil && len(confirmation) == 0 {
+		return err
+	}
+	if strings.TrimSpace(confirmation) != "MAP" {
+		return fmt.Errorf("restore path mapping was not confirmed")
+	}
+	return server.ApplyRestorePathMappings(ctx, mappings)
 }
 
 func authenticateOwner(server *productserver.Server) error {

@@ -2,12 +2,11 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  base: "",
+  base: "/",
   build: {
     outDir: "build",
-    // Splitting React, Apollo and react-intl by package name creates circular
-    // chunks because those packages import each other. Route-level lazy chunks
-    // can be introduced once the browse pages are complete.
+    // Page components are split at React Router boundaries. Keep framework
+    // packages under Rollup's normal chunking to avoid circular vendor chunks.
     sourcemap: false,
   },
   plugins: [react()],

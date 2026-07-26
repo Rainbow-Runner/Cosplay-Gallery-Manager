@@ -32,8 +32,8 @@ describe("AppRoutes", () => {
     ["/", "browse-shell"],
     ["/manage", "manage-shell"],
     ["/setup", "setup-shell"],
-  ])("renders %s in the expected shell", (path, testID) => {
+  ])("renders %s in the expected shell", async (path, testID) => {
     renderRoute(path);
-    expect(screen.getByTestId(testID)).toBeInTheDocument();
+    expect(await screen.findByTestId(testID)).toBeInTheDocument();
   });
 });

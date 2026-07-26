@@ -39,7 +39,7 @@ ifdef PHASHER_OUTPUT
 endif
 ifdef CGM_OUTPUT
   CGM_BINARY := $(CGM_OUTPUT)
-  CGM_OUTPUT := -o $(CGM_OUTPUT)
+  override CGM_OUTPUT := -o $(CGM_OUTPUT)
 else
   CGM_BINARY := cgm
 endif
@@ -55,6 +55,11 @@ GO_BUILD_TAGS += sqlite_stat4 sqlite_math_functions
 # STASH_SOURCEMAPS := true
 
 export CGO_ENABLED := 1
+
+# Allows the product build to select the repository's pinned Go toolchain
+# without changing the toolchain used by the legacy build targets.
+CGM_GO ?= go
+WEB_PNPM ?= corepack pnpm
 
 # define COMPILER_IMAGE for cross-compilation docker container
 ifndef COMPILER_IMAGE
@@ -145,11 +150,12 @@ phasher: build-flags
 	go build $(PHASHER_OUTPUT) $(BUILD_FLAGS) ./cmd/phasher
 
 .PHONY: cgm
-cgm: build-flags
-	go build $(CGM_OUTPUT) $(BUILD_FLAGS) ./cmd/cgm
+cgm: GO_BUILD_TAGS += cgm_web_embed
+cgm: web-ui build-flags
+	$(CGM_GO) build $(CGM_OUTPUT) $(BUILD_FLAGS) ./cmd/cgm
 
 .PHONY: build-cgm
-build-cgm: cgm web-ui
+build-cgm: verify-cgm-ui-boundary cgm
 
 # builds dynamically-linked debug binaries
 .PHONY: build
@@ -422,23 +428,29 @@ validate-ui:
 # the new BrowseShell and ManageShell satisfy the replacement gates.
 .PHONY: pre-web-ui
 pre-web-ui:
-	cd ui/web && pnpm install
+	cd ui/web && $(WEB_PNPM) install
 
 .PHONY: web-ui
 web-ui:
-	cd ui/web && pnpm run build
+	cd ui/web && $(WEB_PNPM) run build
 
 .PHONY: web-ui-start
 web-ui-start:
-	cd ui/web && pnpm run dev --host
+	cd ui/web && $(WEB_PNPM) run dev --host
 
 .PHONY: test-web-ui
 test-web-ui:
-	cd ui/web && pnpm run test
+	cd ui/web && $(WEB_PNPM) run test
 
 .PHONY: validate-web-ui
 validate-web-ui:
-	cd ui/web && pnpm run validate
+	cd ui/web && $(WEB_PNPM) run validate
+
+# CGM may embed only ui/web. Importing package ui would pull ui/v2.5/build into
+# the product binary through the legacy Stash UI embed.
+.PHONY: verify-cgm-ui-boundary
+verify-cgm-ui-boundary:
+	@! $(CGM_GO) list -deps ./cmd/cgm | grep -Fxq "github.com/stashapp/stash/ui"
 
 # these targets run the same steps as fmt-ui and validate-ui, but only on files that have changed
 fmt-ui-quick:

@@ -11,6 +11,8 @@
 - P00-02（部分）：本地未注入构建版本时使用`0.1.0-dev`，不再显示不明确的`unknown`产品版本。
 - P00-03（骨架）：创建`ui/web` React 19应用，包含Apollo、GraphQL、i18n以及Browse/Manage/Setup三个Shell。
 - P00-03（骨架）：新增React路由测试和独立Makefile构建、测试、开发、验证入口。
+- P00-03（发行入口）：Browse、Manage、Setup、登录和维护页按路由使用`React.lazy`拆分；`make cgm`固定先构建React 19并以`cgm_web_embed`标签嵌入单文件产品二进制。
+- P00-03（新旧隔离）：CGM只依赖独立`ui/web` Go嵌入包，不导入会携带`ui/v2.5/build`的旧`ui`包；Makefile加入精确依赖边界检查，显式`web_root`仅作为开发/定制覆盖。
 - P01-01（核心守卫）：新增`internal/persistence/productdb`，以只读预检和写连接二次检查区分空数据库、产品数据库、原Stash数据库与未知数据库。
 - P01-01（核心守卫）：新数据库写入稳定`product_id`和独立Schema版本；原Stash与未知非空数据库拒绝接管且不写入身份表。
 - P01-01（连接基线）：产品SQLite连接启用Foreign Keys、5秒Busy Timeout、单写连接、WAL和`synchronous=NORMAL`。
@@ -96,7 +98,8 @@
 - 运维集成测试验证每日快照到期租约/保留、自动扫描opt-in、完整恢复、Session撤销、任务取消、安全备份注册、人工恢复，以及数据库交换后故障的自动回滚。
 - Operations GraphQL测试验证备份/恢复由Server服务执行且响应不泄漏数据库或存储根。
 - React 19 TypeScript `--noEmit`通过；Vitest当前6个文件、12项测试全部通过。
-- Vite生产构建通过，共转换658个模块；当前主JS minify后、gzip前约626KiB，存在大于500KiB的非阻断分包警告。
+- Vite生产构建通过，共转换659个模块；当前主JS minify后、gzip前约470KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。
+- `cgm_web_embed`标签下的产品UI嵌入和Server回归测试通过；`make build-cgm`生成约24MiB单文件验证产物，深层SPA路由、哈希资源immutable缓存和旧UI依赖隔离均已验证。
 - 实体生命周期回归验证了按关系类型返回删除阻断、合并冲突时禁用提交、明确确认词、GraphQL预览/提交、永久Alias/Tombstone和管理审计。
 - Gallery删除回归验证了归档前阻断、过期revision拒绝、密码与确认词双重门禁、Item/Link/Set UUID Tombstone、任务取消保留、IgnoredGallerySource建立，以及来源媒体和Manifest字节不变。
 - Coser托管资源回归验证了未认证上传拒绝、同源Session上传、实际JPEG派生、过期revision冲突、GIF拒绝、认证资源读取、URL不泄漏根路径，以及替换后旧原图/派生图仍保留。
@@ -106,18 +109,16 @@
 ## 尚未通过的门禁
 
 - 主机仍没有正式安装的Go 1.25工具链；当前依赖`/tmp/cgm-go1.25.12`，需纳入开发镜像与CI。
-- 新前端尚未接入正式发行包，旧`ui/v2.5`仍在仓库；需要完成新二进制静态资源打包和旧业务入口隔离验收。
 - G4的真实FFmpeg/LibRaw跨平台样本矩阵尚未执行；当前仅完成适配器、规划器、图片实际样本和伪生成器处理闭环。
 - Playwright端到端、截图、键盘/读屏、目标浏览器与响应宽度矩阵尚未执行。
 - Coser未引用托管资源的集中审阅/清理界面尚未完成；当前替换文件按约束保留且不会被自动删除。
-- 前端需要路由级分包，消除当前单入口626KiB构建警告并验证低性能移动设备首屏。
+- 前端路由分包已消除单入口构建警告，但低性能移动设备首屏仍需在目标浏览器/设备矩阵中验证。
 
 ## 下一批工作
 
-1. 将React 19构建产物接入正式发行二进制，加入路由分包并移除旧业务UI入口。
-2. 完成Coser未引用托管资源审阅，以及剩余高影响管理操作。
-3. 完善恢复中的异机路径映射提示与完整备份跨平台损坏样本演练。
-4. 增加Setup→导入→审核→激活→浏览→Manifest→备份恢复的Playwright离线E2E及无障碍矩阵。
-5. 准备真实RAW/GIF/Video与危险归档样本，执行FFmpeg/LibRaw、平台、性能和安全发布门禁。
+1. 完成Coser未引用托管资源审阅，以及剩余高影响管理操作。
+2. 完善恢复中的异机路径映射提示与完整备份跨平台损坏样本演练。
+3. 增加Setup→导入→审核→激活→浏览→Manifest→备份恢复的Playwright离线E2E及无障碍矩阵。
+4. 准备真实RAW/GIF/Video与危险归档样本，执行FFmpeg/LibRaw、平台、性能和安全发布门禁。
 
 任何未执行的测试不得在状态记录或发布说明中标记为通过。

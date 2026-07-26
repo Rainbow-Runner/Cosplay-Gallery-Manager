@@ -27,6 +27,7 @@
 - 恢复后 Session 撤销、任务取消、计划暂停、人工环境校验与显式恢复。
 - 默认关闭的启动/每 24 小时自动扫描，使用数据库持久化租约。
 - 无用户画像管理审计，仅记录高影响操作和任务摘要。
+- React 19页面级路由分包、正式单文件二进制静态资源嵌入和旧`ui/v2.5`产品入口隔离。
 
 所有产品新增源码都在当前工作树内；没有需要从宿主机复制的媒体、数据库或秘密文件。
 
@@ -48,9 +49,9 @@ node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
 node node_modules/vitest/vitest.mjs run --maxWorkers=1
 ```
 
-结果：TypeScript 通过；Vitest 3 个测试文件、7 项测试通过。
+结果：TypeScript 通过；Vitest 6 个测试文件、12 项测试通过。
 
-Vite 生产构建已生成成功，当前主 JS 压缩前约 590 KiB；存在需要后续通过路由级懒加载解决的分包警告。`ui/web/build` 是可再生输出，不提交仓库。
+Vite 生产构建已生成成功，共转换659个模块；当前主JS minify后、gzip前约470KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。`ui/web/build`仍是可再生输出，不提交仓库。
 
 ## 4. 当前宿主机限制与未完成验证
 
@@ -99,22 +100,20 @@ go mod download
 cd ui/web
 pnpm install --frozen-lockfile
 pnpm run validate
-pnpm run build
 cd ../..
 
 go test ./internal/persistence/productdb ./internal/productapi ./internal/productserver
-go build ./cmd/cgm
+make build-cgm
 ```
 
-之后先生成旧 UI 依赖或明确隔离旧业务包，再运行全仓测试。不要为让全仓测试变绿而把新产品数据库重新接入旧 Stash Manager、Scene、Image 或 Gallery API。
+`make build-cgm`会先生成`ui/web/build`，再以`cgm_web_embed`标签嵌入产品二进制，并检查CGM依赖图不包含旧`ui`包。之后再生成旧 UI 依赖并运行全仓测试；不要为让全仓测试变绿而把新产品数据库重新接入旧 Stash Manager、Scene、Image 或 Gallery API。
 
 ## 7. 下一批开发优先级
 
-1. React 路由级分包、正式二进制静态资源打包和旧业务 UI 入口隔离。
-2. Coser 未引用托管资源审阅和剩余高影响管理操作。
-3. Setup→导入→审核→激活→浏览→Manifest→备份恢复的离线 Playwright E2E。
-4. 真实媒体、危险归档、跨平台和性能门禁。
-5. AGPLv3 发行源码对应、第三方许可证清单和安装/恢复文档。
+1. Coser 未引用托管资源审阅和剩余高影响管理操作。
+2. Setup→导入→审核→激活→浏览→Manifest→备份恢复的离线 Playwright E2E。
+3. 真实媒体、危险归档、跨平台和性能门禁。
+4. AGPLv3 发行源码对应、第三方许可证清单和安装/恢复文档。
 
 ## 8. 安全与仓库注意事项
 
@@ -213,4 +212,44 @@ corepack pnpm run build
 
 结果：TypeScript通过；Vitest 6个测试文件、12项测试通过；Vite生产构建通过，共转换658个模块。当前主JS minify后、gzip前约626 KiB，路由级分包警告仍未解决，不能标记为通过。
 
-迁移备忘录中的下一项未完成开发任务现为React路由级分包、正式二进制静态资源打包和旧业务UI入口隔离。Coser替换资源已按约束保留，但未引用托管资源的集中审阅/清理界面仍需后续完成，禁止以自动清理方式补齐。
+随后完成了React 19路由分包、正式二进制静态资源打包和旧业务UI入口隔离：
+
+- Browse、Manage、Setup、登录和维护页面均改为`React.lazy`路由边界，URL、Shell结构和已确认交互不变。
+- Vite生产构建共转换659个模块，主JS由约626KiB降至约470KiB，页面形成独立懒加载块且不再触发500KiB警告。
+- 新增独立`ui/web` Go嵌入包；仅正式`cgm_web_embed`构建标签包含可再生`ui/web/build`，普通后端开发构建不要求前端产物。
+- 产品Server在未设置`web_root`时服务嵌入SPA，显式`web_root`继续作为覆盖；深层路由返回`index.html`，哈希资源使用一年immutable缓存。
+- `make cgm`和`make build-cgm`现在先运行新前端构建再生成嵌入式单文件二进制；边界检查确保`cmd/cgm`依赖`ui/web`而不是会嵌入`ui/v2.5/build`的旧`ui`包。
+- `ui/web/build`仍被忽略且未提交，旧Stash UI源码和构建入口未被删除或改造。
+
+本阶段验证结果：
+
+```bash
+cd ui/web
+corepack pnpm run check
+corepack pnpm run test
+corepack pnpm run build
+```
+
+结果：TypeScript通过；Vitest 6个测试文件、12项测试通过；Vite生产构建通过，共转换659个模块，主JS约470KiB，无大包警告。
+
+```bash
+GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
+  /tmp/cgm-go1.25.12/bin/go test ./internal/productserver ./ui/web
+GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
+  /tmp/cgm-go1.25.12/bin/go test -tags cgm_web_embed \
+  ./internal/productserver ./ui/web
+```
+
+结果：默认开发模式和正式嵌入模式均通过；正式模式额外验证产品首页、深层路由、哈希资源缓存和嵌入内容不含旧`v2.5`路径。
+
+```bash
+GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
+  make CGM_GO=/tmp/cgm-go1.25.12/bin/go \
+  CGM_OUTPUT=/tmp/cgm-embedded-check \
+  BUILD_DATE=20260726 GITHASH=b2573ec5 \
+  STASH_VERSION=0.1.0-dev OFFICIAL_BUILD=false build-cgm
+```
+
+结果：通过，生成约24MiB单文件产品二进制；依赖边界检查只发现`github.com/stashapp/stash/ui/web`，未发现旧`github.com/stashapp/stash/ui`包。
+
+迁移备忘录中的下一项未完成开发任务现为Coser未引用托管资源的集中审阅，以及剩余高影响管理操作。替换资源继续按约束保留，禁止以自动清理方式补齐。

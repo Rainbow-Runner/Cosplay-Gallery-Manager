@@ -23,6 +23,7 @@ import (
 	"github.com/stashapp/stash/internal/productapi"
 	"github.com/stashapp/stash/internal/productauth"
 	"github.com/stashapp/stash/pkg/ffmpeg"
+	productweb "github.com/stashapp/stash/ui/web"
 )
 
 type Config struct {
@@ -142,6 +143,8 @@ func (s *Server) rebuildHandler() {
 	mux.Handle("/resource/", resourceHandler)
 	if s.Config.WebRoot != "" {
 		mux.Handle("/", spaHandler(s.Config.WebRoot))
+	} else if embeddedWeb, ok := productweb.FileSystem(); ok {
+		mux.Handle("/", spaHandlerFS(embeddedWeb))
 	}
 	s.handlerSwitch.Set(securityHeaders(s.maintenanceGate(database, mux)))
 }
@@ -290,7 +293,10 @@ func securityHeaders(next http.Handler) http.Handler {
 }
 
 func spaHandler(root string) http.Handler {
-	fileSystem := os.DirFS(root)
+	return spaHandlerFS(os.DirFS(root))
+}
+
+func spaHandlerFS(fileSystem fs.FS) http.Handler {
 	files := http.FileServer(http.FS(fileSystem))
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		clean := strings.TrimPrefix(filepath.ToSlash(filepath.Clean(request.URL.Path)), "/")
@@ -298,6 +304,11 @@ func spaHandler(root string) http.Handler {
 			clean = "index.html"
 		}
 		if info, err := fs.Stat(fileSystem, clean); err == nil && !info.IsDir() {
+			if strings.HasPrefix(clean, "assets/") {
+				response.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			} else if strings.HasSuffix(clean, ".html") {
+				response.Header().Set("Cache-Control", "no-cache")
+			}
 			files.ServeHTTP(response, request)
 			return
 		}

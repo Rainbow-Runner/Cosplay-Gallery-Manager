@@ -40,3 +40,12 @@ export interface ManageAuditEvent { id: number; eventCode: string; targetKind: s
 export interface ManageAuditPage { items: ManageAuditEvent[]; page: number; pageSize: number; totalItems: number; totalPages: number }
 export interface ManageCoreEntity { kind: "COSER" | "WORK" | "CHARACTER" | "TAG"; uuid: string; name: string; sortName: string; aliases: string[]; slug: string; metadataRevision: number; workUUID?: string | null; profileSummary: string; biography: string; countryOrRegion: string; useInRecommendation: boolean; socialAccounts: { uuid: string; platformKey: string; label: string; handle: string; url: string; status: string; visible: boolean; position: string }[]; parents: { uuid: string; name: string; metadataRevision: number }[] }
 export interface ManageCoreEntityPage { items: ManageCoreEntity[]; page: number; pageSize: number; totalItems: number; totalPages: number }
+export interface ManageCoreEntityMergePreview {
+  kind: ManageCoreEntity["kind"]; sourceUUID: string; targetUUID: string; sourceRevision: number; targetRevision: number;
+  affectedGalleryIDs: number[]; conflicts: { code: string; details: string }[]; canMerge: boolean;
+}
+export interface ManageCoreEntityMergeResult { target: ManageCoreEntity; preview: ManageCoreEntityMergePreview; completionWarning?: string | null }
+export interface ManageCoreEntityDeletePreview {
+  kind: ManageCoreEntity["kind"]; uuid: string; metadataRevision: number; referenceCount: number;
+  blockers: { code: string; referenceCount: number }[]; canDelete: boolean;
+}

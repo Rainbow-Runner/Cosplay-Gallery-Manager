@@ -102,11 +102,23 @@ func TestCoreEntityDeleteRequiresNoReferencesAndPermanentlyTombstones(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
+	preview, err := store.PreviewDelete(ctx, portableid.KindWork, work.UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.MetadataRevision != work.MetadataRevision || preview.ReferenceCount != 1 || len(preview.Blockers) != 1 ||
+		preview.Blockers[0].Code != "CHARACTER" || preview.Blockers[0].ReferenceCount != 1 {
+		t.Fatalf("referenced Work delete preview = %#v", preview)
+	}
 	if err := store.DeleteCoreEntity(ctx, portableid.KindWork, work.UUID, work.MetadataRevision, "test", now); !errors.Is(err, ErrCoreEntityReferenced) {
 		t.Fatalf("referenced Work delete error = %v", err)
 	}
 	if err := store.DeleteCoreEntity(ctx, portableid.KindCharacter, character.UUID, character.MetadataRevision, "test", now); err != nil {
 		t.Fatal(err)
+	}
+	preview, err = store.PreviewDelete(ctx, portableid.KindWork, work.UUID)
+	if err != nil || preview.ReferenceCount != 0 || len(preview.Blockers) != 0 {
+		t.Fatalf("unreferenced Work delete preview = %#v, %v", preview, err)
 	}
 	if err := store.DeleteCoreEntity(ctx, portableid.KindWork, work.UUID, work.MetadataRevision, "test", now); err != nil {
 		t.Fatal(err)

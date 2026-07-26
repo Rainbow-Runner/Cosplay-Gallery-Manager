@@ -18,6 +18,7 @@ import (
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/manifest"
 	"github.com/stashapp/stash/internal/persistence/productdb"
+	"github.com/stashapp/stash/internal/portableid"
 	"github.com/stashapp/stash/internal/settings"
 )
 
@@ -447,6 +448,56 @@ func (r *mutationResolver) ReplaceTagParents(ctx context.Context, childUUID stri
 		return nil, manageError(err)
 	}
 	return manageCoreEntity(value), nil
+}
+
+// MergeCoreEntities is the resolver for the mergeCoreEntities field.
+func (r *mutationResolver) MergeCoreEntities(ctx context.Context, kind SearchEntityKind, sourceUUID string, targetUUID string, expectedSourceRevision int64, expectedTargetRevision int64) (*ManageCoreEntityMergeResult, error) {
+	portableKind, err := portableCoreKind(kind)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	preview, err := r.Database.CoreEntities().Merge(ctx, portableKind, sourceUUID, targetUUID, expectedSourceRevision, expectedTargetRevision, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "CORE_ENTITY_MERGE", string(kind), sourceUUID, "CORE_ENTITY_MERGE_FAILED", err, map[string]any{"target_uuid": targetUUID})
+		return nil, manageError(err)
+	}
+	var completionWarning *string
+	redirectStatus := "NOT_APPLICABLE"
+	if portableKind == portableid.KindCoser {
+		redirectStatus = "WRITTEN"
+		metadataRoot, rootErr := r.coserMetadataRoot(ctx)
+		if rootErr == nil {
+			_, rootErr = r.Database.Manifests().WriteCoserMergeRedirect(ctx, metadataRoot, sourceUUID, targetUUID)
+		}
+		if rootErr != nil {
+			redirectStatus = "PENDING"
+			warning := "Coser redirect file is pending; the database merge committed successfully."
+			completionWarning = &warning
+		}
+	}
+	target, err := r.Database.CoreEntities().ManageFind(ctx, string(kind), targetUUID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "CORE_ENTITY_MERGE", string(kind), sourceUUID, "", nil, map[string]any{
+		"target_uuid": targetUUID, "affected_gallery_count": len(preview.AffectedGalleryIDs), "coser_redirect_status": redirectStatus,
+	})
+	return &ManageCoreEntityMergeResult{Target: manageCoreEntity(target), Preview: manageCoreEntityMergePreview(preview), CompletionWarning: completionWarning}, nil
+}
+
+// DeleteCoreEntity is the resolver for the deleteCoreEntity field.
+func (r *mutationResolver) DeleteCoreEntity(ctx context.Context, kind SearchEntityKind, uuid string, expectedMetadataRevision int64) (bool, error) {
+	portableKind, err := portableCoreKind(kind)
+	if err != nil {
+		return false, manageError(err)
+	}
+	err = r.Database.CoreEntities().DeleteCoreEntity(ctx, portableKind, uuid, expectedMetadataRevision, "deleted by owner", time.Now())
+	if err != nil {
+		r.auditManage(ctx, "CORE_ENTITY_DELETE", string(kind), uuid, "CORE_ENTITY_DELETE_FAILED", err, nil)
+		return false, manageError(err)
+	}
+	r.auditManage(ctx, "CORE_ENTITY_DELETE", string(kind), uuid, "", nil, nil)
+	return true, nil
 }
 
 // ReplaceGalleryRelations is the resolver for the replaceGalleryRelations field.
@@ -946,6 +997,32 @@ func (r *queryResolver) ManageCoreEntityOptions(ctx context.Context, kind Search
 		result = append(result, manageCoreEntity(value))
 	}
 	return result, nil
+}
+
+// PreviewCoreEntityMerge is the resolver for the previewCoreEntityMerge field.
+func (r *queryResolver) PreviewCoreEntityMerge(ctx context.Context, kind SearchEntityKind, sourceUUID string, targetUUID string) (*ManageCoreEntityMergePreview, error) {
+	portableKind, err := portableCoreKind(kind)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	value, err := r.Database.CoreEntities().PreviewMerge(ctx, portableKind, sourceUUID, targetUUID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	return manageCoreEntityMergePreview(value), nil
+}
+
+// PreviewCoreEntityDelete is the resolver for the previewCoreEntityDelete field.
+func (r *queryResolver) PreviewCoreEntityDelete(ctx context.Context, kind SearchEntityKind, uuid string) (*ManageCoreEntityDeletePreview, error) {
+	portableKind, err := portableCoreKind(kind)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	value, err := r.Database.CoreEntities().PreviewDelete(ctx, portableKind, uuid)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	return manageCoreEntityDeletePreview(value), nil
 }
 
 // BrowseUISettings is the resolver for the browseUISettings field.

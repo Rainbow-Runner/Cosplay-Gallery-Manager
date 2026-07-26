@@ -261,6 +261,42 @@ type ManageCoreEntity struct {
 	Parents             []*ManageCoreEntityRef `json:"parents"`
 }
 
+type ManageCoreEntityDeleteBlocker struct {
+	Code           string `json:"code"`
+	ReferenceCount int64  `json:"referenceCount"`
+}
+
+type ManageCoreEntityDeletePreview struct {
+	Kind             SearchEntityKind                 `json:"kind"`
+	UUID             string                           `json:"uuid"`
+	MetadataRevision int64                            `json:"metadataRevision"`
+	ReferenceCount   int64                            `json:"referenceCount"`
+	Blockers         []*ManageCoreEntityDeleteBlocker `json:"blockers"`
+	CanDelete        bool                             `json:"canDelete"`
+}
+
+type ManageCoreEntityMergeConflict struct {
+	Code    string `json:"code"`
+	Details string `json:"details"`
+}
+
+type ManageCoreEntityMergePreview struct {
+	Kind               SearchEntityKind                 `json:"kind"`
+	SourceUUID         string                           `json:"sourceUUID"`
+	TargetUUID         string                           `json:"targetUUID"`
+	SourceRevision     int64                            `json:"sourceRevision"`
+	TargetRevision     int64                            `json:"targetRevision"`
+	AffectedGalleryIDs []int64                          `json:"affectedGalleryIDs"`
+	Conflicts          []*ManageCoreEntityMergeConflict `json:"conflicts"`
+	CanMerge           bool                             `json:"canMerge"`
+}
+
+type ManageCoreEntityMergeResult struct {
+	Target            *ManageCoreEntity             `json:"target"`
+	Preview           *ManageCoreEntityMergePreview `json:"preview"`
+	CompletionWarning *string                       `json:"completionWarning,omitempty"`
+}
+
 type ManageCoreEntityPage struct {
 	Items      []*ManageCoreEntity `json:"items"`
 	Page       int                 `json:"page"`

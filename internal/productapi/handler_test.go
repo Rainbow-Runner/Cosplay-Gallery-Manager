@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/persistence/productdb"
+	"github.com/stashapp/stash/internal/portableid"
 )
 
 func TestHandlerRequiresOwnerAuthentication(t *testing.T) {
@@ -130,6 +132,68 @@ func TestOperationsContractUsesServerServiceWithoutExposingRoots(t *testing.T) {
 		if bytes.Contains(response.Body.Bytes(), []byte(database.Path())) {
 			t.Fatal("operations response leaked a local root")
 		}
+	}
+}
+
+func TestCoreEntityLifecycleGraphQLRequiresPreviewAndPreservesPermanentUUIDHistory(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 7, 26, 10, 0, 0, 0, time.UTC)
+	source, err := database.CoreEntities().CreateWork(ctx, productdb.CreateNamedEntityInput{Name: "Source Work"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := database.CoreEntities().CreateWork(ctx, productdb.CreateNamedEntityInput{Name: "Target Work"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tag, err := database.CoreEntities().CreateTag(ctx, productdb.CreateTagInput{
+		CreateNamedEntityInput: productdb.CreateNamedEntityInput{Name: "Disposable Tag"}, UseInRecommendation: true,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(database, func(*http.Request) bool { return true })
+	call := func(query string) []byte {
+		t.Helper()
+		request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(fmt.Sprintf(`{"query":%q}`, query)))
+		request.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) {
+			t.Fatalf("lifecycle GraphQL response = %d %s", response.Code, response.Body.String())
+		}
+		return response.Body.Bytes()
+	}
+
+	mergePreview := call(fmt.Sprintf(`query { previewCoreEntityMerge(kind: WORK, sourceUUID: %q, targetUUID: %q) { sourceRevision targetRevision affectedGalleryIDs conflicts { code } canMerge } }`, source.UUID, target.UUID))
+	if !bytes.Contains(mergePreview, []byte(`"canMerge":true`)) || !bytes.Contains(mergePreview, []byte(`"sourceRevision":1`)) {
+		t.Fatalf("merge preview = %s", mergePreview)
+	}
+	mergeResult := call(fmt.Sprintf(`mutation { mergeCoreEntities(kind: WORK, sourceUUID: %q, targetUUID: %q, expectedSourceRevision: 1, expectedTargetRevision: 1) { target { uuid metadataRevision } preview { canMerge } completionWarning } }`, source.UUID, target.UUID))
+	if !bytes.Contains(mergeResult, []byte(`"uuid":"`+target.UUID+`"`)) || !bytes.Contains(mergeResult, []byte(`"metadataRevision":2`)) {
+		t.Fatalf("merge result = %s", mergeResult)
+	}
+	sourceRecord, err := database.UUIDRegistry().Lookup(ctx, source.UUID)
+	if err != nil || sourceRecord.State != productdb.PortableUUIDAlias || sourceRecord.TargetUUID != target.UUID {
+		t.Fatalf("source UUID record = %#v, %v", sourceRecord, err)
+	}
+
+	deletePreview := call(fmt.Sprintf(`query { previewCoreEntityDelete(kind: TAG, uuid: %q) { metadataRevision referenceCount blockers { code referenceCount } canDelete } }`, tag.UUID))
+	if !bytes.Contains(deletePreview, []byte(`"referenceCount":0`)) || !bytes.Contains(deletePreview, []byte(`"canDelete":true`)) {
+		t.Fatalf("delete preview = %s", deletePreview)
+	}
+	deleteResult := call(fmt.Sprintf(`mutation { deleteCoreEntity(kind: TAG, uuid: %q, expectedMetadataRevision: 1) }`, tag.UUID))
+	if !bytes.Contains(deleteResult, []byte(`"deleteCoreEntity":true`)) {
+		t.Fatalf("delete result = %s", deleteResult)
+	}
+	tagRecord, err := database.UUIDRegistry().Lookup(ctx, tag.UUID)
+	if err != nil || tagRecord.State != productdb.PortableUUIDTombstone || tagRecord.Kind != portableid.KindTag {
+		t.Fatalf("deleted Tag UUID record = %#v, %v", tagRecord, err)
+	}
+	var auditCount int
+	if err := database.QueryRowContext(ctx, `SELECT COUNT(*) FROM management_audit_events WHERE event_code IN ('CORE_ENTITY_MERGE','CORE_ENTITY_DELETE') AND outcome='SUCCESS'`).Scan(&auditCount); err != nil || auditCount != 2 {
+		t.Fatalf("lifecycle audit count = %d, %v", auditCount, err)
 	}
 }
 

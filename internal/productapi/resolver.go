@@ -3,9 +3,11 @@ package productapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/stashapp/stash/internal/persistence/productdb"
+	"github.com/stashapp/stash/internal/portableid"
 )
 
 // Resolver is intentionally backed only by the product database Browse stores.
@@ -84,4 +86,14 @@ func manifestConflictJSON(value any, present bool) string {
 		return "<unavailable>"
 	}
 	return string(data)
+}
+
+func portableCoreKind(kind SearchEntityKind) (portableid.Kind, error) {
+	converted := portableid.Kind(kind)
+	switch converted {
+	case portableid.KindCoser, portableid.KindWork, portableid.KindCharacter, portableid.KindTag:
+		return converted, nil
+	default:
+		return "", errors.New("unsupported core entity kind")
+	}
 }

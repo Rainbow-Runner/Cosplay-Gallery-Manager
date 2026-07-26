@@ -255,6 +255,42 @@ type ComplexityRoot struct {
 		WorkUUID            func(childComplexity int) int
 	}
 
+	ManageCoreEntityDeleteBlocker struct {
+		Code           func(childComplexity int) int
+		ReferenceCount func(childComplexity int) int
+	}
+
+	ManageCoreEntityDeletePreview struct {
+		Blockers         func(childComplexity int) int
+		CanDelete        func(childComplexity int) int
+		Kind             func(childComplexity int) int
+		MetadataRevision func(childComplexity int) int
+		ReferenceCount   func(childComplexity int) int
+		UUID             func(childComplexity int) int
+	}
+
+	ManageCoreEntityMergeConflict struct {
+		Code    func(childComplexity int) int
+		Details func(childComplexity int) int
+	}
+
+	ManageCoreEntityMergePreview struct {
+		AffectedGalleryIDs func(childComplexity int) int
+		CanMerge           func(childComplexity int) int
+		Conflicts          func(childComplexity int) int
+		Kind               func(childComplexity int) int
+		SourceRevision     func(childComplexity int) int
+		SourceUUID         func(childComplexity int) int
+		TargetRevision     func(childComplexity int) int
+		TargetUUID         func(childComplexity int) int
+	}
+
+	ManageCoreEntityMergeResult struct {
+		CompletionWarning func(childComplexity int) int
+		Preview           func(childComplexity int) int
+		Target            func(childComplexity int) int
+	}
+
 	ManageCoreEntityPage struct {
 		Items      func(childComplexity int) int
 		Page       func(childComplexity int) int
@@ -529,8 +565,10 @@ type ComplexityRoot struct {
 		CreateFullBackup        func(childComplexity int) int
 		CreateMediaLibrary      func(childComplexity int, input CreateMediaLibraryInput) int
 		CreateRecognitionRule   func(childComplexity int, input CreateRecognitionRuleInput) int
+		DeleteCoreEntity        func(childComplexity int, kind SearchEntityKind, uuid string, expectedMetadataRevision int64) int
 		DiscoverMediaLibrary    func(childComplexity int, libraryID int64) int
 		ImportGalleryCandidate  func(childComplexity int, candidateID int64) int
+		MergeCoreEntities       func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string, expectedSourceRevision int64, expectedTargetRevision int64) int
 		MoveGalleryItem         func(childComplexity int, setID string, itemUUID string, beforeItemUUID *string, expectedMetadataRevision int64) int
 		PullCoserManifest       func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
 		PullGalleryManifest     func(childComplexity int, setID string, expectedMetadataRevision int64) int
@@ -589,6 +627,8 @@ type ComplexityRoot struct {
 		ManageProcessingJobs    func(childComplexity int, status string, page int) int
 		ManageRuntimeSettings   func(childComplexity int) int
 		MediaDetail             func(childComplexity int, itemUUID string) int
+		PreviewCoreEntityDelete func(childComplexity int, kind SearchEntityKind, uuid string) int
+		PreviewCoreEntityMerge  func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string) int
 		RandomMedia             func(childComplexity int, scope BrowseScope, filter RandomMediaFilter) int
 		RelatedGalleries        func(childComplexity int, setID string, scope BrowseScope) int
 		SearchPreview           func(childComplexity int, query string, scope BrowseScope) int
@@ -686,6 +726,8 @@ type MutationResolver interface {
 	UpdateCoreEntity(ctx context.Context, uuid string, expectedMetadataRevision int64, input CoreEntityInput) (*ManageCoreEntity, error)
 	AddCoserSocialAccount(ctx context.Context, coserUUID string, expectedMetadataRevision int64, input SocialAccountInput) (*ManageCoreEntity, error)
 	ReplaceTagParents(ctx context.Context, childUUID string, expectedChildRevision int64, parents []*ReplaceTagParentInput, expectedParents []*ExpectedTagRevisionInput) (*ManageCoreEntity, error)
+	MergeCoreEntities(ctx context.Context, kind SearchEntityKind, sourceUUID string, targetUUID string, expectedSourceRevision int64, expectedTargetRevision int64) (*ManageCoreEntityMergeResult, error)
+	DeleteCoreEntity(ctx context.Context, kind SearchEntityKind, uuid string, expectedMetadataRevision int64) (bool, error)
 	ReplaceGalleryRelations(ctx context.Context, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) (*ManageGalleryDetail, error)
 	AddGalleryExternalLink(ctx context.Context, setID string, expectedMetadataRevision int64, input GalleryExternalLinkInput) (*ManageGalleryDetail, error)
 	PushGalleryManifest(ctx context.Context, setID string, expectedMetadataRevision int64) (*ManageGalleryManifestState, error)
@@ -727,6 +769,8 @@ type QueryResolver interface {
 	ManageCoreEntities(ctx context.Context, kind SearchEntityKind, page int) (*ManageCoreEntityPage, error)
 	ManageCoreEntity(ctx context.Context, kind SearchEntityKind, uuid string) (*ManageCoreEntity, error)
 	ManageCoreEntityOptions(ctx context.Context, kind SearchEntityKind, query string, limit int) ([]*ManageCoreEntity, error)
+	PreviewCoreEntityMerge(ctx context.Context, kind SearchEntityKind, sourceUUID string, targetUUID string) (*ManageCoreEntityMergePreview, error)
+	PreviewCoreEntityDelete(ctx context.Context, kind SearchEntityKind, uuid string) (*ManageCoreEntityDeletePreview, error)
 	BrowseUISettings(ctx context.Context) (*BrowseUISettings, error)
 }
 
@@ -1770,6 +1814,153 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageCoreEntity.WorkUUID(childComplexity), true
+
+	case "ManageCoreEntityDeleteBlocker.code":
+		if e.complexity.ManageCoreEntityDeleteBlocker.Code == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityDeleteBlocker.Code(childComplexity), true
+
+	case "ManageCoreEntityDeleteBlocker.referenceCount":
+		if e.complexity.ManageCoreEntityDeleteBlocker.ReferenceCount == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityDeleteBlocker.ReferenceCount(childComplexity), true
+
+	case "ManageCoreEntityDeletePreview.blockers":
+		if e.complexity.ManageCoreEntityDeletePreview.Blockers == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityDeletePreview.Blockers(childComplexity), true
+
+	case "ManageCoreEntityDeletePreview.canDelete":
+		if e.complexity.ManageCoreEntityDeletePreview.CanDelete == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityDeletePreview.CanDelete(childComplexity), true
+
+	case "ManageCoreEntityDeletePreview.kind":
+		if e.complexity.ManageCoreEntityDeletePreview.Kind == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityDeletePreview.Kind(childComplexity), true
+
+	case "ManageCoreEntityDeletePreview.metadataRevision":
+		if e.complexity.ManageCoreEntityDeletePreview.MetadataRevision == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityDeletePreview.MetadataRevision(childComplexity), true
+
+	case "ManageCoreEntityDeletePreview.referenceCount":
+		if e.complexity.ManageCoreEntityDeletePreview.ReferenceCount == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityDeletePreview.ReferenceCount(childComplexity), true
+
+	case "ManageCoreEntityDeletePreview.uuid":
+		if e.complexity.ManageCoreEntityDeletePreview.UUID == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityDeletePreview.UUID(childComplexity), true
+
+	case "ManageCoreEntityMergeConflict.code":
+		if e.complexity.ManageCoreEntityMergeConflict.Code == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityMergeConflict.Code(childComplexity), true
+
+	case "ManageCoreEntityMergeConflict.details":
+		if e.complexity.ManageCoreEntityMergeConflict.Details == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityMergeConflict.Details(childComplexity), true
+
+	case "ManageCoreEntityMergePreview.affectedGalleryIDs":
+		if e.complexity.ManageCoreEntityMergePreview.AffectedGalleryIDs == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityMergePreview.AffectedGalleryIDs(childComplexity), true
+
+	case "ManageCoreEntityMergePreview.canMerge":
+		if e.complexity.ManageCoreEntityMergePreview.CanMerge == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityMergePreview.CanMerge(childComplexity), true
+
+	case "ManageCoreEntityMergePreview.conflicts":
+		if e.complexity.ManageCoreEntityMergePreview.Conflicts == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityMergePreview.Conflicts(childComplexity), true
+
+	case "ManageCoreEntityMergePreview.kind":
+		if e.complexity.ManageCoreEntityMergePreview.Kind == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityMergePreview.Kind(childComplexity), true
+
+	case "ManageCoreEntityMergePreview.sourceRevision":
+		if e.complexity.ManageCoreEntityMergePreview.SourceRevision == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityMergePreview.SourceRevision(childComplexity), true
+
+	case "ManageCoreEntityMergePreview.sourceUUID":
+		if e.complexity.ManageCoreEntityMergePreview.SourceUUID == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityMergePreview.SourceUUID(childComplexity), true
+
+	case "ManageCoreEntityMergePreview.targetRevision":
+		if e.complexity.ManageCoreEntityMergePreview.TargetRevision == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityMergePreview.TargetRevision(childComplexity), true
+
+	case "ManageCoreEntityMergePreview.targetUUID":
+		if e.complexity.ManageCoreEntityMergePreview.TargetUUID == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityMergePreview.TargetUUID(childComplexity), true
+
+	case "ManageCoreEntityMergeResult.completionWarning":
+		if e.complexity.ManageCoreEntityMergeResult.CompletionWarning == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityMergeResult.CompletionWarning(childComplexity), true
+
+	case "ManageCoreEntityMergeResult.preview":
+		if e.complexity.ManageCoreEntityMergeResult.Preview == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityMergeResult.Preview(childComplexity), true
+
+	case "ManageCoreEntityMergeResult.target":
+		if e.complexity.ManageCoreEntityMergeResult.Target == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityMergeResult.Target(childComplexity), true
 
 	case "ManageCoreEntityPage.items":
 		if e.complexity.ManageCoreEntityPage.Items == nil {
@@ -3145,6 +3336,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.CreateRecognitionRule(childComplexity, args["input"].(CreateRecognitionRuleInput)), true
 
+	case "Mutation.deleteCoreEntity":
+		if e.complexity.Mutation.DeleteCoreEntity == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteCoreEntity_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteCoreEntity(childComplexity, args["kind"].(SearchEntityKind), args["uuid"].(string), args["expectedMetadataRevision"].(int64)), true
+
 	case "Mutation.discoverMediaLibrary":
 		if e.complexity.Mutation.DiscoverMediaLibrary == nil {
 			break
@@ -3168,6 +3371,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.ImportGalleryCandidate(childComplexity, args["candidateID"].(int64)), true
+
+	case "Mutation.mergeCoreEntities":
+		if e.complexity.Mutation.MergeCoreEntities == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_mergeCoreEntities_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.MergeCoreEntities(childComplexity, args["kind"].(SearchEntityKind), args["sourceUUID"].(string), args["targetUUID"].(string), args["expectedSourceRevision"].(int64), args["expectedTargetRevision"].(int64)), true
 
 	case "Mutation.moveGalleryItem":
 		if e.complexity.Mutation.MoveGalleryItem == nil {
@@ -3762,6 +3977,30 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.MediaDetail(childComplexity, args["itemUUID"].(string)), true
+
+	case "Query.previewCoreEntityDelete":
+		if e.complexity.Query.PreviewCoreEntityDelete == nil {
+			break
+		}
+
+		args, err := ec.field_Query_previewCoreEntityDelete_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.PreviewCoreEntityDelete(childComplexity, args["kind"].(SearchEntityKind), args["uuid"].(string)), true
+
+	case "Query.previewCoreEntityMerge":
+		if e.complexity.Query.PreviewCoreEntityMerge == nil {
+			break
+		}
+
+		args, err := ec.field_Query_previewCoreEntityMerge_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.PreviewCoreEntityMerge(childComplexity, args["kind"].(SearchEntityKind), args["sourceUUID"].(string), args["targetUUID"].(string)), true
 
 	case "Query.randomMedia":
 		if e.complexity.Query.RandomMedia == nil {
@@ -4514,6 +4753,80 @@ func (ec *executionContext) field_Mutation_createRecognitionRule_argsInput(
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Mutation_deleteCoreEntity_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_deleteCoreEntity_argsKind(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["kind"] = arg0
+	arg1, err := ec.field_Mutation_deleteCoreEntity_argsUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["uuid"] = arg1
+	arg2, err := ec.field_Mutation_deleteCoreEntity_argsExpectedMetadataRevision(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["expectedMetadataRevision"] = arg2
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_deleteCoreEntity_argsKind(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (SearchEntityKind, error) {
+	if _, ok := rawArgs["kind"]; !ok {
+		var zeroVal SearchEntityKind
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("kind"))
+	if tmp, ok := rawArgs["kind"]; ok {
+		return ec.unmarshalNSearchEntityKind2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSearchEntityKind(ctx, tmp)
+	}
+
+	var zeroVal SearchEntityKind
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteCoreEntity_argsUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["uuid"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("uuid"))
+	if tmp, ok := rawArgs["uuid"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteCoreEntity_argsExpectedMetadataRevision(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int64, error) {
+	if _, ok := rawArgs["expectedMetadataRevision"]; !ok {
+		var zeroVal int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedMetadataRevision"))
+	if tmp, ok := rawArgs["expectedMetadataRevision"]; ok {
+		return ec.unmarshalNInt642int64(ctx, tmp)
+	}
+
+	var zeroVal int64
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Mutation_discoverMediaLibrary_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -4563,6 +4876,126 @@ func (ec *executionContext) field_Mutation_importGalleryCandidate_argsCandidateI
 
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("candidateID"))
 	if tmp, ok := rawArgs["candidateID"]; ok {
+		return ec.unmarshalNInt642int64(ctx, tmp)
+	}
+
+	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_mergeCoreEntities_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_mergeCoreEntities_argsKind(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["kind"] = arg0
+	arg1, err := ec.field_Mutation_mergeCoreEntities_argsSourceUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["sourceUUID"] = arg1
+	arg2, err := ec.field_Mutation_mergeCoreEntities_argsTargetUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["targetUUID"] = arg2
+	arg3, err := ec.field_Mutation_mergeCoreEntities_argsExpectedSourceRevision(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["expectedSourceRevision"] = arg3
+	arg4, err := ec.field_Mutation_mergeCoreEntities_argsExpectedTargetRevision(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["expectedTargetRevision"] = arg4
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_mergeCoreEntities_argsKind(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (SearchEntityKind, error) {
+	if _, ok := rawArgs["kind"]; !ok {
+		var zeroVal SearchEntityKind
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("kind"))
+	if tmp, ok := rawArgs["kind"]; ok {
+		return ec.unmarshalNSearchEntityKind2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSearchEntityKind(ctx, tmp)
+	}
+
+	var zeroVal SearchEntityKind
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_mergeCoreEntities_argsSourceUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["sourceUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("sourceUUID"))
+	if tmp, ok := rawArgs["sourceUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_mergeCoreEntities_argsTargetUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["targetUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("targetUUID"))
+	if tmp, ok := rawArgs["targetUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_mergeCoreEntities_argsExpectedSourceRevision(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int64, error) {
+	if _, ok := rawArgs["expectedSourceRevision"]; !ok {
+		var zeroVal int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedSourceRevision"))
+	if tmp, ok := rawArgs["expectedSourceRevision"]; ok {
+		return ec.unmarshalNInt642int64(ctx, tmp)
+	}
+
+	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_mergeCoreEntities_argsExpectedTargetRevision(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int64, error) {
+	if _, ok := rawArgs["expectedTargetRevision"]; !ok {
+		var zeroVal int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedTargetRevision"))
+	if tmp, ok := rawArgs["expectedTargetRevision"]; ok {
 		return ec.unmarshalNInt642int64(ctx, tmp)
 	}
 
@@ -7213,6 +7646,131 @@ func (ec *executionContext) field_Query_mediaDetail_argsItemUUID(
 
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("itemUUID"))
 	if tmp, ok := rawArgs["itemUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_previewCoreEntityDelete_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_previewCoreEntityDelete_argsKind(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["kind"] = arg0
+	arg1, err := ec.field_Query_previewCoreEntityDelete_argsUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["uuid"] = arg1
+	return args, nil
+}
+func (ec *executionContext) field_Query_previewCoreEntityDelete_argsKind(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (SearchEntityKind, error) {
+	if _, ok := rawArgs["kind"]; !ok {
+		var zeroVal SearchEntityKind
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("kind"))
+	if tmp, ok := rawArgs["kind"]; ok {
+		return ec.unmarshalNSearchEntityKind2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSearchEntityKind(ctx, tmp)
+	}
+
+	var zeroVal SearchEntityKind
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_previewCoreEntityDelete_argsUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["uuid"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("uuid"))
+	if tmp, ok := rawArgs["uuid"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_previewCoreEntityMerge_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_previewCoreEntityMerge_argsKind(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["kind"] = arg0
+	arg1, err := ec.field_Query_previewCoreEntityMerge_argsSourceUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["sourceUUID"] = arg1
+	arg2, err := ec.field_Query_previewCoreEntityMerge_argsTargetUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["targetUUID"] = arg2
+	return args, nil
+}
+func (ec *executionContext) field_Query_previewCoreEntityMerge_argsKind(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (SearchEntityKind, error) {
+	if _, ok := rawArgs["kind"]; !ok {
+		var zeroVal SearchEntityKind
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("kind"))
+	if tmp, ok := rawArgs["kind"]; ok {
+		return ec.unmarshalNSearchEntityKind2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSearchEntityKind(ctx, tmp)
+	}
+
+	var zeroVal SearchEntityKind
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_previewCoreEntityMerge_argsSourceUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["sourceUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("sourceUUID"))
+	if tmp, ok := rawArgs["sourceUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_previewCoreEntityMerge_argsTargetUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["targetUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("targetUUID"))
+	if tmp, ok := rawArgs["targetUUID"]; ok {
 		return ec.unmarshalNID2string(ctx, tmp)
 	}
 
@@ -14502,6 +15060,987 @@ func (ec *executionContext) fieldContext_ManageCoreEntity_parents(_ context.Cont
 				return ec.fieldContext_ManageCoreEntityRef_metadataRevision(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageCoreEntityRef", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityDeleteBlocker_code(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityDeleteBlocker) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityDeleteBlocker_code(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Code, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityDeleteBlocker_code(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityDeleteBlocker",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityDeleteBlocker_referenceCount(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityDeleteBlocker) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityDeleteBlocker_referenceCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ReferenceCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityDeleteBlocker_referenceCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityDeleteBlocker",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityDeletePreview_kind(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityDeletePreview_kind(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Kind, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(SearchEntityKind)
+	fc.Result = res
+	return ec.marshalNSearchEntityKind2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSearchEntityKind(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityDeletePreview_kind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type SearchEntityKind does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityDeletePreview_uuid(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityDeletePreview_uuid(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityDeletePreview_uuid(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityDeletePreview_metadataRevision(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityDeletePreview_metadataRevision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MetadataRevision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityDeletePreview_metadataRevision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityDeletePreview_referenceCount(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityDeletePreview_referenceCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ReferenceCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityDeletePreview_referenceCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityDeletePreview_blockers(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityDeletePreview_blockers(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Blockers, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageCoreEntityDeleteBlocker)
+	fc.Result = res
+	return ec.marshalNManageCoreEntityDeleteBlocker2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityDeleteBlockerᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityDeletePreview_blockers(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "code":
+				return ec.fieldContext_ManageCoreEntityDeleteBlocker_code(ctx, field)
+			case "referenceCount":
+				return ec.fieldContext_ManageCoreEntityDeleteBlocker_referenceCount(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageCoreEntityDeleteBlocker", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityDeletePreview_canDelete(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityDeletePreview_canDelete(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CanDelete, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityDeletePreview_canDelete(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityMergeConflict_code(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityMergeConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityMergeConflict_code(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Code, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityMergeConflict_code(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityMergeConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityMergeConflict_details(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityMergeConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityMergeConflict_details(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Details, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityMergeConflict_details(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityMergeConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityMergePreview_kind(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityMergePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityMergePreview_kind(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Kind, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(SearchEntityKind)
+	fc.Result = res
+	return ec.marshalNSearchEntityKind2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSearchEntityKind(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityMergePreview_kind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityMergePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type SearchEntityKind does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityMergePreview_sourceUUID(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityMergePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityMergePreview_sourceUUID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SourceUUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityMergePreview_sourceUUID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityMergePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityMergePreview_targetUUID(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityMergePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityMergePreview_targetUUID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TargetUUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityMergePreview_targetUUID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityMergePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityMergePreview_sourceRevision(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityMergePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityMergePreview_sourceRevision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SourceRevision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityMergePreview_sourceRevision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityMergePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityMergePreview_targetRevision(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityMergePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityMergePreview_targetRevision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TargetRevision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityMergePreview_targetRevision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityMergePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityMergePreview_affectedGalleryIDs(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityMergePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityMergePreview_affectedGalleryIDs(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AffectedGalleryIDs, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]int64)
+	fc.Result = res
+	return ec.marshalNInt642ᚕint64ᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityMergePreview_affectedGalleryIDs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityMergePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityMergePreview_conflicts(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityMergePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityMergePreview_conflicts(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Conflicts, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageCoreEntityMergeConflict)
+	fc.Result = res
+	return ec.marshalNManageCoreEntityMergeConflict2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityMergeConflictᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityMergePreview_conflicts(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityMergePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "code":
+				return ec.fieldContext_ManageCoreEntityMergeConflict_code(ctx, field)
+			case "details":
+				return ec.fieldContext_ManageCoreEntityMergeConflict_details(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageCoreEntityMergeConflict", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityMergePreview_canMerge(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityMergePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityMergePreview_canMerge(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CanMerge, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityMergePreview_canMerge(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityMergePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityMergeResult_target(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityMergeResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityMergeResult_target(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Target, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageCoreEntity)
+	fc.Result = res
+	return ec.marshalNManageCoreEntity2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntity(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityMergeResult_target(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityMergeResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "kind":
+				return ec.fieldContext_ManageCoreEntity_kind(ctx, field)
+			case "uuid":
+				return ec.fieldContext_ManageCoreEntity_uuid(ctx, field)
+			case "name":
+				return ec.fieldContext_ManageCoreEntity_name(ctx, field)
+			case "sortName":
+				return ec.fieldContext_ManageCoreEntity_sortName(ctx, field)
+			case "aliases":
+				return ec.fieldContext_ManageCoreEntity_aliases(ctx, field)
+			case "slug":
+				return ec.fieldContext_ManageCoreEntity_slug(ctx, field)
+			case "metadataRevision":
+				return ec.fieldContext_ManageCoreEntity_metadataRevision(ctx, field)
+			case "workUUID":
+				return ec.fieldContext_ManageCoreEntity_workUUID(ctx, field)
+			case "profileSummary":
+				return ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
+			case "biography":
+				return ec.fieldContext_ManageCoreEntity_biography(ctx, field)
+			case "countryOrRegion":
+				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
+			case "useInRecommendation":
+				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "socialAccounts":
+				return ec.fieldContext_ManageCoreEntity_socialAccounts(ctx, field)
+			case "parents":
+				return ec.fieldContext_ManageCoreEntity_parents(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageCoreEntity", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityMergeResult_preview(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityMergeResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityMergeResult_preview(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Preview, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageCoreEntityMergePreview)
+	fc.Result = res
+	return ec.marshalNManageCoreEntityMergePreview2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityMergePreview(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityMergeResult_preview(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityMergeResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "kind":
+				return ec.fieldContext_ManageCoreEntityMergePreview_kind(ctx, field)
+			case "sourceUUID":
+				return ec.fieldContext_ManageCoreEntityMergePreview_sourceUUID(ctx, field)
+			case "targetUUID":
+				return ec.fieldContext_ManageCoreEntityMergePreview_targetUUID(ctx, field)
+			case "sourceRevision":
+				return ec.fieldContext_ManageCoreEntityMergePreview_sourceRevision(ctx, field)
+			case "targetRevision":
+				return ec.fieldContext_ManageCoreEntityMergePreview_targetRevision(ctx, field)
+			case "affectedGalleryIDs":
+				return ec.fieldContext_ManageCoreEntityMergePreview_affectedGalleryIDs(ctx, field)
+			case "conflicts":
+				return ec.fieldContext_ManageCoreEntityMergePreview_conflicts(ctx, field)
+			case "canMerge":
+				return ec.fieldContext_ManageCoreEntityMergePreview_canMerge(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageCoreEntityMergePreview", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityMergeResult_completionWarning(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityMergeResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityMergeResult_completionWarning(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CompletionWarning, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityMergeResult_completionWarning(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityMergeResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -24946,6 +26485,124 @@ func (ec *executionContext) fieldContext_Mutation_replaceTagParents(ctx context.
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_mergeCoreEntities(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_mergeCoreEntities(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().MergeCoreEntities(rctx, fc.Args["kind"].(SearchEntityKind), fc.Args["sourceUUID"].(string), fc.Args["targetUUID"].(string), fc.Args["expectedSourceRevision"].(int64), fc.Args["expectedTargetRevision"].(int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageCoreEntityMergeResult)
+	fc.Result = res
+	return ec.marshalNManageCoreEntityMergeResult2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityMergeResult(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_mergeCoreEntities(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "target":
+				return ec.fieldContext_ManageCoreEntityMergeResult_target(ctx, field)
+			case "preview":
+				return ec.fieldContext_ManageCoreEntityMergeResult_preview(ctx, field)
+			case "completionWarning":
+				return ec.fieldContext_ManageCoreEntityMergeResult_completionWarning(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageCoreEntityMergeResult", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_mergeCoreEntities_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteCoreEntity(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteCoreEntity(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteCoreEntity(rctx, fc.Args["kind"].(SearchEntityKind), fc.Args["uuid"].(string), fc.Args["expectedMetadataRevision"].(int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteCoreEntity(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteCoreEntity_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_replaceGalleryRelations(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_replaceGalleryRelations(ctx, field)
 	if err != nil {
@@ -27693,6 +29350,148 @@ func (ec *executionContext) fieldContext_Query_manageCoreEntityOptions(ctx conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_manageCoreEntityOptions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_previewCoreEntityMerge(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_previewCoreEntityMerge(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().PreviewCoreEntityMerge(rctx, fc.Args["kind"].(SearchEntityKind), fc.Args["sourceUUID"].(string), fc.Args["targetUUID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageCoreEntityMergePreview)
+	fc.Result = res
+	return ec.marshalNManageCoreEntityMergePreview2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityMergePreview(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_previewCoreEntityMerge(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "kind":
+				return ec.fieldContext_ManageCoreEntityMergePreview_kind(ctx, field)
+			case "sourceUUID":
+				return ec.fieldContext_ManageCoreEntityMergePreview_sourceUUID(ctx, field)
+			case "targetUUID":
+				return ec.fieldContext_ManageCoreEntityMergePreview_targetUUID(ctx, field)
+			case "sourceRevision":
+				return ec.fieldContext_ManageCoreEntityMergePreview_sourceRevision(ctx, field)
+			case "targetRevision":
+				return ec.fieldContext_ManageCoreEntityMergePreview_targetRevision(ctx, field)
+			case "affectedGalleryIDs":
+				return ec.fieldContext_ManageCoreEntityMergePreview_affectedGalleryIDs(ctx, field)
+			case "conflicts":
+				return ec.fieldContext_ManageCoreEntityMergePreview_conflicts(ctx, field)
+			case "canMerge":
+				return ec.fieldContext_ManageCoreEntityMergePreview_canMerge(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageCoreEntityMergePreview", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_previewCoreEntityMerge_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_previewCoreEntityDelete(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_previewCoreEntityDelete(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().PreviewCoreEntityDelete(rctx, fc.Args["kind"].(SearchEntityKind), fc.Args["uuid"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageCoreEntityDeletePreview)
+	fc.Result = res
+	return ec.marshalNManageCoreEntityDeletePreview2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityDeletePreview(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_previewCoreEntityDelete(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "kind":
+				return ec.fieldContext_ManageCoreEntityDeletePreview_kind(ctx, field)
+			case "uuid":
+				return ec.fieldContext_ManageCoreEntityDeletePreview_uuid(ctx, field)
+			case "metadataRevision":
+				return ec.fieldContext_ManageCoreEntityDeletePreview_metadataRevision(ctx, field)
+			case "referenceCount":
+				return ec.fieldContext_ManageCoreEntityDeletePreview_referenceCount(ctx, field)
+			case "blockers":
+				return ec.fieldContext_ManageCoreEntityDeletePreview_blockers(ctx, field)
+			case "canDelete":
+				return ec.fieldContext_ManageCoreEntityDeletePreview_canDelete(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageCoreEntityDeletePreview", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_previewCoreEntityDelete_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -34045,6 +35844,278 @@ func (ec *executionContext) _ManageCoreEntity(ctx context.Context, sel ast.Selec
 	return out
 }
 
+var manageCoreEntityDeleteBlockerImplementors = []string{"ManageCoreEntityDeleteBlocker"}
+
+func (ec *executionContext) _ManageCoreEntityDeleteBlocker(ctx context.Context, sel ast.SelectionSet, obj *ManageCoreEntityDeleteBlocker) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageCoreEntityDeleteBlockerImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageCoreEntityDeleteBlocker")
+		case "code":
+			out.Values[i] = ec._ManageCoreEntityDeleteBlocker_code(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "referenceCount":
+			out.Values[i] = ec._ManageCoreEntityDeleteBlocker_referenceCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageCoreEntityDeletePreviewImplementors = []string{"ManageCoreEntityDeletePreview"}
+
+func (ec *executionContext) _ManageCoreEntityDeletePreview(ctx context.Context, sel ast.SelectionSet, obj *ManageCoreEntityDeletePreview) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageCoreEntityDeletePreviewImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageCoreEntityDeletePreview")
+		case "kind":
+			out.Values[i] = ec._ManageCoreEntityDeletePreview_kind(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "uuid":
+			out.Values[i] = ec._ManageCoreEntityDeletePreview_uuid(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "metadataRevision":
+			out.Values[i] = ec._ManageCoreEntityDeletePreview_metadataRevision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "referenceCount":
+			out.Values[i] = ec._ManageCoreEntityDeletePreview_referenceCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "blockers":
+			out.Values[i] = ec._ManageCoreEntityDeletePreview_blockers(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "canDelete":
+			out.Values[i] = ec._ManageCoreEntityDeletePreview_canDelete(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageCoreEntityMergeConflictImplementors = []string{"ManageCoreEntityMergeConflict"}
+
+func (ec *executionContext) _ManageCoreEntityMergeConflict(ctx context.Context, sel ast.SelectionSet, obj *ManageCoreEntityMergeConflict) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageCoreEntityMergeConflictImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageCoreEntityMergeConflict")
+		case "code":
+			out.Values[i] = ec._ManageCoreEntityMergeConflict_code(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "details":
+			out.Values[i] = ec._ManageCoreEntityMergeConflict_details(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageCoreEntityMergePreviewImplementors = []string{"ManageCoreEntityMergePreview"}
+
+func (ec *executionContext) _ManageCoreEntityMergePreview(ctx context.Context, sel ast.SelectionSet, obj *ManageCoreEntityMergePreview) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageCoreEntityMergePreviewImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageCoreEntityMergePreview")
+		case "kind":
+			out.Values[i] = ec._ManageCoreEntityMergePreview_kind(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sourceUUID":
+			out.Values[i] = ec._ManageCoreEntityMergePreview_sourceUUID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "targetUUID":
+			out.Values[i] = ec._ManageCoreEntityMergePreview_targetUUID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sourceRevision":
+			out.Values[i] = ec._ManageCoreEntityMergePreview_sourceRevision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "targetRevision":
+			out.Values[i] = ec._ManageCoreEntityMergePreview_targetRevision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "affectedGalleryIDs":
+			out.Values[i] = ec._ManageCoreEntityMergePreview_affectedGalleryIDs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "conflicts":
+			out.Values[i] = ec._ManageCoreEntityMergePreview_conflicts(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "canMerge":
+			out.Values[i] = ec._ManageCoreEntityMergePreview_canMerge(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageCoreEntityMergeResultImplementors = []string{"ManageCoreEntityMergeResult"}
+
+func (ec *executionContext) _ManageCoreEntityMergeResult(ctx context.Context, sel ast.SelectionSet, obj *ManageCoreEntityMergeResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageCoreEntityMergeResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageCoreEntityMergeResult")
+		case "target":
+			out.Values[i] = ec._ManageCoreEntityMergeResult_target(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "preview":
+			out.Values[i] = ec._ManageCoreEntityMergeResult_preview(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "completionWarning":
+			out.Values[i] = ec._ManageCoreEntityMergeResult_completionWarning(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var manageCoreEntityPageImplementors = []string{"ManageCoreEntityPage"}
 
 func (ec *executionContext) _ManageCoreEntityPage(ctx context.Context, sel ast.SelectionSet, obj *ManageCoreEntityPage) graphql.Marshaler {
@@ -36071,6 +38142,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "mergeCoreEntities":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_mergeCoreEntities(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteCoreEntity":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteCoreEntity(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "replaceGalleryRelations":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_replaceGalleryRelations(ctx, field)
@@ -36878,6 +38963,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_manageCoreEntityOptions(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "previewCoreEntityMerge":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_previewCoreEntityMerge(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "previewCoreEntityDelete":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_previewCoreEntityDelete(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -38400,6 +40529,36 @@ func (ec *executionContext) marshalNInt642int64(ctx context.Context, sel ast.Sel
 	return res
 }
 
+func (ec *executionContext) unmarshalNInt642ᚕint64ᚄ(ctx context.Context, v any) ([]int64, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]int64, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNInt642int64(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNInt642ᚕint64ᚄ(ctx context.Context, sel ast.SelectionSet, v []int64) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNInt642int64(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalNManageAuditEvent2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageAuditEventᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageAuditEvent) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -38636,6 +40795,156 @@ func (ec *executionContext) marshalNManageCoreEntity2ᚖgithubᚗcomᚋstashapp�
 		return graphql.Null
 	}
 	return ec._ManageCoreEntity(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageCoreEntityDeleteBlocker2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityDeleteBlockerᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageCoreEntityDeleteBlocker) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageCoreEntityDeleteBlocker2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityDeleteBlocker(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageCoreEntityDeleteBlocker2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityDeleteBlocker(ctx context.Context, sel ast.SelectionSet, v *ManageCoreEntityDeleteBlocker) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageCoreEntityDeleteBlocker(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageCoreEntityDeletePreview2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityDeletePreview(ctx context.Context, sel ast.SelectionSet, v ManageCoreEntityDeletePreview) graphql.Marshaler {
+	return ec._ManageCoreEntityDeletePreview(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManageCoreEntityDeletePreview2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityDeletePreview(ctx context.Context, sel ast.SelectionSet, v *ManageCoreEntityDeletePreview) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageCoreEntityDeletePreview(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageCoreEntityMergeConflict2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityMergeConflictᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageCoreEntityMergeConflict) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageCoreEntityMergeConflict2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityMergeConflict(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageCoreEntityMergeConflict2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityMergeConflict(ctx context.Context, sel ast.SelectionSet, v *ManageCoreEntityMergeConflict) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageCoreEntityMergeConflict(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageCoreEntityMergePreview2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityMergePreview(ctx context.Context, sel ast.SelectionSet, v ManageCoreEntityMergePreview) graphql.Marshaler {
+	return ec._ManageCoreEntityMergePreview(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManageCoreEntityMergePreview2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityMergePreview(ctx context.Context, sel ast.SelectionSet, v *ManageCoreEntityMergePreview) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageCoreEntityMergePreview(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageCoreEntityMergeResult2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityMergeResult(ctx context.Context, sel ast.SelectionSet, v ManageCoreEntityMergeResult) graphql.Marshaler {
+	return ec._ManageCoreEntityMergeResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManageCoreEntityMergeResult2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityMergeResult(ctx context.Context, sel ast.SelectionSet, v *ManageCoreEntityMergeResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageCoreEntityMergeResult(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNManageCoreEntityPage2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityPage(ctx context.Context, sel ast.SelectionSet, v ManageCoreEntityPage) graphql.Marshaler {

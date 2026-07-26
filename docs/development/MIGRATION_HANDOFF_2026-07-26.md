@@ -110,7 +110,7 @@ go build ./cmd/cgm
 
 ## 7. 下一批开发优先级
 
-1. 实体合并/删除预览 UI、Gallery 归档后删除闭环和 Coser 头像/Banner 托管上传。
+1. Gallery 归档后删除闭环和 Coser 头像/Banner 托管上传。
 2. React 路由级分包、正式二进制静态资源打包和旧业务 UI 入口隔离。
 3. Setup→导入→审核→激活→浏览→Manifest→备份恢复的离线 Playwright E2E。
 4. 真实媒体、危险归档、跨平台和性能门禁。
@@ -123,3 +123,33 @@ go build ./cmd/cgm
 - 第一版拒绝原 Stash/未知非空数据库，不做原地迁移。
 - Browse DTO 和资源 URL 不得泄漏物理路径。
 - 恢复、合并、删除和物理来源转移继续保持显式预览/确认与审计。
+
+## 9. 迁移后续跑记录
+
+2026-07-26在新环境继续完成了核心实体生命周期的Manage闭环：
+
+- 新增Coser/Work/Character/Tag删除预览，按关系类型返回阻断引用数量；提交事务仍会重新检查引用和`metadata_revision`。
+- 新增核心实体合并预览/提交GraphQL契约和Manage UI，显示双方revision、受影响Gallery及全部冲突；任何冲突都会禁用提交，必须先通过普通编辑解决。
+- 合并和删除均要求前端明确确认词，并记录无名称、无路径的高影响管理审计。
+- 合并继续使用既有永久UUID Alias、Slug重定向和Manifest待Push规则；删除继续只允许无引用实体并永久Tombstone UUID。
+- Coser合并在数据库提交后写`redirect_to_uuid`；若文件系统收尾失败，API返回待处理警告而不声称数据库事务已回滚。
+
+本轮验证结果：
+
+```bash
+GOMAXPROCS=2 GOTOOLCHAIN=local \
+  GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
+  /tmp/cgm-go1.25.12/bin/go test \
+  ./internal/persistence/productdb ./internal/productapi ./internal/productserver
+```
+
+结果：通过。`go build ./cmd/cgm`通过。
+
+```bash
+cd ui/web
+corepack pnpm run check
+corepack pnpm run test
+corepack pnpm run build
+```
+
+结果：TypeScript通过；Vitest 4个测试文件、9项测试通过；Vite生产构建通过。当前主JS minify后、gzip前约612 KiB，路由级分包警告仍未解决，不能标记为通过。

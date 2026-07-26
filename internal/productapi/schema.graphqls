@@ -302,6 +302,17 @@ type ManageSocialAccount { uuid: ID! platformKey: String! label: String! handle:
 type ManageCoreEntityRef { uuid: ID! name: String! metadataRevision: Int64! }
 type ManageCoreEntity { kind: SearchEntityKind! uuid: ID! name: String! sortName: String! aliases: [String!]! slug: String! metadataRevision: Int64! workUUID: ID profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean! socialAccounts: [ManageSocialAccount!]! parents: [ManageCoreEntityRef!]! }
 type ManageCoreEntityPage { items: [ManageCoreEntity!]! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
+type ManageCoreEntityMergeConflict { code: String! details: String! }
+type ManageCoreEntityMergePreview {
+  kind: SearchEntityKind! sourceUUID: ID! targetUUID: ID! sourceRevision: Int64! targetRevision: Int64!
+  affectedGalleryIDs: [Int64!]! conflicts: [ManageCoreEntityMergeConflict!]! canMerge: Boolean!
+}
+type ManageCoreEntityMergeResult { target: ManageCoreEntity! preview: ManageCoreEntityMergePreview! completionWarning: String }
+type ManageCoreEntityDeleteBlocker { code: String! referenceCount: Int64! }
+type ManageCoreEntityDeletePreview {
+  kind: SearchEntityKind! uuid: ID! metadataRevision: Int64! referenceCount: Int64!
+  blockers: [ManageCoreEntityDeleteBlocker!]! canDelete: Boolean!
+}
 input CoreEntityInput { kind: SearchEntityKind! name: String! sortName: String! aliases: [String!]! workUUID: ID profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean! }
 input SocialAccountInput { platformKey: String! label: String! handle: String! url: String! status: String! visible: Boolean! position: String! }
 input ReplaceTagParentInput { uuid: ID! position: String! }
@@ -339,6 +350,8 @@ type Query {
   manageCoreEntities(kind: SearchEntityKind!, page: Int! = 1): ManageCoreEntityPage!
   manageCoreEntity(kind: SearchEntityKind!, uuid: ID!): ManageCoreEntity!
   manageCoreEntityOptions(kind: SearchEntityKind!, query: String! = "", limit: Int! = 20): [ManageCoreEntity!]!
+  previewCoreEntityMerge(kind: SearchEntityKind!, sourceUUID: ID!, targetUUID: ID!): ManageCoreEntityMergePreview!
+  previewCoreEntityDelete(kind: SearchEntityKind!, uuid: ID!): ManageCoreEntityDeletePreview!
   browseUISettings: BrowseUISettings!
 }
 
@@ -369,6 +382,8 @@ type Mutation {
   updateCoreEntity(uuid: ID!, expectedMetadataRevision: Int64!, input: CoreEntityInput!): ManageCoreEntity!
   addCoserSocialAccount(coserUUID: ID!, expectedMetadataRevision: Int64!, input: SocialAccountInput!): ManageCoreEntity!
   replaceTagParents(childUUID: ID!, expectedChildRevision: Int64!, parents: [ReplaceTagParentInput!]!, expectedParents: [ExpectedTagRevisionInput!]!): ManageCoreEntity!
+  mergeCoreEntities(kind: SearchEntityKind!, sourceUUID: ID!, targetUUID: ID!, expectedSourceRevision: Int64!, expectedTargetRevision: Int64!): ManageCoreEntityMergeResult!
+  deleteCoreEntity(kind: SearchEntityKind!, uuid: ID!, expectedMetadataRevision: Int64!): Boolean!
   replaceGalleryRelations(setID: ID!, expectedMetadataRevision: Int64!, input: ReplaceGalleryRelationsInput!): ManageGalleryDetail!
   addGalleryExternalLink(setID: ID!, expectedMetadataRevision: Int64!, input: GalleryExternalLinkInput!): ManageGalleryDetail!
   pushGalleryManifest(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryManifestState!

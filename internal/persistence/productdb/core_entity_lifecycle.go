@@ -18,6 +18,19 @@ type coreEntityTable struct {
 	kind portableid.Kind
 }
 
+type CoreEntityDeleteBlocker struct {
+	Code           string
+	ReferenceCount int64
+}
+
+type CoreEntityDeletePreview struct {
+	Kind             portableid.Kind
+	UUID             string
+	MetadataRevision int64
+	ReferenceCount   int64
+	Blockers         []CoreEntityDeleteBlocker
+}
+
 func tableForCoreKind(kind portableid.Kind) (coreEntityTable, error) {
 	switch kind {
 	case portableid.KindCoser:
@@ -131,6 +144,35 @@ func (s *CoreEntityStore) ResolveSlug(ctx context.Context, kind portableid.Kind,
 	return uuid, true, nil
 }
 
+// PreviewDelete reports every relationship that currently prevents deletion.
+// DeleteCoreEntity repeats these checks inside its write transaction, so a
+// preview never weakens the optimistic-lock or no-reference guarantees.
+func (s *CoreEntityStore) PreviewDelete(ctx context.Context, kind portableid.Kind, uuid string) (CoreEntityDeletePreview, error) {
+	table, err := tableForCoreKind(kind)
+	if err != nil {
+		return CoreEntityDeletePreview{}, err
+	}
+	result := CoreEntityDeletePreview{Kind: kind, UUID: uuid}
+	if err := s.db.QueryRowContext(ctx, fmt.Sprintf(`SELECT metadata_revision FROM %s WHERE uuid = ?`, table.name), uuid).Scan(&result.MetadataRevision); err != nil {
+		return CoreEntityDeletePreview{}, err
+	}
+	record, err := lookupPortableUUID(ctx, s.db, uuid)
+	if err != nil {
+		return CoreEntityDeletePreview{}, err
+	}
+	if record.Kind != kind || record.State != PortableUUIDActive {
+		return CoreEntityDeletePreview{}, ErrPortableUUIDNotActive
+	}
+	result.Blockers, err = coreEntityDeleteBlockers(ctx, s.db, kind, uuid)
+	if err != nil {
+		return CoreEntityDeletePreview{}, err
+	}
+	for _, blocker := range result.Blockers {
+		result.ReferenceCount += blocker.ReferenceCount
+	}
+	return result, nil
+}
+
 // DeleteCoreEntity permanently removes an unreferenced entity from business
 // tables and tombstones its UUID. It never deletes media or Coser assets.
 func (s *CoreEntityStore) DeleteCoreEntity(ctx context.Context, kind portableid.Kind, uuid string, expectedRevision int64, reason string, now time.Time) error {
@@ -205,29 +247,55 @@ func tombstonePortableUUID(ctx context.Context, tx *sql.Tx, uuid string, kind po
 }
 
 func coreEntityReferenceCount(ctx context.Context, tx *sql.Tx, kind portableid.Kind, uuid string) (int64, error) {
-	var query string
-	switch kind {
-	case portableid.KindCoser:
-		query = `SELECT COUNT(*) FROM gallery_credits WHERE coser_uuid = ?`
-	case portableid.KindWork:
-		query = `SELECT COUNT(*) FROM characters WHERE work_uuid = ?`
-	case portableid.KindCharacter:
-		query = `SELECT COUNT(*) FROM gallery_cast WHERE character_uuid = ?`
-	case portableid.KindTag:
-		query = `SELECT (SELECT COUNT(*) FROM gallery_tags WHERE tag_uuid = ?) +
-			(SELECT COUNT(*) FROM tag_edges WHERE parent_uuid = ? OR child_uuid = ?)`
-	default:
-		return 0, fmt.Errorf("unsupported core entity kind %s", kind)
-	}
-	var count int64
-	args := []any{uuid}
-	if kind == portableid.KindTag {
-		args = []any{uuid, uuid, uuid}
-	}
-	if err := tx.QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
+	blockers, err := coreEntityDeleteBlockers(ctx, tx, kind, uuid)
+	if err != nil {
 		return 0, err
 	}
+	var count int64
+	for _, blocker := range blockers {
+		count += blocker.ReferenceCount
+	}
 	return count, nil
+}
+
+type coreEntityDeleteQueryer interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+func coreEntityDeleteBlockers(ctx context.Context, queryer coreEntityDeleteQueryer, kind portableid.Kind, uuid string) ([]CoreEntityDeleteBlocker, error) {
+	type referenceQuery struct {
+		code  string
+		query string
+		args  []any
+	}
+	var queries []referenceQuery
+	switch kind {
+	case portableid.KindCoser:
+		queries = []referenceQuery{{code: "GALLERY_CREDIT", query: `SELECT COUNT(*) FROM gallery_credits WHERE coser_uuid = ?`, args: []any{uuid}}}
+	case portableid.KindWork:
+		queries = []referenceQuery{{code: "CHARACTER", query: `SELECT COUNT(*) FROM characters WHERE work_uuid = ?`, args: []any{uuid}}}
+	case portableid.KindCharacter:
+		queries = []referenceQuery{{code: "GALLERY_CAST", query: `SELECT COUNT(*) FROM gallery_cast WHERE character_uuid = ?`, args: []any{uuid}}}
+	case portableid.KindTag:
+		queries = []referenceQuery{
+			{code: "GALLERY_TAG", query: `SELECT COUNT(*) FROM gallery_tags WHERE tag_uuid = ?`, args: []any{uuid}},
+			{code: "TAG_PARENT", query: `SELECT COUNT(*) FROM tag_edges WHERE parent_uuid = ?`, args: []any{uuid}},
+			{code: "TAG_CHILD", query: `SELECT COUNT(*) FROM tag_edges WHERE child_uuid = ?`, args: []any{uuid}},
+		}
+	default:
+		return nil, fmt.Errorf("unsupported core entity kind %s", kind)
+	}
+	var blockers []CoreEntityDeleteBlocker
+	for _, reference := range queries {
+		var count int64
+		if err := queryer.QueryRowContext(ctx, reference.query, reference.args...).Scan(&count); err != nil {
+			return nil, err
+		}
+		if count > 0 {
+			blockers = append(blockers, CoreEntityDeleteBlocker{Code: reference.code, ReferenceCount: count})
+		}
+	}
+	return blockers, nil
 }
 
 func markEntityGalleriesManifestDirty(ctx context.Context, tx *sql.Tx, kind portableid.Kind, uuid string) error {

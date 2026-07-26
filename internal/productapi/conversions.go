@@ -219,6 +219,15 @@ func manageError(err error) error {
 	if errors.Is(err, productdb.ErrCoreMetadataRevisionConflict) {
 		return errors.New("core entity metadata revision conflict")
 	}
+	if errors.Is(err, productdb.ErrCoreEntityMergeConflict) {
+		return errors.New("core entity merge has unresolved conflicts")
+	}
+	if errors.Is(err, productdb.ErrCoreEntityReferenced) {
+		return errors.New("core entity is still referenced")
+	}
+	if errors.Is(err, productdb.ErrPortableUUIDNotActive) {
+		return errors.New("core entity is no longer active")
+	}
 	return publicError(err)
 }
 
@@ -395,6 +404,29 @@ func manageCoreEntityPage(value productdb.ManageCoreEntityPage) *ManageCoreEntit
 	result := &ManageCoreEntityPage{Page: value.Page, PageSize: value.PageSize, TotalItems: value.TotalItems, TotalPages: value.TotalPages}
 	for _, item := range value.Items {
 		result.Items = append(result.Items, manageCoreEntity(item))
+	}
+	return result
+}
+
+func manageCoreEntityMergePreview(value productdb.CoreEntityMergePreview) *ManageCoreEntityMergePreview {
+	result := &ManageCoreEntityMergePreview{
+		Kind: SearchEntityKind(value.Kind), SourceUUID: value.SourceUUID, TargetUUID: value.TargetUUID,
+		SourceRevision: value.SourceRevision, TargetRevision: value.TargetRevision,
+		AffectedGalleryIDs: value.AffectedGalleryIDs, CanMerge: len(value.Conflicts) == 0,
+	}
+	for _, conflict := range value.Conflicts {
+		result.Conflicts = append(result.Conflicts, &ManageCoreEntityMergeConflict{Code: conflict.Code, Details: conflict.Details})
+	}
+	return result
+}
+
+func manageCoreEntityDeletePreview(value productdb.CoreEntityDeletePreview) *ManageCoreEntityDeletePreview {
+	result := &ManageCoreEntityDeletePreview{
+		Kind: SearchEntityKind(value.Kind), UUID: value.UUID, MetadataRevision: value.MetadataRevision,
+		ReferenceCount: value.ReferenceCount, CanDelete: value.ReferenceCount == 0,
+	}
+	for _, blocker := range value.Blockers {
+		result.Blockers = append(result.Blockers, &ManageCoreEntityDeleteBlocker{Code: blocker.Code, ReferenceCount: blocker.ReferenceCount})
 	}
 	return result
 }

@@ -100,7 +100,7 @@ export interface GalleryMemberIndex {
 }
 
 export type SearchEntityKind = "GALLERY" | "COSER" | "WORK" | "CHARACTER" | "TAG";
-export interface EntityIndexItem { kind: SearchEntityKind; uuid: string; slug: string; name: string; aliases: string[] }
+export interface EntityIndexItem { kind: SearchEntityKind; uuid: string; slug: string; name: string; aliases: string[]; avatarURL?: string | null }
 export interface EntityPage { items: EntityIndexItem[]; page: number; pageSize: number; totalItems: number; totalPages: number }
 export interface SearchHit { kind: SearchEntityKind; uuid: string; slug: string; name: string; matchLevel: number }
 export interface SearchPreview { scope: Scope; query: string; galleries: SearchHit[]; cosers: SearchHit[]; works: SearchHit[]; characters: SearchHit[]; tags: SearchHit[] }
@@ -110,7 +110,7 @@ export interface RandomMediaItem {
   favorite: boolean; ratingHalfSteps?: number | null;
 }
 export interface SocialAccount { uuid: string; platformKey: string; label: string; handle: string; url: string; status: "ACTIVE" | "INACTIVE"; position: string }
-export interface CoserDetail { entity: EntityIndexItem; profileSummary: string; biography: string; countryOrRegion: string; socialAccounts: SocialAccount[]; galleries: GalleryPage; redirected: boolean }
+export interface CoserDetail { entity: EntityIndexItem; profileSummary: string; biography: string; countryOrRegion: string; bannerURL?: string | null; socialAccounts: SocialAccount[]; galleries: GalleryPage; redirected: boolean }
 export interface WorkDetail { entity: EntityIndexItem; characters: EntityIndexItem[]; redirected: boolean }
 export interface CharacterDetail { entity: EntityIndexItem; work: EntityIndexItem; galleries: GalleryPage; redirected: boolean }
 export interface TagDetail { entity: EntityIndexItem; galleries: GalleryPage; redirected: boolean }

@@ -110,8 +110,8 @@ go build ./cmd/cgm
 
 ## 7. 下一批开发优先级
 
-1. Coser 头像/Banner 托管上传。
-2. React 路由级分包、正式二进制静态资源打包和旧业务 UI 入口隔离。
+1. React 路由级分包、正式二进制静态资源打包和旧业务 UI 入口隔离。
+2. Coser 未引用托管资源审阅和剩余高影响管理操作。
 3. Setup→导入→审核→激活→浏览→Manifest→备份恢复的离线 Playwright E2E。
 4. 真实媒体、危险归档、跨平台和性能门禁。
 5. AGPLv3 发行源码对应、第三方许可证清单和安装/恢复文档。
@@ -183,4 +183,34 @@ corepack pnpm run build
 
 结果：TypeScript通过；Vitest 5个测试文件、11项测试通过；Vite生产构建通过，共转换657个模块。当前主JS minify后、gzip前约620 KiB，路由级分包警告仍未解决，不能标记为通过。
 
-迁移备忘录中的下一项未完成开发任务现为Coser头像/Banner托管上传；必须继续遵守独立Coser Manifest、单一托管元数据根、裁切/焦点同步和绝不写入用户媒体来源的既有约束。
+随后完成了Coser头像/Banner托管上传的首个完整闭环：
+
+- 新增同源、Session认证的multipart上传端点；按实际内容只允许JPEG、PNG和静态WebP，拒绝GIF/SVG等其他格式，并执行20MiB/50MP限制。
+- 原图和头像480、Banner 960/1600派生图只写入单一`<coser_root>/<uuid>/assets/`目录；目录和资源读取逐级拒绝符号链接。
+- 上传保存归一化头像裁切与Banner焦点，使用Coser独立`metadata_revision`乐观锁，并将既有Coser Manifest标为`DB_DIRTY`。
+- 替换时不删除旧原图或派生图；数据库提交冲突最多留下未引用托管资源，不会触碰用户媒体来源。
+- Manage资料页新增上传、预览和裁切/焦点字段；Browse Coser索引与详情使用不透明认证资源URL，无头像保持名称首字符占位，无Banner隐藏区域。
+- 上传成功/失败进入不含物理路径的管理审计。
+
+本阶段验证结果：
+
+```bash
+GOMAXPROCS=2 GOTOOLCHAIN=local \
+  GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
+  /tmp/cgm-go1.25.12/bin/go test \
+  ./internal/persistence/productdb ./internal/coserasset \
+  ./internal/productapi ./internal/productserver
+```
+
+结果：通过。`go build -o /tmp/cgm-build-check ./cmd/cgm`通过。
+
+```bash
+cd ui/web
+corepack pnpm run check
+corepack pnpm run test
+corepack pnpm run build
+```
+
+结果：TypeScript通过；Vitest 6个测试文件、12项测试通过；Vite生产构建通过，共转换658个模块。当前主JS minify后、gzip前约626 KiB，路由级分包警告仍未解决，不能标记为通过。
+
+迁移备忘录中的下一项未完成开发任务现为React路由级分包、正式二进制静态资源打包和旧业务UI入口隔离。Coser替换资源已按约束保留，但未引用托管资源的集中审阅/清理界面仍需后续完成，禁止以自动清理方式补齐。

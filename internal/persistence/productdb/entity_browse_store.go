@@ -78,6 +78,14 @@ func (s *BrowseStore) EntityIndex(ctx context.Context, kind browse.SearchEntityK
 		if err != nil {
 			return browse.EntityPage{}, err
 		}
+		if kind == browse.SearchCoser {
+			var available int
+			if err := s.db.QueryRowContext(ctx, `SELECT avatar_path<>'',metadata_revision FROM cosers WHERE uuid=?`, result.Items[index].UUID).
+				Scan(&available, &result.Items[index].AssetRevision); err != nil {
+				return browse.EntityPage{}, err
+			}
+			result.Items[index].AvatarAvailable = available == 1
+		}
 	}
 	result.Page, result.PageSize, result.TotalItems = page, config.pageSize, total
 	result.TotalPages = int(math.Ceil(float64(total) / float64(config.pageSize)))

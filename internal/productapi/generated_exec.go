@@ -86,6 +86,7 @@ type ComplexityRoot struct {
 	}
 
 	CoserDetail struct {
+		BannerURL       func(childComplexity int) int
 		Biography       func(childComplexity int) int
 		CountryOrRegion func(childComplexity int) int
 		Entity          func(childComplexity int) int
@@ -96,11 +97,12 @@ type ComplexityRoot struct {
 	}
 
 	EntityIndexItem struct {
-		Aliases func(childComplexity int) int
-		Kind    func(childComplexity int) int
-		Name    func(childComplexity int) int
-		Slug    func(childComplexity int) int
-		UUID    func(childComplexity int) int
+		Aliases   func(childComplexity int) int
+		AvatarURL func(childComplexity int) int
+		Kind      func(childComplexity int) int
+		Name      func(childComplexity int) int
+		Slug      func(childComplexity int) int
+		UUID      func(childComplexity int) int
 	}
 
 	EntityPage struct {
@@ -208,6 +210,12 @@ type ComplexityRoot struct {
 		TotalPages func(childComplexity int) int
 	}
 
+	ManageAvatarCrop struct {
+		Size func(childComplexity int) int
+		X    func(childComplexity int) int
+		Y    func(childComplexity int) int
+	}
+
 	ManageBackupRecord struct {
 		ArchiveSha256          func(childComplexity int) int
 		ByteSize               func(childComplexity int) int
@@ -240,6 +248,10 @@ type ComplexityRoot struct {
 
 	ManageCoreEntity struct {
 		Aliases             func(childComplexity int) int
+		AvatarCrop          func(childComplexity int) int
+		AvatarURL           func(childComplexity int) int
+		BannerFocalPoint    func(childComplexity int) int
+		BannerURL           func(childComplexity int) int
 		Biography           func(childComplexity int) int
 		CountryOrRegion     func(childComplexity int) int
 		Kind                func(childComplexity int) int
@@ -319,6 +331,11 @@ type ComplexityRoot struct {
 		ID          func(childComplexity int) int
 		LibraryID   func(childComplexity int) int
 		Unassigned  func(childComplexity int) int
+	}
+
+	ManageFocalPoint struct {
+		X func(childComplexity int) int
+		Y func(childComplexity int) int
 	}
 
 	ManageGalleryCast struct {
@@ -1018,6 +1035,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.CharacterDetail.Work(childComplexity), true
 
+	case "CoserDetail.bannerURL":
+		if e.complexity.CoserDetail.BannerURL == nil {
+			break
+		}
+
+		return e.complexity.CoserDetail.BannerURL(childComplexity), true
+
 	case "CoserDetail.biography":
 		if e.complexity.CoserDetail.Biography == nil {
 			break
@@ -1073,6 +1097,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.EntityIndexItem.Aliases(childComplexity), true
+
+	case "EntityIndexItem.avatarURL":
+		if e.complexity.EntityIndexItem.AvatarURL == nil {
+			break
+		}
+
+		return e.complexity.EntityIndexItem.AvatarURL(childComplexity), true
 
 	case "EntityIndexItem.kind":
 		if e.complexity.EntityIndexItem.Kind == nil {
@@ -1564,6 +1595,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageAuditPage.TotalPages(childComplexity), true
 
+	case "ManageAvatarCrop.size":
+		if e.complexity.ManageAvatarCrop.Size == nil {
+			break
+		}
+
+		return e.complexity.ManageAvatarCrop.Size(childComplexity), true
+
+	case "ManageAvatarCrop.x":
+		if e.complexity.ManageAvatarCrop.X == nil {
+			break
+		}
+
+		return e.complexity.ManageAvatarCrop.X(childComplexity), true
+
+	case "ManageAvatarCrop.y":
+		if e.complexity.ManageAvatarCrop.Y == nil {
+			break
+		}
+
+		return e.complexity.ManageAvatarCrop.Y(childComplexity), true
+
 	case "ManageBackupRecord.archiveSHA256":
 		if e.complexity.ManageBackupRecord.ArchiveSha256 == nil {
 			break
@@ -1738,6 +1790,34 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageCoreEntity.Aliases(childComplexity), true
+
+	case "ManageCoreEntity.avatarCrop":
+		if e.complexity.ManageCoreEntity.AvatarCrop == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntity.AvatarCrop(childComplexity), true
+
+	case "ManageCoreEntity.avatarURL":
+		if e.complexity.ManageCoreEntity.AvatarURL == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntity.AvatarURL(childComplexity), true
+
+	case "ManageCoreEntity.bannerFocalPoint":
+		if e.complexity.ManageCoreEntity.BannerFocalPoint == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntity.BannerFocalPoint(childComplexity), true
+
+	case "ManageCoreEntity.bannerURL":
+		if e.complexity.ManageCoreEntity.BannerURL == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntity.BannerURL(childComplexity), true
 
 	case "ManageCoreEntity.biography":
 		if e.complexity.ManageCoreEntity.Biography == nil {
@@ -2102,6 +2182,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageDiscoverySnapshot.Unassigned(childComplexity), true
+
+	case "ManageFocalPoint.x":
+		if e.complexity.ManageFocalPoint.X == nil {
+			break
+		}
+
+		return e.complexity.ManageFocalPoint.X(childComplexity), true
+
+	case "ManageFocalPoint.y":
+		if e.complexity.ManageFocalPoint.Y == nil {
+			break
+		}
+
+		return e.complexity.ManageFocalPoint.Y(childComplexity), true
 
 	case "ManageGalleryCast.characterName":
 		if e.complexity.ManageGalleryCast.CharacterName == nil {
@@ -9700,6 +9794,8 @@ func (ec *executionContext) fieldContext_CharacterDetail_entity(_ context.Contex
 				return ec.fieldContext_EntityIndexItem_name(ctx, field)
 			case "aliases":
 				return ec.fieldContext_EntityIndexItem_aliases(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_EntityIndexItem_avatarURL(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type EntityIndexItem", field.Name)
 		},
@@ -9756,6 +9852,8 @@ func (ec *executionContext) fieldContext_CharacterDetail_work(_ context.Context,
 				return ec.fieldContext_EntityIndexItem_name(ctx, field)
 			case "aliases":
 				return ec.fieldContext_EntityIndexItem_aliases(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_EntityIndexItem_avatarURL(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type EntityIndexItem", field.Name)
 		},
@@ -9912,6 +10010,8 @@ func (ec *executionContext) fieldContext_CoserDetail_entity(_ context.Context, f
 				return ec.fieldContext_EntityIndexItem_name(ctx, field)
 			case "aliases":
 				return ec.fieldContext_EntityIndexItem_aliases(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_EntityIndexItem_avatarURL(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type EntityIndexItem", field.Name)
 		},
@@ -10106,6 +10206,47 @@ func (ec *executionContext) fieldContext_CoserDetail_socialAccounts(_ context.Co
 				return ec.fieldContext_SocialAccount_position(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type SocialAccount", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CoserDetail_bannerURL(ctx context.Context, field graphql.CollectedField, obj *CoserDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CoserDetail_bannerURL(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BannerURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CoserDetail_bannerURL(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CoserDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -10431,6 +10572,47 @@ func (ec *executionContext) fieldContext_EntityIndexItem_aliases(_ context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _EntityIndexItem_avatarURL(ctx context.Context, field graphql.CollectedField, obj *EntityIndexItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_EntityIndexItem_avatarURL(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AvatarURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_EntityIndexItem_avatarURL(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "EntityIndexItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _EntityPage_items(ctx context.Context, field graphql.CollectedField, obj *EntityPage) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_EntityPage_items(ctx, field)
 	if err != nil {
@@ -10480,6 +10662,8 @@ func (ec *executionContext) fieldContext_EntityPage_items(_ context.Context, fie
 				return ec.fieldContext_EntityIndexItem_name(ctx, field)
 			case "aliases":
 				return ec.fieldContext_EntityIndexItem_aliases(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_EntityIndexItem_avatarURL(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type EntityIndexItem", field.Name)
 		},
@@ -13590,6 +13774,138 @@ func (ec *executionContext) fieldContext_ManageAuditPage_totalPages(_ context.Co
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageAvatarCrop_x(ctx context.Context, field graphql.CollectedField, obj *ManageAvatarCrop) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageAvatarCrop_x(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.X, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageAvatarCrop_x(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageAvatarCrop",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageAvatarCrop_y(ctx context.Context, field graphql.CollectedField, obj *ManageAvatarCrop) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageAvatarCrop_y(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Y, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageAvatarCrop_y(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageAvatarCrop",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageAvatarCrop_size(ctx context.Context, field graphql.CollectedField, obj *ManageAvatarCrop) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageAvatarCrop_size(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Size, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageAvatarCrop_size(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageAvatarCrop",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageBackupRecord_id(ctx context.Context, field graphql.CollectedField, obj *ManageBackupRecord) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageBackupRecord_id(ctx, field)
 	if err != nil {
@@ -15171,6 +15487,184 @@ func (ec *executionContext) fieldContext_ManageCoreEntity_useInRecommendation(_ 
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageCoreEntity_avatarURL(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntity) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AvatarURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntity_avatarURL(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntity_bannerURL(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntity) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntity_bannerURL(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BannerURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntity_bannerURL(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntity_avatarCrop(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntity) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntity_avatarCrop(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AvatarCrop, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*ManageAvatarCrop)
+	fc.Result = res
+	return ec.marshalOManageAvatarCrop2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageAvatarCrop(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntity_avatarCrop(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "x":
+				return ec.fieldContext_ManageAvatarCrop_x(ctx, field)
+			case "y":
+				return ec.fieldContext_ManageAvatarCrop_y(ctx, field)
+			case "size":
+				return ec.fieldContext_ManageAvatarCrop_size(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageAvatarCrop", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntity_bannerFocalPoint(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntity) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntity_bannerFocalPoint(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BannerFocalPoint, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*ManageFocalPoint)
+	fc.Result = res
+	return ec.marshalOManageFocalPoint2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageFocalPoint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntity_bannerFocalPoint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "x":
+				return ec.fieldContext_ManageFocalPoint_x(ctx, field)
+			case "y":
+				return ec.fieldContext_ManageFocalPoint_y(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageFocalPoint", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageCoreEntity_socialAccounts(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntity) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageCoreEntity_socialAccounts(ctx, field)
 	if err != nil {
@@ -16152,6 +16646,14 @@ func (ec *executionContext) fieldContext_ManageCoreEntityMergeResult_target(_ co
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
+			case "bannerURL":
+				return ec.fieldContext_ManageCoreEntity_bannerURL(ctx, field)
+			case "avatarCrop":
+				return ec.fieldContext_ManageCoreEntity_avatarCrop(ctx, field)
+			case "bannerFocalPoint":
+				return ec.fieldContext_ManageCoreEntity_bannerFocalPoint(ctx, field)
 			case "socialAccounts":
 				return ec.fieldContext_ManageCoreEntity_socialAccounts(ctx, field)
 			case "parents":
@@ -16329,6 +16831,14 @@ func (ec *executionContext) fieldContext_ManageCoreEntityPage_items(_ context.Co
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
+			case "bannerURL":
+				return ec.fieldContext_ManageCoreEntity_bannerURL(ctx, field)
+			case "avatarCrop":
+				return ec.fieldContext_ManageCoreEntity_avatarCrop(ctx, field)
+			case "bannerFocalPoint":
+				return ec.fieldContext_ManageCoreEntity_bannerFocalPoint(ctx, field)
 			case "socialAccounts":
 				return ec.fieldContext_ManageCoreEntity_socialAccounts(ctx, field)
 			case "parents":
@@ -17123,6 +17633,94 @@ func (ec *executionContext) fieldContext_ManageDiscoverySnapshot_unassigned(_ co
 				return ec.fieldContext_ManageUnassignedDiagnostic_mediaCount(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageUnassignedDiagnostic", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageFocalPoint_x(ctx context.Context, field graphql.CollectedField, obj *ManageFocalPoint) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageFocalPoint_x(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.X, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageFocalPoint_x(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageFocalPoint",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageFocalPoint_y(ctx context.Context, field graphql.CollectedField, obj *ManageFocalPoint) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageFocalPoint_y(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Y, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageFocalPoint_y(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageFocalPoint",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
 		},
 	}
 	return fc, nil
@@ -26780,6 +27378,14 @@ func (ec *executionContext) fieldContext_Mutation_createCoreEntity(ctx context.C
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
+			case "bannerURL":
+				return ec.fieldContext_ManageCoreEntity_bannerURL(ctx, field)
+			case "avatarCrop":
+				return ec.fieldContext_ManageCoreEntity_avatarCrop(ctx, field)
+			case "bannerFocalPoint":
+				return ec.fieldContext_ManageCoreEntity_bannerFocalPoint(ctx, field)
 			case "socialAccounts":
 				return ec.fieldContext_ManageCoreEntity_socialAccounts(ctx, field)
 			case "parents":
@@ -26865,6 +27471,14 @@ func (ec *executionContext) fieldContext_Mutation_updateCoreEntity(ctx context.C
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
+			case "bannerURL":
+				return ec.fieldContext_ManageCoreEntity_bannerURL(ctx, field)
+			case "avatarCrop":
+				return ec.fieldContext_ManageCoreEntity_avatarCrop(ctx, field)
+			case "bannerFocalPoint":
+				return ec.fieldContext_ManageCoreEntity_bannerFocalPoint(ctx, field)
 			case "socialAccounts":
 				return ec.fieldContext_ManageCoreEntity_socialAccounts(ctx, field)
 			case "parents":
@@ -26950,6 +27564,14 @@ func (ec *executionContext) fieldContext_Mutation_addCoserSocialAccount(ctx cont
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
+			case "bannerURL":
+				return ec.fieldContext_ManageCoreEntity_bannerURL(ctx, field)
+			case "avatarCrop":
+				return ec.fieldContext_ManageCoreEntity_avatarCrop(ctx, field)
+			case "bannerFocalPoint":
+				return ec.fieldContext_ManageCoreEntity_bannerFocalPoint(ctx, field)
 			case "socialAccounts":
 				return ec.fieldContext_ManageCoreEntity_socialAccounts(ctx, field)
 			case "parents":
@@ -27035,6 +27657,14 @@ func (ec *executionContext) fieldContext_Mutation_replaceTagParents(ctx context.
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
+			case "bannerURL":
+				return ec.fieldContext_ManageCoreEntity_bannerURL(ctx, field)
+			case "avatarCrop":
+				return ec.fieldContext_ManageCoreEntity_avatarCrop(ctx, field)
+			case "bannerFocalPoint":
+				return ec.fieldContext_ManageCoreEntity_bannerFocalPoint(ctx, field)
 			case "socialAccounts":
 				return ec.fieldContext_ManageCoreEntity_socialAccounts(ctx, field)
 			case "parents":
@@ -28496,6 +29126,8 @@ func (ec *executionContext) fieldContext_Query_coserDetail(ctx context.Context, 
 				return ec.fieldContext_CoserDetail_countryOrRegion(ctx, field)
 			case "socialAccounts":
 				return ec.fieldContext_CoserDetail_socialAccounts(ctx, field)
+			case "bannerURL":
+				return ec.fieldContext_CoserDetail_bannerURL(ctx, field)
 			case "galleries":
 				return ec.fieldContext_CoserDetail_galleries(ctx, field)
 			case "redirected":
@@ -29876,6 +30508,14 @@ func (ec *executionContext) fieldContext_Query_manageCoreEntity(ctx context.Cont
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
+			case "bannerURL":
+				return ec.fieldContext_ManageCoreEntity_bannerURL(ctx, field)
+			case "avatarCrop":
+				return ec.fieldContext_ManageCoreEntity_avatarCrop(ctx, field)
+			case "bannerFocalPoint":
+				return ec.fieldContext_ManageCoreEntity_bannerFocalPoint(ctx, field)
 			case "socialAccounts":
 				return ec.fieldContext_ManageCoreEntity_socialAccounts(ctx, field)
 			case "parents":
@@ -29961,6 +30601,14 @@ func (ec *executionContext) fieldContext_Query_manageCoreEntityOptions(ctx conte
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
+			case "bannerURL":
+				return ec.fieldContext_ManageCoreEntity_bannerURL(ctx, field)
+			case "avatarCrop":
+				return ec.fieldContext_ManageCoreEntity_avatarCrop(ctx, field)
+			case "bannerFocalPoint":
+				return ec.fieldContext_ManageCoreEntity_bannerFocalPoint(ctx, field)
 			case "socialAccounts":
 				return ec.fieldContext_ManageCoreEntity_socialAccounts(ctx, field)
 			case "parents":
@@ -32010,6 +32658,8 @@ func (ec *executionContext) fieldContext_TagDetail_entity(_ context.Context, fie
 				return ec.fieldContext_EntityIndexItem_name(ctx, field)
 			case "aliases":
 				return ec.fieldContext_EntityIndexItem_aliases(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_EntityIndexItem_avatarURL(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type EntityIndexItem", field.Name)
 		},
@@ -32166,6 +32816,8 @@ func (ec *executionContext) fieldContext_WorkDetail_entity(_ context.Context, fi
 				return ec.fieldContext_EntityIndexItem_name(ctx, field)
 			case "aliases":
 				return ec.fieldContext_EntityIndexItem_aliases(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_EntityIndexItem_avatarURL(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type EntityIndexItem", field.Name)
 		},
@@ -32222,6 +32874,8 @@ func (ec *executionContext) fieldContext_WorkDetail_characters(_ context.Context
 				return ec.fieldContext_EntityIndexItem_name(ctx, field)
 			case "aliases":
 				return ec.fieldContext_EntityIndexItem_aliases(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_EntityIndexItem_avatarURL(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type EntityIndexItem", field.Name)
 		},
@@ -35412,6 +36066,8 @@ func (ec *executionContext) _CoserDetail(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "bannerURL":
+			out.Values[i] = ec._CoserDetail_bannerURL(ctx, field, obj)
 		case "galleries":
 			out.Values[i] = ec._CoserDetail_galleries(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -35481,6 +36137,8 @@ func (ec *executionContext) _EntityIndexItem(ctx context.Context, sel ast.Select
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "avatarURL":
+			out.Values[i] = ec._EntityIndexItem_avatarURL(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -36261,6 +36919,55 @@ func (ec *executionContext) _ManageAuditPage(ctx context.Context, sel ast.Select
 	return out
 }
 
+var manageAvatarCropImplementors = []string{"ManageAvatarCrop"}
+
+func (ec *executionContext) _ManageAvatarCrop(ctx context.Context, sel ast.SelectionSet, obj *ManageAvatarCrop) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageAvatarCropImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageAvatarCrop")
+		case "x":
+			out.Values[i] = ec._ManageAvatarCrop_x(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "y":
+			out.Values[i] = ec._ManageAvatarCrop_y(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "size":
+			out.Values[i] = ec._ManageAvatarCrop_size(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var manageBackupRecordImplementors = []string{"ManageBackupRecord"}
 
 func (ec *executionContext) _ManageBackupRecord(ctx context.Context, sel ast.SelectionSet, obj *ManageBackupRecord) graphql.Marshaler {
@@ -36511,6 +37218,14 @@ func (ec *executionContext) _ManageCoreEntity(ctx context.Context, sel ast.Selec
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "avatarURL":
+			out.Values[i] = ec._ManageCoreEntity_avatarURL(ctx, field, obj)
+		case "bannerURL":
+			out.Values[i] = ec._ManageCoreEntity_bannerURL(ctx, field, obj)
+		case "avatarCrop":
+			out.Values[i] = ec._ManageCoreEntity_avatarCrop(ctx, field, obj)
+		case "bannerFocalPoint":
+			out.Values[i] = ec._ManageCoreEntity_bannerFocalPoint(ctx, field, obj)
 		case "socialAccounts":
 			out.Values[i] = ec._ManageCoreEntity_socialAccounts(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -37016,6 +37731,50 @@ func (ec *executionContext) _ManageDiscoverySnapshot(ctx context.Context, sel as
 			}
 		case "unassigned":
 			out.Values[i] = ec._ManageDiscoverySnapshot_unassigned(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageFocalPointImplementors = []string{"ManageFocalPoint"}
+
+func (ec *executionContext) _ManageFocalPoint(ctx context.Context, sel ast.SelectionSet, obj *ManageFocalPoint) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageFocalPointImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageFocalPoint")
+		case "x":
+			out.Values[i] = ec._ManageFocalPoint_x(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "y":
+			out.Values[i] = ec._ManageFocalPoint_y(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -43518,6 +44277,20 @@ func (ec *executionContext) marshalOInt642ᚖint64(ctx context.Context, sel ast.
 	_ = ctx
 	res := graphql.MarshalInt64(*v)
 	return res
+}
+
+func (ec *executionContext) marshalOManageAvatarCrop2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageAvatarCrop(ctx context.Context, sel ast.SelectionSet, v *ManageAvatarCrop) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._ManageAvatarCrop(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOManageFocalPoint2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageFocalPoint(ctx context.Context, sel ast.SelectionSet, v *ManageFocalPoint) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._ManageFocalPoint(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOResourceIdentity2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐResourceIdentity(ctx context.Context, sel ast.SelectionSet, v *ResourceIdentity) graphql.Marshaler {

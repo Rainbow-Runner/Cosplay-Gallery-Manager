@@ -14,6 +14,6 @@ export function EntityIndexPage({ kind, titleID }: { kind: Exclude<SearchEntityK
     <ScopeSelector value={scope} onChange={(next) => setParameters({ scope: next, page: "1", sort })} />
     {loading ? <p className="state-message">{intl.formatMessage({ id: "state.loading" })}</p> : null}{error ? <p className="state-message" role="alert">{intl.formatMessage({ id: "state.error" })}</p> : null}
     {data?.entityIndex.items.length ? <section className={`entity-index entity-index--${kind.toLowerCase()}`}>{data.entityIndex.items.map((item) =>
-      <Link key={item.uuid} to={`/${routeNames[kind]}/${item.slug}`}><strong>{item.name}</strong>{item.aliases.length ? <span>{item.aliases.join(" / ")}</span> : null}</Link>)}</section> : null}
+      <Link key={item.uuid} to={`/${routeNames[kind]}/${item.slug}`}>{kind === "COSER" ? <div className="entity-index__avatar">{item.avatarURL ? <img src={item.avatarURL} alt="" /> : item.name.slice(0, 1)}</div> : null}<strong>{item.name}</strong>{item.aliases.length ? <span>{item.aliases.join(" / ")}</span> : null}</Link>)}</section> : null}
   </main>;
 }

@@ -189,11 +189,13 @@ const (
 )
 
 type EntityIndexItem struct {
-	Kind    SearchEntityKind
-	UUID    string
-	Slug    string
-	Name    string
-	Aliases []string
+	Kind            SearchEntityKind
+	UUID            string
+	Slug            string
+	Name            string
+	Aliases         []string
+	AvatarAvailable bool
+	AssetRevision   int64
 }
 
 type EntityPage struct {
@@ -246,6 +248,7 @@ type CoserDetail struct {
 	CountryOrRegion string
 	SocialAccounts  []SocialAccount
 	Galleries       GalleryPage
+	BannerAvailable bool
 	Redirected      bool
 }
 

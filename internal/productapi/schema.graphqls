@@ -141,6 +141,7 @@ type EntityIndexItem {
   slug: String!
   name: String!
   aliases: [String!]!
+  avatarURL: String
 }
 
 type EntityPage {
@@ -185,6 +186,7 @@ type CoserDetail {
   biography: String!
   countryOrRegion: String!
   socialAccounts: [SocialAccount!]!
+  bannerURL: String
   galleries: GalleryPage!
   redirected: Boolean!
 }
@@ -300,7 +302,14 @@ type ManageAuditEvent {
 type ManageAuditPage { items: [ManageAuditEvent!]! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
 type ManageSocialAccount { uuid: ID! platformKey: String! label: String! handle: String! url: String! status: String! visible: Boolean! position: String! }
 type ManageCoreEntityRef { uuid: ID! name: String! metadataRevision: Int64! }
-type ManageCoreEntity { kind: SearchEntityKind! uuid: ID! name: String! sortName: String! aliases: [String!]! slug: String! metadataRevision: Int64! workUUID: ID profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean! socialAccounts: [ManageSocialAccount!]! parents: [ManageCoreEntityRef!]! }
+type ManageAvatarCrop { x: Float! y: Float! size: Float! }
+type ManageFocalPoint { x: Float! y: Float! }
+type ManageCoreEntity {
+  kind: SearchEntityKind! uuid: ID! name: String! sortName: String! aliases: [String!]! slug: String! metadataRevision: Int64!
+  workUUID: ID profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean!
+  avatarURL: String bannerURL: String avatarCrop: ManageAvatarCrop bannerFocalPoint: ManageFocalPoint
+  socialAccounts: [ManageSocialAccount!]! parents: [ManageCoreEntityRef!]!
+}
 type ManageCoreEntityPage { items: [ManageCoreEntity!]! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
 type ManageCoreEntityMergeConflict { code: String! details: String! }
 type ManageCoreEntityMergePreview {

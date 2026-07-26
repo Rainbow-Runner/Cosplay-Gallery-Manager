@@ -20,7 +20,7 @@ export function CoserDetailPage() {
   const detail = query.data?.coserDetail;
   useCanonicalDetail(detail, route.slug, "coser", route.navigate);
   if (query.loading) return <Loading />; if (query.error || !detail) return <ErrorState />;
-  return <main className="browse-main"><section className="coser-hero"><div className="coser-avatar">{detail.entity.name.slice(0, 1)}</div><div><p>COSER</p><h1>{detail.entity.name}</h1>
+  return <main className="browse-main">{detail.bannerURL ? <div className="coser-banner"><img src={detail.bannerURL} alt="" /></div> : null}<section className="coser-hero"><div className="coser-avatar">{detail.entity.avatarURL ? <img src={detail.entity.avatarURL} alt="" /> : detail.entity.name.slice(0, 1)}</div><div><p>COSER</p><h1>{detail.entity.name}</h1>
     {detail.countryOrRegion ? <span>{detail.countryOrRegion}</span> : null}{detail.profileSummary ? <details><summary>{intl.formatMessage({ id: "coser.profile" })}</summary><p>{detail.profileSummary}</p></details> : null}</div></section>
     {detail.biography ? <section className="coser-biography"><h2>{intl.formatMessage({ id: "coser.biography" })}</h2><p>{detail.biography}</p></section> : null}
     {detail.socialAccounts.length ? <section className="social-accounts">{detail.socialAccounts.map((account) => <a key={account.uuid} className={account.status === "INACTIVE" ? "is-inactive" : ""} href={account.url} target="_blank" rel="noreferrer"><span>{account.platformKey}</span>{account.label || account.handle}</a>)}</section> : null}

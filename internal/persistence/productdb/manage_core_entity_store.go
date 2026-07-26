@@ -24,6 +24,8 @@ type ManageCoreEntity struct {
 	CountryOrRegion     string
 	AvatarPath          string
 	BannerPath          string
+	AvatarCrop          *coreentity.AvatarCrop
+	BannerFocalPoint    *coreentity.FocalPoint
 	SocialAccounts      []coreentity.SocialAccount
 	Parents             []ManageCoreEntityRef
 }
@@ -166,7 +168,7 @@ func (s *CoreEntityStore) ManageFind(ctx context.Context, kind, uuid string) (Ma
 		if err != nil {
 			return ManageCoreEntity{}, err
 		}
-		result := ManageCoreEntity{Kind: kind, UUID: value.UUID, Name: value.Name, SortName: value.SortName, Aliases: value.Aliases, Slug: value.Slug, MetadataRevision: value.MetadataRevision, ProfileSummary: value.ProfileSummary, Biography: value.Biography, CountryOrRegion: value.CountryOrRegion, AvatarPath: value.AvatarPath, BannerPath: value.BannerPath}
+		result := ManageCoreEntity{Kind: kind, UUID: value.UUID, Name: value.Name, SortName: value.SortName, Aliases: value.Aliases, Slug: value.Slug, MetadataRevision: value.MetadataRevision, ProfileSummary: value.ProfileSummary, Biography: value.Biography, CountryOrRegion: value.CountryOrRegion, AvatarPath: value.AvatarPath, BannerPath: value.BannerPath, AvatarCrop: value.AvatarCrop, BannerFocalPoint: value.BannerFocalPoint}
 		accounts, err := s.manageSocialAccounts(ctx, uuid)
 		result.SocialAccounts = accounts
 		return result, err

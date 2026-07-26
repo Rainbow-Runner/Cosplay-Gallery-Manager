@@ -66,6 +66,7 @@ type CoserDetail struct {
 	Biography       string           `json:"biography"`
 	CountryOrRegion string           `json:"countryOrRegion"`
 	SocialAccounts  []*SocialAccount `json:"socialAccounts"`
+	BannerURL       *string          `json:"bannerURL,omitempty"`
 	Galleries       *GalleryPage     `json:"galleries"`
 	Redirected      bool             `json:"redirected"`
 }
@@ -90,11 +91,12 @@ type CreateRecognitionRuleInput struct {
 }
 
 type EntityIndexItem struct {
-	Kind    SearchEntityKind `json:"kind"`
-	UUID    string           `json:"uuid"`
-	Slug    string           `json:"slug"`
-	Name    string           `json:"name"`
-	Aliases []string         `json:"aliases"`
+	Kind      SearchEntityKind `json:"kind"`
+	UUID      string           `json:"uuid"`
+	Slug      string           `json:"slug"`
+	Name      string           `json:"name"`
+	Aliases   []string         `json:"aliases"`
+	AvatarURL *string          `json:"avatarURL,omitempty"`
 }
 
 type EntityPage struct {
@@ -214,6 +216,12 @@ type ManageAuditPage struct {
 	TotalPages int                 `json:"totalPages"`
 }
 
+type ManageAvatarCrop struct {
+	X    float64 `json:"x"`
+	Y    float64 `json:"y"`
+	Size float64 `json:"size"`
+}
+
 type ManageBackupRecord struct {
 	ID                     string  `json:"id"`
 	Kind                   string  `json:"kind"`
@@ -257,6 +265,10 @@ type ManageCoreEntity struct {
 	Biography           string                 `json:"biography"`
 	CountryOrRegion     string                 `json:"countryOrRegion"`
 	UseInRecommendation bool                   `json:"useInRecommendation"`
+	AvatarURL           *string                `json:"avatarURL,omitempty"`
+	BannerURL           *string                `json:"bannerURL,omitempty"`
+	AvatarCrop          *ManageAvatarCrop      `json:"avatarCrop,omitempty"`
+	BannerFocalPoint    *ManageFocalPoint      `json:"bannerFocalPoint,omitempty"`
 	SocialAccounts      []*ManageSocialAccount `json:"socialAccounts"`
 	Parents             []*ManageCoreEntityRef `json:"parents"`
 }
@@ -325,6 +337,11 @@ type ManageDiscoverySnapshot struct {
 	CompletedAt string                        `json:"completedAt"`
 	Candidates  []*ManageCandidate            `json:"candidates"`
 	Unassigned  []*ManageUnassignedDiagnostic `json:"unassigned"`
+}
+
+type ManageFocalPoint struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 type ManageGalleryCast struct {

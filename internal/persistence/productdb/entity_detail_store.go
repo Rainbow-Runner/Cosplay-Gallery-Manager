@@ -17,10 +17,15 @@ func (s *BrowseStore) CoserDetail(ctx context.Context, value string, scope brows
 	var result browse.CoserDetail
 	result.Redirected = redirected
 	result.Entity.Kind = browse.SearchCoser
-	if err := s.db.QueryRowContext(ctx, `SELECT uuid,slug,name,profile_summary,biography,country_or_region FROM cosers WHERE uuid=?`, uuid).Scan(
-		&result.Entity.UUID, &result.Entity.Slug, &result.Entity.Name, &result.ProfileSummary, &result.Biography, &result.CountryOrRegion); err != nil {
+	var avatarAvailable, bannerAvailable int
+	if err := s.db.QueryRowContext(ctx, `SELECT uuid,slug,name,profile_summary,biography,country_or_region,
+		avatar_path<>'',banner_path<>'',metadata_revision FROM cosers WHERE uuid=?`, uuid).Scan(
+		&result.Entity.UUID, &result.Entity.Slug, &result.Entity.Name, &result.ProfileSummary, &result.Biography, &result.CountryOrRegion,
+		&avatarAvailable, &bannerAvailable, &result.Entity.AssetRevision); err != nil {
 		return browse.CoserDetail{}, err
 	}
+	result.Entity.AvatarAvailable = avatarAvailable == 1
+	result.BannerAvailable = bannerAvailable == 1
 	config, _ := entityBrowseConfiguration(browse.SearchCoser)
 	result.Entity.Aliases, err = s.entityAliases(ctx, config, uuid)
 	if err != nil {

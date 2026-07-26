@@ -167,12 +167,21 @@ func searchHits(values []browse.SearchHit) []*SearchHit {
 }
 
 func entityIndexItem(value browse.EntityIndexItem) *EntityIndexItem {
-	return &EntityIndexItem{Kind: SearchEntityKind(value.Kind), UUID: value.UUID, Slug: value.Slug, Name: value.Name, Aliases: value.Aliases}
+	result := &EntityIndexItem{Kind: SearchEntityKind(value.Kind), UUID: value.UUID, Slug: value.Slug, Name: value.Name, Aliases: value.Aliases}
+	if value.AvatarAvailable {
+		url := coserAssetResourceURL(value.UUID, value.AssetRevision, "avatar-480")
+		result.AvatarURL = &url
+	}
+	return result
 }
 
 func coserDetailModel(value browse.CoserDetail) *CoserDetail {
 	result := &CoserDetail{Entity: entityIndexItem(value.Entity), ProfileSummary: value.ProfileSummary, Biography: value.Biography,
 		CountryOrRegion: value.CountryOrRegion, Galleries: galleryPage(value.Galleries), Redirected: value.Redirected}
+	if value.BannerAvailable {
+		url := coserAssetResourceURL(value.Entity.UUID, value.Entity.AssetRevision, "banner-1600")
+		result.BannerURL = &url
+	}
 	for _, account := range value.SocialAccounts {
 		result.SocialAccounts = append(result.SocialAccounts, &SocialAccount{UUID: account.UUID, PlatformKey: account.PlatformKey,
 			Label: account.Label, Handle: account.Handle, URL: account.URL, Status: account.Status, Position: strconv.FormatInt(account.Position, 10)})
@@ -391,6 +400,20 @@ func manageAuditPage(value productdb.AuditPage) *ManageAuditPage {
 func manageCoreEntity(value productdb.ManageCoreEntity) *ManageCoreEntity {
 	result := &ManageCoreEntity{Kind: SearchEntityKind(value.Kind), UUID: value.UUID, Name: value.Name, SortName: value.SortName, Aliases: value.Aliases, Slug: value.Slug,
 		MetadataRevision: value.MetadataRevision, ProfileSummary: value.ProfileSummary, Biography: value.Biography, CountryOrRegion: value.CountryOrRegion, UseInRecommendation: value.UseInRecommendation}
+	if value.AvatarPath != "" {
+		url := coserAssetResourceURL(value.UUID, value.MetadataRevision, "avatar-480")
+		result.AvatarURL = &url
+	}
+	if value.BannerPath != "" {
+		url := coserAssetResourceURL(value.UUID, value.MetadataRevision, "banner-1600")
+		result.BannerURL = &url
+	}
+	if value.AvatarCrop != nil {
+		result.AvatarCrop = &ManageAvatarCrop{X: value.AvatarCrop.X, Y: value.AvatarCrop.Y, Size: value.AvatarCrop.Size}
+	}
+	if value.BannerFocalPoint != nil {
+		result.BannerFocalPoint = &ManageFocalPoint{X: value.BannerFocalPoint.X, Y: value.BannerFocalPoint.Y}
+	}
 	if value.WorkUUID != "" {
 		result.WorkUUID = &value.WorkUUID
 	}
@@ -401,6 +424,10 @@ func manageCoreEntity(value productdb.ManageCoreEntity) *ManageCoreEntity {
 		result.Parents = append(result.Parents, &ManageCoreEntityRef{UUID: parent.UUID, Name: parent.Name, MetadataRevision: parent.MetadataRevision})
 	}
 	return result
+}
+
+func coserAssetResourceURL(uuid string, revision int64, variant string) string {
+	return "/resource/coser/" + uuid + "/" + strconv.FormatInt(revision, 10) + "/" + variant
 }
 
 func manageCoreEntityPage(value productdb.ManageCoreEntityPage) *ManageCoreEntityPage {

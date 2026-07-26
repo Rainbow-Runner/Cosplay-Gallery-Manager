@@ -119,7 +119,7 @@ export const ENTITY_INDEX = gql`
   query EntityIndex($kind: SearchEntityKind!, $scope: BrowseScope!, $page: Int!, $sort: EntitySort!) {
     entityIndex(kind: $kind, scope: $scope, page: $page, sort: $sort) {
       page pageSize totalItems totalPages
-      items { kind uuid slug name aliases }
+      items { kind uuid slug name aliases avatarURL }
     }
   }
 `;
@@ -141,8 +141,8 @@ export const COSER_DETAIL = gql`
   ${GALLERY_CARD_FIELDS}
   query CoserDetail($slug: String!, $scope: BrowseScope!, $page: Int!) {
     coserDetail(slug: $slug, scope: $scope, page: $page) {
-      entity { kind uuid slug name aliases }
-      profileSummary biography countryOrRegion redirected
+      entity { kind uuid slug name aliases avatarURL }
+      profileSummary biography countryOrRegion bannerURL redirected
       socialAccounts { uuid platformKey label handle url status position }
       galleries { page pageSize totalItems totalPages items { ...GalleryCardFields } }
     }

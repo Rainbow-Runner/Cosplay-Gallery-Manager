@@ -80,6 +80,12 @@ export const messages: Record<SupportedLocale, Record<string, string>> = {
     "manage.galleryDelete.password": "Re-enter the owner password", "manage.galleryDelete.typeDelete": "Type DELETE to continue",
     "manage.galleryDelete.cancel": "Cancel", "manage.galleryDelete.deleting": "Deleting…", "manage.galleryDelete.commit": "Permanently delete Gallery",
     "manage.galleryDelete.failed": "Unable to delete Gallery",
+    "manage.coserAssets.heading": "Managed profile images",
+    "manage.coserAssets.summary": "Upload local JPEG, PNG, or static WebP files (maximum 20 MiB and 50 MP). Originals and generated responsive images stay under this Coser's managed metadata directory; replaced files are retained for later unreferenced-asset review.",
+    "manage.coserAssets.avatar": "Avatar", "manage.coserAssets.banner": "Banner", "manage.coserAssets.file": "Local image file",
+    "manage.coserAssets.size": "Size", "manage.coserAssets.noBanner": "No Banner — the Browse region stays hidden",
+    "manage.coserAssets.uploadAvatar": "Upload avatar", "manage.coserAssets.uploadBanner": "Upload Banner",
+    "manage.coserAssets.uploading": "Validating and generating…", "manage.coserAssets.saved": "Managed image saved", "manage.coserAssets.failed": "Managed image upload failed",
   },
   "zh-CN": {
     "shell.browse.description": "以作品集为核心的浏览端基础已经就绪。",
@@ -157,6 +163,12 @@ export const messages: Record<SupportedLocale, Record<string, string>> = {
     "manage.galleryDelete.password": "重新输入所有者密码", "manage.galleryDelete.typeDelete": "输入 DELETE 以继续",
     "manage.galleryDelete.cancel": "取消", "manage.galleryDelete.deleting": "正在删除…", "manage.galleryDelete.commit": "永久删除作品集",
     "manage.galleryDelete.failed": "无法删除作品集",
+    "manage.coserAssets.heading": "托管资料图片",
+    "manage.coserAssets.summary": "上传本地 JPEG、PNG 或静态 WebP（单文件最多 20 MiB、50 MP）。原图和响应派生图只保存在该 Coser 的托管元数据目录；被替换文件会保留，等待后续未引用资源处理。",
+    "manage.coserAssets.avatar": "头像", "manage.coserAssets.banner": "Banner", "manage.coserAssets.file": "本地图片文件",
+    "manage.coserAssets.size": "尺寸", "manage.coserAssets.noBanner": "暂无 Banner；浏览页会隐藏该区域",
+    "manage.coserAssets.uploadAvatar": "上传头像", "manage.coserAssets.uploadBanner": "上传 Banner",
+    "manage.coserAssets.uploading": "正在校验并生成…", "manage.coserAssets.saved": "托管图片已保存", "manage.coserAssets.failed": "托管图片上传失败",
   },
 };
 

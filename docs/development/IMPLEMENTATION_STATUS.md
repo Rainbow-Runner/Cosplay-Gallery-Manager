@@ -69,6 +69,10 @@
 - P07（Gallery永久删除）：仅`ARCHIVED` Gallery可进入删除事务，GraphQL要求重新验证所有者密码和精确确认词；预览返回受影响Item、ExternalLink、可执行任务及忽略源状态，提交时再次检查`metadata_revision`。
 - P07（Gallery删除聚合事务）：删除业务/个人/Item记录前取消并解除相关任务引用，建立`IgnoredGallerySource`，永久Tombstone Gallery、全部Item与ExternalLink UUID；来源媒体、Gallery Manifest和托管来源资源不发生文件系统写入。
 - P09（Gallery删除审计）：Gallery删除的确认、密码和事务失败均记录无路径管理审计；成功摘要只记录受影响记录数量和是否建立忽略源。
+- P07（Coser托管图片）：新增同源、Session认证的头像/Banner multipart上传；按实际内容只接受JPEG、PNG和静态WebP，执行20MiB/50MP上限，原图与头像480、Banner 960/1600派生图只写入`<coser_root>/<uuid>/assets/`。
+- P07（Coser裁切与焦点）：上传时保存归一化头像裁切和Banner焦点，替换原图不继承旧参数；数据库更新使用独立`metadata_revision`乐观锁并把既有Coser Manifest标记为`DB_DIRTY`。
+- P07（Coser资源安全）：资源服务使用UUID、revision和variant不透明URL，逐级拒绝符号链接且不返回物理路径；替换不删除旧托管文件，失败提交最多留下未引用托管资源，不会影响用户媒体来源。
+- P06/P07（Coser图片界面）：Manage资料页可上传并预览头像/Banner，Browse Coser索引显示1:1头像、详情按有无资源显示头像/Banner，无头像继续使用名称首字符占位且无Banner隐藏区域。
 - P07（关系选择）：Manage提供不继承Browse scope的全库名称/Alias搜索；Gallery关系编辑器可搜索并选择任意现有Coser、Character和Tag，同时保留UUID人工输入能力。
 - P07（Tag DAG）：Tag编辑页可搜索并批量替换多个直接父级；事务要求所有新增、保留和移除父Tag的revision，数据库触发器继续承担严格无环校验。
 - P07（Manifest UI）：Gallery与Coser均可检查同步状态、显式Push/Pull，并对三方冲突逐字段选择DATABASE/FILE；Coser资料使用Setup完成后保存在产品数据库中的单一元数据根。
@@ -91,10 +95,11 @@
 - GraphQL集成测试验证Gallery与Coser Manifest只能通过显式Mutation写入各自确定路径，并返回CLEAN状态。
 - 运维集成测试验证每日快照到期租约/保留、自动扫描opt-in、完整恢复、Session撤销、任务取消、安全备份注册、人工恢复，以及数据库交换后故障的自动回滚。
 - Operations GraphQL测试验证备份/恢复由Server服务执行且响应不泄漏数据库或存储根。
-- React 19 TypeScript `--noEmit`通过；Vitest当前5个文件、11项测试全部通过。
-- Vite生产构建通过，共转换657个模块；当前主JS minify后、gzip前约620KiB，存在大于500KiB的非阻断分包警告。
+- React 19 TypeScript `--noEmit`通过；Vitest当前6个文件、12项测试全部通过。
+- Vite生产构建通过，共转换658个模块；当前主JS minify后、gzip前约626KiB，存在大于500KiB的非阻断分包警告。
 - 实体生命周期回归验证了按关系类型返回删除阻断、合并冲突时禁用提交、明确确认词、GraphQL预览/提交、永久Alias/Tombstone和管理审计。
 - Gallery删除回归验证了归档前阻断、过期revision拒绝、密码与确认词双重门禁、Item/Link/Set UUID Tombstone、任务取消保留、IgnoredGallerySource建立，以及来源媒体和Manifest字节不变。
+- Coser托管资源回归验证了未认证上传拒绝、同源Session上传、实际JPEG派生、过期revision冲突、GIF拒绝、认证资源读取、URL不泄漏根路径，以及替换后旧原图/派生图仍保留。
 - BLAKE3依赖固定为`github.com/zeebo/blake3 v0.2.4`并记录模块校验和。
 - 用户来源能力审计未发现删除调用；应用删除仅限失败备份、缓存、临时文件等明确生成数据。
 
@@ -104,14 +109,14 @@
 - 新前端尚未接入正式发行包，旧`ui/v2.5`仍在仓库；需要完成新二进制静态资源打包和旧业务入口隔离验收。
 - G4的真实FFmpeg/LibRaw跨平台样本矩阵尚未执行；当前仅完成适配器、规划器、图片实际样本和伪生成器处理闭环。
 - Playwright端到端、截图、键盘/读屏、目标浏览器与响应宽度矩阵尚未执行。
-- Coser头像/Banner托管上传尚未完成。
-- 前端需要路由级分包，消除当前单入口620KiB构建警告并验证低性能移动设备首屏。
+- Coser未引用托管资源的集中审阅/清理界面尚未完成；当前替换文件按约束保留且不会被自动删除。
+- 前端需要路由级分包，消除当前单入口626KiB构建警告并验证低性能移动设备首屏。
 
 ## 下一批工作
 
-1. 完成Coser头像/Banner托管上传与剩余高影响管理操作。
-2. 完善恢复中的异机路径映射提示与完整备份跨平台损坏样本演练。
-3. 将React 19构建产物接入正式发行二进制，加入路由分包并移除旧业务UI入口。
+1. 将React 19构建产物接入正式发行二进制，加入路由分包并移除旧业务UI入口。
+2. 完成Coser未引用托管资源审阅，以及剩余高影响管理操作。
+3. 完善恢复中的异机路径映射提示与完整备份跨平台损坏样本演练。
 4. 增加Setup→导入→审核→激活→浏览→Manifest→备份恢复的Playwright离线E2E及无障碍矩阵。
 5. 准备真实RAW/GIF/Video与危险归档样本，执行FFmpeg/LibRaw、平台、性能和安全发布门禁。
 

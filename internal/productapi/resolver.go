@@ -13,8 +13,9 @@ import (
 // Resolver is intentionally backed only by the product database Browse stores.
 // It cannot reach legacy Scene/Image models or physical source paths.
 type Resolver struct {
-	Database   *productdb.Database
-	Operations OperationsService
+	Database      *productdb.Database
+	Operations    OperationsService
+	OwnerPassword OwnerPasswordVerifier
 }
 
 func (r *Resolver) auditManage(ctx context.Context, eventCode, targetKind, targetID, failureCode string, operationErr error, summary map[string]any) {

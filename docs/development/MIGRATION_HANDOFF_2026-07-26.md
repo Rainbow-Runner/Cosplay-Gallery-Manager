@@ -110,7 +110,7 @@ go build ./cmd/cgm
 
 ## 7. 下一批开发优先级
 
-1. Gallery 归档后删除闭环和 Coser 头像/Banner 托管上传。
+1. Coser 头像/Banner 托管上传。
 2. React 路由级分包、正式二进制静态资源打包和旧业务 UI 入口隔离。
 3. Setup→导入→审核→激活→浏览→Manifest→备份恢复的离线 Playwright E2E。
 4. 真实媒体、危险归档、跨平台和性能门禁。
@@ -153,3 +153,34 @@ corepack pnpm run build
 ```
 
 结果：TypeScript通过；Vitest 4个测试文件、9项测试通过；Vite生产构建通过。当前主JS minify后、gzip前约612 KiB，路由级分包警告仍未解决，不能标记为通过。
+
+随后完成了Gallery归档后永久删除闭环：
+
+- 数据库只允许删除`ARCHIVED` Gallery，并在事务中重新检查`metadata_revision`；DRAFT/ACTIVE和过期revision均拒绝。
+- 删除前取消并解除相关处理任务引用，使任务诊断记录保留；随后删除Gallery业务/个人/Item记录，永久Tombstone set/item/link UUID。
+- 有绑定来源时原子建立`IgnoredGallerySource`，防止发现流程静默重建；无来源Gallery不伪造路径记录。
+- 删除服务不读取、删除、移动或改写来源媒体、Gallery Manifest、托管来源资源和衍生缓存文件。
+- GraphQL由产品Server注入所有者密码验证服务；Mutation同时要求重新输入密码和精确确认词`DELETE`，成功与失败进入无路径管理审计。
+- Manage Gallery基本信息页新增删除影响预览和双重确认弹窗；非`ARCHIVED`状态永久禁用提交。
+
+本阶段验证结果：
+
+```bash
+GOMAXPROCS=2 GOTOOLCHAIN=local \
+  GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
+  /tmp/cgm-go1.25.12/bin/go test \
+  ./internal/persistence/productdb ./internal/productapi ./internal/productserver
+```
+
+结果：通过。`go build ./cmd/cgm`通过。
+
+```bash
+cd ui/web
+corepack pnpm run check
+corepack pnpm run test
+corepack pnpm run build
+```
+
+结果：TypeScript通过；Vitest 5个测试文件、11项测试通过；Vite生产构建通过，共转换657个模块。当前主JS minify后、gzip前约620 KiB，路由级分包警告仍未解决，不能标记为通过。
+
+迁移备忘录中的下一项未完成开发任务现为Coser头像/Banner托管上传；必须继续遵守独立Coser Manifest、单一托管元数据根、裁切/焦点同步和绝不写入用户媒体来源的既有约束。

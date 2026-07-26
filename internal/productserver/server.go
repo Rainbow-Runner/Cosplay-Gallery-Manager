@@ -129,7 +129,7 @@ func (s *Server) rebuildHandler() {
 	listenHost, _, _ := net.SplitHostPort(s.Config.Listen)
 	directLoopbackSetup := net.ParseIP(listenHost) != nil && net.ParseIP(listenHost).IsLoopback()
 	mux.Handle("/setup/complete", sameOrigin(auth.CompleteSetupHandler(directLoopbackSetup)))
-	mux.Handle("/graphql", sameOrigin(productapi.NewHandlerWithOperations(database, auth.AuthorizeRequest, s)))
+	mux.Handle("/graphql", sameOrigin(productapi.NewHandlerWithServices(database, auth.AuthorizeRequest, s, auth)))
 	mux.Handle("/maintenance/status", s.maintenanceStatusHandler(database, auth))
 	mux.Handle("/maintenance/resume", sameOrigin(s.maintenanceResumeHandler()))
 	resourceHandler := mediaresource.Handler{Database: database, Cache: mediaprocessing.CacheWriter{Root: s.Config.CachePath},

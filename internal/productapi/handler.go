@@ -19,12 +19,22 @@ type OperationsService interface {
 	RestoreBackup(context.Context, string) (productdb.MaintenanceState, error)
 }
 
+type OwnerPasswordVerifier interface {
+	VerifyPassword(context.Context, string) error
+}
+
 func NewHandler(database *productdb.Database, authorize AuthorizeRequest) http.Handler {
 	return NewHandlerWithOperations(database, authorize, nil)
 }
 
 func NewHandlerWithOperations(database *productdb.Database, authorize AuthorizeRequest, operations OperationsService) http.Handler {
-	server := handler.New(NewExecutableSchema(Config{Resolvers: &Resolver{Database: database, Operations: operations}}))
+	return NewHandlerWithServices(database, authorize, operations, nil)
+}
+
+func NewHandlerWithServices(database *productdb.Database, authorize AuthorizeRequest, operations OperationsService, ownerPassword OwnerPasswordVerifier) http.Handler {
+	server := handler.New(NewExecutableSchema(Config{Resolvers: &Resolver{
+		Database: database, Operations: operations, OwnerPassword: ownerPassword,
+	}}))
 	server.AddTransport(transport.Options{})
 	server.AddTransport(transport.POST{})
 	server.Use(extension.Introspection{})

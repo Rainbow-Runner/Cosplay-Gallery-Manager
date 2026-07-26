@@ -500,6 +500,38 @@ func (r *mutationResolver) DeleteCoreEntity(ctx context.Context, kind SearchEnti
 	return true, nil
 }
 
+// DeleteGallery is the resolver for the deleteGallery field.
+func (r *mutationResolver) DeleteGallery(ctx context.Context, setID string, expectedMetadataRevision int64, password string, confirmation string) (bool, error) {
+	if confirmation != "DELETE" {
+		err := errors.New("confirmation phrase does not match")
+		r.auditManage(ctx, "GALLERY_DELETE", "GALLERY", setID, "GALLERY_DELETE_CONFIRMATION_FAILED", err, nil)
+		return false, err
+	}
+	if r.OwnerPassword == nil {
+		err := errors.New("owner password verification is unavailable")
+		r.auditManage(ctx, "GALLERY_DELETE", "GALLERY", setID, "GALLERY_DELETE_PASSWORD_FAILED", err, nil)
+		return false, err
+	}
+	if err := r.OwnerPassword.VerifyPassword(ctx, password); err != nil {
+		r.auditManage(ctx, "GALLERY_DELETE", "GALLERY", setID, "GALLERY_DELETE_PASSWORD_FAILED", err, nil)
+		return false, errors.New("owner password verification failed")
+	}
+	preview, err := r.Database.Galleries().PreviewDelete(ctx, setID)
+	if err != nil {
+		r.auditManage(ctx, "GALLERY_DELETE", "GALLERY", setID, "GALLERY_DELETE_FAILED", err, nil)
+		return false, manageError(err)
+	}
+	if err := r.Database.Galleries().Delete(ctx, setID, expectedMetadataRevision, time.Now()); err != nil {
+		r.auditManage(ctx, "GALLERY_DELETE", "GALLERY", setID, "GALLERY_DELETE_FAILED", err, nil)
+		return false, manageError(err)
+	}
+	r.auditManage(ctx, "GALLERY_DELETE", "GALLERY", setID, "", nil, map[string]any{
+		"item_count": preview.ItemCount, "external_link_count": preview.ExternalLinkCount,
+		"cancelled_job_count": preview.ExecutableJobCount, "ignored_source_created": preview.HasSource,
+	})
+	return true, nil
+}
+
 // ReplaceGalleryRelations is the resolver for the replaceGalleryRelations field.
 func (r *mutationResolver) ReplaceGalleryRelations(ctx context.Context, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) (*ManageGalleryDetail, error) {
 	galleryID, err := r.Database.Manage().GalleryID(ctx, setID)
@@ -1023,6 +1055,20 @@ func (r *queryResolver) PreviewCoreEntityDelete(ctx context.Context, kind Search
 		return nil, manageError(err)
 	}
 	return manageCoreEntityDeletePreview(value), nil
+}
+
+// PreviewGalleryDelete is the resolver for the previewGalleryDelete field.
+func (r *queryResolver) PreviewGalleryDelete(ctx context.Context, setID string) (*ManageGalleryDeletePreview, error) {
+	value, err := r.Database.Galleries().PreviewDelete(ctx, setID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	return &ManageGalleryDeletePreview{
+		SetID: value.SetID, State: GalleryState(value.State), MetadataRevision: value.MetadataRevision,
+		ItemCount: value.ItemCount, ExternalLinkCount: value.ExternalLinkCount,
+		ExecutableJobCount: value.ExecutableJobCount, IgnoredSourceWillBeCreated: value.HasSource,
+		CanDelete: value.CanDelete(),
+	}, nil
 }
 
 // BrowseUISettings is the resolver for the browseUISettings field.

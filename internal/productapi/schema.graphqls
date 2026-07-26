@@ -313,6 +313,10 @@ type ManageCoreEntityDeletePreview {
   kind: SearchEntityKind! uuid: ID! metadataRevision: Int64! referenceCount: Int64!
   blockers: [ManageCoreEntityDeleteBlocker!]! canDelete: Boolean!
 }
+type ManageGalleryDeletePreview {
+  setID: ID! state: GalleryState! metadataRevision: Int64! itemCount: Int64!
+  externalLinkCount: Int64! executableJobCount: Int64! ignoredSourceWillBeCreated: Boolean! canDelete: Boolean!
+}
 input CoreEntityInput { kind: SearchEntityKind! name: String! sortName: String! aliases: [String!]! workUUID: ID profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean! }
 input SocialAccountInput { platformKey: String! label: String! handle: String! url: String! status: String! visible: Boolean! position: String! }
 input ReplaceTagParentInput { uuid: ID! position: String! }
@@ -352,6 +356,7 @@ type Query {
   manageCoreEntityOptions(kind: SearchEntityKind!, query: String! = "", limit: Int! = 20): [ManageCoreEntity!]!
   previewCoreEntityMerge(kind: SearchEntityKind!, sourceUUID: ID!, targetUUID: ID!): ManageCoreEntityMergePreview!
   previewCoreEntityDelete(kind: SearchEntityKind!, uuid: ID!): ManageCoreEntityDeletePreview!
+  previewGalleryDelete(setID: ID!): ManageGalleryDeletePreview!
   browseUISettings: BrowseUISettings!
 }
 
@@ -384,6 +389,7 @@ type Mutation {
   replaceTagParents(childUUID: ID!, expectedChildRevision: Int64!, parents: [ReplaceTagParentInput!]!, expectedParents: [ExpectedTagRevisionInput!]!): ManageCoreEntity!
   mergeCoreEntities(kind: SearchEntityKind!, sourceUUID: ID!, targetUUID: ID!, expectedSourceRevision: Int64!, expectedTargetRevision: Int64!): ManageCoreEntityMergeResult!
   deleteCoreEntity(kind: SearchEntityKind!, uuid: ID!, expectedMetadataRevision: Int64!): Boolean!
+  deleteGallery(setID: ID!, expectedMetadataRevision: Int64!, password: String!, confirmation: String!): Boolean!
   replaceGalleryRelations(setID: ID!, expectedMetadataRevision: Int64!, input: ReplaceGalleryRelationsInput!): ManageGalleryDetail!
   addGalleryExternalLink(setID: ID!, expectedMetadataRevision: Int64!, input: GalleryExternalLinkInput!): ManageGalleryDetail!
   pushGalleryManifest(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryManifestState!

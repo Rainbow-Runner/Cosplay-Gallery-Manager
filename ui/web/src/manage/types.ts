@@ -15,6 +15,10 @@ export interface ManageGalleryDetail {
   row: ManageGalleryRow; aliases: string[]; description: string; shootDate: string; shootDatePrecision: "DAY" | "MONTH" | "UNKNOWN";
   photographerName: string; studioName: string; items: ManageGalleryItem[]; credits: ManageGalleryCredit[]; tags: ManageGalleryTag[]; externalLinks: ManageGalleryExternalLink[];
 }
+export interface ManageGalleryDeletePreview {
+  setID: string; state: "DRAFT" | "ACTIVE" | "ARCHIVED"; metadataRevision: number; itemCount: number;
+  externalLinkCount: number; executableJobCount: number; ignoredSourceWillBeCreated: boolean; canDelete: boolean;
+}
 export interface ManageRecognitionRule { id: number; name: string; kind: "MARKER" | "PATH_TEMPLATE" | "FIXED_DEPTH"; enabled: boolean; autoCreateDraft: boolean; order: number; pattern: string; fixedDepth: number }
 export interface ManageLibrary { id: number; name: string; rootPath: string; enabled: boolean; readOnly: boolean; captureTimezone: string; rules: ManageRecognitionRule[] }
 export interface ManageCandidate { id: number; rootPath: string; sourceType: string; method: string; manifestSetID?: string | null; status: string; autoCreateDraft: boolean; hasConflict: boolean; overLimit: boolean; mediaCount: number; suggestions: { field: string; value: string }[] }

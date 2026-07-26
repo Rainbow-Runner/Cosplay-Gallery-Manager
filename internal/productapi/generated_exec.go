@@ -336,6 +336,17 @@ type ComplexityRoot struct {
 		Position  func(childComplexity int) int
 	}
 
+	ManageGalleryDeletePreview struct {
+		CanDelete                  func(childComplexity int) int
+		ExecutableJobCount         func(childComplexity int) int
+		ExternalLinkCount          func(childComplexity int) int
+		IgnoredSourceWillBeCreated func(childComplexity int) int
+		ItemCount                  func(childComplexity int) int
+		MetadataRevision           func(childComplexity int) int
+		SetID                      func(childComplexity int) int
+		State                      func(childComplexity int) int
+	}
+
 	ManageGalleryDetail struct {
 		Aliases            func(childComplexity int) int
 		Credits            func(childComplexity int) int
@@ -566,6 +577,7 @@ type ComplexityRoot struct {
 		CreateMediaLibrary      func(childComplexity int, input CreateMediaLibraryInput) int
 		CreateRecognitionRule   func(childComplexity int, input CreateRecognitionRuleInput) int
 		DeleteCoreEntity        func(childComplexity int, kind SearchEntityKind, uuid string, expectedMetadataRevision int64) int
+		DeleteGallery           func(childComplexity int, setID string, expectedMetadataRevision int64, password string, confirmation string) int
 		DiscoverMediaLibrary    func(childComplexity int, libraryID int64) int
 		ImportGalleryCandidate  func(childComplexity int, candidateID int64) int
 		MergeCoreEntities       func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string, expectedSourceRevision int64, expectedTargetRevision int64) int
@@ -629,6 +641,7 @@ type ComplexityRoot struct {
 		MediaDetail             func(childComplexity int, itemUUID string) int
 		PreviewCoreEntityDelete func(childComplexity int, kind SearchEntityKind, uuid string) int
 		PreviewCoreEntityMerge  func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string) int
+		PreviewGalleryDelete    func(childComplexity int, setID string) int
 		RandomMedia             func(childComplexity int, scope BrowseScope, filter RandomMediaFilter) int
 		RelatedGalleries        func(childComplexity int, setID string, scope BrowseScope) int
 		SearchPreview           func(childComplexity int, query string, scope BrowseScope) int
@@ -728,6 +741,7 @@ type MutationResolver interface {
 	ReplaceTagParents(ctx context.Context, childUUID string, expectedChildRevision int64, parents []*ReplaceTagParentInput, expectedParents []*ExpectedTagRevisionInput) (*ManageCoreEntity, error)
 	MergeCoreEntities(ctx context.Context, kind SearchEntityKind, sourceUUID string, targetUUID string, expectedSourceRevision int64, expectedTargetRevision int64) (*ManageCoreEntityMergeResult, error)
 	DeleteCoreEntity(ctx context.Context, kind SearchEntityKind, uuid string, expectedMetadataRevision int64) (bool, error)
+	DeleteGallery(ctx context.Context, setID string, expectedMetadataRevision int64, password string, confirmation string) (bool, error)
 	ReplaceGalleryRelations(ctx context.Context, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) (*ManageGalleryDetail, error)
 	AddGalleryExternalLink(ctx context.Context, setID string, expectedMetadataRevision int64, input GalleryExternalLinkInput) (*ManageGalleryDetail, error)
 	PushGalleryManifest(ctx context.Context, setID string, expectedMetadataRevision int64) (*ManageGalleryManifestState, error)
@@ -771,6 +785,7 @@ type QueryResolver interface {
 	ManageCoreEntityOptions(ctx context.Context, kind SearchEntityKind, query string, limit int) ([]*ManageCoreEntity, error)
 	PreviewCoreEntityMerge(ctx context.Context, kind SearchEntityKind, sourceUUID string, targetUUID string) (*ManageCoreEntityMergePreview, error)
 	PreviewCoreEntityDelete(ctx context.Context, kind SearchEntityKind, uuid string) (*ManageCoreEntityDeletePreview, error)
+	PreviewGalleryDelete(ctx context.Context, setID string) (*ManageGalleryDeletePreview, error)
 	BrowseUISettings(ctx context.Context) (*BrowseUISettings, error)
 }
 
@@ -2151,6 +2166,62 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageGalleryCredit.Position(childComplexity), true
 
+	case "ManageGalleryDeletePreview.canDelete":
+		if e.complexity.ManageGalleryDeletePreview.CanDelete == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDeletePreview.CanDelete(childComplexity), true
+
+	case "ManageGalleryDeletePreview.executableJobCount":
+		if e.complexity.ManageGalleryDeletePreview.ExecutableJobCount == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDeletePreview.ExecutableJobCount(childComplexity), true
+
+	case "ManageGalleryDeletePreview.externalLinkCount":
+		if e.complexity.ManageGalleryDeletePreview.ExternalLinkCount == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDeletePreview.ExternalLinkCount(childComplexity), true
+
+	case "ManageGalleryDeletePreview.ignoredSourceWillBeCreated":
+		if e.complexity.ManageGalleryDeletePreview.IgnoredSourceWillBeCreated == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDeletePreview.IgnoredSourceWillBeCreated(childComplexity), true
+
+	case "ManageGalleryDeletePreview.itemCount":
+		if e.complexity.ManageGalleryDeletePreview.ItemCount == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDeletePreview.ItemCount(childComplexity), true
+
+	case "ManageGalleryDeletePreview.metadataRevision":
+		if e.complexity.ManageGalleryDeletePreview.MetadataRevision == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDeletePreview.MetadataRevision(childComplexity), true
+
+	case "ManageGalleryDeletePreview.setID":
+		if e.complexity.ManageGalleryDeletePreview.SetID == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDeletePreview.SetID(childComplexity), true
+
+	case "ManageGalleryDeletePreview.state":
+		if e.complexity.ManageGalleryDeletePreview.State == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDeletePreview.State(childComplexity), true
+
 	case "ManageGalleryDetail.aliases":
 		if e.complexity.ManageGalleryDetail.Aliases == nil {
 			break
@@ -3348,6 +3419,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.DeleteCoreEntity(childComplexity, args["kind"].(SearchEntityKind), args["uuid"].(string), args["expectedMetadataRevision"].(int64)), true
 
+	case "Mutation.deleteGallery":
+		if e.complexity.Mutation.DeleteGallery == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteGallery_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteGallery(childComplexity, args["setID"].(string), args["expectedMetadataRevision"].(int64), args["password"].(string), args["confirmation"].(string)), true
+
 	case "Mutation.discoverMediaLibrary":
 		if e.complexity.Mutation.DiscoverMediaLibrary == nil {
 			break
@@ -4001,6 +4084,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.PreviewCoreEntityMerge(childComplexity, args["kind"].(SearchEntityKind), args["sourceUUID"].(string), args["targetUUID"].(string)), true
+
+	case "Query.previewGalleryDelete":
+		if e.complexity.Query.PreviewGalleryDelete == nil {
+			break
+		}
+
+		args, err := ec.field_Query_previewGalleryDelete_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.PreviewGalleryDelete(childComplexity, args["setID"].(string)), true
 
 	case "Query.randomMedia":
 		if e.complexity.Query.RandomMedia == nil {
@@ -4824,6 +4919,103 @@ func (ec *executionContext) field_Mutation_deleteCoreEntity_argsExpectedMetadata
 	}
 
 	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteGallery_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_deleteGallery_argsSetID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["setID"] = arg0
+	arg1, err := ec.field_Mutation_deleteGallery_argsExpectedMetadataRevision(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["expectedMetadataRevision"] = arg1
+	arg2, err := ec.field_Mutation_deleteGallery_argsPassword(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["password"] = arg2
+	arg3, err := ec.field_Mutation_deleteGallery_argsConfirmation(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["confirmation"] = arg3
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_deleteGallery_argsSetID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["setID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("setID"))
+	if tmp, ok := rawArgs["setID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteGallery_argsExpectedMetadataRevision(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int64, error) {
+	if _, ok := rawArgs["expectedMetadataRevision"]; !ok {
+		var zeroVal int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedMetadataRevision"))
+	if tmp, ok := rawArgs["expectedMetadataRevision"]; ok {
+		return ec.unmarshalNInt642int64(ctx, tmp)
+	}
+
+	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteGallery_argsPassword(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["password"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
+	if tmp, ok := rawArgs["password"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteGallery_argsConfirmation(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["confirmation"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("confirmation"))
+	if tmp, ok := rawArgs["confirmation"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
+	}
+
+	var zeroVal string
 	return zeroVal, nil
 }
 
@@ -7771,6 +7963,34 @@ func (ec *executionContext) field_Query_previewCoreEntityMerge_argsTargetUUID(
 
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("targetUUID"))
 	if tmp, ok := rawArgs["targetUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_previewGalleryDelete_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_previewGalleryDelete_argsSetID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["setID"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Query_previewGalleryDelete_argsSetID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["setID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("setID"))
+	if tmp, ok := rawArgs["setID"]; ok {
 		return ec.unmarshalNID2string(ctx, tmp)
 	}
 
@@ -17316,6 +17536,358 @@ func (ec *executionContext) fieldContext_ManageGalleryCredit_cast(_ context.Cont
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageGalleryDeletePreview_setID(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDeletePreview_setID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SetID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDeletePreview_setID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryDeletePreview_state(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDeletePreview_state(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.State, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(GalleryState)
+	fc.Result = res
+	return ec.marshalNGalleryState2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐGalleryState(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDeletePreview_state(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type GalleryState does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryDeletePreview_metadataRevision(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDeletePreview_metadataRevision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MetadataRevision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDeletePreview_metadataRevision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryDeletePreview_itemCount(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDeletePreview_itemCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ItemCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDeletePreview_itemCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryDeletePreview_externalLinkCount(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDeletePreview_externalLinkCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ExternalLinkCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDeletePreview_externalLinkCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryDeletePreview_executableJobCount(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDeletePreview_executableJobCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ExecutableJobCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDeletePreview_executableJobCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryDeletePreview_ignoredSourceWillBeCreated(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDeletePreview_ignoredSourceWillBeCreated(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IgnoredSourceWillBeCreated, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDeletePreview_ignoredSourceWillBeCreated(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryDeletePreview_canDelete(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDeletePreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDeletePreview_canDelete(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CanDelete, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDeletePreview_canDelete(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDeletePreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageGalleryDetail_row(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDetail) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageGalleryDetail_row(ctx, field)
 	if err != nil {
@@ -26603,6 +27175,61 @@ func (ec *executionContext) fieldContext_Mutation_deleteCoreEntity(ctx context.C
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_deleteGallery(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteGallery(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteGallery(rctx, fc.Args["setID"].(string), fc.Args["expectedMetadataRevision"].(int64), fc.Args["password"].(string), fc.Args["confirmation"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteGallery(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteGallery_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_replaceGalleryRelations(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_replaceGalleryRelations(ctx, field)
 	if err != nil {
@@ -29492,6 +30119,79 @@ func (ec *executionContext) fieldContext_Query_previewCoreEntityDelete(ctx conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_previewCoreEntityDelete_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_previewGalleryDelete(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_previewGalleryDelete(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().PreviewGalleryDelete(rctx, fc.Args["setID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageGalleryDeletePreview)
+	fc.Result = res
+	return ec.marshalNManageGalleryDeletePreview2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryDeletePreview(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_previewGalleryDelete(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "setID":
+				return ec.fieldContext_ManageGalleryDeletePreview_setID(ctx, field)
+			case "state":
+				return ec.fieldContext_ManageGalleryDeletePreview_state(ctx, field)
+			case "metadataRevision":
+				return ec.fieldContext_ManageGalleryDeletePreview_metadataRevision(ctx, field)
+			case "itemCount":
+				return ec.fieldContext_ManageGalleryDeletePreview_itemCount(ctx, field)
+			case "externalLinkCount":
+				return ec.fieldContext_ManageGalleryDeletePreview_externalLinkCount(ctx, field)
+			case "executableJobCount":
+				return ec.fieldContext_ManageGalleryDeletePreview_executableJobCount(ctx, field)
+			case "ignoredSourceWillBeCreated":
+				return ec.fieldContext_ManageGalleryDeletePreview_ignoredSourceWillBeCreated(ctx, field)
+			case "canDelete":
+				return ec.fieldContext_ManageGalleryDeletePreview_canDelete(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDeletePreview", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_previewGalleryDelete_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -36455,6 +37155,80 @@ func (ec *executionContext) _ManageGalleryCredit(ctx context.Context, sel ast.Se
 	return out
 }
 
+var manageGalleryDeletePreviewImplementors = []string{"ManageGalleryDeletePreview"}
+
+func (ec *executionContext) _ManageGalleryDeletePreview(ctx context.Context, sel ast.SelectionSet, obj *ManageGalleryDeletePreview) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageGalleryDeletePreviewImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageGalleryDeletePreview")
+		case "setID":
+			out.Values[i] = ec._ManageGalleryDeletePreview_setID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "state":
+			out.Values[i] = ec._ManageGalleryDeletePreview_state(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "metadataRevision":
+			out.Values[i] = ec._ManageGalleryDeletePreview_metadataRevision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "itemCount":
+			out.Values[i] = ec._ManageGalleryDeletePreview_itemCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "externalLinkCount":
+			out.Values[i] = ec._ManageGalleryDeletePreview_externalLinkCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "executableJobCount":
+			out.Values[i] = ec._ManageGalleryDeletePreview_executableJobCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ignoredSourceWillBeCreated":
+			out.Values[i] = ec._ManageGalleryDeletePreview_ignoredSourceWillBeCreated(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "canDelete":
+			out.Values[i] = ec._ManageGalleryDeletePreview_canDelete(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var manageGalleryDetailImplementors = []string{"ManageGalleryDetail"}
 
 func (ec *executionContext) _ManageGalleryDetail(ctx context.Context, sel ast.SelectionSet, obj *ManageGalleryDetail) graphql.Marshaler {
@@ -38156,6 +38930,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "deleteGallery":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteGallery(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "replaceGalleryRelations":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_replaceGalleryRelations(ctx, field)
@@ -39007,6 +39788,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_previewCoreEntityDelete(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "previewGalleryDelete":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_previewGalleryDelete(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -41149,6 +41952,20 @@ func (ec *executionContext) marshalNManageGalleryCredit2ᚖgithubᚗcomᚋstasha
 		return graphql.Null
 	}
 	return ec._ManageGalleryCredit(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageGalleryDeletePreview2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryDeletePreview(ctx context.Context, sel ast.SelectionSet, v ManageGalleryDeletePreview) graphql.Marshaler {
+	return ec._ManageGalleryDeletePreview(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManageGalleryDeletePreview2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryDeletePreview(ctx context.Context, sel ast.SelectionSet, v *ManageGalleryDeletePreview) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageGalleryDeletePreview(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNManageGalleryDetail2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryDetail(ctx context.Context, sel ast.SelectionSet, v ManageGalleryDetail) graphql.Marshaler {

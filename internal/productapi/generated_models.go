@@ -342,6 +342,17 @@ type ManageGalleryCredit struct {
 	Cast      []*ManageGalleryCast `json:"cast"`
 }
 
+type ManageGalleryDeletePreview struct {
+	SetID                      string       `json:"setID"`
+	State                      GalleryState `json:"state"`
+	MetadataRevision           int64        `json:"metadataRevision"`
+	ItemCount                  int64        `json:"itemCount"`
+	ExternalLinkCount          int64        `json:"externalLinkCount"`
+	ExecutableJobCount         int64        `json:"executableJobCount"`
+	IgnoredSourceWillBeCreated bool         `json:"ignoredSourceWillBeCreated"`
+	CanDelete                  bool         `json:"canDelete"`
+}
+
 type ManageGalleryDetail struct {
 	Row                *ManageGalleryRow            `json:"row"`
 	Aliases            []string                     `json:"aliases"`

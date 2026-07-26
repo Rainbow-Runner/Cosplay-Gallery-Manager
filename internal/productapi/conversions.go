@@ -216,6 +216,9 @@ func manageError(err error) error {
 	if errors.Is(err, productdb.ErrMetadataRevisionConflict) {
 		return errors.New("metadata revision conflict")
 	}
+	if errors.Is(err, productdb.ErrGalleryDeleteRequiresArchived) {
+		return errors.New("Gallery must be ARCHIVED before permanent deletion")
+	}
 	if errors.Is(err, productdb.ErrCoreMetadataRevisionConflict) {
 		return errors.New("core entity metadata revision conflict")
 	}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,19 @@ import (
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/portableid"
 )
+
+type fakeOwnerPasswordVerifier struct {
+	password string
+	calls    int
+}
+
+func (v *fakeOwnerPasswordVerifier) VerifyPassword(_ context.Context, password string) error {
+	v.calls++
+	if password != v.password {
+		return errors.New("invalid owner password")
+	}
+	return nil
+}
 
 func TestHandlerRequiresOwnerAuthentication(t *testing.T) {
 	database := openTestDatabase(t)
@@ -132,6 +146,59 @@ func TestOperationsContractUsesServerServiceWithoutExposingRoots(t *testing.T) {
 		if bytes.Contains(response.Body.Bytes(), []byte(database.Path())) {
 			t.Fatal("operations response leaked a local root")
 		}
+	}
+}
+
+func TestGalleryDeleteGraphQLRequiresArchivePasswordAndConfirmation(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 7, 26, 17, 0, 0, 0, time.UTC)
+	created, err := database.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Delete API"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifier := &fakeOwnerPasswordVerifier{password: "correct owner password"}
+	handler := NewHandlerWithServices(database, func(*http.Request) bool { return true }, nil, verifier)
+	call := func(query string) []byte {
+		t.Helper()
+		request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(fmt.Sprintf(`{"query":%q}`, query)))
+		request.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK {
+			t.Fatalf("GraphQL response = %d %s", response.Code, response.Body.String())
+		}
+		return response.Body.Bytes()
+	}
+
+	preview := call(`query { previewGalleryDelete(setID:"` + created.SetID + `") { state metadataRevision itemCount canDelete } }`)
+	if !bytes.Contains(preview, []byte(`"state":"DRAFT"`)) || !bytes.Contains(preview, []byte(`"canDelete":false`)) {
+		t.Fatalf("draft preview = %s", preview)
+	}
+	archived, err := database.Galleries().SetState(ctx, created.ID, created.MetadataRevision, gallery.StateArchived, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bad := call(`mutation { deleteGallery(setID:"` + created.SetID + `",expectedMetadataRevision:` + fmt.Sprint(archived.MetadataRevision) + `,password:"wrong",confirmation:"DELETE") }`)
+	if !bytes.Contains(bad, []byte(`owner password verification failed`)) {
+		t.Fatalf("wrong-password response = %s", bad)
+	}
+	if _, err := database.Galleries().Find(ctx, created.ID); err != nil {
+		t.Fatalf("wrong password deleted Gallery: %v", err)
+	}
+	deleted := call(`mutation { deleteGallery(setID:"` + created.SetID + `",expectedMetadataRevision:` + fmt.Sprint(archived.MetadataRevision) + `,password:"correct owner password",confirmation:"DELETE") }`)
+	if !bytes.Contains(deleted, []byte(`"deleteGallery":true`)) || bytes.Contains(deleted, []byte(`"errors"`)) {
+		t.Fatalf("delete response = %s", deleted)
+	}
+	if verifier.calls != 2 {
+		t.Fatalf("password verification calls = %d, want 2", verifier.calls)
+	}
+	var auditCount int
+	if err := database.QueryRowContext(ctx, `SELECT COUNT(*) FROM management_audit_events WHERE event_code='GALLERY_DELETE' AND target_id=? AND outcome='SUCCESS'`, created.SetID).Scan(&auditCount); err != nil {
+		t.Fatal(err)
+	}
+	if auditCount != 1 {
+		t.Fatalf("successful delete audit count = %d", auditCount)
 	}
 }
 

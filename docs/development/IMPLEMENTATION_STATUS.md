@@ -66,6 +66,9 @@
 - P07（高影响确认）：实体合并与删除使用明确确认词，提交时重新执行乐观锁和关系约束；成功合并保留永久UUID Alias/Slug重定向，成功删除只允许无引用实体并永久Tombstone UUID。
 - P07（Coser合并收尾）：Coser数据库合并提交后尝试写入`redirect_to_uuid`；文件系统收尾失败时返回不泄漏路径的待处理警告，不把已提交数据库事务误报为回滚。
 - P09（实体生命周期审计）：核心实体合并/删除的成功与失败均进入管理审计；摘要只包含实体UUID、目标UUID、受影响Gallery数量和Coser重定向状态，不包含名称或路径。
+- P07（Gallery永久删除）：仅`ARCHIVED` Gallery可进入删除事务，GraphQL要求重新验证所有者密码和精确确认词；预览返回受影响Item、ExternalLink、可执行任务及忽略源状态，提交时再次检查`metadata_revision`。
+- P07（Gallery删除聚合事务）：删除业务/个人/Item记录前取消并解除相关任务引用，建立`IgnoredGallerySource`，永久Tombstone Gallery、全部Item与ExternalLink UUID；来源媒体、Gallery Manifest和托管来源资源不发生文件系统写入。
+- P09（Gallery删除审计）：Gallery删除的确认、密码和事务失败均记录无路径管理审计；成功摘要只记录受影响记录数量和是否建立忽略源。
 - P07（关系选择）：Manage提供不继承Browse scope的全库名称/Alias搜索；Gallery关系编辑器可搜索并选择任意现有Coser、Character和Tag，同时保留UUID人工输入能力。
 - P07（Tag DAG）：Tag编辑页可搜索并批量替换多个直接父级；事务要求所有新增、保留和移除父Tag的revision，数据库触发器继续承担严格无环校验。
 - P07（Manifest UI）：Gallery与Coser均可检查同步状态、显式Push/Pull，并对三方冲突逐字段选择DATABASE/FILE；Coser资料使用Setup完成后保存在产品数据库中的单一元数据根。
@@ -88,9 +91,10 @@
 - GraphQL集成测试验证Gallery与Coser Manifest只能通过显式Mutation写入各自确定路径，并返回CLEAN状态。
 - 运维集成测试验证每日快照到期租约/保留、自动扫描opt-in、完整恢复、Session撤销、任务取消、安全备份注册、人工恢复，以及数据库交换后故障的自动回滚。
 - Operations GraphQL测试验证备份/恢复由Server服务执行且响应不泄漏数据库或存储根。
-- React 19 TypeScript `--noEmit`通过；Vitest当前4个文件、9项测试全部通过。
-- Vite生产构建通过，共转换656个模块；当前主JS minify后、gzip前约612KiB，存在大于500KiB的非阻断分包警告。
+- React 19 TypeScript `--noEmit`通过；Vitest当前5个文件、11项测试全部通过。
+- Vite生产构建通过，共转换657个模块；当前主JS minify后、gzip前约620KiB，存在大于500KiB的非阻断分包警告。
 - 实体生命周期回归验证了按关系类型返回删除阻断、合并冲突时禁用提交、明确确认词、GraphQL预览/提交、永久Alias/Tombstone和管理审计。
+- Gallery删除回归验证了归档前阻断、过期revision拒绝、密码与确认词双重门禁、Item/Link/Set UUID Tombstone、任务取消保留、IgnoredGallerySource建立，以及来源媒体和Manifest字节不变。
 - BLAKE3依赖固定为`github.com/zeebo/blake3 v0.2.4`并记录模块校验和。
 - 用户来源能力审计未发现删除调用；应用删除仅限失败备份、缓存、临时文件等明确生成数据。
 
@@ -100,12 +104,12 @@
 - 新前端尚未接入正式发行包，旧`ui/v2.5`仍在仓库；需要完成新二进制静态资源打包和旧业务入口隔离验收。
 - G4的真实FFmpeg/LibRaw跨平台样本矩阵尚未执行；当前仅完成适配器、规划器、图片实际样本和伪生成器处理闭环。
 - Playwright端到端、截图、键盘/读屏、目标浏览器与响应宽度矩阵尚未执行。
-- 实体合并/删除预览UI和Coser头像/Banner托管上传尚未完成。
-- 前端需要路由级分包，消除当前单入口590kB构建警告并验证低性能移动设备首屏。
+- Coser头像/Banner托管上传尚未完成。
+- 前端需要路由级分包，消除当前单入口620KiB构建警告并验证低性能移动设备首屏。
 
 ## 下一批工作
 
-1. 完成Gallery归档后删除闭环、Coser头像/Banner托管上传与剩余高影响管理操作。
+1. 完成Coser头像/Banner托管上传与剩余高影响管理操作。
 2. 完善恢复中的异机路径映射提示与完整备份跨平台损坏样本演练。
 3. 将React 19构建产物接入正式发行二进制，加入路由分包并移除旧业务UI入口。
 4. 增加Setup→导入→审核→激活→浏览→Manifest→备份恢复的Playwright离线E2E及无障碍矩阵。

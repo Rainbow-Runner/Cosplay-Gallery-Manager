@@ -1,12 +1,14 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { type FormEvent, useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ADD_GALLERY_EXTERNAL_LINK, MANAGE_GALLERY, MANAGE_GALLERY_MANIFEST, MOVE_GALLERY_ITEM, PULL_GALLERY_MANIFEST, PUSH_GALLERY_MANIFEST, REPLACE_GALLERY_RELATIONS, RESET_GALLERY_COVER, RESOLVE_GALLERY_MANIFEST, SCAN_GALLERY_SOURCE, SET_GALLERY_COVER_ITEM, SET_GALLERY_ITEM_EXCLUDED, SET_GALLERY_STATE, UPDATE_GALLERY_ITEM, UPDATE_GALLERY_METADATA } from "../api/manage";
 import { ManageEntitySelector } from "./ManageEntitySelector";
+import { ManageGalleryDeletePanel } from "./ManageGalleryDeletePanel";
 import type { ManageGalleryCredit, ManageGalleryDetail, ManageGalleryItem, ManageGalleryManifestState, ManageGalleryTag } from "./types";
 
 const tabs = ["basic", "cast", "media", "source", "manifest"] as const;
 export function ManageGalleryEditorPage() {
+  const navigate = useNavigate();
   const { setID = "" } = useParams(); const [parameters, setParameters] = useSearchParams(); const tab = tabs.includes(parameters.get("tab") as typeof tabs[number]) ? parameters.get("tab") as typeof tabs[number] : "basic";
   const query = useQuery<{ manageGallery: ManageGalleryDetail }>(MANAGE_GALLERY, { variables: { setID } }); const [save] = useMutation(UPDATE_GALLERY_METADATA); const [setState] = useMutation(SET_GALLERY_STATE);
   const [updateItem] = useMutation<{ updateGalleryItem: ManageGalleryDetail }>(UPDATE_GALLERY_ITEM);
@@ -91,7 +93,9 @@ export function ManageGalleryEditorPage() {
       <section className="manage-panel manage-external-links"><h3>Original source links</h3><p>HTTP(S) links are stored as quiet references only; the application never fetches their content.</p>
         {draft.externalLinks.length ? <ul>{draft.externalLinks.map((link) => <li key={link.uuid}><span>{link.type}</span><a href={link.url} target="_blank" rel="noreferrer">{link.label || link.url}</a></li>)}</ul> : <p>No external links.</p>}
         <form className="manage-inline-form" onSubmit={createExternalLink}><select aria-label="External link type" value={linkDraft.type} onChange={(event) => setLinkDraft({ ...linkDraft, type: event.target.value })}><option value="SOURCE">SOURCE</option><option value="PROFILE">PROFILE</option><option value="REFERENCE">REFERENCE</option></select><input aria-label="External link label" placeholder="Label" maxLength={100} value={linkDraft.label} onChange={(event) => setLinkDraft({ ...linkDraft, label: event.target.value })} /><input aria-label="External link URL" type="url" required placeholder="https://…" value={linkDraft.url} onChange={(event) => setLinkDraft({ ...linkDraft, url: event.target.value })} /><button disabled={externalLinkState.loading} type="submit">Add link</button></form>
-      </section></> : null}
+      </section>
+        <ManageGalleryDeletePanel key={`${draft.row.state}-${draft.row.metadataRevision}`} setID={setID} title={draft.row.title} onDeleted={() => navigate("/manage", { replace: true })} />
+      </> : null}
     {tab === "cast" ? <section className="manage-panel manage-relations"><header><div><h3>人物、角色与标签</h3><p>一次显式保存整个关系集合。空 Cast 自动归类为 Album；任一 Cast 存在时归类为 Cosplay。</p></div><strong>{draft.credits.some((credit) => credit.cast.length > 0) ? "COSPLAY" : "ALBUM"}</strong></header>
       <div className="manage-relation-block"><div className="manage-inline-toolbar"><h4>Coser credits</h4><button type="button" onClick={() => setDraft({ ...draft, credits: [...draft.credits, { coserUUID: "", coserName: "", position: "", cast: [] }] })}>Add Coser</button></div>
         {draft.credits.length ? draft.credits.map((credit, creditIndex) => <article className="manage-credit" key={`${credit.coserUUID}-${creditIndex}`}><div className="manage-credit__head"><ManageEntitySelector kind="COSER" label="Coser" uuid={credit.coserUUID} name={credit.coserName} onSelect={(entity) => editCredit(creditIndex, { coserUUID: entity.uuid, coserName: entity.name })} /><button type="button" onClick={() => setDraft({ ...draft, credits: draft.credits.filter((_, index) => index !== creditIndex) })}>Remove</button></div>

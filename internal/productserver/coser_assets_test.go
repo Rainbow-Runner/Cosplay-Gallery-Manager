@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -17,7 +18,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stashapp/stash/internal/coserasset"
 	"github.com/stashapp/stash/internal/persistence/productdb"
+	"github.com/stashapp/stash/internal/portableid"
 )
 
 func TestCoserManagedAssetUploadIsAuthenticatedValidatedAndServedOpaque(t *testing.T) {
@@ -157,6 +160,117 @@ func TestCoserManagedAssetRejectsAnimatedAndStaleUploads(t *testing.T) {
 	server.Handler.ServeHTTP(staleResponse, stale)
 	if staleResponse.Code != http.StatusConflict {
 		t.Fatalf("stale upload = %d %s", staleResponse.Code, staleResponse.Body.String())
+	}
+}
+
+func TestCoserManagedAssetReviewRequiresReauthenticationAndCleansOnlySelectedGeneratedFiles(t *testing.T) {
+	server := testServer(t)
+	ctx := context.Background()
+	root := t.TempDir()
+	coserRoot := filepath.Join(root, "cosers")
+	if err := os.MkdirAll(coserRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := server.Database.ExecContext(ctx, `UPDATE product_setup SET complete=1,coser_metadata_root=?,backup_root=?,completed_at_utc=? WHERE id=1`,
+		coserRoot, filepath.Join(root, "backups"), time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.Auth.ConfigurePassword(ctx, "correct horse battery staple"); err != nil {
+		t.Fatal(err)
+	}
+	coser, err := server.Database.CoreEntities().CreateCoser(ctx, productdb.CreateCoserInput{
+		CreateNamedEntityInput: productdb.CreateNamedEntityInput{Name: "Cleanup Review"},
+	}, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	assetID := portableid.New()
+	assets := filepath.Join(coserRoot, coser.UUID, "assets")
+	if err := os.MkdirAll(assets, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	generated := filepath.Join(assets, "avatar-"+assetID+".jpg")
+	if err := os.WriteFile(generated, []byte("generated"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	unknown := filepath.Join(assets, "owner-note.txt")
+	if err := os.WriteFile(unknown, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	unauthorized := httptest.NewRecorder()
+	server.Handler.ServeHTTP(unauthorized, httptest.NewRequest(http.MethodGet, coserAssetReviewPath, nil))
+	if unauthorized.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthorized review = %d", unauthorized.Code)
+	}
+	cookie := loginTestOwner(t, server)
+	reviewRequest := httptest.NewRequest(http.MethodGet, coserAssetReviewPath, nil)
+	reviewRequest.AddCookie(cookie)
+	reviewResponse := httptest.NewRecorder()
+	server.Handler.ServeHTTP(reviewResponse, reviewRequest)
+	if reviewResponse.Code != http.StatusOK || strings.Contains(reviewResponse.Body.String(), coserRoot) ||
+		strings.Contains(reviewResponse.Body.String(), assetID) {
+		t.Fatalf("review = %d %s", reviewResponse.Code, reviewResponse.Body.String())
+	}
+	var review coserasset.Review
+	if err := json.Unmarshal(reviewResponse.Body.Bytes(), &review); err != nil {
+		t.Fatal(err)
+	}
+	if len(review.Groups) != 1 || review.Groups[0].FileCount != 1 || review.IgnoredEntryCount != 1 {
+		t.Fatalf("review body = %#v", review)
+	}
+
+	sendCleanup := func(password, confirmation string, origin string) *httptest.ResponseRecorder {
+		t.Helper()
+		data, err := json.Marshal(coserAssetCleanupRequest{
+			AssetIDs: []string{review.Groups[0].ID}, Password: password, Confirmation: confirmation,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		request := httptest.NewRequest(http.MethodPost, coserAssetReviewPath, bytes.NewReader(data))
+		request.Header.Set("Content-Type", "application/json")
+		if origin != "" {
+			request.Header.Set("Origin", origin)
+		}
+		request.AddCookie(cookie)
+		response := httptest.NewRecorder()
+		server.Handler.ServeHTTP(response, request)
+		return response
+	}
+	if response := sendCleanup("correct horse battery staple", "CLEAN", "http://evil.test"); response.Code != http.StatusForbidden {
+		t.Fatalf("cross-origin cleanup = %d", response.Code)
+	}
+	if response := sendCleanup("correct horse battery staple", "WRONG", ""); response.Code != http.StatusBadRequest {
+		t.Fatalf("wrong confirmation cleanup = %d %s", response.Code, response.Body.String())
+	}
+	if response := sendCleanup("wrong password", "CLEAN", ""); response.Code != http.StatusForbidden {
+		t.Fatalf("wrong password cleanup = %d %s", response.Code, response.Body.String())
+	}
+	response := sendCleanup("correct horse battery staple", "CLEAN", "")
+	if response.Code != http.StatusOK || strings.Contains(response.Body.String(), coserRoot) {
+		t.Fatalf("cleanup = %d %s", response.Code, response.Body.String())
+	}
+	var result coserasset.CleanupResult
+	if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.DeletedGroupCount != 1 || result.DeletedFileCount != 1 || len(result.Review.Groups) != 0 {
+		t.Fatalf("cleanup result = %#v", result)
+	}
+	if _, err := os.Stat(generated); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("selected generated file still exists: %v", err)
+	}
+	if _, err := os.Stat(unknown); err != nil {
+		t.Fatalf("unknown file was changed: %v", err)
+	}
+	audit, err := server.Database.Operations().AuditPage(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(audit.Items) < 3 || audit.Items[0].EventCode != "COSER_ASSET_CLEANUP" || audit.Items[0].Outcome != "SUCCESS" ||
+		strings.Contains(audit.Items[0].SummaryJSON, coserRoot) {
+		t.Fatalf("cleanup audit = %#v", audit.Items)
 	}
 }
 

@@ -2,6 +2,7 @@ package productdb
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -23,6 +24,83 @@ type CoserManagedAssetInput struct {
 	RelativePath     string
 	AvatarCrop       *coreentity.AvatarCrop
 	BannerFocalPoint *coreentity.FocalPoint
+}
+
+type CoserManagedAssetOwnerState string
+
+const (
+	CoserManagedAssetOwnerActive  CoserManagedAssetOwnerState = "ACTIVE"
+	CoserManagedAssetOwnerMerged  CoserManagedAssetOwnerState = "MERGED"
+	CoserManagedAssetOwnerDeleted CoserManagedAssetOwnerState = "DELETED"
+)
+
+type CoserManagedAssetOwner struct {
+	UUID       string
+	State      CoserManagedAssetOwnerState
+	AvatarPath string
+	BannerPath string
+}
+
+// CoserManagedAssetOwners returns every permanently registered Coser UUID and
+// the only database paths that may currently retain managed asset groups.
+func (s *CoreEntityStore) CoserManagedAssetOwners(ctx context.Context) ([]CoserManagedAssetOwner, error) {
+	return coserManagedAssetOwners(ctx, s.db)
+}
+
+// WithCoserManagedAssetOwners holds the database's immediate write
+// transaction while action runs. Cleanup uses this bounded critical section so
+// a Manifest pull or upload cannot publish a path between the final reference
+// check and removal of an application-generated file.
+func (s *CoreEntityStore) WithCoserManagedAssetOwners(ctx context.Context, action func([]CoserManagedAssetOwner) error) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	owners, err := coserManagedAssetOwners(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if err := action(owners); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+type coserAssetOwnerQueryer interface {
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+}
+
+func coserManagedAssetOwners(ctx context.Context, queryer coserAssetOwnerQueryer) ([]CoserManagedAssetOwner, error) {
+	rows, err := queryer.QueryContext(ctx, `
+		SELECT registry.uuid,
+			CASE
+				WHEN alias.alias_uuid IS NOT NULL THEN 'MERGED'
+				WHEN tombstone.uuid IS NOT NULL THEN 'DELETED'
+				ELSE 'ACTIVE'
+			END,
+			COALESCE(coser.avatar_path, ''),
+			COALESCE(coser.banner_path, '')
+		FROM portable_uuid_registry registry
+		LEFT JOIN portable_uuid_aliases alias ON alias.alias_uuid = registry.uuid
+		LEFT JOIN portable_uuid_tombstones tombstone ON tombstone.uuid = registry.uuid
+		LEFT JOIN cosers coser ON coser.uuid = registry.uuid
+		WHERE registry.entity_kind = 'COSER'
+		ORDER BY registry.uuid
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []CoserManagedAssetOwner
+	for rows.Next() {
+		var owner CoserManagedAssetOwner
+		if err := rows.Scan(&owner.UUID, &owner.State, &owner.AvatarPath, &owner.BannerPath); err != nil {
+			return nil, err
+		}
+		result = append(result, owner)
+	}
+	return result, rows.Err()
 }
 
 // SetCoserManagedAsset publishes a previously validated application-managed

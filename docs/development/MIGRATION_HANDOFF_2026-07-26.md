@@ -28,6 +28,7 @@
 - 默认关闭的启动/每 24 小时自动扫描，使用数据库持久化租约。
 - 无用户画像管理审计，仅记录高影响操作和任务摘要。
 - React 19页面级路由分包、正式单文件二进制静态资源嵌入和旧`ui/v2.5`产品入口隔离。
+- Coser未引用托管资源集中审阅、选择性清理、提交时引用重检、所有者重新认证和无路径审计。
 
 所有产品新增源码都在当前工作树内；没有需要从宿主机复制的媒体、数据库或秘密文件。
 
@@ -49,9 +50,9 @@ node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
 node node_modules/vitest/vitest.mjs run --maxWorkers=1
 ```
 
-结果：TypeScript 通过；Vitest 6 个测试文件、12 项测试通过。
+结果：TypeScript 通过；Vitest 7 个测试文件、13 项测试通过。
 
-Vite 生产构建已生成成功，共转换659个模块；当前主JS minify后、gzip前约470KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。`ui/web/build`仍是可再生输出，不提交仓库。
+Vite 生产构建已生成成功，共转换660个模块；当前主JS minify后、gzip前约470KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。`ui/web/build`仍是可再生输出，不提交仓库。
 
 ## 4. 当前宿主机限制与未完成验证
 
@@ -110,7 +111,7 @@ make build-cgm
 
 ## 7. 下一批开发优先级
 
-1. Coser 未引用托管资源审阅和剩余高影响管理操作。
+1. 恢复中的异机路径映射提示与完整备份跨平台损坏样本演练。
 2. Setup→导入→审核→激活→浏览→Manifest→备份恢复的离线 Playwright E2E。
 3. 真实媒体、危险归档、跨平台和性能门禁。
 4. AGPLv3 发行源码对应、第三方许可证清单和安装/恢复文档。
@@ -252,4 +253,44 @@ GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
 
 结果：通过，生成约24MiB单文件产品二进制；依赖边界检查只发现`github.com/stashapp/stash/ui/web`，未发现旧`github.com/stashapp/stash/ui`包。
 
-迁移备忘录中的下一项未完成开发任务现为Coser未引用托管资源的集中审阅，以及剩余高影响管理操作。替换资源继续按约束保留，禁止以自动清理方式补齐。
+随后完成了Coser未引用托管资源的集中审阅和人工清理闭环：
+
+- Operations新增集中审阅面板，按已替换、已合并Coser、已删除Coser显示资源组；只返回不透明组ID、技术Coser UUID、头像/Banner类型、文件数量/容量和最后修改时间。
+- 扫描只接受`avatar|banner-<uuid>`原图和既定480/960/1600 JPEG派生命名；未知文件、上传/清理临时文件、目录、符号链接和未注册UUID目录只计入忽略摘要，不返回路径且不能选择。
+- 现用头像/Banner组始终排除；清理提交在SQLite immediate事务中重新装载全部Coser引用，审阅过期即返回冲突，防止上传或Manifest写入在最终检查与删除之间发布旧路径。
+- 文件删除先在同一托管目录隔离重命名并复核inode，确认仍为同一普通文件后才删除；Coser Manifest、资料目录和全部用户媒体不读取、不移动、不删除。
+- UI必须人工选择最多100组、重新输入所有者密码和精确确认词`CLEAN`；HTTP端点要求Session和同源，失败后界面重新审阅且不自动重试。
+- 清理成功/失败均进入管理审计；摘要只记录选择/删除的组数、文件数和字节数，不记录Coser名称、文件名或物理路径。
+
+本阶段验证结果：
+
+```bash
+GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
+  /tmp/cgm-go1.25.12/bin/go test \
+  ./internal/persistence/productdb ./internal/coserasset \
+  ./internal/productapi ./internal/productserver
+GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
+  /tmp/cgm-go1.25.12/bin/go test -tags cgm_web_embed \
+  ./internal/coserasset ./internal/productserver ./ui/web
+```
+
+结果：通过。覆盖现用资源排除、替换/删除分组、未知文件与符号链接跳过、过期审阅冲突、选择性清理、Manifest保留、认证/同源/密码/确认词门禁及无路径审计。
+
+```bash
+cd ui/web
+corepack pnpm run check
+corepack pnpm run test
+corepack pnpm run build
+```
+
+结果：TypeScript通过；Vitest 7个测试文件、13项测试通过；Vite生产构建通过，共转换660个模块，主JS约470KiB，无大包警告。
+
+```bash
+GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
+  /tmp/cgm-go1.25.12/bin/go build -tags cgm_web_embed \
+  -o /tmp/cgm-embedded-check ./cmd/cgm
+```
+
+结果：通过。`ui/web/build`仍为可再生忽略输出，未加入提交范围。
+
+迁移备忘录中的下一项未完成开发任务现为恢复中的异机路径映射提示，以及完整备份跨平台损坏样本演练。

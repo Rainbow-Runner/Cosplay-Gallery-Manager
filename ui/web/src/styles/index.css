@@ -385,6 +385,16 @@ a { color: inherit; text-decoration: none; }
 .operation-panel { margin-top: 1.2rem; padding: 1.2rem; border: 1px solid var(--line); background: var(--surface); }
 .operation-panel > header h3 { margin: 0; font: 400 1.45rem Georgia, serif; }
 .operation-panel > header p { max-width: 60rem; color: var(--ink-muted); font-size: .65rem; line-height: 1.65; }
+.coser-asset-review > header { display: flex; justify-content: space-between; gap: 1rem; align-items: start; }
+.coser-asset-review__actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.coser-asset-review__actions button { padding: .55rem .7rem; border: 1px solid var(--line); background: transparent; color: #fff; font-size: .58rem; cursor: pointer; white-space: nowrap; }
+.coser-asset-review__actions button.danger { border-color: #a24756; color: #ef9baa; }
+.coser-asset-review__actions button:disabled { opacity: .3; cursor: default; }
+.coser-asset-review__summary { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: .8rem 0; color: var(--ink-muted); font-size: .58rem; }
+.coser-asset-table td strong, .coser-asset-table td small { display: block; }
+.coser-asset-table td small { margin-top: .25rem; color: var(--ink-muted); font-size: .55rem; }
+.coser-asset-table code { color: #cfc3bc; font-size: .58rem; }
+.coser-asset-table input[type="checkbox"] { inline-size: 1rem; block-size: 1rem; accent-color: var(--accent); }
 .backup-table td:nth-child(2) { min-width: 17rem; }
 .backup-table td strong, .backup-table td small, .audit-table td small { display: block; }
 .backup-table td small, .audit-table td small { max-width: 24rem; overflow: hidden; margin-top: .3rem; color: var(--ink-muted); font: .55rem ui-monospace, monospace; text-overflow: ellipsis; white-space: nowrap; }

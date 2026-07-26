@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"path"
@@ -19,6 +20,7 @@ import (
 
 const (
 	coserAssetUploadPrefix   = "/manage/coser-assets/"
+	coserAssetReviewPath     = "/manage/coser-assets/review"
 	coserAssetResourcePrefix = "/resource/coser/"
 )
 
@@ -26,6 +28,95 @@ type coserAssetResponse struct {
 	MetadataRevision int64  `json:"metadata_revision"`
 	AvatarURL        string `json:"avatar_url"`
 	BannerURL        string `json:"banner_url"`
+}
+
+type coserAssetCleanupRequest struct {
+	AssetIDs     []string `json:"asset_ids"`
+	Password     string   `json:"password"`
+	Confirmation string   `json:"confirmation"`
+}
+
+func (s *Server) coserAssetReviewHandler(database *productdb.Database) http.Handler {
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Cache-Control", "no-store")
+		if !s.Auth.AuthorizeRequest(request) {
+			http.Error(response, "authentication required", http.StatusUnauthorized)
+			return
+		}
+		if request.Method != http.MethodGet && request.Method != http.MethodPost {
+			response.Header().Set("Allow", "GET, POST")
+			http.Error(response, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		roots, err := database.Operations().StorageRoots(request.Context())
+		if err != nil {
+			http.Error(response, "Coser metadata storage is unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		service := coserasset.Service{Database: database, Root: roots.CoserMetadataRoot}
+		if request.Method == http.MethodGet {
+			review, err := service.ReviewUnreferenced(request.Context())
+			if err != nil {
+				http.Error(response, "Coser managed asset review failed", http.StatusInternalServerError)
+				return
+			}
+			response.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(response).Encode(review)
+			return
+		}
+
+		request.Body = http.MaxBytesReader(response, request.Body, 64*1024)
+		var input coserAssetCleanupRequest
+		decoder := json.NewDecoder(request.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil {
+			s.auditCoserAssetCleanup(database, request, "FAILURE", "COSER_ASSET_CLEANUP_INPUT_FAILED", nil)
+			http.Error(response, "invalid Coser managed asset cleanup request", http.StatusBadRequest)
+			return
+		}
+		var trailing any
+		if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+			s.auditCoserAssetCleanup(database, request, "FAILURE", "COSER_ASSET_CLEANUP_INPUT_FAILED", nil)
+			http.Error(response, "cleanup request must contain exactly one JSON object", http.StatusBadRequest)
+			return
+		}
+		if input.Confirmation != "CLEAN" {
+			s.auditCoserAssetCleanup(database, request, "FAILURE", "COSER_ASSET_CLEANUP_CONFIRMATION_FAILED",
+				map[string]any{"selected_group_count": len(input.AssetIDs)})
+			http.Error(response, "confirmation phrase does not match", http.StatusBadRequest)
+			return
+		}
+		if err := s.Auth.VerifyPassword(request.Context(), input.Password); err != nil {
+			s.auditCoserAssetCleanup(database, request, "FAILURE", "COSER_ASSET_CLEANUP_PASSWORD_FAILED",
+				map[string]any{"selected_group_count": len(input.AssetIDs)})
+			http.Error(response, "owner password verification failed", http.StatusForbidden)
+			return
+		}
+		result, err := service.CleanupUnreferenced(request.Context(), input.AssetIDs)
+		if err != nil {
+			code := http.StatusInternalServerError
+			errorCode := "COSER_ASSET_CLEANUP_FAILED"
+			if errors.Is(err, coserasset.ErrCleanupSelectionInvalid) {
+				code, errorCode = http.StatusBadRequest, "COSER_ASSET_CLEANUP_INPUT_FAILED"
+			} else if errors.Is(err, coserasset.ErrCleanupReviewStale) {
+				code, errorCode = http.StatusConflict, "COSER_ASSET_CLEANUP_REVIEW_STALE"
+			}
+			s.auditCoserAssetCleanup(database, request, "FAILURE", errorCode,
+				map[string]any{"selected_group_count": len(input.AssetIDs)})
+			http.Error(response, "Coser managed asset cleanup failed", code)
+			return
+		}
+		s.auditCoserAssetCleanup(database, request, "SUCCESS", "", map[string]any{
+			"selected_group_count": len(input.AssetIDs), "deleted_group_count": result.DeletedGroupCount,
+			"deleted_file_count": result.DeletedFileCount, "deleted_byte_size": result.DeletedByteSize,
+		})
+		response.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(response).Encode(result)
+	})
+}
+
+func (s *Server) auditCoserAssetCleanup(database *productdb.Database, request *http.Request, outcome, errorCode string, summary map[string]any) {
+	_ = database.Operations().Audit(request.Context(), "COSER_ASSET_CLEANUP", "SYSTEM", "", outcome, errorCode, summary, time.Now())
 }
 
 func (s *Server) coserAssetUploadHandler(database *productdb.Database) http.Handler {

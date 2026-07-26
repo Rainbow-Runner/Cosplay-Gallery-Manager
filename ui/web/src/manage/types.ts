@@ -42,6 +42,16 @@ export interface ManageBackupRecord {
 export interface ManageMaintenanceState { state: "NORMAL" | "RESTORING" | "WAITING_VALIDATION"; restoreBackupID?: string | null; lastErrorCode: string; updatedAt: string }
 export interface ManageAuditEvent { id: number; eventCode: string; targetKind: string; targetID: string; outcome: string; errorCode: string; summaryJSON: string; createdAt: string }
 export interface ManageAuditPage { items: ManageAuditEvent[]; page: number; pageSize: number; totalItems: number; totalPages: number }
+export interface ManageCoserAssetReviewGroup {
+  id: string; coser_uuid: string; kind: "AVATAR" | "BANNER"; reason: "REPLACED" | "MERGED_COSER" | "DELETED_COSER";
+  file_count: number; byte_size: number; modified_at: string;
+}
+export interface ManageCoserAssetReview {
+  groups: ManageCoserAssetReviewGroup[]; total_file_count: number; total_byte_size: number; ignored_entry_count: number;
+}
+export interface ManageCoserAssetCleanupResult {
+  deleted_group_count: number; deleted_file_count: number; deleted_byte_size: number; review: ManageCoserAssetReview;
+}
 export interface ManageCoreEntity { kind: "COSER" | "WORK" | "CHARACTER" | "TAG"; uuid: string; name: string; sortName: string; aliases: string[]; slug: string; metadataRevision: number; workUUID?: string | null; profileSummary: string; biography: string; countryOrRegion: string; useInRecommendation: boolean; avatarURL?: string | null; bannerURL?: string | null; avatarCrop?: { x: number; y: number; size: number } | null; bannerFocalPoint?: { x: number; y: number } | null; socialAccounts: { uuid: string; platformKey: string; label: string; handle: string; url: string; status: string; visible: boolean; position: string }[]; parents: { uuid: string; name: string; metadataRevision: number }[] }
 export interface ManageCoreEntityPage { items: ManageCoreEntity[]; page: number; pageSize: number; totalItems: number; totalPages: number }
 export interface ManageCoreEntityMergePreview {

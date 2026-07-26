@@ -75,6 +75,9 @@
 - P07（Coser裁切与焦点）：上传时保存归一化头像裁切和Banner焦点，替换原图不继承旧参数；数据库更新使用独立`metadata_revision`乐观锁并把既有Coser Manifest标记为`DB_DIRTY`。
 - P07（Coser资源安全）：资源服务使用UUID、revision和variant不透明URL，逐级拒绝符号链接且不返回物理路径；替换不删除旧托管文件，失败提交最多留下未引用托管资源，不会影响用户媒体来源。
 - P06/P07（Coser图片界面）：Manage资料页可上传并预览头像/Banner，Browse Coser索引显示1:1头像、详情按有无资源显示头像/Banner，无头像继续使用名称首字符占位且无Banner隐藏区域。
+- P07/P09（Coser资源审阅）：Operations集中列出已替换、合并或删除Coser留下的未引用头像/Banner生成组；DTO仅返回不透明组ID、Coser UUID、原因、类型、文件数量/容量和时间，不返回文件名或路径。
+- P07/P09（Coser资源清理）：只允许人工选择严格匹配CGM UUID命名的原图/派生图组；提交要求Session、同源、所有者密码和精确确认词`CLEAN`，并在SQLite immediate事务中重新检查全部引用后逐文件隔离复核再删除。
+- P07/P09（清理安全与审计）：未知文件、临时文件、符号链接、Coser Manifest、Coser资料目录和全部用户媒体永不进入候选；成功/失败审计只记录组数、文件数和字节数，不记录名称或路径，失败不自动重试。
 - P07（关系选择）：Manage提供不继承Browse scope的全库名称/Alias搜索；Gallery关系编辑器可搜索并选择任意现有Coser、Character和Tag，同时保留UUID人工输入能力。
 - P07（Tag DAG）：Tag编辑页可搜索并批量替换多个直接父级；事务要求所有新增、保留和移除父Tag的revision，数据库触发器继续承担严格无环校验。
 - P07（Manifest UI）：Gallery与Coser均可检查同步状态、显式Push/Pull，并对三方冲突逐字段选择DATABASE/FILE；Coser资料使用Setup完成后保存在产品数据库中的单一元数据根。
@@ -97,12 +100,13 @@
 - GraphQL集成测试验证Gallery与Coser Manifest只能通过显式Mutation写入各自确定路径，并返回CLEAN状态。
 - 运维集成测试验证每日快照到期租约/保留、自动扫描opt-in、完整恢复、Session撤销、任务取消、安全备份注册、人工恢复，以及数据库交换后故障的自动回滚。
 - Operations GraphQL测试验证备份/恢复由Server服务执行且响应不泄漏数据库或存储根。
-- React 19 TypeScript `--noEmit`通过；Vitest当前6个文件、12项测试全部通过。
-- Vite生产构建通过，共转换659个模块；当前主JS minify后、gzip前约470KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。
+- React 19 TypeScript `--noEmit`通过；Vitest当前7个文件、13项测试全部通过。
+- Vite生产构建通过，共转换660个模块；当前主JS minify后、gzip前约470KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。
 - `cgm_web_embed`标签下的产品UI嵌入和Server回归测试通过；`make build-cgm`生成约24MiB单文件验证产物，深层SPA路由、哈希资源immutable缓存和旧UI依赖隔离均已验证。
 - 实体生命周期回归验证了按关系类型返回删除阻断、合并冲突时禁用提交、明确确认词、GraphQL预览/提交、永久Alias/Tombstone和管理审计。
 - Gallery删除回归验证了归档前阻断、过期revision拒绝、密码与确认词双重门禁、Item/Link/Set UUID Tombstone、任务取消保留、IgnoredGallerySource建立，以及来源媒体和Manifest字节不变。
 - Coser托管资源回归验证了未认证上传拒绝、同源Session上传、实际JPEG派生、过期revision冲突、GIF拒绝、认证资源读取、URL不泄漏根路径，以及替换后旧原图/派生图仍保留。
+- Coser未引用资源回归验证了现用组排除、已替换/已删除分组、未知文件与符号链接跳过、引用变化后过期审阅拒绝、密码/确认词/同源门禁、选择性清理、Manifest保留和无路径审计。
 - BLAKE3依赖固定为`github.com/zeebo/blake3 v0.2.4`并记录模块校验和。
 - 用户来源能力审计未发现删除调用；应用删除仅限失败备份、缓存、临时文件等明确生成数据。
 
@@ -111,14 +115,12 @@
 - 主机仍没有正式安装的Go 1.25工具链；当前依赖`/tmp/cgm-go1.25.12`，需纳入开发镜像与CI。
 - G4的真实FFmpeg/LibRaw跨平台样本矩阵尚未执行；当前仅完成适配器、规划器、图片实际样本和伪生成器处理闭环。
 - Playwright端到端、截图、键盘/读屏、目标浏览器与响应宽度矩阵尚未执行。
-- Coser未引用托管资源的集中审阅/清理界面尚未完成；当前替换文件按约束保留且不会被自动删除。
 - 前端路由分包已消除单入口构建警告，但低性能移动设备首屏仍需在目标浏览器/设备矩阵中验证。
 
 ## 下一批工作
 
-1. 完成Coser未引用托管资源审阅，以及剩余高影响管理操作。
-2. 完善恢复中的异机路径映射提示与完整备份跨平台损坏样本演练。
-3. 增加Setup→导入→审核→激活→浏览→Manifest→备份恢复的Playwright离线E2E及无障碍矩阵。
-4. 准备真实RAW/GIF/Video与危险归档样本，执行FFmpeg/LibRaw、平台、性能和安全发布门禁。
+1. 完善恢复中的异机路径映射提示与完整备份跨平台损坏样本演练。
+2. 增加Setup→导入→审核→激活→浏览→Manifest→备份恢复的Playwright离线E2E及无障碍矩阵。
+3. 准备真实RAW/GIF/Video与危险归档样本，执行FFmpeg/LibRaw、平台、性能和安全发布门禁。
 
 任何未执行的测试不得在状态记录或发布说明中标记为通过。

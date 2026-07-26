@@ -126,6 +126,7 @@
 - 固定`GOMAXPROCS=4`的百万Item性能门禁通过：最慢Gallery列表p95约493ms、时间线约477ms，均低于500ms；Tag未缓存约141ms、缓存约143ms，其他目标均通过。
 - 固定工具链CGO构建通过Linux amd64与Linux arm64；Linux amd64 Docker镜像实际构建、非root启动和`/healthz` 204通过。
 - About/Legal后端、前端、产品版本/源码URL测试通过；SPDX文件可解析且包含1个产品包与52项应用依赖。
+- `verify-cgm-release`已在干净本地提交上通过：嵌入式Linux amd64二进制报告完整Git revision，Go VCS元数据为`modified=false`，同提交AGPL源码归档包含`LICENSE`并生成独立SHA-256。
 
 ## 尚未通过的门禁
 
@@ -135,7 +136,7 @@
 - Docker linux/amd64已实际健康启动；linux/arm64镜像运行需要宿主机全局binfmt或原生arm64 runner。本轮特权binfmt注册被安全策略拒绝，故双架构Docker门禁尚未全部通过。
 - 只读媒体源由E2E和容器挂载覆盖基础流程；真实操作系统网络挂载、Manifest Push无写权限和低性能移动设备首屏仍需目标环境验收。
 - 新增CI/夜间工作流尚未在远端runner执行，不能根据本地语法和子门禁结果推定通过。
-- RC版本/API/schema冻结、正式多平台产物签名/校验和、容器平台SBOM以及干净发行提交的源码归档对应脚本尚未执行。
+- RC版本/API/schema冻结、正式多平台产物签名/发布校验和与容器平台SBOM尚未执行；本地源码对应脚本已通过，但不等同于正式RC产物验收。
 
 ## 下一批工作
 

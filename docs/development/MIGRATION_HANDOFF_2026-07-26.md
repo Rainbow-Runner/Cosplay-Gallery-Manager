@@ -350,3 +350,5 @@ GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
 2026-07-27产品范围调整：第一版取消Windows平台构建、安装和运行验收，Windows原生支持整体移入后续版本；已完成的Windows交叉构建仅保留为历史技术证据，不再属于G9或1.0门禁。平台脚本和交叉工具链已移除MinGW/Windows目标。当前下一项改为真实Linux arm64、Docker arm64和完整浏览器/无障碍验收。
 
 同日新增独立`CGM CI`与`CGM Nightly Gates`定义：提交门禁覆盖产品Go/React、真实媒体、归档、法律资料确定性、源码对应、Chromium离线E2E、Linux双架构CGO与Docker多架构构建；夜间门禁覆盖固定4核百万Item性能和Firefox/WebKit离线E2E。工作流尚未在远端runner执行，首次结果仍需逐项核实，不能在当前本地记录中标记为通过。
+
+本地提交后已在干净工作树执行`CGM_VERSION=0.1.0-dev scripts/verify-cgm-release.sh`：嵌入式Linux amd64二进制报告完整提交，`go version -m`确认VCS revision一致且`modified=false`，`git archive`生成的同提交源码包包含`LICENSE`，二者SHA-256均成功生成。该结果证明本地源码对应链路可用，不代替未来正式RC签名和远端runner结果。

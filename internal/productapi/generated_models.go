@@ -382,6 +382,7 @@ type ManageGalleryDetail struct {
 	Credits            []*ManageGalleryCredit       `json:"credits"`
 	Tags               []*ManageGalleryTag          `json:"tags"`
 	ExternalLinks      []*ManageGalleryExternalLink `json:"externalLinks"`
+	FolderMatches      []*ManageGalleryFolderMatch  `json:"folderMatches"`
 }
 
 type ManageGalleryExternalLink struct {
@@ -390,6 +391,15 @@ type ManageGalleryExternalLink struct {
 	Label    string `json:"label"`
 	URL      string `json:"url"`
 	Position string `json:"position"`
+}
+
+type ManageGalleryFolderMatch struct {
+	Kind        SearchEntityKind `json:"kind"`
+	UUID        string           `json:"uuid"`
+	Name        string           `json:"name"`
+	MatchedName string           `json:"matchedName"`
+	WorkUUID    string           `json:"workUUID"`
+	WorkName    string           `json:"workName"`
 }
 
 type ManageGalleryItem struct {
@@ -741,6 +751,17 @@ type UpdateGalleryMetadataInput struct {
 	ContentRating      ContentRating      `json:"contentRating"`
 	PhotographerName   string             `json:"photographerName"`
 	StudioName         string             `json:"studioName"`
+}
+
+type UpdateRecognitionRuleInput struct {
+	ID              int64  `json:"id"`
+	Name            string `json:"name"`
+	Kind            string `json:"kind"`
+	Enabled         bool   `json:"enabled"`
+	AutoCreateDraft bool   `json:"autoCreateDraft"`
+	Order           int    `json:"order"`
+	Pattern         string `json:"pattern"`
+	FixedDepth      int    `json:"fixedDepth"`
 }
 
 type WorkDetail struct {

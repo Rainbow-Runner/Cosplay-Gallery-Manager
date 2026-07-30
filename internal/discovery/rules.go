@@ -134,7 +134,16 @@ func MatchDirectory(relativeDirectory string, hasMarker bool, rules []Rule) (*Ma
 		switch rule.Kind {
 		case RuleKindMarker:
 			if hasMarker {
-				return &Match{Root: normalized, RuleID: rule.ID, Kind: rule.Kind, AutoCreate: rule.AutoCreateDraft}, nil
+				return &Match{
+					Root:       normalized,
+					RuleID:     rule.ID,
+					Kind:       rule.Kind,
+					AutoCreate: rule.AutoCreateDraft,
+					Suggestions: []Suggestion{{
+						Field: "title",
+						Value: norm.NFC.String(strings.TrimSpace(path.Base(normalized))),
+					}},
+				}, nil
 			}
 		case RuleKindPathTemplate:
 			compiled := regexp.MustCompile("^(?:" + rule.Pattern + ")$")

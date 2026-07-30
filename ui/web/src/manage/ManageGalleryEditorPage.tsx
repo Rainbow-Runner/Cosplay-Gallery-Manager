@@ -4,13 +4,22 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ADD_GALLERY_EXTERNAL_LINK, MANAGE_GALLERY, MANAGE_GALLERY_MANIFEST, MOVE_GALLERY_ITEM, PULL_GALLERY_MANIFEST, PUSH_GALLERY_MANIFEST, REPLACE_GALLERY_RELATIONS, RESET_GALLERY_COVER, RESOLVE_GALLERY_MANIFEST, SCAN_GALLERY_SOURCE, SET_GALLERY_COVER_ITEM, SET_GALLERY_ITEM_EXCLUDED, SET_GALLERY_STATE, UPDATE_GALLERY_ITEM, UPDATE_GALLERY_METADATA } from "../api/manage";
 import { ManageEntitySelector } from "./ManageEntitySelector";
 import { ManageGalleryDeletePanel } from "./ManageGalleryDeletePanel";
-import type { ManageGalleryCredit, ManageGalleryDetail, ManageGalleryItem, ManageGalleryManifestState, ManageGalleryTag } from "./types";
+import type { ManageGalleryCredit, ManageGalleryDetail, ManageGalleryFolderMatch, ManageGalleryItem, ManageGalleryManifestState, ManageGalleryTag } from "./types";
 
 const tabs = ["basic", "cast", "media", "source", "manifest"] as const;
+function isAbsoluteHTTPURL(value: string) {
+  try {
+    const parsed = new URL(value);
+    return (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+      parsed.host !== "" && parsed.username === "" && parsed.password === "";
+  } catch {
+    return false;
+  }
+}
 export function ManageGalleryEditorPage() {
   const navigate = useNavigate();
   const { setID = "" } = useParams(); const [parameters, setParameters] = useSearchParams(); const tab = tabs.includes(parameters.get("tab") as typeof tabs[number]) ? parameters.get("tab") as typeof tabs[number] : "basic";
-  const query = useQuery<{ manageGallery: ManageGalleryDetail }>(MANAGE_GALLERY, { variables: { setID } }); const [save] = useMutation(UPDATE_GALLERY_METADATA); const [setState] = useMutation(SET_GALLERY_STATE);
+  const query = useQuery<{ manageGallery: ManageGalleryDetail }>(MANAGE_GALLERY, { variables: { setID }, fetchPolicy: "network-only" }); const [save] = useMutation(UPDATE_GALLERY_METADATA); const [setState] = useMutation(SET_GALLERY_STATE);
   const [updateItem] = useMutation<{ updateGalleryItem: ManageGalleryDetail }>(UPDATE_GALLERY_ITEM);
   const [setExcluded] = useMutation<{ setGalleryItemExcluded: ManageGalleryDetail }>(SET_GALLERY_ITEM_EXCLUDED);
   const [moveItem] = useMutation<{ moveGalleryItem: ManageGalleryDetail }>(MOVE_GALLERY_ITEM);
@@ -29,6 +38,7 @@ export function ManageGalleryEditorPage() {
   useEffect(() => { if (query.data) setDraft(query.data.manageGallery); }, [query.data]);
   if (!draft) return <main className="manage-page"><p>{query.error ? "Unable to load Gallery." : "Loading…"}</p></main>;
   const current = draft;
+  const externalLinkValid = isAbsoluteHTTPURL(linkDraft.url);
   async function submit(event: FormEvent) { event.preventDefault(); setMessage(""); try { await save({ variables: { setID, expectedMetadataRevision: current.row.metadataRevision, input: {
     title: current.row.title, aliases: current.aliases, description: current.description, shootDate: current.shootDate, shootDatePrecision: current.shootDate ? current.shootDatePrecision : "UNKNOWN",
     contentRating: current.row.contentRating || "NON_ADULT", photographerName: current.photographerName, studioName: current.studioName } } }); setMessage("Saved"); await query.refetch(); } catch { setMessage("Revision conflict or invalid metadata"); } }
@@ -41,19 +51,66 @@ export function ManageGalleryEditorPage() {
   async function scan() { setMessage(""); try { const result = await scanSource({ variables: { setID } }); if (result.data) setDraft(result.data.scanGallerySource); setMessage("Source scan completed"); } catch (error) { setMessage(error instanceof Error ? error.message : "Source scan failed"); } }
   function editCredit(index: number, patch: Partial<ManageGalleryCredit>) { setDraft({ ...current, credits: current.credits.map((credit, position) => position === index ? { ...credit, ...patch } : credit) }); }
   function editTag(index: number, patch: Partial<ManageGalleryTag>) { setDraft({ ...current, tags: current.tags.map((tag, position) => position === index ? { ...tag, ...patch } : tag) }); }
+  const relationsValid = current.credits.every((credit) => credit.coserUUID && credit.cast.every((cast) => cast.characterUUID)) &&
+    current.tags.every((tag) => tag.uuid);
+  function folderMatchApplied(match: ManageGalleryFolderMatch) {
+    if (match.kind === "COSER") return current.credits.some((credit) => credit.coserUUID === match.uuid);
+    if (match.kind === "CHARACTER") return current.credits.some((credit) => credit.cast.some((cast) => cast.characterUUID === match.uuid));
+    return current.credits.some((credit) => credit.cast.some((cast) => cast.workUUID === match.uuid));
+  }
+  function useFolderMatch(match: ManageGalleryFolderMatch) {
+    setMessage("");
+    if (match.kind === "COSER") {
+      if (current.credits.some((credit) => credit.coserUUID === match.uuid)) {
+        setMessage("This Coser is already in the relation draft");
+        return;
+      }
+      setDraft({ ...current, credits: [...current.credits, { coserUUID: match.uuid, coserName: match.name, position: "", cast: [] }] });
+      setMessage("Folder match added to the relation draft; save all relations to confirm");
+      return;
+    }
+    if (match.kind === "CHARACTER") {
+      if (current.credits.length !== 1) {
+        setMessage("Add or retain exactly one Coser before applying a Character folder match");
+        return;
+      }
+      if (current.credits[0].cast.some((cast) => cast.characterUUID === match.uuid)) {
+        setMessage("This Character is already in the relation draft");
+        return;
+      }
+      setDraft({
+        ...current,
+        credits: [{
+          ...current.credits[0],
+          cast: [...current.credits[0].cast, {
+            characterUUID: match.uuid, characterName: match.name,
+            workUUID: match.workUUID, workName: match.workName, position: "",
+          }],
+        }],
+      });
+      setMessage("Folder match added to the relation draft; save all relations to confirm");
+    }
+  }
   async function saveRelations() {
+    if (!relationsValid) {
+      setMessage("Select an existing Coser, Character or Tag for every unfinished relation row");
+      return;
+    }
     setMessage("");
     try {
       const result = await replaceRelations({ variables: { setID, expectedMetadataRevision: current.row.metadataRevision, input: {
         credits: current.credits.map((credit, index) => ({ coserUUID: credit.coserUUID, position: String((index + 1) * 1024), cast: credit.cast.map((cast, castIndex) => ({ characterUUID: cast.characterUUID, position: String((castIndex + 1) * 1024) })) })),
         tags: current.tags.map((tag, index) => ({ tagUUID: tag.uuid, position: String((index + 1) * 1024) })),
       } } });
-      if (result.data) setDraft(result.data.replaceGalleryRelations);
+      if (!result.data) throw new Error("Server did not return the saved Gallery relations");
+      setDraft(result.data.replaceGalleryRelations);
+      const refreshed = await query.refetch();
+      if (refreshed.data) setDraft(refreshed.data.manageGallery);
       setMessage("People, characters and tags saved");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Relation save failed"); }
   }
   async function createExternalLink(event: FormEvent) {
-    event.preventDefault(); setMessage("");
+    event.preventDefault(); if (!externalLinkValid) return; setMessage("");
     try {
       const result = await addExternalLink({ variables: { setID, expectedMetadataRevision: current.row.metadataRevision, input: { ...linkDraft, position: String((current.externalLinks.length + 1) * 1024) } } });
       if (result.data) setDraft(result.data.addGalleryExternalLink);
@@ -92,18 +149,22 @@ export function ManageGalleryEditorPage() {
       <footer className="span-2"><button type="submit">Save metadata</button></footer></form>
       <section className="manage-panel manage-external-links"><h3>Original source links</h3><p>HTTP(S) links are stored as quiet references only; the application never fetches their content.</p>
         {draft.externalLinks.length ? <ul>{draft.externalLinks.map((link) => <li key={link.uuid}><span>{link.type}</span><a href={link.url} target="_blank" rel="noreferrer">{link.label || link.url}</a></li>)}</ul> : <p>No external links.</p>}
-        <form className="manage-inline-form" onSubmit={createExternalLink}><select aria-label="External link type" value={linkDraft.type} onChange={(event) => setLinkDraft({ ...linkDraft, type: event.target.value })}><option value="SOURCE">SOURCE</option><option value="PROFILE">PROFILE</option><option value="REFERENCE">REFERENCE</option></select><input aria-label="External link label" placeholder="Label" maxLength={100} value={linkDraft.label} onChange={(event) => setLinkDraft({ ...linkDraft, label: event.target.value })} /><input aria-label="External link URL" type="url" required placeholder="https://…" value={linkDraft.url} onChange={(event) => setLinkDraft({ ...linkDraft, url: event.target.value })} /><button disabled={externalLinkState.loading} type="submit">Add link</button></form>
+        <form className="manage-inline-form" onSubmit={createExternalLink}><select aria-label="External link type" value={linkDraft.type} onChange={(event) => setLinkDraft({ ...linkDraft, type: event.target.value })}><option value="SOURCE">SOURCE</option><option value="PROFILE">PROFILE</option><option value="REFERENCE">REFERENCE</option></select><input aria-label="External link label" placeholder="Label" maxLength={100} value={linkDraft.label} onChange={(event) => setLinkDraft({ ...linkDraft, label: event.target.value })} /><input aria-label="External link URL" type="url" required placeholder="https://…" value={linkDraft.url} onChange={(event) => setLinkDraft({ ...linkDraft, url: event.target.value })} /><button disabled={!externalLinkValid || externalLinkState.loading} type="submit">Add link</button></form>
       </section>
         <ManageGalleryDeletePanel key={`${draft.row.state}-${draft.row.metadataRevision}`} setID={setID} title={draft.row.title} onDeleted={() => navigate("/manage", { replace: true })} />
       </> : null}
     {tab === "cast" ? <section className="manage-panel manage-relations"><header><div><h3>人物、角色与标签</h3><p>一次显式保存整个关系集合。空 Cast 自动归类为 Album；任一 Cast 存在时归类为 Cosplay。</p></div><strong>{draft.credits.some((credit) => credit.cast.length > 0) ? "COSPLAY" : "ALBUM"}</strong></header>
+      {(draft.folderMatches || []).length ? <div className="manage-folder-matches"><h4>Folder-name matches</h4><p>These are review-only hints matched against existing names and aliases. Nothing becomes a formal relation until you apply it and save all relations.</p>
+        <ul>{draft.folderMatches.map((match) => <li key={`${match.kind}-${match.uuid}`}><div><strong>{match.kind}</strong><span>{match.kind === "CHARACTER" ? `${match.workName} · ${match.name}` : match.name}</span><small>matched “{match.matchedName}”</small></div>{folderMatchApplied(match) ? <em>Already saved</em> : match.kind === "WORK" ? <em>Context only</em> : <button type="button" onClick={() => useFolderMatch(match)}>Use</button>}</li>)}</ul>
+      </div> : null}
       <div className="manage-relation-block"><div className="manage-inline-toolbar"><h4>Coser credits</h4><button type="button" onClick={() => setDraft({ ...draft, credits: [...draft.credits, { coserUUID: "", coserName: "", position: "", cast: [] }] })}>Add Coser</button></div>
         {draft.credits.length ? draft.credits.map((credit, creditIndex) => <article className="manage-credit" key={`${credit.coserUUID}-${creditIndex}`}><div className="manage-credit__head"><ManageEntitySelector kind="COSER" label="Coser" uuid={credit.coserUUID} name={credit.coserName} onSelect={(entity) => editCredit(creditIndex, { coserUUID: entity.uuid, coserName: entity.name })} /><button type="button" onClick={() => setDraft({ ...draft, credits: draft.credits.filter((_, index) => index !== creditIndex) })}>Remove</button></div>
           <div className="manage-cast-list"><h5>Characters played by this Coser</h5>{credit.cast.map((cast, castIndex) => <div className="manage-cast-row" key={`${cast.characterUUID}-${castIndex}`}><ManageEntitySelector kind="CHARACTER" label="Character" uuid={cast.characterUUID} name={cast.workName ? `${cast.workName} · ${cast.characterName}` : cast.characterName} onSelect={(entity) => editCredit(creditIndex, { cast: credit.cast.map((value, index) => index === castIndex ? { ...value, characterUUID: entity.uuid, characterName: entity.name, workUUID: entity.workUUID || "", workName: "" } : value) })} /><button type="button" onClick={() => editCredit(creditIndex, { cast: credit.cast.filter((_, index) => index !== castIndex) })}>Remove</button></div>)}<button type="button" onClick={() => editCredit(creditIndex, { cast: [...credit.cast, { characterUUID: "", characterName: "", workUUID: "", workName: "", position: "" }] })}>Add Character</button></div>
         </article>) : <p>No Coser credits. This Gallery is currently an Album.</p>}
       </div>
       <div className="manage-relation-block"><div className="manage-inline-toolbar"><h4>Direct tags</h4><button type="button" onClick={() => setDraft({ ...draft, tags: [...draft.tags, { uuid: "", name: "", position: "" }] })}>Add Tag</button></div>{draft.tags.map((tag, tagIndex) => <div className="manage-tag-row" key={`${tag.uuid}-${tagIndex}`}><ManageEntitySelector kind="TAG" label="Tag" uuid={tag.uuid} name={tag.name} onSelect={(entity) => editTag(tagIndex, { uuid: entity.uuid, name: entity.name })} /><button type="button" onClick={() => setDraft({ ...draft, tags: draft.tags.filter((_, index) => index !== tagIndex) })}>Remove</button></div>)}</div>
-      <div className="manage-panel-actions"><button type="button" disabled={relationState.loading} onClick={saveRelations}>{relationState.loading ? "Saving…" : "Save all relations"}</button></div>
+      {!relationsValid ? <p className="manage-error">Finish or remove every empty Coser, Character and Tag row before saving.</p> : null}
+      <div className="manage-panel-actions"><button type="button" disabled={!relationsValid || relationState.loading} onClick={saveRelations}>{relationState.loading ? "Saving…" : "Save all relations"}</button></div>
     </section> : null}
     {tab === "media" ? <section><div className="manage-inline-toolbar"><span>{draft.items.length} members</span><button type="button" onClick={autoCover}>Reset cover to auto</button></div><div className="manage-table-wrap"><table className="manage-table manage-media-table"><thead><tr><th>Order</th><th>Path / Caption</th><th>Type</th><th>Category</th><th>Availability</th><th>Processing</th><th>Actions</th></tr></thead><tbody>{draft.items.map((item) => <tr key={item.uuid} className={item.excluded ? "is-excluded" : ""}><td><button type="button" aria-label="Move up" onClick={() => move(item, -1)}>↑</button><button type="button" aria-label="Move down" onClick={() => move(item, 1)}>↓</button></td><td><strong>{item.relativePath}</strong><input aria-label={`Caption for ${item.relativePath}`} value={item.caption} maxLength={1000} placeholder="Caption" onChange={(event) => editItem(item.uuid, { caption: event.target.value })} /></td><td>{item.mediaKind}<small>{item.contentFormat}</small></td><td>{item.mediaKind === "STATIC_IMAGE" ? <select value={item.imageCategory || "PHOTO"} onChange={(event) => editItem(item.uuid, { imageCategory: event.target.value as "PHOTO" | "SELFIE" })}><option value="PHOTO">PHOTO</option><option value="SELFIE">SELFIE</option></select> : "—"}</td><td>{item.availability}</td><td>{item.processingState}</td><td><button type="button" onClick={() => saveItem(item)}>Save</button><button type="button" onClick={() => toggleExcluded(item)}>{item.excluded ? "Restore" : "Exclude"}</button>{item.mediaKind === "STATIC_IMAGE" ? <button type="button" onClick={() => chooseCover(item)}>Cover</button> : null}</td></tr>)}</tbody></table></div></section> : null}
     {tab === "source" ? <section className="manage-panel"><h3>来源与扫描</h3><dl><dt>Path</dt><dd>{draft.row.sourcePath}</dd><dt>Availability</dt><dd>{draft.row.sourceAvailability}</dd><dt>Reconcile</dt><dd>{draft.row.reconcileState}</dd><dt>Scan revision</dt><dd>{draft.row.scanRevision}</dd></dl><div className="manage-panel-actions"><button type="button" disabled={scanState.loading} onClick={scan}>{scanState.loading ? "Scanning…" : "Scan source now"}</button><button type="button" onClick={() => navigator.clipboard?.writeText(draft.row.sourcePath)}>Copy path</button></div></section> : null}

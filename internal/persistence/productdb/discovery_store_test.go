@@ -3,6 +3,7 @@ package productdb
 import (
 	"archive/zip"
 	"context"
+	"database/sql"
 	"errors"
 	"os"
 	"path/filepath"
@@ -43,8 +44,29 @@ func TestFilesystemDiscoveryHonoursMarkerRootAndSuppressesNestedDiagnostics(t *t
 	if len(snapshot.Candidates) != 1 || snapshot.Candidates[0].RootPath != setRoot || snapshot.Candidates[0].MediaCount != 1 {
 		t.Fatalf("filesystem candidates = %#v", snapshot.Candidates)
 	}
+	if len(snapshot.Candidates[0].Suggestions) != 1 ||
+		snapshot.Candidates[0].Suggestions[0] != (discovery.Suggestion{Field: "title", Value: "Set"}) {
+		t.Fatalf("marker title suggestions = %#v", snapshot.Candidates[0].Suggestions)
+	}
 	if len(snapshot.Unassigned) != 0 {
 		t.Fatalf("nested media was also reported unassigned: %#v", snapshot.Unassigned)
+	}
+	created, err := db.CandidateDiscovery().ImportCandidate(ctx, snapshot.Candidates[0].ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.Title != "Set" {
+		t.Fatalf("marker Gallery title = %q, want source directory name", created.Title)
+	}
+	var pendingTitleSuggestions int
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM gallery_metadata_suggestions
+		WHERE gallery_id = ? AND suggestion_kind = 'TITLE' AND status = 'PENDING'
+	`, created.ID).Scan(&pendingTitleSuggestions); err != nil {
+		t.Fatal(err)
+	}
+	if pendingTitleSuggestions != 0 {
+		t.Fatalf("marker fallback created %d redundant title suggestions", pendingTitleSuggestions)
 	}
 }
 
@@ -192,6 +214,69 @@ func TestDiscoveryPriorityAndPathSuggestions(t *testing.T) {
 	}
 }
 
+func TestRecognitionRuleUpdateAndDelete(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 7, 27, 15, 0, 0, 0, time.UTC)
+	mediaLibrary := createTestLibrary(t, db, now)
+	rules := db.RecognitionRules()
+	created, err := rules.Create(ctx, CreateRecognitionRuleInput{
+		LibraryID: mediaLibrary.ID, Name: "Depth", Kind: discovery.RuleKindFixedDepth,
+		Enabled: true, Order: 20, FixedDepth: 2,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	updated, err := rules.Update(ctx, UpdateRecognitionRuleInput{
+		ID: created.ID, Name: "Marker", Kind: discovery.RuleKindMarker,
+		Enabled: true, AutoCreateDraft: true, Order: 5,
+	}, now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Kind != discovery.RuleKindMarker || updated.FixedDepth != 0 ||
+		!updated.Enabled || !updated.AutoCreateDraft || updated.Order != 5 {
+		t.Fatalf("updated rule = %#v", updated)
+	}
+	listed, err := rules.List(ctx, mediaLibrary.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 1 || listed[0] != updated {
+		t.Fatalf("listed rules = %#v, want %#v", listed, updated)
+	}
+
+	snapshot, err := db.CandidateDiscovery().CommitSnapshot(ctx, mediaLibrary.ID, []ObservedDirectory{{
+		RelativePath: "Set", HasRootMarker: true, MediaCount: 2,
+	}}, now.Add(2*time.Minute))
+	if err != nil || len(snapshot.Candidates) != 1 || snapshot.Candidates[0].RuleID == nil {
+		t.Fatalf("candidate before rule deletion = %#v, %v", snapshot.Candidates, err)
+	}
+	if err := rules.Delete(ctx, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	listed, err = rules.List(ctx, mediaLibrary.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 0 {
+		t.Fatalf("rules after delete = %#v", listed)
+	}
+	snapshot, err = db.CandidateDiscovery().LatestSnapshot(ctx, mediaLibrary.ID)
+	if err != nil || len(snapshot.Candidates) != 1 || snapshot.Candidates[0].RuleID != nil {
+		t.Fatalf("candidate after rule deletion = %#v, %v", snapshot.Candidates, err)
+	}
+	if _, err := rules.Update(ctx, UpdateRecognitionRuleInput{
+		ID: created.ID, Name: "Missing", Kind: discovery.RuleKindMarker,
+	}, now.Add(3*time.Minute)); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("updating missing rule = %v, want sql.ErrNoRows", err)
+	}
+	if err := rules.Delete(ctx, created.ID); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("deleting missing rule = %v, want sql.ErrNoRows", err)
+	}
+}
+
 func TestAutoCreateDraftKeepsSuggestionsPending(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)
@@ -231,6 +316,66 @@ func TestAutoCreateDraftKeepsSuggestionsPending(t *testing.T) {
 	}
 	if identityPending != 1 || metadataPending != 1 {
 		t.Fatalf("pending suggestions = identity %d metadata %d", identityPending, metadataPending)
+	}
+}
+
+func TestMarkerImportUsesFolderTitleAndOffersExistingEntityMatches(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 7, 27, 18, 0, 0, 0, time.UTC)
+	mediaLibrary := createTestLibrary(t, db, now)
+	coser, err := db.CoreEntities().CreateCoser(ctx, CreateCoserInput{
+		CreateNamedEntityInput: CreateNamedEntityInput{Name: "Alice", Aliases: []string{"爱丽丝"}},
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	work, err := db.CoreEntities().CreateWork(ctx, CreateNamedEntityInput{
+		Name: "Fate/stay night", Aliases: []string{"命运之夜"},
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	character, err := db.CoreEntities().CreateCharacter(ctx, work.UUID, CreateNamedEntityInput{
+		Name: "Saber", Aliases: []string{"阿尔托莉雅"},
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.RecognitionRules().Create(ctx, CreateRecognitionRuleInput{
+		LibraryID: mediaLibrary.ID, Name: "Marker", Kind: discovery.RuleKindMarker,
+		Enabled: true, AutoCreateDraft: true,
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+	folderName := "爱丽丝 - 命运之夜 - 阿尔托莉雅"
+	snapshot, err := db.CandidateDiscovery().CommitSnapshot(ctx, mediaLibrary.ID, []ObservedDirectory{{
+		RelativePath: folderName, HasRootMarker: true, MediaCount: 3,
+	}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Candidates) != 1 || snapshot.Candidates[0].GalleryID == nil ||
+		snapshot.Candidates[0].Status != "IMPORTED" {
+		t.Fatalf("marker candidates = %#v", snapshot.Candidates)
+	}
+	created, err := db.Galleries().Find(ctx, *snapshot.Candidates[0].GalleryID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.Title != folderName {
+		t.Fatalf("marker title = %q, want %q", created.Title, folderName)
+	}
+	detail, err := db.Manage().GalleryDetail(ctx, created.SetID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, match := range detail.FolderMatches {
+		got[match.Kind] = match.UUID
+	}
+	if got["COSER"] != coser.UUID || got["WORK"] != work.UUID || got["CHARACTER"] != character.UUID {
+		t.Fatalf("folder matches = %#v", detail.FolderMatches)
 	}
 }
 

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
 
 import { DELETE_CORE_ENTITY, MERGE_CORE_ENTITIES, PREVIEW_CORE_ENTITY_DELETE, PREVIEW_CORE_ENTITY_MERGE } from "../api/manage";
+import { Dialog } from "../ui/Patterns";
 import { ManageEntitySelector } from "./ManageEntitySelector";
 import type {
   ManageCoreEntity,
@@ -125,11 +126,11 @@ export function ManageEntityLifecyclePanel({
         <button className="danger" type="button" disabled={!deletePreview.canDelete} onClick={() => { setConfirmationText(""); setConfirmation("DELETE"); }}>{t("manage.lifecycle.deletePermanently")}</button>
       </div> : null}
     </article>
-    {confirmation ? <div className="operation-confirm-backdrop" role="presentation"><section className="operation-confirm" role="dialog" aria-modal="true" aria-labelledby="entity-lifecycle-confirm-title">
+    {confirmation ? <Dialog titleID="entity-lifecycle-confirm-title" dismissible={!mergeState.loading && !deleteState.loading} onClose={() => setConfirmation(null)}>
       <p>{t("manage.lifecycle.permanentChange")}</p><h3 id="entity-lifecycle-confirm-title">{confirmation === "MERGE" ? t("manage.lifecycle.mergeConfirm", { source: source.name, target: target.name }) : t("manage.lifecycle.deleteConfirm", { source: source.name })}</h3>
       <ul>{confirmation === "MERGE" ? <><li>{t("manage.lifecycle.mergeEffectTarget")}</li><li>{t("manage.lifecycle.mergeEffectAlias")}</li><li>{t("manage.lifecycle.noMediaChange")}</li></> : <><li>{t("manage.lifecycle.deleteEffectReferences")}</li><li>{t("manage.lifecycle.deleteEffectTombstone")}</li><li>{t("manage.lifecycle.deleteEffectAssets")}</li></>}</ul>
       <label>{t("manage.lifecycle.typeToContinue", { phrase: confirmation })}<input autoFocus value={confirmationText} onChange={(event) => setConfirmationText(event.target.value)} /></label>
       <footer><button type="button" onClick={() => setConfirmation(null)}>{t("manage.lifecycle.cancel")}</button><button className="danger" type="button" disabled={confirmationText !== confirmation || mergeState.loading || deleteState.loading} onClick={confirmation === "MERGE" ? merge : remove}>{mergeState.loading || deleteState.loading ? t("manage.lifecycle.committing") : confirmation === "MERGE" ? t("manage.lifecycle.mergeCommit") : t("manage.lifecycle.deleteCommit")}</button></footer>
-    </section></div> : null}
+    </Dialog> : null}
   </section>;
 }

@@ -13,7 +13,7 @@ export default defineConfig({
   timeout: 120_000,
   expect: {
     timeout: 15_000,
-    toHaveScreenshot: { animations: "disabled", maxDiffPixelRatio: 0.01 },
+    toHaveScreenshot: { animations: "disabled", maxDiffPixelRatio: 0.002 },
   },
   reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
   use: {

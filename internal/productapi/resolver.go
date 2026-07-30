@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/portableid"
+	"github.com/stashapp/stash/internal/productlog"
 )
 
 // Resolver is intentionally backed only by the product database Browse stores.
@@ -24,6 +26,18 @@ func (r *Resolver) auditManage(ctx context.Context, eventCode, targetKind, targe
 		outcome, errorCode = "FAILURE", failureCode
 	}
 	_ = r.Database.Operations().Audit(ctx, eventCode, targetKind, targetID, outcome, errorCode, summary, time.Now())
+	attributes := []any{
+		"request_id", productlog.RequestID(ctx),
+		"event_code", eventCode,
+		"target_kind", targetKind,
+		"target_id", targetID,
+		"outcome", outcome,
+	}
+	if operationErr != nil {
+		slog.Error("CGM_MANAGE_OPERATION", append(attributes, "error_code", errorCode)...)
+	} else {
+		slog.Info("CGM_MANAGE_OPERATION", attributes...)
+	}
 }
 
 func (r *Resolver) coserMetadataRoot(ctx context.Context) (string, error) {

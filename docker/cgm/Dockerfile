@@ -9,7 +9,7 @@ COPY ui/web/ ./
 RUN corepack pnpm run build
 
 FROM --platform=$TARGETPLATFORM golang:1.25.12-bookworm AS backend
-ARG CGM_VERSION=0.1.0-dev
+ARG CGM_VERSION=1.5.0-dev
 ARG CGM_GIT_HASH
 WORKDIR /source
 COPY go.mod go.sum ./

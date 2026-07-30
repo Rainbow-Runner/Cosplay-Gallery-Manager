@@ -5,7 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"math"
+	"path/filepath"
+	"sort"
+	"strings"
 
+	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/manage"
 )
 
@@ -148,15 +152,169 @@ func (s *ManageStore) GalleryDetail(ctx context.Context, setID string) (manage.G
 	if err != nil {
 		return manage.GalleryDetail{}, err
 	}
-	defer linkRows.Close()
 	for linkRows.Next() {
 		var link manage.GalleryExternalLink
 		if err := linkRows.Scan(&link.UUID, &link.Type, &link.Label, &link.URL, &link.Position); err != nil {
+			linkRows.Close()
 			return manage.GalleryDetail{}, err
 		}
 		result.ExternalLinks = append(result.ExternalLinks, link)
 	}
-	return result, linkRows.Err()
+	if err := linkRows.Err(); err != nil {
+		linkRows.Close()
+		return manage.GalleryDetail{}, err
+	}
+	if err := linkRows.Close(); err != nil {
+		return manage.GalleryDetail{}, err
+	}
+	var markerImport int
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM gallery_candidates
+			WHERE gallery_id = ? AND recognition_method = 'MARKER' AND status = 'IMPORTED'
+		)
+	`, galleryID).Scan(&markerImport); err != nil {
+		return manage.GalleryDetail{}, err
+	}
+	if markerImport == 1 && row.SourceType == gallery.SourceTypeDirectory {
+		result.FolderMatches, err = s.folderEntityMatches(ctx, filepath.Base(filepath.Clean(row.SourcePath)))
+		if err != nil {
+			return manage.GalleryDetail{}, err
+		}
+	}
+	return result, nil
+}
+
+type folderEntityToken struct {
+	UUID, Name, Token, WorkUUID, WorkName string
+	tokenKey                              string
+}
+
+func (s *ManageStore) folderEntityMatches(ctx context.Context, folderName string) ([]manage.GalleryFolderMatch, error) {
+	folderKey := normalizedKey(folderName)
+	if folderKey == "" {
+		return nil, nil
+	}
+	cosers, err := s.matchFolderEntityKind(ctx, folderKey, "COSER", `
+		SELECT uuid,name,name,'','' FROM cosers
+		UNION ALL
+		SELECT coser.uuid,coser.name,alias.alias,'',''
+		FROM coser_aliases alias JOIN cosers coser ON coser.uuid=alias.coser_uuid
+	`, nil)
+	if err != nil {
+		return nil, err
+	}
+	works, err := s.matchFolderEntityKind(ctx, folderKey, "WORK", `
+		SELECT uuid,name,name,uuid,name FROM works
+		UNION ALL
+		SELECT work.uuid,work.name,alias.alias,work.uuid,work.name
+		FROM work_aliases alias JOIN works work ON work.uuid=alias.work_uuid
+	`, nil)
+	if err != nil {
+		return nil, err
+	}
+	workUUIDs := make(map[string]struct{}, len(works))
+	for _, match := range works {
+		workUUIDs[match.UUID] = struct{}{}
+	}
+	characters, err := s.matchFolderEntityKind(ctx, folderKey, "CHARACTER", `
+		SELECT character.uuid,character.name,character.name,work.uuid,work.name
+		FROM characters character JOIN works work ON work.uuid=character.work_uuid
+		UNION ALL
+		SELECT character.uuid,character.name,alias.alias,work.uuid,work.name
+		FROM character_aliases alias
+		JOIN characters character ON character.uuid=alias.character_uuid
+		JOIN works work ON work.uuid=character.work_uuid
+	`, workUUIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := append(cosers, works...)
+	result = append(result, characters...)
+	return result, nil
+}
+
+func (s *ManageStore) matchFolderEntityKind(
+	ctx context.Context,
+	folderKey string,
+	kind string,
+	query string,
+	allowedWorkUUIDs map[string]struct{},
+) ([]manage.GalleryFolderMatch, error) {
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	ownersByToken := map[string]map[string]folderEntityToken{}
+	for rows.Next() {
+		var token folderEntityToken
+		if err := rows.Scan(&token.UUID, &token.Name, &token.Token, &token.WorkUUID, &token.WorkName); err != nil {
+			return nil, err
+		}
+		if kind == "CHARACTER" && len(allowedWorkUUIDs) > 0 {
+			if _, allowed := allowedWorkUUIDs[token.WorkUUID]; !allowed {
+				continue
+			}
+		}
+		token.tokenKey = normalizedKey(token.Token)
+		if token.tokenKey == "" || !strings.Contains(folderKey, token.tokenKey) {
+			continue
+		}
+		if len([]rune(token.tokenKey)) < 2 && folderKey != token.tokenKey {
+			continue
+		}
+		if ownersByToken[token.tokenKey] == nil {
+			ownersByToken[token.tokenKey] = map[string]folderEntityToken{}
+		}
+		ownersByToken[token.tokenKey][token.UUID] = token
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	bestByUUID := map[string]folderEntityToken{}
+	for _, owners := range ownersByToken {
+		if len(owners) != 1 {
+			continue
+		}
+		for uuid, token := range owners {
+			current, exists := bestByUUID[uuid]
+			if !exists || len([]rune(token.tokenKey)) > len([]rune(current.tokenKey)) {
+				bestByUUID[uuid] = token
+			}
+		}
+	}
+	tokens := make([]folderEntityToken, 0, len(bestByUUID))
+	for _, token := range bestByUUID {
+		tokens = append(tokens, token)
+	}
+	result := make([]manage.GalleryFolderMatch, 0, len(tokens))
+	for index, token := range tokens {
+		suppressed := false
+		for otherIndex, other := range tokens {
+			if index == otherIndex || len([]rune(other.tokenKey)) <= len([]rune(token.tokenKey)) {
+				continue
+			}
+			if strings.Contains(other.tokenKey, token.tokenKey) {
+				suppressed = true
+				break
+			}
+		}
+		if suppressed {
+			continue
+		}
+		result = append(result, manage.GalleryFolderMatch{
+			Kind: kind, UUID: token.UUID, Name: token.Name, MatchedName: token.Token,
+			WorkUUID: token.WorkUUID, WorkName: token.WorkName,
+		})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Name != result[j].Name {
+			return result[i].Name < result[j].Name
+		}
+		return result[i].UUID < result[j].UUID
+	})
+	return result, nil
 }
 
 const manageGalleryRowSelect = `SELECT gallery.set_id,gallery.slug,gallery.state,gallery.title,COALESCE(gallery.content_rating,''),gallery.metadata_revision,gallery.scan_revision,

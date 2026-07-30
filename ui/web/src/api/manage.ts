@@ -8,6 +8,7 @@ const MANAGE_GALLERY_DETAIL = gql`
     credits { coserUUID coserName position cast { characterUUID characterName workUUID workName position } }
     tags { uuid name position }
     externalLinks { uuid type label url position }
+    folderMatches { kind uuid name matchedName workUUID workName }
   }
 `;
 
@@ -80,6 +81,12 @@ export const CREATE_MEDIA_LIBRARY = gql`
 `;
 export const CREATE_RECOGNITION_RULE = gql`
   mutation CreateRecognitionRule($input: CreateRecognitionRuleInput!) { createRecognitionRule(input: $input) { id name kind enabled autoCreateDraft order pattern fixedDepth } }
+`;
+export const UPDATE_RECOGNITION_RULE = gql`
+  mutation UpdateRecognitionRule($input: UpdateRecognitionRuleInput!) { updateRecognitionRule(input: $input) { id name kind enabled autoCreateDraft order pattern fixedDepth } }
+`;
+export const DELETE_RECOGNITION_RULE = gql`
+  mutation DeleteRecognitionRule($id: Int64!) { deleteRecognitionRule(id: $id) }
 `;
 export const DISCOVER_MEDIA_LIBRARY = gql`
   mutation DiscoverMediaLibrary($libraryID: Int64!) { discoverMediaLibrary(libraryID: $libraryID) { id libraryID completedAt candidates { id rootPath sourceType method manifestSetID status autoCreateDraft hasConflict overLimit mediaCount suggestions { field value } } unassigned { parentPath mediaCount } } }

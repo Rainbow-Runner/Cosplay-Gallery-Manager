@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { CREATE_FULL_BACKUP, MANAGE_OPERATIONS, RESTORE_BACKUP } from "../api/manage";
+import { Dialog } from "../ui/Patterns";
 import { ManageCoserAssetReviewPanel } from "./ManageCoserAssetReviewPanel";
 import type { ManageAuditPage, ManageBackupRecord, ManageMaintenanceState } from "./types";
 
@@ -70,7 +71,7 @@ export function ManageOperationsPage() {
       {data?.manageAudit && data.manageAudit.totalPages > 1 ? <nav className="manage-pagination"><button disabled={page <= 1} onClick={() => setParameters({ page: String(page - 1) })}>Previous</button><span>{page} / {data.manageAudit.totalPages}</span><button disabled={page >= data.manageAudit.totalPages} onClick={() => setParameters({ page: String(page + 1) })}>Next</button></nav> : null}
     </section>
 
-    {restoreTarget ? <div className="operation-confirm-backdrop" role="presentation"><section className="operation-confirm" role="dialog" aria-modal="true" aria-labelledby="restore-title"><p>DESTRUCTIVE DATABASE REPLACEMENT</p><h3 id="restore-title">Restore {restoreTarget.fileName}?</h3><ul><li>A new safety backup is created before replacement.</li><li>The selected database and managed Coser metadata replace the live state.</li><li>All sessions are revoked; executable jobs are cancelled; schedules remain paused.</li><li>Media files are never deleted or included in this operation.</li></ul><label>Type <strong>RESTORE</strong> to continue<input autoFocus value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><footer><button type="button" onClick={() => setRestoreTarget(null)}>Cancel</button><button className="danger" type="button" disabled={confirmation !== "RESTORE" || restoreState.loading} onClick={restore}>{restoreState.loading ? "Validating and restoring…" : "Create safety backup and restore"}</button></footer></section></div> : null}
+    {restoreTarget ? <Dialog titleID="restore-title" dismissible={!restoreState.loading} onClose={() => setRestoreTarget(null)}><p>DESTRUCTIVE DATABASE REPLACEMENT</p><h3 id="restore-title">Restore {restoreTarget.fileName}?</h3><ul><li>A new safety backup is created before replacement.</li><li>The selected database and managed Coser metadata replace the live state.</li><li>All sessions are revoked; executable jobs are cancelled; schedules remain paused.</li><li>Media files are never deleted or included in this operation.</li></ul><label>Type <strong>RESTORE</strong> to continue<input autoFocus value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><footer><button type="button" onClick={() => setRestoreTarget(null)}>Cancel</button><button className="danger" type="button" disabled={confirmation !== "RESTORE" || restoreState.loading} onClick={restore}>{restoreState.loading ? "Validating and restoring…" : "Create safety backup and restore"}</button></footer></Dialog> : null}
   </main>;
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -22,12 +23,60 @@ func TestHealthIsPublicButGraphQLRequiresSession(t *testing.T) {
 	if health.Code != http.StatusNoContent || health.Body.Len() != 0 {
 		t.Fatalf("health = %d %q", health.Code, health.Body.String())
 	}
+	if requestID := health.Header().Get("X-Request-ID"); !strings.HasPrefix(requestID, "req-") {
+		t.Fatalf("health request ID = %q", requestID)
+	}
 	graphql := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodPost, "/graphql", strings.NewReader(`{"query":"{ browseUISettings { settingsRevision } }"}`))
 	request.Header.Set("Content-Type", "application/json")
 	server.Handler.ServeHTTP(graphql, request)
 	if graphql.Code != http.StatusUnauthorized {
 		t.Fatalf("GraphQL status = %d", graphql.Code)
+	}
+}
+
+func TestLoadConfigDefaultsAndValidatesLogLevel(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "cgm.json")
+	if err := os.WriteFile(path, []byte(`{
+		"listen":"127.0.0.1:9999",
+		"database_path":"product.sqlite",
+		"cache_path":"cache",
+		"worker_count":1
+	}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	config, err := LoadConfig(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.LogLevel != "INFO" {
+		t.Fatalf("default log level = %q, want INFO", config.LogLevel)
+	}
+
+	if err := os.WriteFile(path, []byte(`{
+		"listen":"127.0.0.1:9999",
+		"database_path":"product.sqlite",
+		"cache_path":"cache",
+		"worker_count":1,
+		"log_level":"TRACE"
+	}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadConfig(path); err == nil {
+		t.Fatal("invalid log level unexpectedly accepted")
+	}
+}
+
+func TestEndpointCategoryDoesNotExposeBusinessRouteValues(t *testing.T) {
+	for path, expected := range map[string]string{
+		"/graphql":                       "GRAPHQL",
+		"/resource/gallery-uuid/cover":   "MEDIA_RESOURCE",
+		"/gallery/private-gallery-title": "WEB_ROUTE",
+		"/search?q=private-name":         "WEB_ROUTE",
+	} {
+		if got := endpointCategory(path); got != expected {
+			t.Fatalf("endpointCategory(%q) = %q, want %q", path, got, expected)
+		}
 	}
 }
 

@@ -66,6 +66,7 @@ type GalleryDetail struct {
 	Credits            []GalleryCredit
 	Tags               []GalleryTag
 	ExternalLinks      []GalleryExternalLink
+	FolderMatches      []GalleryFolderMatch
 }
 
 type GalleryCast struct {
@@ -84,4 +85,11 @@ type GalleryTag struct {
 type GalleryExternalLink struct {
 	UUID, Type, Label, URL string
 	Position               int64
+}
+
+// GalleryFolderMatch is a non-persistent editing hint derived from the
+// Marker Gallery source-directory name and already existing core entities.
+// It never creates a Credit or Cast without an explicit editor save.
+type GalleryFolderMatch struct {
+	Kind, UUID, Name, MatchedName, WorkUUID, WorkName string
 }

@@ -24,8 +24,8 @@ export function GalleryIndexPage({ scope = "LIST", home = false }: Props) {
   return (
     <main className="browse-main">
       <header className="page-heading">
-        <p>{effectiveScope}</p>
         <h1>{intl.formatMessage({ id: titleID })}</h1>
+        <p>{effectiveScope}</p>
       </header>
       {query.loading ? <div className="gallery-grid gallery-grid--loading" aria-label={intl.formatMessage({ id: "state.loading" })} /> : null}
       {query.error ? <p className="state-message" role="alert">{intl.formatMessage({ id: "state.error" })}</p> : null}

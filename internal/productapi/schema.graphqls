@@ -242,7 +242,9 @@ type ManageGalleryItem {
 type ManageGalleryDetail {
   row: ManageGalleryRow! aliases: [String!]! description: String! shootDate: String! shootDatePrecision: ShootDatePrecision!
   photographerName: String! studioName: String! items: [ManageGalleryItem!]! credits: [ManageGalleryCredit!]! tags: [ManageGalleryTag!]! externalLinks: [ManageGalleryExternalLink!]!
+  folderMatches: [ManageGalleryFolderMatch!]!
 }
+type ManageGalleryFolderMatch { kind: SearchEntityKind! uuid: ID! name: String! matchedName: String! workUUID: ID! workName: String! }
 type ManageGalleryCast { characterUUID: ID! characterName: String! workUUID: ID! workName: String! position: String! }
 type ManageGalleryCredit { coserUUID: ID! coserName: String! position: String! cast: [ManageGalleryCast!]! }
 type ManageGalleryTag { uuid: ID! name: String! position: String! }
@@ -269,6 +271,7 @@ type ManageUnassignedDiagnostic { parentPath: String! mediaCount: Int! }
 type ManageDiscoverySnapshot { id: Int64! libraryID: Int64! completedAt: String! candidates: [ManageCandidate!]! unassigned: [ManageUnassignedDiagnostic!]! }
 input CreateMediaLibraryInput { name: String! rootPath: String! enabled: Boolean! readOnly: Boolean! captureTimezone: String! }
 input CreateRecognitionRuleInput { libraryID: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }
+input UpdateRecognitionRuleInput { id: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }
 type ManageRuntimeSettings {
   settingsRevision: Int64! homeScope: BrowseScope! galleryCardScrubberEnabled: Boolean! galleryDetailMediaFilterEnabled: Boolean!
   galleryCardControlsVisible: Boolean! mediaCardControlsVisible: Boolean! detailPersonalControlsVisible: Boolean!
@@ -384,6 +387,8 @@ type Mutation {
   resetGalleryCover(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
   createMediaLibrary(input: CreateMediaLibraryInput!): ManageLibrary!
   createRecognitionRule(input: CreateRecognitionRuleInput!): ManageRecognitionRule!
+  updateRecognitionRule(input: UpdateRecognitionRuleInput!): ManageRecognitionRule!
+  deleteRecognitionRule(id: Int64!): Boolean!
   discoverMediaLibrary(libraryID: Int64!): ManageDiscoverySnapshot!
   importGalleryCandidate(candidateID: Int64!): ManageGalleryDetail!
   scanGallerySource(setID: ID!): ManageGalleryDetail!

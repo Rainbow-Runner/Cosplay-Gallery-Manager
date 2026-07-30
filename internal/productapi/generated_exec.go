@@ -369,6 +369,7 @@ type ComplexityRoot struct {
 		Credits            func(childComplexity int) int
 		Description        func(childComplexity int) int
 		ExternalLinks      func(childComplexity int) int
+		FolderMatches      func(childComplexity int) int
 		Items              func(childComplexity int) int
 		PhotographerName   func(childComplexity int) int
 		Row                func(childComplexity int) int
@@ -384,6 +385,15 @@ type ComplexityRoot struct {
 		Type     func(childComplexity int) int
 		URL      func(childComplexity int) int
 		UUID     func(childComplexity int) int
+	}
+
+	ManageGalleryFolderMatch struct {
+		Kind        func(childComplexity int) int
+		MatchedName func(childComplexity int) int
+		Name        func(childComplexity int) int
+		UUID        func(childComplexity int) int
+		WorkName    func(childComplexity int) int
+		WorkUUID    func(childComplexity int) int
 	}
 
 	ManageGalleryItem struct {
@@ -595,6 +605,7 @@ type ComplexityRoot struct {
 		CreateRecognitionRule   func(childComplexity int, input CreateRecognitionRuleInput) int
 		DeleteCoreEntity        func(childComplexity int, kind SearchEntityKind, uuid string, expectedMetadataRevision int64) int
 		DeleteGallery           func(childComplexity int, setID string, expectedMetadataRevision int64, password string, confirmation string) int
+		DeleteRecognitionRule   func(childComplexity int, id int64) int
 		DiscoverMediaLibrary    func(childComplexity int, libraryID int64) int
 		ImportGalleryCandidate  func(childComplexity int, candidateID int64) int
 		MergeCoreEntities       func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string, expectedSourceRevision int64, expectedTargetRevision int64) int
@@ -622,6 +633,7 @@ type ComplexityRoot struct {
 		UpdateCoreEntity        func(childComplexity int, uuid string, expectedMetadataRevision int64, input CoreEntityInput) int
 		UpdateGalleryItem       func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64, input UpdateGalleryItemInput) int
 		UpdateGalleryMetadata   func(childComplexity int, setID string, expectedMetadataRevision int64, input UpdateGalleryMetadataInput) int
+		UpdateRecognitionRule   func(childComplexity int, input UpdateRecognitionRuleInput) int
 		UpdateRuntimeSettings   func(childComplexity int, expectedSettingsRevision int64, input RuntimeSettingsInput) int
 	}
 
@@ -744,6 +756,8 @@ type MutationResolver interface {
 	ResetGalleryCover(ctx context.Context, setID string, expectedMetadataRevision int64) (*ManageGalleryDetail, error)
 	CreateMediaLibrary(ctx context.Context, input CreateMediaLibraryInput) (*ManageLibrary, error)
 	CreateRecognitionRule(ctx context.Context, input CreateRecognitionRuleInput) (*ManageRecognitionRule, error)
+	UpdateRecognitionRule(ctx context.Context, input UpdateRecognitionRuleInput) (*ManageRecognitionRule, error)
+	DeleteRecognitionRule(ctx context.Context, id int64) (bool, error)
 	DiscoverMediaLibrary(ctx context.Context, libraryID int64) (*ManageDiscoverySnapshot, error)
 	ImportGalleryCandidate(ctx context.Context, candidateID int64) (*ManageGalleryDetail, error)
 	ScanGallerySource(ctx context.Context, setID string) (*ManageGalleryDetail, error)
@@ -2344,6 +2358,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageGalleryDetail.ExternalLinks(childComplexity), true
 
+	case "ManageGalleryDetail.folderMatches":
+		if e.complexity.ManageGalleryDetail.FolderMatches == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDetail.FolderMatches(childComplexity), true
+
 	case "ManageGalleryDetail.items":
 		if e.complexity.ManageGalleryDetail.Items == nil {
 			break
@@ -2427,6 +2448,48 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageGalleryExternalLink.UUID(childComplexity), true
+
+	case "ManageGalleryFolderMatch.kind":
+		if e.complexity.ManageGalleryFolderMatch.Kind == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryFolderMatch.Kind(childComplexity), true
+
+	case "ManageGalleryFolderMatch.matchedName":
+		if e.complexity.ManageGalleryFolderMatch.MatchedName == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryFolderMatch.MatchedName(childComplexity), true
+
+	case "ManageGalleryFolderMatch.name":
+		if e.complexity.ManageGalleryFolderMatch.Name == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryFolderMatch.Name(childComplexity), true
+
+	case "ManageGalleryFolderMatch.uuid":
+		if e.complexity.ManageGalleryFolderMatch.UUID == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryFolderMatch.UUID(childComplexity), true
+
+	case "ManageGalleryFolderMatch.workName":
+		if e.complexity.ManageGalleryFolderMatch.WorkName == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryFolderMatch.WorkName(childComplexity), true
+
+	case "ManageGalleryFolderMatch.workUUID":
+		if e.complexity.ManageGalleryFolderMatch.WorkUUID == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryFolderMatch.WorkUUID(childComplexity), true
 
 	case "ManageGalleryItem.availability":
 		if e.complexity.ManageGalleryItem.Availability == nil {
@@ -3525,6 +3588,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.DeleteGallery(childComplexity, args["setID"].(string), args["expectedMetadataRevision"].(int64), args["password"].(string), args["confirmation"].(string)), true
 
+	case "Mutation.deleteRecognitionRule":
+		if e.complexity.Mutation.DeleteRecognitionRule == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteRecognitionRule_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteRecognitionRule(childComplexity, args["id"].(int64)), true
+
 	case "Mutation.discoverMediaLibrary":
 		if e.complexity.Mutation.DiscoverMediaLibrary == nil {
 			break
@@ -3848,6 +3923,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.UpdateGalleryMetadata(childComplexity, args["setID"].(string), args["expectedMetadataRevision"].(int64), args["input"].(UpdateGalleryMetadataInput)), true
+
+	case "Mutation.updateRecognitionRule":
+		if e.complexity.Mutation.UpdateRecognitionRule == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateRecognitionRule_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateRecognitionRule(childComplexity, args["input"].(UpdateRecognitionRuleInput)), true
 
 	case "Mutation.updateRuntimeSettings":
 		if e.complexity.Mutation.UpdateRuntimeSettings == nil {
@@ -4566,6 +4653,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputSocialAccountInput,
 		ec.unmarshalInputUpdateGalleryItemInput,
 		ec.unmarshalInputUpdateGalleryMetadataInput,
+		ec.unmarshalInputUpdateRecognitionRuleInput,
 	)
 	first := true
 
@@ -5110,6 +5198,34 @@ func (ec *executionContext) field_Mutation_deleteGallery_argsConfirmation(
 	}
 
 	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteRecognitionRule_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_deleteRecognitionRule_argsID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_deleteRecognitionRule_argsID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int64, error) {
+	if _, ok := rawArgs["id"]; !ok {
+		var zeroVal int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+	if tmp, ok := rawArgs["id"]; ok {
+		return ec.unmarshalNInt642int64(ctx, tmp)
+	}
+
+	var zeroVal int64
 	return zeroVal, nil
 }
 
@@ -6832,6 +6948,34 @@ func (ec *executionContext) field_Mutation_updateGalleryMetadata_argsInput(
 	}
 
 	var zeroVal UpdateGalleryMetadataInput
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_updateRecognitionRule_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_updateRecognitionRule_argsInput(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_updateRecognitionRule_argsInput(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (UpdateRecognitionRuleInput, error) {
+	if _, ok := rawArgs["input"]; !ok {
+		var zeroVal UpdateRecognitionRuleInput
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+	if tmp, ok := rawArgs["input"]; ok {
+		return ec.unmarshalNUpdateRecognitionRuleInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐUpdateRecognitionRuleInput(ctx, tmp)
+	}
+
+	var zeroVal UpdateRecognitionRuleInput
 	return zeroVal, nil
 }
 
@@ -19062,6 +19206,64 @@ func (ec *executionContext) fieldContext_ManageGalleryDetail_externalLinks(_ con
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageGalleryDetail_folderMatches(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FolderMatches, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageGalleryFolderMatch)
+	fc.Result = res
+	return ec.marshalNManageGalleryFolderMatch2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryFolderMatchᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDetail_folderMatches(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "kind":
+				return ec.fieldContext_ManageGalleryFolderMatch_kind(ctx, field)
+			case "uuid":
+				return ec.fieldContext_ManageGalleryFolderMatch_uuid(ctx, field)
+			case "name":
+				return ec.fieldContext_ManageGalleryFolderMatch_name(ctx, field)
+			case "matchedName":
+				return ec.fieldContext_ManageGalleryFolderMatch_matchedName(ctx, field)
+			case "workUUID":
+				return ec.fieldContext_ManageGalleryFolderMatch_workUUID(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageGalleryFolderMatch_workName(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryFolderMatch", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageGalleryExternalLink_uuid(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryExternalLink) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageGalleryExternalLink_uuid(ctx, field)
 	if err != nil {
@@ -19272,6 +19474,270 @@ func (ec *executionContext) _ManageGalleryExternalLink_position(ctx context.Cont
 func (ec *executionContext) fieldContext_ManageGalleryExternalLink_position(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ManageGalleryExternalLink",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryFolderMatch_kind(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryFolderMatch) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryFolderMatch_kind(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Kind, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(SearchEntityKind)
+	fc.Result = res
+	return ec.marshalNSearchEntityKind2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSearchEntityKind(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryFolderMatch_kind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryFolderMatch",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type SearchEntityKind does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryFolderMatch_uuid(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryFolderMatch) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryFolderMatch_uuid(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryFolderMatch_uuid(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryFolderMatch",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryFolderMatch_name(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryFolderMatch) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryFolderMatch_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryFolderMatch_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryFolderMatch",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryFolderMatch_matchedName(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryFolderMatch) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryFolderMatch_matchedName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MatchedName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryFolderMatch_matchedName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryFolderMatch",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryFolderMatch_workUUID(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryFolderMatch) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryFolderMatch_workUUID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.WorkUUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryFolderMatch_workUUID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryFolderMatch",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryFolderMatch_workName(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryFolderMatch) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryFolderMatch_workName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.WorkName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryFolderMatch_workName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryFolderMatch",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -26070,6 +26536,8 @@ func (ec *executionContext) fieldContext_Mutation_updateGalleryMetadata(ctx cont
 				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
 			case "externalLinks":
 				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -26149,6 +26617,8 @@ func (ec *executionContext) fieldContext_Mutation_setGalleryState(ctx context.Co
 				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
 			case "externalLinks":
 				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -26228,6 +26698,8 @@ func (ec *executionContext) fieldContext_Mutation_updateGalleryItem(ctx context.
 				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
 			case "externalLinks":
 				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -26307,6 +26779,8 @@ func (ec *executionContext) fieldContext_Mutation_setGalleryItemExcluded(ctx con
 				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
 			case "externalLinks":
 				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -26386,6 +26860,8 @@ func (ec *executionContext) fieldContext_Mutation_moveGalleryItem(ctx context.Co
 				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
 			case "externalLinks":
 				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -26465,6 +26941,8 @@ func (ec *executionContext) fieldContext_Mutation_setGalleryCoverItem(ctx contex
 				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
 			case "externalLinks":
 				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -26544,6 +27022,8 @@ func (ec *executionContext) fieldContext_Mutation_resetGalleryCover(ctx context.
 				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
 			case "externalLinks":
 				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -26706,6 +27186,134 @@ func (ec *executionContext) fieldContext_Mutation_createRecognitionRule(ctx cont
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_updateRecognitionRule(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateRecognitionRule(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateRecognitionRule(rctx, fc.Args["input"].(UpdateRecognitionRuleInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageRecognitionRule)
+	fc.Result = res
+	return ec.marshalNManageRecognitionRule2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageRecognitionRule(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateRecognitionRule(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ManageRecognitionRule_id(ctx, field)
+			case "name":
+				return ec.fieldContext_ManageRecognitionRule_name(ctx, field)
+			case "kind":
+				return ec.fieldContext_ManageRecognitionRule_kind(ctx, field)
+			case "enabled":
+				return ec.fieldContext_ManageRecognitionRule_enabled(ctx, field)
+			case "autoCreateDraft":
+				return ec.fieldContext_ManageRecognitionRule_autoCreateDraft(ctx, field)
+			case "order":
+				return ec.fieldContext_ManageRecognitionRule_order(ctx, field)
+			case "pattern":
+				return ec.fieldContext_ManageRecognitionRule_pattern(ctx, field)
+			case "fixedDepth":
+				return ec.fieldContext_ManageRecognitionRule_fixedDepth(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageRecognitionRule", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateRecognitionRule_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteRecognitionRule(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteRecognitionRule(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteRecognitionRule(rctx, fc.Args["id"].(int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteRecognitionRule(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteRecognitionRule_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_discoverMediaLibrary(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_discoverMediaLibrary(ctx, field)
 	if err != nil {
@@ -26834,6 +27442,8 @@ func (ec *executionContext) fieldContext_Mutation_importGalleryCandidate(ctx con
 				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
 			case "externalLinks":
 				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -26913,6 +27523,8 @@ func (ec *executionContext) fieldContext_Mutation_scanGallerySource(ctx context.
 				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
 			case "externalLinks":
 				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -27921,6 +28533,8 @@ func (ec *executionContext) fieldContext_Mutation_replaceGalleryRelations(ctx co
 				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
 			case "externalLinks":
 				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -28000,6 +28614,8 @@ func (ec *executionContext) fieldContext_Mutation_addGalleryExternalLink(ctx con
 				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
 			case "externalLinks":
 				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -29737,6 +30353,8 @@ func (ec *executionContext) fieldContext_Query_manageGallery(ctx context.Context
 				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
 			case "externalLinks":
 				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -35773,6 +36391,82 @@ func (ec *executionContext) unmarshalInputUpdateGalleryMetadataInput(ctx context
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputUpdateRecognitionRuleInput(ctx context.Context, obj any) (UpdateRecognitionRuleInput, error) {
+	var it UpdateRecognitionRuleInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "name", "kind", "enabled", "autoCreateDraft", "order", "pattern", "fixedDepth"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalNInt642int64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "kind":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("kind"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Kind = data
+		case "enabled":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Enabled = data
+		case "autoCreateDraft":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("autoCreateDraft"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AutoCreateDraft = data
+		case "order":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("order"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Order = data
+		case "pattern":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pattern"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Pattern = data
+		case "fixedDepth":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fixedDepth"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.FixedDepth = data
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -38054,6 +38748,11 @@ func (ec *executionContext) _ManageGalleryDetail(ctx context.Context, sel ast.Se
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "folderMatches":
+			out.Values[i] = ec._ManageGalleryDetail_folderMatches(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -38110,6 +38809,70 @@ func (ec *executionContext) _ManageGalleryExternalLink(ctx context.Context, sel 
 			}
 		case "position":
 			out.Values[i] = ec._ManageGalleryExternalLink_position(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageGalleryFolderMatchImplementors = []string{"ManageGalleryFolderMatch"}
+
+func (ec *executionContext) _ManageGalleryFolderMatch(ctx context.Context, sel ast.SelectionSet, obj *ManageGalleryFolderMatch) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageGalleryFolderMatchImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageGalleryFolderMatch")
+		case "kind":
+			out.Values[i] = ec._ManageGalleryFolderMatch_kind(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "uuid":
+			out.Values[i] = ec._ManageGalleryFolderMatch_uuid(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._ManageGalleryFolderMatch_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "matchedName":
+			out.Values[i] = ec._ManageGalleryFolderMatch_matchedName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "workUUID":
+			out.Values[i] = ec._ManageGalleryFolderMatch_workUUID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "workName":
+			out.Values[i] = ec._ManageGalleryFolderMatch_workName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -39587,6 +40350,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "createRecognitionRule":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createRecognitionRule(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateRecognitionRule":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateRecognitionRule(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteRecognitionRule":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteRecognitionRule(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -42795,6 +43572,60 @@ func (ec *executionContext) marshalNManageGalleryExternalLink2ᚖgithubᚗcomᚋ
 	return ec._ManageGalleryExternalLink(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNManageGalleryFolderMatch2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryFolderMatchᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageGalleryFolderMatch) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageGalleryFolderMatch2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryFolderMatch(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageGalleryFolderMatch2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryFolderMatch(ctx context.Context, sel ast.SelectionSet, v *ManageGalleryFolderMatch) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageGalleryFolderMatch(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNManageGalleryItem2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryItemᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageGalleryItem) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -43893,6 +44724,11 @@ func (ec *executionContext) unmarshalNUpdateGalleryItemInput2githubᚗcomᚋstas
 
 func (ec *executionContext) unmarshalNUpdateGalleryMetadataInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐUpdateGalleryMetadataInput(ctx context.Context, v any) (UpdateGalleryMetadataInput, error) {
 	res, err := ec.unmarshalInputUpdateGalleryMetadataInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNUpdateRecognitionRuleInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐUpdateRecognitionRuleInput(ctx context.Context, v any) (UpdateRecognitionRuleInput, error) {
+	res, err := ec.unmarshalInputUpdateRecognitionRuleInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 

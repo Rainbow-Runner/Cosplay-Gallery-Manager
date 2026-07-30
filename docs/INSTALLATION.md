@@ -34,13 +34,18 @@ Linux example:
   "cache_path": "/var/cache/cgm",
   "ffmpeg_path": "/usr/bin/ffmpeg",
   "libraw_path": "/usr/bin/dcraw",
-  "worker_count": 2
+  "worker_count": 2,
+  "log_level": "INFO"
 }
 ```
 
 `listen` must contain an explicit host and port. `worker_count` must be from 1
-through 8. A native first-time Setup reached through a literal loopback bind
-does not require a ticket.
+through 8. `log_level` accepts `DEBUG`, `INFO`, `WARN`, or `ERROR`; use
+`DEBUG` only while diagnosing a local development instance. Request logs use
+technical request IDs and endpoint categories and do not include query
+strings, GraphQL variables, media paths, or business metadata. A native
+first-time Setup reached through a literal loopback bind does not require a
+ticket.
 
 ## Docker Compose
 

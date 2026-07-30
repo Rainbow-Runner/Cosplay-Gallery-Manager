@@ -5,7 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
@@ -16,6 +16,7 @@ import (
 	"github.com/stashapp/stash/internal/build"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/product"
+	"github.com/stashapp/stash/internal/productlog"
 	"github.com/stashapp/stash/internal/productserver"
 	"golang.org/x/term"
 )
@@ -41,6 +42,9 @@ func main() {
 	config, err := productserver.LoadConfig(*configPath)
 	if err != nil {
 		fatal("CGM_CONFIG_INVALID")
+	}
+	if err := productlog.Configure(config.LogLevel, os.Stderr); err != nil {
+		fatal("CGM_LOG_CONFIG_INVALID")
 	}
 	server, err := productserver.Open(config)
 	if err != nil {
@@ -116,10 +120,11 @@ func main() {
 		defer release()
 		_ = httpServer.Shutdown(ctx)
 	}()
-	log.Printf("%s listening on http://%s", product.WorkingName, config.Listen)
+	slog.Info("CGM_SERVICE_STARTED", "product", product.WorkingName, "listen", config.Listen, "log_level", config.LogLevel)
 	if err := httpServer.ListenAndServe(); err != nil && err.Error() != "http: Server closed" {
 		fatal("CGM_HTTP_SERVER_FAILED")
 	}
+	slog.Info("CGM_SERVICE_STOPPED")
 }
 
 func mapRestoredMediaLibraries(server *productserver.Server) error {
@@ -175,6 +180,6 @@ func authenticateOwner(server *productserver.Server) error {
 }
 
 func fatal(code string) {
-	log.Print(code)
+	slog.Error(code)
 	os.Exit(1)
 }

@@ -5,5 +5,6 @@
   "web_root": "/opt/cgm/web",
   "ffmpeg_path": "/usr/bin/ffmpeg",
   "libraw_path": "/usr/bin/dcraw_emu",
-  "worker_count": 1
+  "worker_count": 1,
+  "log_level": "INFO"
 }

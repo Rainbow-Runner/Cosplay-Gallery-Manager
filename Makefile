@@ -440,7 +440,7 @@ web-ui:
 
 .PHONY: web-ui-start
 web-ui-start:
-	cd ui/web && $(WEB_PNPM) run dev --host
+	cd ui/web && $(WEB_PNPM) run dev
 
 .PHONY: test-web-ui
 test-web-ui:

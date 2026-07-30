@@ -2,7 +2,7 @@
 set -euo pipefail
 
 cgm_go="${CGM_GO:-go}"
-cgm_version="${CGM_VERSION:-0.1.0-dev}"
+cgm_version="${CGM_VERSION:-1.5.0-dev}"
 cgm_commit="$(git rev-parse HEAD)"
 
 if [[ -n "$(git status --porcelain)" ]]; then

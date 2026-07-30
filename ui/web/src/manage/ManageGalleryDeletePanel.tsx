@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useIntl } from "react-intl";
 
 import { DELETE_GALLERY, PREVIEW_GALLERY_DELETE } from "../api/manage";
+import { Dialog } from "../ui/Patterns";
 import type { ManageGalleryDeletePreview } from "./types";
 
 export function ManageGalleryDeletePanel({
@@ -62,7 +63,7 @@ export function ManageGalleryDeletePanel({
       {!preview.canDelete ? <p>{t("manage.galleryDelete.archiveFirst")}</p> : <p>{t("manage.galleryDelete.ready")}</p>}
       <button className="danger" type="button" disabled={!preview.canDelete} onClick={() => { setPassword(""); setConfirmation(""); setMessage(""); setConfirming(true); }}>{t("manage.galleryDelete.open")}</button>
     </div> : null}
-    {confirming ? <div className="operation-confirm-backdrop" role="presentation"><section className="operation-confirm" role="dialog" aria-modal="true" aria-labelledby="gallery-delete-confirm-title">
+    {confirming ? <Dialog titleID="gallery-delete-confirm-title" dismissible={!deleteState.loading} onClose={() => setConfirming(false)}>
       <p>{t("manage.galleryDelete.permanent")}</p>
       <h3 id="gallery-delete-confirm-title">{t("manage.galleryDelete.confirmTitle", { title })}</h3>
       <ul>
@@ -77,6 +78,6 @@ export function ManageGalleryDeletePanel({
         <button type="button" onClick={() => setConfirming(false)}>{t("manage.galleryDelete.cancel")}</button>
         <button className="danger" type="button" disabled={!password || confirmation !== "DELETE" || deleteState.loading} onClick={remove}>{deleteState.loading ? t("manage.galleryDelete.deleting") : t("manage.galleryDelete.commit")}</button>
       </footer>
-    </section></div> : null}
+    </Dialog> : null}
   </section>;
 }

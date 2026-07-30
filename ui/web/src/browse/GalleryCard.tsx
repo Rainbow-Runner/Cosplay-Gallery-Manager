@@ -4,8 +4,12 @@ import { Link } from "react-router-dom";
 
 import { GalleryCardPosterScrubber } from "./GalleryCardPosterScrubber";
 import { SET_GALLERY_FAVORITE } from "../api/browse";
+import { formatGalleryMediaCount } from "./galleryMediaCount";
+import { galleryCardPresentation } from "./galleryCardPresentation";
 import { galleryPreviewURL, itemResourceURL } from "./resourceUrl";
 import type { BrowseGalleryCard } from "./types";
+import { Avatar, CardMedia } from "../ui/Media";
+import { Icon } from "../ui/Icon";
 
 interface Props {
   card: BrowseGalleryCard;
@@ -14,14 +18,11 @@ interface Props {
   ratingSummaryVisible?: boolean;
 }
 
-function names(values: { name: string }[]) {
-  return values.map((value) => value.name).join(" · ");
-}
-
 export function GalleryCard({ card, scrubberEnabled, favoriteControlVisible = true, ratingSummaryVisible = true }: Props) {
   const coverURL = itemResourceURL(card.cover.resource);
   const previewURL = useCallback((ordinal: number) => galleryPreviewURL(card, ordinal), [card]);
-  const subtitle = card.collectionType === "ALBUM" ? names(card.credits) : names(card.characters);
+  const presentation = galleryCardPresentation(card);
+  const mediaCount = formatGalleryMediaCount(card.media);
   const rating = card.ratingHalfSteps ? (card.ratingHalfSteps / 2).toFixed(1) : null;
   const [favorite, setFavorite] = useState(card.favorite);
   const [saveFavorite] = useMutation(SET_GALLERY_FAVORITE);
@@ -33,16 +34,17 @@ export function GalleryCard({ card, scrubberEnabled, favoriteControlVisible = tr
 
   return (
     <article className="gallery-card" data-rating={card.contentRating}>
-      <div className="gallery-card__poster-frame"><Link className="gallery-card__poster" to={`/gallery/${encodeURIComponent(card.slug)}`} aria-label={card.title}>
+      <CardMedia className="gallery-card__poster-frame"><Link className="gallery-card__poster" to={`/gallery/${encodeURIComponent(card.slug)}`} aria-label={card.title}>
           <GalleryCardPosterScrubber coverURL={coverURL} previewCount={card.scrubberCount} previewURL={previewURL} enabled={scrubberEnabled} alt={card.title} />
           {card.contentRating === "ADULT" ? <span className="gallery-card__r18" aria-label="R-18">R-18</span> : null}
-        </Link>{favoriteControlVisible ? <button className="gallery-card__favorite" type="button" aria-label="Favourite" onClick={toggleFavorite}>{favorite ? "♥" : "♡"}</button> : null}</div>
+          {mediaCount ? <span className="gallery-card__count" aria-label={`Media count ${mediaCount}`}>{mediaCount}</span> : null}
+        </Link>{favoriteControlVisible ? <button className={`gallery-card__favorite${favorite ? " is-active" : ""}`} type="button" aria-label="Favourite" aria-pressed={favorite} onClick={toggleFavorite}><Icon name="heart" /></button> : null}</CardMedia>
       <div className="gallery-card__body">
-        <p className="gallery-card__kind">{card.collectionType}</p>
-        <h2><Link to={`/gallery/${encodeURIComponent(card.slug)}`}>{card.title}</Link></h2>
-        <p className="gallery-card__relation" title={subtitle}>{subtitle || "\u00a0"}</p>
-        <div className="gallery-card__meta">
-          <span>P{card.media.photo} / S{card.media.selfie} / G{card.media.gif} / V{card.media.video}</span>
+        <h2 title={card.title}><Link to={`/gallery/${encodeURIComponent(card.slug)}`}>{presentation.primary}</Link></h2>
+        <p className="gallery-card__work" title={presentation.secondary}>{presentation.secondary || "\u00a0"}</p>
+        <div className="gallery-card__people">
+          <span className="gallery-card__avatars">{presentation.cosers.slice(0, 3).map((name) => <Avatar key={name} name={name} size="small" />)}</span>
+          <span className="gallery-card__cosers" title={presentation.cosers.join(" · ")}>{presentation.cosers.join(" · ") || "\u00a0"}</span>
           {rating && ratingSummaryVisible ? <span aria-label={`Rating ${rating} of 5`}>★ {rating}</span> : null}
         </div>
       </div>

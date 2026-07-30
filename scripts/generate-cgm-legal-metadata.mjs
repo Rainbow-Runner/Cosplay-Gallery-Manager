@@ -98,7 +98,7 @@ const sbom = {
   documentNamespace: "https://github.com/Rainbow-Runner/Cosplay-Gallery-Manager/sbom/application-dependencies/v1",
   creationInfo: { created, creators: ["Tool: scripts/generate-cgm-legal-metadata.mjs"] },
   packages: [{
-    name: "Cosplay Gallery Manager", SPDXID: productID, versionInfo: "0.1.0-dev",
+    name: "Cosplay Gallery Manager", SPDXID: productID, versionInfo: "1.5.0-dev",
     downloadLocation: "NOASSERTION", filesAnalyzed: false,
     licenseConcluded: "AGPL-3.0-or-later", licenseDeclared: "AGPL-3.0-or-later",
     supplier: "Organization: Cosplay Gallery Manager contributors",

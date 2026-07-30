@@ -289,6 +289,12 @@ func manageGalleryDetail(value manage.GalleryDetail) *ManageGalleryDetail {
 		}
 		result.Credits = append(result.Credits, convertedCredit)
 	}
+	for _, match := range value.FolderMatches {
+		result.FolderMatches = append(result.FolderMatches, &ManageGalleryFolderMatch{
+			Kind: SearchEntityKind(match.Kind), UUID: match.UUID, Name: match.Name,
+			MatchedName: match.MatchedName, WorkUUID: match.WorkUUID, WorkName: match.WorkName,
+		})
+	}
 	for _, tag := range value.Tags {
 		result.Tags = append(result.Tags, &ManageGalleryTag{UUID: tag.UUID, Name: tag.Name, Position: strconv.FormatInt(tag.Position, 10)})
 	}

@@ -14,7 +14,7 @@
     {
       "name": "Cosplay Gallery Manager",
       "SPDXID": "SPDXRef-Package-Cosplay-Gallery-Manager",
-      "versionInfo": "0.1.0-dev",
+      "versionInfo": "1.5.0-dev",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
       "licenseConcluded": "AGPL-3.0-or-later",

@@ -9,11 +9,13 @@ export interface ManageGalleryCast { characterUUID: string; characterName: strin
 export interface ManageGalleryCredit { coserUUID: string; coserName: string; position: string; cast: ManageGalleryCast[] }
 export interface ManageGalleryTag { uuid: string; name: string; position: string }
 export interface ManageGalleryExternalLink { uuid: string; type: "SOURCE" | "PROFILE" | "REFERENCE"; label: string; url: string; position: string }
+export interface ManageGalleryFolderMatch { kind: "COSER" | "WORK" | "CHARACTER"; uuid: string; name: string; matchedName: string; workUUID: string; workName: string }
 export interface ManageGalleryManifestState { status: "NONE" | "CLEAN" | "DB_DIRTY" | "FILE_DIRTY" | "CONFLICT" | "MISSING" | "ERROR"; path: string; manifestRevision: number; metadataRevision: number; conflicts: { path: string; baselineJSON: string; databaseJSON: string; fileJSON: string }[] }
 export type ManageCoserManifestState = ManageGalleryManifestState;
 export interface ManageGalleryDetail {
   row: ManageGalleryRow; aliases: string[]; description: string; shootDate: string; shootDatePrecision: "DAY" | "MONTH" | "UNKNOWN";
   photographerName: string; studioName: string; items: ManageGalleryItem[]; credits: ManageGalleryCredit[]; tags: ManageGalleryTag[]; externalLinks: ManageGalleryExternalLink[];
+  folderMatches: ManageGalleryFolderMatch[];
 }
 export interface ManageGalleryDeletePreview {
   setID: string; state: "DRAFT" | "ACTIVE" | "ARCHIVED"; metadataRevision: number; itemCount: number;

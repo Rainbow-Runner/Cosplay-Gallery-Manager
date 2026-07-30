@@ -4,15 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/stashapp/stash/internal/mediaaccess"
@@ -22,6 +24,7 @@ import (
 	"github.com/stashapp/stash/internal/processingworker"
 	"github.com/stashapp/stash/internal/productapi"
 	"github.com/stashapp/stash/internal/productauth"
+	"github.com/stashapp/stash/internal/productlog"
 	"github.com/stashapp/stash/pkg/ffmpeg"
 	productweb "github.com/stashapp/stash/ui/web"
 )
@@ -34,10 +37,11 @@ type Config struct {
 	FFmpegPath   string `json:"ffmpeg_path"`
 	LibRawPath   string `json:"libraw_path"`
 	WorkerCount  int    `json:"worker_count"`
+	LogLevel     string `json:"log_level"`
 }
 
 func DefaultConfig() Config {
-	return Config{Listen: "127.0.0.1:9999", DatabasePath: "cosplay-gallery-manager.sqlite", CachePath: "cache", WorkerCount: 1}
+	return Config{Listen: "127.0.0.1:9999", DatabasePath: "cosplay-gallery-manager.sqlite", CachePath: "cache", WorkerCount: 1, LogLevel: "INFO"}
 }
 
 func LoadConfig(path string) (Config, error) {
@@ -72,6 +76,9 @@ func (c Config) Validate() error {
 	}
 	if c.WorkerCount < 1 || c.WorkerCount > 8 {
 		return errors.New("worker_count must be between 1 and 8")
+	}
+	if _, err := productlog.ParseLevel(c.LogLevel); err != nil {
+		return err
 	}
 	return nil
 }
@@ -149,7 +156,7 @@ func (s *Server) rebuildHandler() {
 	} else if embeddedWeb, ok := productweb.FileSystem(); ok {
 		mux.Handle("/", spaHandlerFS(embeddedWeb))
 	}
-	s.handlerSwitch.Set(securityHeaders(s.maintenanceGate(database, mux)))
+	s.handlerSwitch.Set(requestLogger(securityHeaders(s.maintenanceGate(database, mux))))
 }
 
 func (s *Server) HTTPServer() *http.Server {
@@ -195,6 +202,11 @@ func (s *Server) startWorkers(ctx context.Context) error {
 	if s.Config.FFmpegPath != "" {
 		generators = append(generators, mediaprocessing.FFmpegPosterGenerator{Encoder: ffmpeg.NewEncoder(s.Config.FFmpegPath)})
 	}
+	slog.Info("CGM_WORKERS_STARTED",
+		"worker_count", s.Config.WorkerCount,
+		"libraw_enabled", s.Config.LibRawPath != "",
+		"ffmpeg_enabled", s.Config.FFmpegPath != "",
+	)
 	worker := processingworker.Worker{Database: s.Database, Materializer: mediaaccess.Materializer{TemporaryRoot: temporaryRoot}, Cache: mediaprocessing.CacheWriter{Root: s.Config.CachePath}, Generators: generators}
 	workerContext, cancel := context.WithCancel(ctx)
 	s.workerCancel = cancel
@@ -249,8 +261,9 @@ func (h *switchHandler) ServeHTTP(response http.ResponseWriter, request *http.Re
 
 func runWorkerLoop(ctx context.Context, worker processingworker.Worker, owner string) {
 	for ctx.Err() == nil {
-		_, err := worker.RunOne(ctx, owner, 30*time.Second, time.Now())
+		job, err := worker.RunOne(ctx, owner, 30*time.Second, time.Now())
 		if err == nil {
+			slog.Debug("CGM_MEDIA_JOB_COMPLETED", "job_id", job.ID, "item_uuid", job.ItemUUID, "variant", job.Variant)
 			continue
 		}
 		if errors.Is(err, productdb.ErrJobNotClaimable) {
@@ -263,8 +276,88 @@ func runWorkerLoop(ctx context.Context, worker processingworker.Worker, owner st
 			continue
 		}
 		if ctx.Err() == nil {
-			log.Print("CGM_MEDIA_JOB_FAILED")
+			slog.Error("CGM_MEDIA_JOB_FAILED", "job_id", job.ID, "item_uuid", job.ItemUUID, "variant", job.Variant)
 		}
+	}
+}
+
+var requestSequence atomic.Uint64
+
+type responseMetrics struct {
+	http.ResponseWriter
+	status int
+	bytes  int
+}
+
+func (w *responseMetrics) WriteHeader(status int) {
+	if w.status == 0 {
+		w.status = status
+	}
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *responseMetrics) Write(data []byte) (int, error) {
+	if w.status == 0 {
+		w.status = http.StatusOK
+	}
+	count, err := w.ResponseWriter.Write(data)
+	w.bytes += count
+	return count, err
+}
+
+func (w *responseMetrics) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}
+
+func requestLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		requestID := fmt.Sprintf("req-%016x", requestSequence.Add(1))
+		response.Header().Set("X-Request-ID", requestID)
+		metrics := &responseMetrics{ResponseWriter: response}
+		started := time.Now()
+		next.ServeHTTP(metrics, request.WithContext(productlog.WithRequestID(request.Context(), requestID)))
+		status := metrics.status
+		if status == 0 {
+			status = http.StatusOK
+		}
+		attributes := []any{
+			"request_id", requestID,
+			"endpoint", endpointCategory(request.URL.Path),
+			"method", request.Method,
+			"status", status,
+			"duration_ms", time.Since(started).Milliseconds(),
+			"response_bytes", metrics.bytes,
+		}
+		if status >= http.StatusInternalServerError {
+			slog.Error("CGM_HTTP_REQUEST", attributes...)
+		} else {
+			slog.Debug("CGM_HTTP_REQUEST", attributes...)
+		}
+	})
+}
+
+func endpointCategory(path string) string {
+	switch {
+	case path == "/graphql":
+		return "GRAPHQL"
+	case strings.HasPrefix(path, "/resource/"):
+		return "MEDIA_RESOURCE"
+	case strings.HasPrefix(path, "/manage/coser-assets/"):
+		return "COSER_ASSET"
+	case strings.HasPrefix(path, "/session/"):
+		return "SESSION"
+	case strings.HasPrefix(path, "/setup/"):
+		return "SETUP"
+	case strings.HasPrefix(path, "/maintenance/"):
+		return "MAINTENANCE"
+	case path == "/healthz" || path == "/readyz":
+		return "HEALTH"
+	case path == "/about.json":
+		return "ABOUT"
+	case strings.HasPrefix(path, "/assets/"):
+		return "WEB_ASSET"
+	default:
+		return "WEB_ROUTE"
 	}
 }
 

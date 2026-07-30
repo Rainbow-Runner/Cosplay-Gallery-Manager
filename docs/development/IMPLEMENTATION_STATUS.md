@@ -1,11 +1,22 @@
 # Cosplay Gallery Manager 实施状态
 
-> 当前里程碑：0.7 性能、跨平台与发行加固
+> 当前里程碑：1.5 本机业务迭代与可诊断性增强
 > 状态：进行中
-> 更新日期：2026-07-27
+> 更新日期：2026-07-30
 
 ## 已完成
 
+- 1.5（Gallery卡片计数）：P/S/G/V媒体数量改为后置类型缩写并过滤零值，例如`100P`或`96P 4S 2V`；四类全为0时不渲染计数，既有后端计数口径和顺序不变。
+- 1.5（GalleryEpic视觉改造起步）：建立2026-07-30参考版本的浅色语义Token与208/256px侧栏、64px顶栏等冻结几何变量；新增原创内嵌SVG图标、原创CGM字标及首批Button/Input/Badge/Alert基础组件，Browse顶栏不再使用Unicode搜索、收藏、信息和设置符号。
+- 1.5（GalleryEpic BrowseShell）：Browse已迁移为浅色固定桌面侧栏、64px粘性品牌顶栏和1024px以下移动Drawer；原路由按Galleries/Library/Explore分组，保留Search、Manage、Legal、Favorites和History，Drawer支持遮罩/Escape关闭、焦点循环与菜单按钮焦点恢复。
+- 1.5（Browse无障碍与视觉回归）：新增BrowseShell/Drawer/分页/Tab/DataTable组件测试；修复浅色迁移暴露的侧栏标题与Gallery facts低对比度，Chromium离线主流程axe A/AA、键盘、1440桌面与390移动截图回归通过。
+- 1.5（GalleryEpic UI-03～UI-05）：Gallery卡片完成Character/Work/Coser三层信息、头像组和封面右下零值过滤计数；Gallery详情完成Breadcrumb、小封面紧凑标题、Related右栏、4/3/2媒体网格及首尾不循环Lightbox；实体、搜索、时间线、随机、个人和媒体详情统一浅色高密度视觉。
+- 1.5（GalleryEpic UI-06～UI-07）：Manage及Setup、Login、Legal、Maintenance统一浅色Token与无衬线层级；恢复、Gallery删除、实体生命周期和Coser托管资源清理共用可聚焦Dialog，原确认词、密码、revision、Mutation和危险语义不变。
+- 1.5（GalleryEpic UI-08）：视觉回归阈值由1%收紧为0.2%，桌面Browse和390px Gallery详情基线已更新；离线完整业务流程、axe A/AA、键盘和焦点恢复回归通过。
+- 1.5（开发日志）：启动配置新增`DEBUG/INFO/WARN/ERROR`日志级别；systemd journal可按稳定事件码、请求ID、端点类别、状态和耗时关联排查，默认不记录查询字符串、GraphQL变量、媒体路径或业务元数据。
+- 1.5（增量开发）：React开发服务器固定在loopback `3100`，通过同源代理复用`127.0.0.1:9999`后端、真实数据库和Session，可使用Vite HMR检查前端；后端继续采用单进程增量构建与用户服务重启，避免两个进程同时访问SQLite。
+- 1.5（扫描规则管理）：媒体库确定性扫描规则已补齐编辑和二次确认删除；可修改名称、类型、顺序、启用、自动建DRAFT、深度或RE2模板，类型切换会清空不适用字段。
+- 1.5（规则安全与审计）：规则更新/删除复用既有确定性校验并写入无路径管理审计；删除规则只解除最近发现候选的规则引用，不删除Candidate、DRAFT、GallerySource或媒体文件。
 - P00-01：建立[Stash复用与隔离边界](../architecture/STASH_REUSE_BOUNDARY.md)。
 - P00-02（部分）：新增`internal/product`，定义稳定product ID、工作名、默认路径名称及产品/数据库/Manifest/媒体处理四套独立版本。
 - P00-02（部分）：本地未注入构建版本时使用`0.1.0-dev`，不再显示不明确的`unknown`产品版本。
@@ -29,6 +40,7 @@
 - P02-01：实现媒体库根、最具体子根所有权、禁用子根边界、改根/删除影响预览，以及GallerySource显式转移或未分配。
 - P02-02～P02-03：实现默认关闭的MARKER、PATH_TEMPLATE和FIXED_DEPTH确定性规则；PATH_TEMPLATE按完整NFC相对路径使用Go RE2命名捕获，只生成待审核建议。
 - P02-04：实现Candidate到DRAFT的两阶段导入；自动规则只能逐规则启用AUTO_CREATE_DRAFT，且不会把建议直接写入正式元数据。
+- 1.5增量：MARKER导入在缺少Gallery Manifest时以来源根目录文件夹名作为标题保底；对已有Coser、Work、Character名称/Alias的目录名匹配仅作为Manage Cast页人工应用提示，不自动创建实体或关系，PATH_TEMPLATE待审核语义不变。
 - P02-05：实现source-scoped扫描暂存、完整成功后的原子提交，以及失败/取消不产生半扫描MISSING。
 - P02-06：接入完整BLAKE3和采样BLAKE3；同路径保留身份、同来源完整指纹唯一时重绑定、歧义时保留旧MISSING并创建独立Item。
 - P02-06：Manifest `set_id`只生成SOURCE_REBIND_CANDIDATE；来源改绑必须显式确认，两个可访问副本还需要重复来源二次确认。
@@ -64,6 +76,8 @@
 - P07（ManageShell）：实现高密度Gallery问题索引、两阶段媒体库发现/导入、来源扫描、任务队列、运行时设置，以及Gallery五页签和Coser四页签编辑结构。
 - P07（Gallery编辑）：基本元数据显式保存；成员分类、Caption、排除、组内排序和封面即时生效；Coser→Character与Tag关系按Gallery范围原子批量保存，Album/Cosplay由Cast自动推导。
 - P07（核心实体）：Coser/Work/Character/Tag可独立创建与编辑；Coser社交账号保持人工顺序，未关联Gallery的Coser仍可在Manage中维护。
+- P07（管理表单校验）：Character要求Name和Primary Work；媒体库、扫描规则、核心实体、社交账号、Gallery关系/外链、Tag父级和运行时设置在必填项或数值范围无效时禁用提交，Mutation进行中防止重复提交。
+- P07（社交平台键）：Coser社交账号提供常用Platform key选择，同时保留符合`[a-z0-9][a-z0-9_-]{0,63}`的自定义键；外部账号URL仍只保存不抓取。
 - P07（实体生命周期）：Manage GraphQL/UI已接入Coser/Work/Character/Tag合并与删除预览；合并明确显示双方revision、受影响Gallery和全部阻断冲突，只有无冲突预览可提交。
 - P07（高影响确认）：实体合并与删除使用明确确认词，提交时重新执行乐观锁和关系约束；成功合并保留永久UUID Alias/Slug重定向，成功删除只允许无引用实体并永久Tombstone UUID。
 - P07（Coser合并收尾）：Coser数据库合并提交后尝试写入`redirect_to_uuid`；文件系统收尾失败时返回不泄漏路径的待处理警告，不把已提交数据库事务误报为回滚。
@@ -79,6 +93,7 @@
 - P07/P09（Coser资源清理）：只允许人工选择严格匹配CGM UUID命名的原图/派生图组；提交要求Session、同源、所有者密码和精确确认词`CLEAN`，并在SQLite immediate事务中重新检查全部引用后逐文件隔离复核再删除。
 - P07/P09（清理安全与审计）：未知文件、临时文件、符号链接、Coser Manifest、Coser资料目录和全部用户媒体永不进入候选；成功/失败审计只记录组数、文件数和字节数，不记录名称或路径，失败不自动重试。
 - P07（关系选择）：Manage提供不继承Browse scope的全库名称/Alias搜索；Gallery关系编辑器可搜索并选择任意现有Coser、Character和Tag，同时保留UUID人工输入能力。
+- P07（关系回显）：Gallery和核心实体详情绕过Apollo陈旧内存缓存从本机GraphQL后端读取；关系保存后显式refetch，已保存的目录名匹配显示`Already saved`，不会误导用户重复应用。
 - P07（Tag DAG）：Tag编辑页可搜索并批量替换多个直接父级；事务要求所有新增、保留和移除父Tag的revision，数据库触发器继续承担严格无环校验。
 - P07（Manifest UI）：Gallery与Coser均可检查同步状态、显式Push/Pull，并对三方冲突逐字段选择DATABASE/FILE；Coser资料使用Setup完成后保存在产品数据库中的单一元数据根。
 - P07（外部链接）：Gallery仅保存人工HTTP(S)链接，Manage可显式新增，Browse详情末尾弱化展示且服务端不抓取外部内容。
@@ -107,12 +122,14 @@
 - DIRECTORY重复扫描、来源失联、危险归档、父子媒体库、两阶段导入、set_id重绑定候选、成员排除/忘记/排序均有回归测试。
 - 媒体内容替换、任务恢复、原子缓存、双层封面、认证Range资源、Scrubber ordinal、分页/scope、时间线、推荐、随机、搜索和成员索引均有回归测试。
 - Gallery关系批量保存验证了多人、多角色、Tag、单次revision递增、过期revision拒绝且不产生部分写入。
+- Gallery关系GraphQL集成回归额外验证Credit/Cast实际持久化及无路径技术审计；前端回归验证重新读取后正式关系显示、目录匹配已保存状态和未完成关系行提交门禁。
+- Character缺少Primary Work时，前端创建按钮保持禁用；后端防御性回归验证直接GraphQL调用返回明确校验错误而非`internal server error`，并记录失败审计。
 - GraphQL集成测试验证Gallery与Coser Manifest只能通过显式Mutation写入各自确定路径，并返回CLEAN状态。
 - 运维集成测试验证每日快照到期租约/保留、自动扫描opt-in、完整恢复、Session撤销、任务取消、安全备份注册、异机路径映射门槛、人工恢复，以及数据库交换后故障的自动回滚。
 - 完整备份损坏矩阵验证POSIX/Windows路径穿越、重复/大小写/NFC碰撞、保留名、符号链接、未知Entry、畸形JSON、缺项、无效SQLite产品身份、压缩炸弹和截断ZIP均在替换前拒绝。
 - Operations GraphQL测试验证备份/恢复由Server服务执行且响应不泄漏数据库或存储根。
-- React 19 TypeScript `--noEmit`通过；Vitest当前8个文件、15项测试全部通过。
-- Vite生产构建通过，共转换661个模块；当前主JS minify后、gzip前约471KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。
+- React 19 TypeScript `--noEmit`通过；Vitest当前16个文件、37项测试全部通过。
+- Vite生产构建通过，共转换669个模块；当前主JS minify后、gzip前约472KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。
 - `cgm_web_embed`标签下的产品UI嵌入和Server回归测试通过；`make build-cgm`生成约24MiB单文件验证产物，深层SPA路由、哈希资源immutable缓存和旧UI依赖隔离均已验证。
 - 实体生命周期回归验证了按关系类型返回删除阻断、合并冲突时禁用提交、明确确认词、GraphQL预览/提交、永久Alias/Tombstone和管理审计。
 - Gallery删除回归验证了归档前阻断、过期revision拒绝、密码与确认词双重门禁、Item/Link/Set UUID Tombstone、任务取消保留、IgnoredGallerySource建立，以及来源媒体和Manifest字节不变。
@@ -120,7 +137,7 @@
 - Coser未引用资源回归验证了现用组排除、已替换/已删除分组、未知文件与符号链接跳过、引用变化后过期审阅拒绝、密码/确认词/同源门禁、选择性清理、Manifest保留和无路径审计。
 - BLAKE3依赖固定为`github.com/zeebo/blake3 v0.2.4`并记录模块校验和。
 - 用户来源能力审计未发现删除调用；应用删除仅限失败备份、缓存、临时文件等明确生成数据。
-- Chromium离线Playwright主流程通过，Setup/Browse/Gallery/Operations axe扫描无WCAG A/AA违规，桌面与390px移动截图回归通过。
+- Chromium离线Playwright主流程通过，Setup/Browse/Gallery/Operations axe扫描无WCAG A/AA违规，桌面与390px移动截图在0.2%像素差异门禁下回归通过。
 - 真实媒体门禁通过：合成标准DNG由dcraw实际生成代理，动画GIF与FFmpeg生成MP4实际生成Poster，内容分类与扩展名无关。
 - 危险归档单元矩阵通过；完整备份损坏矩阵继续在替换前拒绝危险输入。
 - 固定`GOMAXPROCS=4`的百万Item性能门禁通过：最慢Gallery列表p95约493ms、时间线约477ms，均低于500ms；Tag未缓存约141ms、缓存约143ms，其他目标均通过。
@@ -130,6 +147,9 @@
 
 ## 本机实际业务应用测试部署（2026-07-27）
 
+- 2026-07-30 02:40 CST已增量部署UI-03～UI-08完成后的`1.5.0-dev (local)`单文件构建，SHA-256为`38af89d5afe479a6f38d88d3a08735b68a03044c5648cf5a00f28a79e089dded`；旧二进制备份于`/tmp/cgm-before-galleryepic-ui-20260730`。
+- 用户服务保持`enabled/active`，Health/Ready为204，Root/Legal为200；入口HTML已确认引用本轮GalleryCard、GalleryDetail和Patterns哈希资源。
+- 配置校验和和产品数据库inode部署前后不变；没有替换数据库、配置、媒体库、缓存或Manifest。运行中的SQLite文件大小变化属于服务重启后的正常写入/检查点。
 - 在干净提交`3dc86fb6be38216349fb039a6b3253fb392ae422`上重新运行TypeScript、8文件/15项Vitest、661模块生产构建和主要Go/SQLite/API包回归，结果通过。
 - 构建并安装Linux amd64原生单文件到`~/.local/bin/cgm`；二进制报告完整提交，SHA-256为`ef2dc87446daaee84ddc8c187aebfb877e6419545d4782ee987a5d6c688e918a`，且依赖边界未包含旧Stash UI。
 - 建立私有配置、数据库、缓存、Coser元数据和备份目录；用户级`cosplay-gallery-manager.service`已启用并运行，仅监听`127.0.0.1:9999`。

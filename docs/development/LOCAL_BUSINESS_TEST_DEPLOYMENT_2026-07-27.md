@@ -1,10 +1,30 @@
 # 本机实际业务应用测试部署
 
+## 1.5 增量开发状态
+
+- 2026-07-30 02:40 CST已将本机用户服务增量升级为UI-03～UI-08完成后的`1.5.0-dev`开发构建。
+- 当前二进制SHA-256：`38af89d5afe479a6f38d88d3a08735b68a03044c5648cf5a00f28a79e089dded`。
+- 替换前二进制保存在`/tmp/cgm-before-galleryepic-ui-20260730`，SHA-256为`e10dacab3fc167dc536bde86fa733507c3de2532319f1fb05d1e34fa644c15cb`。
+- 部署后用户服务保持`enabled/active`；`/healthz`和`/readyz`为204，首页与Legal为200，`/about.json`报告`buildTime=2026-07-30`、`gitHash=local`、`exactSourceAvailable=false`。
+- 首页已核对实际引用本轮`index-DMxPCGgd.js`、`index-De7_OG72.css`、GalleryCard、GalleryDetail和Patterns哈希Chunk；浏览器若保留旧页面，只需正常刷新以取得新的入口HTML。
+- 配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库inode仍为`19679716`；本次部署没有替换配置、数据库、媒体库、缓存或Manifest。
+- 本构建来自包含尚未提交1.5修改的本地工作树，因此`/about.json`正确报告`exactSourceAvailable=false`，不能作为正式发行源码对应证明。
+- 启动配置已加入`"log_level": "DEBUG"`；journal可查看结构化请求、管理操作和工作器事件。日志不记录GraphQL变量、搜索词、媒体路径或业务元数据。
+- 1.5新增扫描规则编辑和二次确认删除。修改规则后必须重新执行`Scan selected library`，最近一次发现快照不会被静默重写；删除规则不影响现有Gallery或媒体。
+- 没有`.cosplay.json`时，空`.cosplay-root`识别出的新Gallery以来源文件夹名称作为确定性标题保底；Cast页可显示对现有Coser、Work、Character名称/Alias的非强制匹配提示，关系仍必须人工应用并保存。
+- Coser社交账号Platform key可选择常用平台，也可继续输入符合既有格式的自定义key。
+- Gallery与核心实体详情始终从本机CGM GraphQL后端读取最新值；保存关系后再次主动读取，避免Apollo内存缓存让已保存Credit/Cast看似丢失。该行为不访问互联网。
+- Character必须选择Primary Work后才能创建；Gallery空关系行、非法外部URL、无效媒体库/扫描规则/运行时设置等同类输入均在前端禁用提交。
+- Browse、Gallery详情、实体/搜索/个人页面、Manage和系统页面已迁移到GalleryEpic参考几何的浅色设计系统；Gallery媒体计数只显示非零类型，详情媒体网格为4/3/2列，Lightbox首尾不循环。
+- Chromium离线完整业务流程、axe A/AA、键盘焦点以及1440桌面/390移动截图在0.2%视觉差异门禁下通过；Firefox/WebKit、真实移动设备、读屏和200%缩放仍需目标环境人工验收。
+- `make web-ui-start`可在`127.0.0.1:3100`启动Vite HMR并同源代理当前9999后端。已验证首页与`/session/status`代理均返回200；开发服务器验证后已停止。
+- 详细实现、测试和回退记录见[V1_5_DEVELOPMENT_LOG.md](./V1_5_DEVELOPMENT_LOG.md)。
+
 ## 部署基线
 
 - 运行形态：Linux amd64 原生单所有者服务。
 - 源码提交：`3dc86fb6be38216349fb039a6b3253fb392ae422`。
-- 产品版本：`0.1.0-dev`，仅作为第一版正式发布前的本机业务测试实例。
+- 初始产品版本：`0.1.0-dev`；当前运行版本见上方1.5增量开发状态。
 - 二进制：`/home/rainbowrunner/.local/bin/cgm`。
 - 二进制 SHA-256：`ef2dc87446daaee84ddc8c187aebfb877e6419545d4782ee987a5d6c688e918a`。
 - 启动配置：`/home/rainbowrunner/.config/cosplay-gallery-manager/cgm.json`，权限 `0600`。

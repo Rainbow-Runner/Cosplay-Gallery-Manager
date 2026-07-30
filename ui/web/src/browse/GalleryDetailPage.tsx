@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -7,6 +7,8 @@ import { BROWSE_UI_SETTINGS, GALLERY_DETAIL, GALLERY_MEMBER_INDEX, RECORD_GALLER
 import { GalleryCard } from "./GalleryCard";
 import { itemResourceURL } from "./resourceUrl";
 import type { BrowseUISettings, GalleryDetail, GalleryMember, GalleryMemberIndex } from "./types";
+import { Breadcrumbs } from "../ui/Patterns";
+import { Icon } from "../ui/Icon";
 
 const memberBatchSize = 24;
 type MediaFilter = "ALL" | "PHOTO" | "SELFIE" | "GIF" | "VIDEO";
@@ -20,6 +22,10 @@ export function visualMemberGroups(items: GalleryMember[], filter: MediaFilter) 
     { key: "gif", titleID: "gallery.group.gif", items: gifItems },
     { key: "video", titleID: "gallery.group.video", items: videoItems },
   ].filter((group) => group.items.length > 0);
+}
+
+export function lightboxNavigationState(index: number, total: number) {
+  return { canPrevious: index > 0, canNext: index >= 0 && index < total - 1 };
 }
 
 export function GalleryDetailPage() {
@@ -57,6 +63,7 @@ export function GalleryDetailPage() {
   const members = memberQuery.data?.galleryMemberIndex.items ?? [];
   const groups = useMemo(() => visualMemberGroups(members, filter), [filter, members]);
   const lightboxItem = lightboxIndex === null ? null : members[lightboxIndex];
+  const lightboxNavigation = lightboxNavigationState(lightboxIndex ?? -1, members.length);
 
   if (detailQuery.loading) return <main className="browse-main"><p className="state-message">{intl.formatMessage({ id: "state.loading" })}</p></main>;
   if (detailQuery.error || !detail) return <main className="browse-main"><p className="state-message" role="alert">{intl.formatMessage({ id: "state.error" })}</p></main>;
@@ -65,6 +72,10 @@ export function GalleryDetailPage() {
   const settings = settingsQuery.data?.browseUISettings;
   return (
     <main className="gallery-detail">
+      <Breadcrumbs>
+        <li><Link to="/">Home</Link></li>
+        <li aria-current="page">{detail.card.title}</li>
+      </Breadcrumbs>
       <section className="gallery-hero">
         <div className="gallery-hero__cover">{coverURL ? <img src={coverURL} alt="" /> : <span>CGM</span>}</div>
         <div className="gallery-hero__body">
@@ -92,7 +103,7 @@ export function GalleryDetailPage() {
         </div>
       </section>
 
-      <section className="gallery-members">
+      <div className="gallery-detail__columns"><section className="gallery-members">
         <header className="section-heading"><h2>{intl.formatMessage({ id: "gallery.contents" })}</h2><span>{members.length}</span></header>
         {settings?.detailMediaFilterEnabled ? (
           <div className="media-filters" role="group" aria-label={intl.formatMessage({ id: "gallery.filter" })}>
@@ -125,7 +136,7 @@ export function GalleryDetailPage() {
           <header className="section-heading"><h2>{intl.formatMessage({ id: "gallery.related" })}</h2></header>
           <div className="gallery-grid">{relatedQuery.data.relatedGalleries.map(({ card }) => <GalleryCard key={card.setID} card={card} scrubberEnabled={settings?.galleryScrubberEnabled ?? false} />)}</div>
         </section>
-      ) : null}
+      ) : null}</div>
 
       {detail.externalLinks.length ? (
         <footer className="external-links">{detail.externalLinks.map((link) => <a key={link.uuid} href={link.url} rel="noreferrer" target="_blank">↗ {link.label || link.type}</a>)}</footer>
@@ -133,8 +144,9 @@ export function GalleryDetailPage() {
 
       {lightboxItem ? (
         <Lightbox item={lightboxItem} onClose={() => setLightboxIndex(null)}
-          onPrevious={() => setLightboxIndex((lightboxIndex! - 1 + members.length) % members.length)}
-          onNext={() => setLightboxIndex((lightboxIndex! + 1) % members.length)} />
+          canPrevious={lightboxNavigation.canPrevious} canNext={lightboxNavigation.canNext}
+          onPrevious={() => { if (lightboxNavigation.canPrevious) setLightboxIndex(lightboxIndex! - 1); }}
+          onNext={() => { if (lightboxNavigation.canNext) setLightboxIndex(lightboxIndex! + 1); }} />
       ) : null}
     </main>
   );
@@ -151,17 +163,32 @@ function MediaTile({ item, onOpen }: { item: GalleryMember; onOpen: () => void }
   );
 }
 
-function Lightbox({ item, onClose, onPrevious, onNext }: { item: GalleryMember; onClose: () => void; onPrevious: () => void; onNext: () => void }) {
+function Lightbox({ item, onClose, canPrevious, canNext, onPrevious, onNext }: {
+  item: GalleryMember;
+  onClose: () => void;
+  canPrevious: boolean;
+  canNext: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
   const resource = item.largeResource ?? item.cardResource;
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, []);
   return (
-    <div className="lightbox" role="dialog" aria-modal="true" aria-label={item.caption || item.mediaKind} onClick={onClose}>
-      <button className="lightbox__close" type="button" onClick={onClose}>×</button>
-      <button className="lightbox__previous" type="button" onClick={(event) => { event.stopPropagation(); onPrevious(); }}>‹</button>
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label={item.caption || item.mediaKind} onClick={onClose}
+      onKeyDown={(event) => { if (event.key === "Escape") onClose(); else if (event.key === "ArrowLeft" && canPrevious) onPrevious(); else if (event.key === "ArrowRight" && canNext) onNext(); }}>
+      <button ref={closeRef} className="lightbox__close" type="button" aria-label="Close media viewer" onClick={(event) => { event.stopPropagation(); onClose(); }}><Icon name="close" /></button>
+      <button className="lightbox__previous" type="button" aria-label="Previous media" disabled={!canPrevious} onClick={(event) => { event.stopPropagation(); onPrevious(); }}><Icon name="chevron-left" /></button>
       <div className="lightbox__content" onClick={(event) => event.stopPropagation()}>
         {resource ? <img src={itemResourceURL(resource) ?? undefined} alt={item.caption} /> : <span>{item.processingState}</span>}
         {item.caption ? <p>{item.caption}</p> : null}
       </div>
-      <button className="lightbox__next" type="button" onClick={(event) => { event.stopPropagation(); onNext(); }}>›</button>
+      <button className="lightbox__next" type="button" aria-label="Next media" disabled={!canNext} onClick={(event) => { event.stopPropagation(); onNext(); }}><Icon name="chevron-right" /></button>
     </div>
   );
 }

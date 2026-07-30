@@ -79,6 +79,128 @@ func TestHandlerServesPathFreeBrowseContract(t *testing.T) {
 	}
 }
 
+func TestRecognitionRuleUpdateAndDeleteGraphQL(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 7, 27, 15, 30, 0, 0, time.UTC)
+	mediaLibrary, err := database.Libraries().Create(ctx, productdb.CreateLibraryInput{
+		Name: "Rule API", RootPath: t.TempDir(), Enabled: true, ReadOnly: true, CaptureTimezone: "UTC",
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rule, err := database.RecognitionRules().Create(ctx, productdb.CreateRecognitionRuleInput{
+		LibraryID: mediaLibrary.ID, Name: "Depth", Kind: "FIXED_DEPTH", FixedDepth: 1,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(database, func(*http.Request) bool { return true })
+	call := func(query string) []byte {
+		t.Helper()
+		request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(fmt.Sprintf(`{"query":%q}`, query)))
+		request.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) {
+			t.Fatalf("recognition rule GraphQL response = %d %s", response.Code, response.Body.String())
+		}
+		return response.Body.Bytes()
+	}
+
+	updated := call(fmt.Sprintf(`mutation { updateRecognitionRule(input:{id:%d,name:"Marker",kind:"MARKER",enabled:true,autoCreateDraft:true,order:5,pattern:"",fixedDepth:0}) { id name kind enabled autoCreateDraft order fixedDepth } }`, rule.ID))
+	if !bytes.Contains(updated, []byte(`"kind":"MARKER"`)) || !bytes.Contains(updated, []byte(`"autoCreateDraft":true`)) {
+		t.Fatalf("update result = %s", updated)
+	}
+	deleted := call(fmt.Sprintf(`mutation { deleteRecognitionRule(id:%d) }`, rule.ID))
+	if !bytes.Contains(deleted, []byte(`"deleteRecognitionRule":true`)) {
+		t.Fatalf("delete result = %s", deleted)
+	}
+	rules, err := database.RecognitionRules().List(ctx, mediaLibrary.ID)
+	if err != nil || len(rules) != 0 {
+		t.Fatalf("rules after GraphQL delete = %#v, %v", rules, err)
+	}
+	var auditCount int
+	if err := database.QueryRowContext(ctx, `SELECT COUNT(*) FROM management_audit_events WHERE event_code IN ('RECOGNITION_RULE_UPDATE','RECOGNITION_RULE_DELETE') AND outcome='SUCCESS'`).Scan(&auditCount); err != nil || auditCount != 2 {
+		t.Fatalf("recognition rule audit count = %d, %v", auditCount, err)
+	}
+}
+
+func TestCharacterCreateWithoutWorkReturnsValidationErrorAndAudit(t *testing.T) {
+	database := openTestDatabase(t)
+	handler := NewHandler(database, func(*http.Request) bool { return true })
+	body := `{"query":"mutation { createCoreEntity(input:{kind:CHARACTER,name:\"Saber\",sortName:\"\",aliases:[],profileSummary:\"\",biography:\"\",countryOrRegion:\"\",useInRecommendation:true}) { uuid } }"}`
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK || !bytes.Contains(response.Body.Bytes(), []byte("Character requires a primary Work")) {
+		t.Fatalf("missing-Work response = %d %s", response.Code, response.Body.String())
+	}
+	if bytes.Contains(response.Body.Bytes(), []byte("internal server error")) {
+		t.Fatalf("missing-Work response hid a correctable validation error: %s", response.Body.String())
+	}
+	var auditCount int
+	if err := database.QueryRowContext(context.Background(), `
+		SELECT COUNT(*) FROM management_audit_events
+		WHERE event_code='CORE_ENTITY_CREATE' AND target_kind='CHARACTER'
+		  AND outcome='FAILURE' AND error_code='CORE_ENTITY_CREATE_FAILED'
+	`).Scan(&auditCount); err != nil || auditCount != 1 {
+		t.Fatalf("missing-Work audit count = %d, %v", auditCount, err)
+	}
+}
+
+func TestGalleryRelationMutationPersistsAndWritesTechnicalAudit(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 7, 28, 0, 30, 0, 0, time.UTC)
+	created, err := database.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Relations"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coser, err := database.CoreEntities().CreateCoser(ctx, productdb.CreateCoserInput{
+		CreateNamedEntityInput: productdb.CreateNamedEntityInput{Name: "Alice"},
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	work, err := database.CoreEntities().CreateWork(ctx, productdb.CreateNamedEntityInput{Name: "Fate"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	character, err := database.CoreEntities().CreateCharacter(ctx, work.UUID, productdb.CreateNamedEntityInput{Name: "Saber"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	query := fmt.Sprintf(`mutation {
+		replaceGalleryRelations(
+			setID:%q, expectedMetadataRevision:1,
+			input:{credits:[{coserUUID:%q,position:"1024",cast:[{characterUUID:%q,position:"1024"}]}],tags:[]}
+		) { row { metadataRevision } credits { coserUUID cast { characterUUID } } }
+	}`, created.SetID, coser.UUID, character.UUID)
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(fmt.Sprintf(`{"query":%q}`, query)))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	NewHandler(database, func(*http.Request) bool { return true }).ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(`"metadataRevision":2`)) {
+		t.Fatalf("relation response = %d %s", response.Code, response.Body.String())
+	}
+	var credits, casts, auditCount int
+	if err := database.QueryRowContext(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM gallery_credits WHERE gallery_id=?),
+			(SELECT COUNT(*) FROM gallery_cast WHERE gallery_id=?),
+			(SELECT COUNT(*) FROM management_audit_events
+			 WHERE event_code='GALLERY_RELATIONS_REPLACE' AND target_id=? AND outcome='SUCCESS')
+	`, created.ID, created.ID, created.SetID).Scan(&credits, &casts, &auditCount); err != nil {
+		t.Fatal(err)
+	}
+	if credits != 1 || casts != 1 || auditCount != 1 {
+		t.Fatalf("persisted relations/audit = credits %d casts %d audit %d", credits, casts, auditCount)
+	}
+}
+
 func TestManageManifestMutationsUseExplicitConfiguredPaths(t *testing.T) {
 	database := openTestDatabase(t)
 	ctx := context.Background()

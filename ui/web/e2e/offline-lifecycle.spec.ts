@@ -57,7 +57,7 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
   await login(page);
 
   await page.goto("/manage/cosers");
-  await page.getByLabel("Name", { exact: true }).fill("Offline E2E Coser");
+  await page.getByLabel("Name (required)", { exact: true }).fill("Offline E2E Coser");
   await page.getByLabel("Profile summary").fill("Local-only lifecycle fixture.");
   await page.getByRole("button", { name: "Create", exact: true }).click();
   await expect(page.getByText("Saved", { exact: true })).toBeVisible();
@@ -67,8 +67,8 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
     has: page.getByText("Add media library", { exact: true }),
   });
   await addLibrary.getByText("Add media library", { exact: true }).click();
-  await addLibrary.getByLabel("Name", { exact: true }).fill("Offline fixture");
-  await addLibrary.getByLabel("Absolute path").fill(libraryRoot);
+  await addLibrary.getByLabel("Name (required)", { exact: true }).fill("Offline fixture");
+  await addLibrary.getByLabel("Absolute path (required)").fill(libraryRoot);
   await addLibrary.getByLabel("Read-only source").uncheck();
   await addLibrary.getByRole("button", { name: "Create", exact: true }).click();
   await expect(page.getByRole("button", { name: /Offline fixture/ })).toBeVisible();
@@ -76,7 +76,7 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
     has: page.getByText("Add deterministic rule", { exact: true }),
   });
   await addRule.getByText("Add deterministic rule", { exact: true }).click();
-  await addRule.getByLabel("Name", { exact: true }).fill("Direct gallery directory");
+  await addRule.getByLabel("Name (required)", { exact: true }).fill("Direct gallery directory");
   await addRule.getByLabel("Enable rule").check();
   await addRule.getByRole("button", { name: "Add rule" }).click();
   await expect(page.getByText(/FIXED_DEPTH · ON/)).toBeVisible();
@@ -115,6 +115,8 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
   await page.goto("/");
   const galleryLink = page.getByRole("link", { name: "Offline E2E Gallery" }).last();
   await expect(galleryLink).toBeVisible();
+  await expect(page.getByLabel("Media count 2P 1G")).toBeVisible();
+  await expect(page.locator(".gallery-card__kind")).toHaveCount(0);
   await expectAccessible(page);
   if (browserName === "chromium") {
     await expect(page).toHaveScreenshot("browse-desktop.png", { fullPage: true });
@@ -124,6 +126,13 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
   await expect(page.getByText("3", { exact: true }).first()).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
+  const mobileMenu = page.getByRole("button", { name: "Open navigation" });
+  await mobileMenu.click();
+  await expect(page.getByRole("dialog", { name: "Primary navigation" })).toBeVisible();
+  await expectAccessible(page);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Primary navigation" })).toBeHidden();
+  await expect(mobileMenu).toBeFocused();
   await expectAccessible(page);
   if (browserName === "chromium") {
     await expect(page).toHaveScreenshot("gallery-mobile.png", { fullPage: true });

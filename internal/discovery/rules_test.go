@@ -51,7 +51,8 @@ func TestMarkerHasHighestAutomaticPriority(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if match == nil || match.Kind != RuleKindMarker {
+	if match == nil || match.Kind != RuleKindMarker || len(match.Suggestions) != 1 ||
+		match.Suggestions[0] != (Suggestion{Field: "title", Value: "marked"}) {
 		t.Fatalf("match = %#v", match)
 	}
 }

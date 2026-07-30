@@ -20,6 +20,7 @@ import (
 	"github.com/stashapp/stash/internal/portableid"
 	"github.com/stashapp/stash/internal/slug"
 	"github.com/stashapp/stash/internal/sourcescan"
+	"golang.org/x/text/unicode/norm"
 )
 
 type RecognitionRuleStore struct {
@@ -41,6 +42,17 @@ type CreateRecognitionRuleInput struct {
 	FixedDepth      int
 }
 
+type UpdateRecognitionRuleInput struct {
+	ID              int64
+	Name            string
+	Kind            discovery.RuleKind
+	Enabled         bool
+	AutoCreateDraft bool
+	Order           int
+	Pattern         string
+	FixedDepth      int
+}
+
 func (s *RecognitionRuleStore) Create(
 	ctx context.Context,
 	input CreateRecognitionRuleInput,
@@ -51,21 +63,11 @@ func (s *RecognitionRuleStore) Create(
 		Kind: input.Kind, Enabled: input.Enabled, AutoCreateDraft: input.AutoCreateDraft,
 		Order: input.Order, Pattern: input.Pattern, FixedDepth: input.FixedDepth,
 	}
-	if err := discovery.ValidateRule(rule); err != nil {
+	if err := validateRecognitionRule(rule); err != nil {
 		return discovery.Rule{}, err
 	}
-	if input.Name == "" || len([]rune(input.Name)) > 300 {
-		return discovery.Rule{}, errors.New("recognition rule name must contain 1 to 300 characters")
-	}
 
-	var pattern interface{}
-	var depth interface{}
-	if input.Kind == discovery.RuleKindPathTemplate {
-		pattern = input.Pattern
-	}
-	if input.Kind == discovery.RuleKindFixedDepth {
-		depth = input.FixedDepth
-	}
+	pattern, depth := recognitionRuleParameters(rule)
 	timestamp := formatTime(normalisedTime(now))
 	result, err := s.db.ExecContext(ctx, `
 		INSERT INTO gallery_recognition_rules (
@@ -79,6 +81,76 @@ func (s *RecognitionRuleStore) Create(
 	}
 	rule.ID, err = result.LastInsertId()
 	return rule, err
+}
+
+func (s *RecognitionRuleStore) Update(
+	ctx context.Context,
+	input UpdateRecognitionRuleInput,
+	now time.Time,
+) (discovery.Rule, error) {
+	rule := discovery.Rule{
+		ID: input.ID, Name: input.Name,
+		Kind: input.Kind, Enabled: input.Enabled, AutoCreateDraft: input.AutoCreateDraft,
+		Order: input.Order, Pattern: input.Pattern, FixedDepth: input.FixedDepth,
+	}
+	if err := validateRecognitionRule(rule); err != nil {
+		return discovery.Rule{}, err
+	}
+
+	pattern, depth := recognitionRuleParameters(rule)
+	result, err := s.db.ExecContext(ctx, `
+		UPDATE gallery_recognition_rules
+		SET name=?, rule_kind=?, enabled=?, auto_create_draft=?,
+		    sort_order=?, pattern=?, fixed_depth=?, updated_at_utc=?
+		WHERE id=?
+	`, rule.Name, rule.Kind, rule.Enabled, rule.AutoCreateDraft,
+		rule.Order, pattern, depth, formatTime(normalisedTime(now)), rule.ID)
+	if err != nil {
+		return discovery.Rule{}, err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return discovery.Rule{}, err
+	}
+	if affected != 1 {
+		return discovery.Rule{}, sql.ErrNoRows
+	}
+	return rule, nil
+}
+
+func (s *RecognitionRuleStore) Delete(ctx context.Context, id int64) error {
+	result, err := s.db.ExecContext(ctx, `DELETE FROM gallery_recognition_rules WHERE id=?`, id)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func validateRecognitionRule(rule discovery.Rule) error {
+	if err := discovery.ValidateRule(rule); err != nil {
+		return err
+	}
+	if rule.Name == "" || len([]rune(rule.Name)) > 300 {
+		return errors.New("recognition rule name must contain 1 to 300 characters")
+	}
+	return nil
+}
+
+func recognitionRuleParameters(rule discovery.Rule) (pattern any, depth any) {
+	if rule.Kind == discovery.RuleKindPathTemplate {
+		pattern = rule.Pattern
+	}
+	if rule.Kind == discovery.RuleKindFixedDepth {
+		depth = rule.FixedDepth
+	}
+	return pattern, depth
 }
 
 func (s *RecognitionRuleStore) List(ctx context.Context, libraryID int64) ([]discovery.Rule, error) {
@@ -720,13 +792,14 @@ func (s *CandidateDiscoveryStore) ImportCandidate(
 	var libraryID int64
 	var rootPath string
 	var sourceType gallery.SourceType
+	var recognitionMethod string
 	var status string
 	var manifestSetID sql.NullString
 	var conflict, overLimit int
 	if err := tx.QueryRowContext(ctx, `
-		SELECT library_id, root_path, source_type, status, has_conflict, over_limit, manifest_set_id
+		SELECT library_id, root_path, source_type, recognition_method, status, has_conflict, over_limit, manifest_set_id
 		FROM gallery_candidates WHERE id = ?
-	`, candidateID).Scan(&libraryID, &rootPath, &sourceType, &status, &conflict, &overLimit, &manifestSetID); err != nil {
+	`, candidateID).Scan(&libraryID, &rootPath, &sourceType, &recognitionMethod, &status, &conflict, &overLimit, &manifestSetID); err != nil {
 		return gallery.Gallery{}, err
 	}
 	if status != "PENDING" {
@@ -740,15 +813,25 @@ func (s *CandidateDiscoveryStore) ImportCandidate(
 	if setID == "" {
 		setID = portableid.New()
 	}
+	title := ""
+	if recognitionMethod == string(discovery.RuleKindMarker) {
+		title = norm.NFC.String(strings.TrimSpace(filepath.Base(filepath.Clean(rootPath))))
+		if title == "" || title == "." || title == string(filepath.Separator) {
+			return gallery.Gallery{}, errors.New("MARKER candidate root has no usable directory name")
+		}
+		if len([]rune(title)) > 300 {
+			return gallery.Gallery{}, errors.New("MARKER candidate directory name exceeds the Gallery title limit")
+		}
+	}
 	timestamp := normalisedTime(now)
 	if _, err := registerPortableUUID(ctx, tx, setID, portableid.KindGallery, timestamp); err != nil {
 		return gallery.Gallery{}, err
 	}
 	result, err := tx.ExecContext(ctx, `
 		INSERT INTO galleries (
-			set_id, slug, state, created_at_utc, updated_at_utc
-		) VALUES (?, ?, 'DRAFT', ?, ?)
-	`, setID, slug.FromName("", setID), formatTime(timestamp), formatTime(timestamp))
+			set_id, slug, state, title, created_at_utc, updated_at_utc
+		) VALUES (?, ?, 'DRAFT', ?, ?, ?)
+	`, setID, slug.FromName(title, setID), title, formatTime(timestamp), formatTime(timestamp))
 	if err != nil {
 		return gallery.Gallery{}, err
 	}
@@ -794,7 +877,15 @@ func (s *CandidateDiscoveryStore) ImportCandidate(
 			`, galleryID, suggestion.Field, suggestion.Value, formatTime(timestamp)); err != nil {
 				return gallery.Gallery{}, err
 			}
-		case "title", "year", "month":
+		case "title":
+			// A MARKER import already used the exact source-directory name as
+			// its deterministic title fallback. Do not turn that same value
+			// into a redundant pending metadata suggestion.
+			if recognitionMethod == string(discovery.RuleKindMarker) {
+				continue
+			}
+			fallthrough
+		case "year", "month":
 			if _, err := tx.ExecContext(ctx, `
 				INSERT INTO gallery_metadata_suggestions (
 					gallery_id, suggestion_kind, value, status, created_at_utc

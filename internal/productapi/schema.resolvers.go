@@ -212,6 +212,31 @@ func (r *mutationResolver) CreateRecognitionRule(ctx context.Context, input Crea
 	return manageRecognitionRule(value), nil
 }
 
+// UpdateRecognitionRule is the resolver for the updateRecognitionRule field.
+func (r *mutationResolver) UpdateRecognitionRule(ctx context.Context, input UpdateRecognitionRuleInput) (*ManageRecognitionRule, error) {
+	value, err := r.Database.RecognitionRules().Update(ctx, productdb.UpdateRecognitionRuleInput{
+		ID: input.ID, Name: input.Name, Kind: discovery.RuleKind(input.Kind), Enabled: input.Enabled,
+		AutoCreateDraft: input.AutoCreateDraft, Order: input.Order, Pattern: input.Pattern, FixedDepth: input.FixedDepth,
+	}, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "RECOGNITION_RULE_UPDATE", "RULE", strconv.FormatInt(input.ID, 10), "RECOGNITION_RULE_UPDATE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "RECOGNITION_RULE_UPDATE", "RULE", strconv.FormatInt(value.ID, 10), "", nil,
+		map[string]any{"kind": value.Kind, "enabled": value.Enabled, "auto_create_draft": value.AutoCreateDraft})
+	return manageRecognitionRule(value), nil
+}
+
+// DeleteRecognitionRule is the resolver for the deleteRecognitionRule field.
+func (r *mutationResolver) DeleteRecognitionRule(ctx context.Context, id int64) (bool, error) {
+	if err := r.Database.RecognitionRules().Delete(ctx, id); err != nil {
+		r.auditManage(ctx, "RECOGNITION_RULE_DELETE", "RULE", strconv.FormatInt(id, 10), "RECOGNITION_RULE_DELETE_FAILED", err, nil)
+		return false, manageError(err)
+	}
+	r.auditManage(ctx, "RECOGNITION_RULE_DELETE", "RULE", strconv.FormatInt(id, 10), "", nil, nil)
+	return true, nil
+}
+
 // DiscoverMediaLibrary is the resolver for the discoverMediaLibrary field.
 func (r *mutationResolver) DiscoverMediaLibrary(ctx context.Context, libraryID int64) (*ManageDiscoverySnapshot, error) {
 	value, err := r.Database.CandidateDiscovery().DiscoverFilesystem(ctx, libraryID, time.Now())
@@ -345,7 +370,9 @@ func (r *mutationResolver) CreateCoreEntity(ctx context.Context, input CoreEntit
 		uuid = value.UUID
 	case SearchEntityKindCharacter:
 		if input.WorkUUID == nil {
-			return nil, manageError(errors.New("Character requires a Work UUID"))
+			err = errors.New("Character requires a primary Work")
+			r.auditManage(ctx, "CORE_ENTITY_CREATE", string(input.Kind), "new", "CORE_ENTITY_CREATE_FAILED", err, nil)
+			return nil, err
 		}
 		var value coreentity.Character
 		value, err = r.Database.CoreEntities().CreateCharacter(ctx, *input.WorkUUID, named, time.Now())
@@ -355,15 +382,18 @@ func (r *mutationResolver) CreateCoreEntity(ctx context.Context, input CoreEntit
 		value, err = r.Database.CoreEntities().CreateTag(ctx, productdb.CreateTagInput{CreateNamedEntityInput: named, UseInRecommendation: input.UseInRecommendation}, time.Now())
 		uuid = value.UUID
 	default:
-		return nil, manageError(errors.New("unsupported core entity kind"))
+		err = errors.New("unsupported core entity kind")
 	}
 	if err != nil {
+		r.auditManage(ctx, "CORE_ENTITY_CREATE", string(input.Kind), "new", "CORE_ENTITY_CREATE_FAILED", err, nil)
 		return nil, manageError(err)
 	}
 	value, err := r.Database.CoreEntities().ManageFind(ctx, string(input.Kind), uuid)
 	if err != nil {
+		r.auditManage(ctx, "CORE_ENTITY_CREATE", string(input.Kind), uuid, "CORE_ENTITY_CREATE_FAILED", err, nil)
 		return nil, manageError(err)
 	}
+	r.auditManage(ctx, "CORE_ENTITY_CREATE", string(input.Kind), uuid, "", nil, nil)
 	return manageCoreEntity(value), nil
 }
 
@@ -395,12 +425,15 @@ func (r *mutationResolver) UpdateCoreEntity(ctx context.Context, uuid string, ex
 		return nil, manageError(errors.New("unsupported core entity kind"))
 	}
 	if err != nil {
+		r.auditManage(ctx, "CORE_ENTITY_UPDATE", string(input.Kind), uuid, "CORE_ENTITY_UPDATE_FAILED", err, nil)
 		return nil, manageError(err)
 	}
 	value, err := r.Database.CoreEntities().ManageFind(ctx, string(input.Kind), uuid)
 	if err != nil {
+		r.auditManage(ctx, "CORE_ENTITY_UPDATE", string(input.Kind), uuid, "CORE_ENTITY_UPDATE_FAILED", err, nil)
 		return nil, manageError(err)
 	}
+	r.auditManage(ctx, "CORE_ENTITY_UPDATE", string(input.Kind), uuid, "", nil, nil)
 	return manageCoreEntity(value), nil
 }
 
@@ -408,15 +441,19 @@ func (r *mutationResolver) UpdateCoreEntity(ctx context.Context, uuid string, ex
 func (r *mutationResolver) AddCoserSocialAccount(ctx context.Context, coserUUID string, expectedMetadataRevision int64, input SocialAccountInput) (*ManageCoreEntity, error) {
 	position, err := strconv.ParseInt(input.Position, 10, 64)
 	if err != nil {
+		r.auditManage(ctx, "COSER_SOCIAL_ACCOUNT_ADD", "COSER", coserUUID, "COSER_SOCIAL_ACCOUNT_ADD_FAILED", err, nil)
 		return nil, manageError(err)
 	}
 	if _, err := r.Database.CoreEntities().AddSocialAccount(ctx, coserUUID, input.PlatformKey, input.Label, input.Handle, input.URL, input.Status, input.Visible, position, expectedMetadataRevision, time.Now()); err != nil {
+		r.auditManage(ctx, "COSER_SOCIAL_ACCOUNT_ADD", "COSER", coserUUID, "COSER_SOCIAL_ACCOUNT_ADD_FAILED", err, nil)
 		return nil, manageError(err)
 	}
 	value, err := r.Database.CoreEntities().ManageFind(ctx, "COSER", coserUUID)
 	if err != nil {
+		r.auditManage(ctx, "COSER_SOCIAL_ACCOUNT_ADD", "COSER", coserUUID, "COSER_SOCIAL_ACCOUNT_ADD_FAILED", err, nil)
 		return nil, manageError(err)
 	}
+	r.auditManage(ctx, "COSER_SOCIAL_ACCOUNT_ADD", "COSER", coserUUID, "", nil, nil)
 	return manageCoreEntity(value), nil
 }
 
@@ -536,9 +573,11 @@ func (r *mutationResolver) DeleteGallery(ctx context.Context, setID string, expe
 func (r *mutationResolver) ReplaceGalleryRelations(ctx context.Context, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) (*ManageGalleryDetail, error) {
 	galleryID, err := r.Database.Manage().GalleryID(ctx, setID)
 	if err != nil {
+		r.auditManage(ctx, "GALLERY_RELATIONS_REPLACE", "GALLERY", setID, "GALLERY_RELATIONS_REPLACE_FAILED", err, nil)
 		return nil, manageError(err)
 	}
 	converted := productdb.ReplaceGalleryRelationsInput{}
+	castCount := 0
 	for _, credit := range input.Credits {
 		if credit == nil {
 			return nil, manageError(errors.New("GalleryCredit cannot be null"))
@@ -557,6 +596,7 @@ func (r *mutationResolver) ReplaceGalleryRelations(ctx context.Context, setID st
 				return nil, manageError(err)
 			}
 			convertedCredit.Cast = append(convertedCredit.Cast, productdb.ReplaceGalleryCastInput{CharacterUUID: cast.CharacterUUID, Position: castPosition})
+			castCount++
 		}
 		converted.Credits = append(converted.Credits, convertedCredit)
 	}
@@ -571,8 +611,10 @@ func (r *mutationResolver) ReplaceGalleryRelations(ctx context.Context, setID st
 		converted.Tags = append(converted.Tags, productdb.ReplaceGalleryTagInput{TagUUID: tag.TagUUID, Position: position})
 	}
 	if err := r.Database.Galleries().ReplaceRelations(ctx, galleryID, expectedMetadataRevision, converted, time.Now()); err != nil {
+		r.auditManage(ctx, "GALLERY_RELATIONS_REPLACE", "GALLERY", setID, "GALLERY_RELATIONS_REPLACE_FAILED", err, map[string]any{"credit_count": len(converted.Credits), "cast_count": castCount, "tag_count": len(converted.Tags)})
 		return nil, manageError(err)
 	}
+	r.auditManage(ctx, "GALLERY_RELATIONS_REPLACE", "GALLERY", setID, "", nil, map[string]any{"credit_count": len(converted.Credits), "cast_count": castCount, "tag_count": len(converted.Tags)})
 	return r.loadManageGalleryDetail(ctx, setID)
 }
 

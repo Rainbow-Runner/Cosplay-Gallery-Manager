@@ -18,7 +18,7 @@ const (
 	// DevelopmentVersion is used when no product version is injected by the
 	// release build. Product SemVer is independent of the compatibility
 	// versions below.
-	DevelopmentVersion = "0.1.0-dev"
+	DevelopmentVersion = "1.5.0-dev"
 
 	// DatabaseSchemaVersion versions the new, product-owned database schema.
 	// It does not correspond to any original Stash schema version.

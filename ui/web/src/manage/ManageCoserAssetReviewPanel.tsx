@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { Dialog } from "../ui/Patterns";
 import type { ManageCoserAssetCleanupResult, ManageCoserAssetReview } from "./types";
 
 const reviewPath = "/manage/coser-assets/review";
@@ -90,13 +91,13 @@ export function ManageCoserAssetReviewPanel() {
     </tbody></table></div>
     {!loading && review?.groups.length === 0 ? <p className="state-message">No unreferenced generated Coser assets require review.</p> : null}
 
-    {confirming ? <div className="operation-confirm-backdrop" role="presentation"><section className="operation-confirm" role="dialog" aria-modal="true" aria-labelledby="coser-cleanup-title">
+    {confirming ? <Dialog titleID="coser-cleanup-title" dismissible={!cleaning} onClose={() => setConfirming(false)}>
       <p>IRREVERSIBLE MANAGED FILE CLEANUP</p><h3 id="coser-cleanup-title">Remove {selectedFiles} generated files?</h3>
       <ul><li>{selected.size} selected avatar/banner groups use {formatBytes(selectedBytes)}.</li><li>The server rechecks every database reference immediately before cleanup.</li><li>Coser Manifests, unknown files and user media are never included.</li><li>Removed files can be recovered only from an earlier full backup.</li></ul>
       <label>Owner password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
       <label>Type <strong>CLEAN</strong> to continue<input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>
       <footer><button type="button" disabled={cleaning} onClick={() => setConfirming(false)}>Cancel</button><button className="danger" type="button" disabled={password === "" || confirmation !== "CLEAN" || cleaning} onClick={() => void cleanup()}>{cleaning ? "Rechecking and cleaning…" : "Permanently remove selected files"}</button></footer>
-    </section></div> : null}
+    </Dialog> : null}
   </section>;
 }
 

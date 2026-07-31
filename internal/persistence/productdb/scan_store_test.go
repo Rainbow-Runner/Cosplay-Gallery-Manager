@@ -112,7 +112,7 @@ func TestSuccessfulScanAtomicallyEnqueuesPrimaryDerivativeJobs(t *testing.T) {
 		}
 		variants = append(variants, variant)
 	}
-	if len(variants) != 3 || variants[0] != mediaprocessing.VariantCard480 || variants[1] != mediaprocessing.VariantLightbox4096 || variants[2] != mediaprocessing.VariantStaticPoster {
+	if len(variants) != 2 || variants[0] != mediaprocessing.VariantCard480 || variants[1] != mediaprocessing.VariantStaticPoster {
 		t.Fatalf("queued variants = %#v", variants)
 	}
 }

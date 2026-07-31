@@ -20,11 +20,35 @@ interface PaginationProps {
 }
 
 export function Pagination({ page, totalPages, previousLabel, nextLabel, onPageChange }: PaginationProps) {
+  const firstPage = totalPages <= 5 || page <= 3
+    ? 1
+    : page >= totalPages - 2
+      ? Math.max(1, totalPages - 4)
+      : page - 2;
+  const visiblePages = Array.from(
+    { length: Math.min(5, Math.max(totalPages, 0)) },
+    (_, index) => firstPage + index,
+  );
+
   return (
     <nav className="cgm-pagination" aria-label="Pagination">
-      <button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>{previousLabel}</button>
-      <span aria-current="page">{page} / {Math.max(totalPages, 1)}</span>
-      <button type="button" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>{nextLabel}</button>
+      <button className="cgm-pagination__arrow" type="button" aria-label={previousLabel} disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+        <Icon name="chevron-left" />
+      </button>
+      {visiblePages.map((visiblePage) => (
+        <button
+          className="cgm-pagination__page"
+          type="button"
+          key={visiblePage}
+          aria-current={visiblePage === page ? "page" : undefined}
+          onClick={() => onPageChange(visiblePage)}
+        >
+          {visiblePage}
+        </button>
+      ))}
+      <button className="cgm-pagination__arrow" type="button" aria-label={nextLabel} disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+        <Icon name="chevron-right" />
+      </button>
     </nav>
   );
 }

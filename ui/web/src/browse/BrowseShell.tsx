@@ -22,19 +22,19 @@ interface NavigationGroup {
 const primaryGroups: NavigationGroup[] = [
   { items: [{ to: "/", messageID: "nav.home", icon: "home", end: true }] },
   {
-    labelID: "nav.group.galleries",
+    labelID: "nav.group.cosplay",
     items: [
       { to: "/list", messageID: "nav.list", icon: "images" },
-      { to: "/magic", messageID: "nav.magic", icon: "sparkles" },
+      { to: "/cosers", messageID: "nav.cosers", icon: "user" },
+      { to: "/works", messageID: "nav.parodies", icon: "palette" },
+      { to: "/magic", messageID: "nav.magic", icon: "lock" },
     ],
   },
   {
-    labelID: "nav.group.library",
+    labelID: "nav.group.album",
     items: [
-      { to: "/cosers", messageID: "nav.cosers", icon: "user" },
-      { to: "/works", messageID: "nav.works", icon: "book" },
-      { to: "/characters", messageID: "nav.characters", icon: "character" },
-      { to: "/tags", messageID: "nav.tags", icon: "tags" },
+      { to: "/albums", messageID: "nav.albums", icon: "images" },
+      { to: "/models", messageID: "nav.models", icon: "user" },
     ],
   },
   {
@@ -44,6 +44,7 @@ const primaryGroups: NavigationGroup[] = [
       { to: "/random", messageID: "nav.random", icon: "shuffle" },
       { to: "/favorites", messageID: "nav.favorites", icon: "heart" },
       { to: "/history", messageID: "nav.history", icon: "history" },
+      { to: "/tags", messageID: "nav.tags", icon: "tags" },
     ],
   },
 ];

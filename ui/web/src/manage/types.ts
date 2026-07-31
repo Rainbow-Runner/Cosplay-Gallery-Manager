@@ -34,6 +34,7 @@ export interface ManageRuntimeSettings {
   dailyBackupEnabled: boolean; dailyBackupRetention: number;
   archiveMaxEntries: number; archiveMaxEntryBytes: number; archiveMaxTotalBytes: number; archiveMaxCompressionRatio: number; archiveMaxImagePixels: number;
 }
+export interface ManageCacheStorage { path: string; byteSize: number; fileCount: number; baseByteSize: number; enhancedByteSize: number }
 export interface ManageProcessingJob { id: number; kind: string; galleryID?: number | null; itemUUID?: string | null; variant: string; status: string; priority: number; attemptCount: number; maxAttempts: number; lastErrorCode: string; structuralFailure: boolean; createdAt: string; updatedAt: string }
 export interface ManageProcessingJobPage { items: ManageProcessingJob[]; page: number; pageSize: number; totalItems: number; totalPages: number }
 export interface ManageBackupRecord {

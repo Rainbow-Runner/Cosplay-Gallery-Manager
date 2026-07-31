@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { DataTable, Dialog, Drawer, EmptyState, Pagination, Tabs } from "./Patterns";
@@ -26,7 +26,15 @@ describe("CGM design-system patterns", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Media" }));
     expect(onPageChange).toHaveBeenCalledWith(3);
     expect(onTabChange).toHaveBeenCalledWith("media");
+    expect(screen.getByRole("button", { name: "2" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("tab", { name: "Galleries" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("keeps numeric pagination to a compact five-page window", () => {
+    render(<Pagination page={5} totalPages={12} previousLabel="Previous" nextLabel="Next" onPageChange={vi.fn()} />);
+    const pagination = screen.getAllByRole("navigation", { name: "Pagination" }).at(-1);
+    expect(pagination).toBeDefined();
+    expect(within(pagination!).getAllByRole("button").map((button) => button.textContent)).toEqual(["", "3", "4", "5", "6", "7", ""]);
   });
 
   it("provides semantic table and empty-state structures", () => {

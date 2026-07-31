@@ -197,8 +197,13 @@ journalctl --user -u cosplay-gallery-manager.service --since today -o cat
 - 2026-07-27 23:12 CST首次安装本轮开发二进制；23:15 CST在最终UI提示与测试重建后再次增量替换。当时的开发版本为`1.5.0-dev`，二进制SHA-256为`e0513629b7c512a57a58a5c4022a23feb3e960e9ea7887861282ab4ce28c2323`。
 - 2026-07-27 23:49 CST安装Marker标题保底与目录名实体提示构建；当前二进制SHA-256为`6832f9188c3233aa69133f0fdab32aaf504aee8e453ef49177f5db041f6cc0e4`，替换前二进制另存于`/tmp/cgm-before-marker-title-fallback`。
 - 2026-07-28 00:48 CST安装管理表单校验与Gallery关系回显构建；当前二进制SHA-256为`e10dacab3fc167dc536bde86fa733507c3de2532319f1fb05d1e34fa644c15cb`，替换前二进制另存于`/tmp/cgm-before-form-relations-fix`。
-- 2026-07-30 02:40 CST安装UI-03～UI-08 GalleryEpic视觉改造构建；当前二进制SHA-256为`38af89d5afe479a6f38d88d3a08735b68a03044c5648cf5a00f28a79e089dded`，替换前二进制另存于`/tmp/cgm-before-galleryepic-ui-20260730`。
-- 本次部署后用户服务为`enabled/active`，`/healthz`与`/readyz`均返回204，`/`与`/legal`均返回200；首页实际引用`index-DMxPCGgd.js`、`index-De7_OG72.css`以及本轮GalleryCard、GalleryDetail和Patterns哈希Chunk。
+- 2026-07-30 02:40 CST安装UI-03～UI-08 GalleryEpic视觉改造构建；该构建二进制SHA-256为`38af89d5afe479a6f38d88d3a08735b68a03044c5648cf5a00f28a79e089dded`，替换前二进制另存于`/tmp/cgm-before-galleryepic-ui-20260730`。
+- 2026-07-30 23:56 CST安装Gallery卡片Coser详情入口构建；当前二进制SHA-256为`87e87d2128f1fd2d258d6ef2768b991c152c0c41adeb74643a536bb6912c99ce`，替换前二进制另存于`/tmp/cgm-before-coser-card-links-20260730`。
+- 2026-07-31 00:29 CST安装Coser详情高保真与数字分页最终构建；当前二进制SHA-256为`1aac8277d217cac3a5c5d7d0ab41970937a7802b26ee28f2555c069d17b5e2b0`，替换前功能基线二进制另存于`/tmp/cgm-before-coser-detail-20260731`，其SHA-256为`87e87d2128f1fd2d258d6ef2768b991c152c0c41adeb74643a536bb6912c99ce`。
+- 本次部署入口引用`index-DQfwh2rp.js`和`index-DpMxJ2Aj.css`，Coser详情与数字分页懒加载块分别为`EntityDetailPages-EWnHhW4q.js`和`Patterns-CpDb8YDR.js`；服务保持`enabled/active`且Health/Ready均为204。
+- 本次部署后配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库inode仍为`19679716`；没有替换数据库、配置、媒体库、缓存或Manifest。
+- 本次部署后用户服务保持`enabled/active`，Health/Ready均为204；入口HTML引用`index-DIaGmrZF.js`和`index-hypU1gnW.css`，已部署的`GalleryCard-BmxDwNEF.js`包含`/coser/`路由与`gallery-card__coser-link`。
+- 02:40部署后用户服务为`enabled/active`，`/healthz`与`/readyz`均返回204，`/`与`/legal`均返回200；当时首页引用`index-DMxPCGgd.js`、`index-De7_OG72.css`以及对应GalleryCard、GalleryDetail和Patterns哈希Chunk。
 - `/about.json`报告`version=1.5.0-dev`、`gitHash=local`、`buildTime=2026-07-30`和`exactSourceAvailable=false`。配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库inode仍为`19679716`；重启期间SQLite文件大小随正常运行写入/检查点变化，没有替换数据库文件。
 - 首次构建校核发现旧Make构建信息仍尝试调用未安装的系统Go，曾短暂把脏工作树错误标识为精确提交；该构建立即被`gitHash=local`的正确开发构建替换。最终`/about.json`为`version=1.5.0-dev`、`exactSourceAvailable=false`，没有把未提交改动声明为精确发行源码。
 - 最终用户服务重启成功，`/healthz`与`/readyz`均返回204；数据库、配置、缓存、媒体库和Manifest均未随二进制替换。
@@ -367,3 +372,360 @@ playwright test e2e/offline-lifecycle.spec.ts
 ```
 
 自动化门禁完成不替代真实Firefox/WebKit、真实移动设备、读屏和200%缩放人工验收；这些仍按实施状态文档列为跨环境验收项，而不是把未执行结果标记为通过。
+
+## 1.5-08 Gallery卡片Coser详情入口
+
+### 实现
+
+- Gallery卡片的Coser头像与名称改为独立可聚焦链接，鼠标点击或键盘操作均进入对应Coser详情页。
+- 多Coser卡片为每个已返回Coser提供各自的详情入口；同一UUID重复关系只显示一次，不再因显示名称相同而错误合并两个不同Coser。
+- 链接复用后端既有的UUID详情入口和规范slug重定向，不新增GraphQL字段、数据库查询或N+1请求；Gallery详情页原有Coser链接使用相同机制。
+- 无Credit的Album保留空白布局占位，但不会生成空链接；Favorite、Rating、Scrubber和Gallery标题链接行为不变。
+
+### 阶段验证
+
+```text
+pnpm exec vitest run \
+  src/browse/GalleryCard.test.tsx \
+  src/browse/galleryCardPresentation.test.ts \
+  src/browse/galleryMediaCount.test.ts --maxWorkers=1
+3 files / 8 tests PASS
+
+pnpm run check
+PASS
+
+pnpm run test
+17 files / 39 tests PASS
+
+pnpm run build
+669 modules transformed; production build PASS
+main JS 472.07 KiB; no large-chunk warning
+
+playwright test e2e/offline-lifecycle.spec.ts
+1 passed
+```
+
+离线E2E新增“Browse卡片Coser链接→Coser详情标题→规范详情URL”真实点击验证；既有Setup、导入、激活、Manifest、备份恢复、路径映射、axe和视觉回归继续通过。
+
+## 1.5-09 Coser详情GalleryEpic高保真复核与数字分页
+
+### 参考冻结
+
+- 按用户指定的`https://galleryepic.com/zh/coser/298/1`重新抓取1440×1000桌面、390×844移动和页面底部分页视图。
+- 广告和广告造成的留白不纳入实现；参考截图只用于测量，不复制参考站Logo、媒体、代码或远程资产。
+- 精确基线已同步到`GALLERYEPIC_FRONTEND_GAP_ANALYSIS_AND_PLAN_2026-07-30.md`：
+  - 4:1 Banner；
+  - 桌面128px、移动80px方形头像叠层；
+  - 20/18px名称与紧凑社交标记；
+  - 36px高、8px圆角控件；
+  - 36px居中数字分页。
+
+### 实现
+
+- Coser详情增加`Home › Cosers › 当前Coser`Breadcrumb，页面顶部内容间距按参考页收敛到12px。
+- Banner固定为4:1；没有托管Banner时显示中性本地占位，仍维持同一首屏几何且不产生网络请求。
+- 资料区改为方形头像覆盖Banner下沿：
+  - 桌面头像128px、8px白色内边距；
+  - 移动头像80px、4px内边距，名称叠在Banner下沿；
+  - Country继续保留为弱文字。
+- 社交账号由大文字卡片收敛为20～24px紧凑平台标记；每个链接仍有可访问名称、Tooltip、ACTIVE/INACTIVE透明度和自定义Platform key缩写回退。
+- Profile与Biography继续保留，使用轻边框可折叠内容，不改变元数据模型。
+- LIST/MAGIC/ALL Scope与Shoot timeline保持原功能，只采用参考站筛选控件的轻边框几何；没有伪造作品/角色筛选或下载功能。
+- Coser详情中的Gallery卡片隐藏重复Coser行，保留3:4封面、媒体计数、Favorite和既有CGM `6/5/4/3/2`列约束。
+- `Pagination`升级为居中的Chevron+数字分页：
+  - 最多连续显示5个页码；
+  - 当前页为浅边框圆角按钮；
+  - 点击后更新`scope/page`URL并向本机GraphQL读取对应页；
+  - 不改变24项页大小、GraphQL DTO或数据库。
+- 新增Coser详情桌面/移动视觉基线；离线E2E增加Coser页axe A/AA、桌面与390px截图。
+
+### 阶段验证
+
+```text
+pnpm exec vitest run \
+  src/ui/Patterns.test.tsx \
+  src/browse/EntityDetailPages.test.tsx \
+  src/browse/GalleryCard.test.tsx
+3 files / 8 tests PASS
+
+pnpm run check
+PASS
+
+pnpm run test
+18 files / 41 tests PASS
+
+pnpm run build
+669 modules transformed; production build PASS
+main JS 472.08 KiB; no large-chunk warning
+
+playwright test --update-snapshots
+1 passed; offline lifecycle, axe A/AA and Coser desktop/mobile baselines PASS
+```
+
+恢复阶段的短暂`WEB_ROUTE 503`仍为既有数据库交换窗口；随后工作器恢复、路径映射与来源重扫成功。本阶段没有后端、Schema、数据库或媒体文件变更。
+
+### 增量部署
+
+- 2026-07-31 00:29 CST将本阶段嵌入式Linux amd64最终构建安装到`~/.local/bin/cgm`，SHA-256为`1aac8277d217cac3a5c5d7d0ab41970937a7802b26ee28f2555c069d17b5e2b0`。
+- 替换前二进制备份为`/tmp/cgm-before-coser-detail-20260731`，可用于本机回退。
+- 最终CSS清理前的同功能构建另存于`/tmp/cgm-before-pagination-final-css-20260731`，SHA-256为`05d55f8e0415a3da41a2cc1e5d29de1dea79cb9e994c4418a8fa96fb60dfd58c`。
+- `/about.json`正确报告`version=1.5.0-dev`、`gitHash=local`、`buildTime=2026-07-31`和`exactSourceAvailable=false`，没有把尚未提交的工作树伪装成精确发行源码。
+- 用户服务保持`enabled/active`，`/healthz`与`/readyz`均为204；配置SHA-256与产品数据库inode保持不变。
+
+## 1.5-10 缓存占用与来源访问审计、管理页只读状态
+
+### 实测与结论
+
+- 本机108个来源媒体逻辑大小337.75 MiB；CGM缓存216个文件逻辑大小149.02 MiB，约为来源的44.1%。
+- `CARD_480`仅3.56 MiB（2.39%缓存占比）；`LIGHTBOX_4096`为145.46 MiB（97.61%），确认空间放大的根因不是卡片缩略图，而是每张静态图的扫描时4096大图。
+- 当前两种Variant均为BASE；增强缓存50 GiB阈值和LRU不会回收Lightbox。按当前样本线性估算，10,000张静态图约产生13.48 GiB缓存。
+- 仓库中的原Stash实现只常驻最长边640 JPEG缩略图，可关闭落盘、首次请求生成、小图跳过生成并按Checksum复用；Lightbox直接读取原图，不预存每图4096大图。
+- CGM日常Browse只读取产品数据库、浏览器缓存或本机CGM派生缓存；缓存缺失返回404，不回退读取来源。显式Gallery重扫会完整读取并哈希来源，随后每个独立派生任务再次打开来源。
+- 完整分析与后续优化候选记录在[缓存占用与来源访问分析](CACHE_STORAGE_AND_SOURCE_ACCESS_ANALYSIS_2026-07-31.md)。本轮不修改已确认的BASE/ENHANCED策略。
+
+### 管理页实现
+
+- Manage → Settings增加只读`Generated cache`区，显示实际绝对缓存路径、普通文件逻辑总大小和文件数。
+- 缓存根仍来自启动级`cache_path`；页面没有路径输入、迁移、清理或重建操作，也不修改启动配置。
+- GraphQL只暴露已认证Manage查询`manageCacheStorage`；实际文件系统统计由Server运维服务执行，Resolver不获得直接来源访问能力。
+- 统计遍历不跟随符号链接，只计普通文件并响应请求Context取消；仅在Settings查询时执行，不进行后台轮询。
+
+### 阶段验证
+
+```text
+go test ./internal/productapi ./internal/productserver ./internal/mediaresource \
+  ./internal/mediaprocessing ./internal/processingworker \
+  ./internal/persistence/productdb ./internal/sourcescan
+7 packages PASS
+
+pnpm run check
+PASS
+
+pnpm run test
+19 files / 43 tests PASS
+
+pnpm run build
+669 modules transformed; production build PASS
+main JS 472.08 KiB; no large-chunk warning
+```
+
+新增回归验证GraphQL运维边界、缓存普通文件计数/字节统计、符号链接不跟随，以及Settings中
+路径与大小只读显示。本阶段没有执行位置修改、缓存删除、重建或来源媒体写入。
+
+### 增量部署
+
+- 2026-07-31 00:58 CST将本阶段嵌入式Linux amd64构建安装到`~/.local/bin/cgm`，SHA-256为
+  `c1503fe9653617789e0e522a2dd122aaf4c5b146cf03392160275076e67d1007`。
+- 替换前二进制备份为`/tmp/cgm-before-cache-status-20260731`，SHA-256为
+  `1aac8277d217cac3a5c5d7d0ab41970937a7802b26ee28f2555c069d17b5e2b0`。
+- 用户服务保持`enabled/active`，`/healthz`与`/readyz`均为204；入口引用
+  `index-CPpPzbO_.js`、`index-DZkfDa2M.css`和`ManageSettingsPage-D4q1vbqz.js`，Settings
+  Chunk已核对包含`manageCacheStorage`、`Generated cache`和`Occupied space`。
+- `/about.json`报告`1.5.0-dev`、`gitHash=local`、`exactSourceAvailable=false`；配置SHA-256
+  仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库
+  inode仍为`19679716`，没有替换数据库、配置、媒体库、缓存或Manifest。
+
+## 1.5-11 CARD BASE、按需Lightbox与可回收缓存上限
+
+### 已确认策略与实现
+
+- `CARD_480`和`STATIC_POSTER`继续属于不可被LRU删除的BASE；`LIGHTBOX_4096`改为ENHANCED。
+- 扫描静态图片（包括RAW）只排队`CARD_480`。首次打开Lightbox或静态媒体详情时，已认证且
+  Browse可见的单Item请求使用稳定任务键幂等排队4096代理；前端立即显示480图，以750ms聚焦
+  状态查询轮询，生成完成后切换大图，失败时保留480图并显示非阻断提示。
+- ENHANCED回收删除派生记录和应用生成文件，但不再立即重排任务，避免“刚回收又生成”的循环；
+  下一次显式查看会重新打开已完成/失败/取消的任务。
+- 成功打开资源（含304校验请求）会更新完整资源身份对应的`last_accessed_at_utc`。Scheduler启动时
+  及每分钟读取运行时上限、数据库ENHANCED字节与文件系统可用空间，执行最多10,000条候选的LRU。
+- Manage → Settings继续只读显示缓存位置，并增加BASE/可回收占用；可回收上限以GiB输入，仍持久化
+  到既有`enhanced_cache_maximum_bytes`带revision设置。位置、手工清理和来源媒体不在页面权限内。
+
+### 兼容迁移与安全边界
+
+- 工作器启动前执行幂等数据迁移：已有`LIGHTBOX_4096`派生记录改为ENHANCED，相关任务Payload
+  改为ENHANCED；文件本身不移动、不重编码、不立即删除。
+- 按需接口只允许ACTIVE、来源/Item AVAILABLE、未超限、未隐藏、无未解决阻断Issue且未排除的
+  静态图片；返回值只有处理状态与不透明资源身份，不返回来源路径或缓存路径。
+- 回收候选仍由数据库严格限定ENHANCED；BASE与媒体来源不属于删除能力。默认50 GiB上限下，当前
+  145.46 MiB已有Lightbox不会仅因本次部署被清除。
+
+### 阶段验证
+
+```text
+go test ./internal/mediaprocessing ./internal/persistence/productdb \
+  ./internal/processingworker ./internal/mediaresource ./internal/productapi ./internal/productserver
+6 packages PASS
+
+pnpm run test
+20 files / 46 tests PASS
+
+pnpm run check
+PASS
+
+pnpm run build
+670 modules transformed; production build PASS
+main JS 472.13 KiB; no large-chunk warning
+
+playwright test
+1 passed; offline lifecycle, backup/restore, axe A/AA and visual baselines PASS
+```
+
+新增回归覆盖扫描只排BASE、RAW主代理、Lightbox按需任务幂等/终态重开、既有层级迁移、回收不
+立即重建、分层容量统计、GiB换算和前端按需Hook。`go test ./...`除CGM无关的旧Stash
+`ui/v2.5/build`未生成setup failure及沙箱禁止`httptest`监听IPv6端口外，其余已运行包通过；上列
+六个产品相关包与正式`build-cgm`链全部通过。
+
+### 增量部署与本机迁移核验
+
+- 2026-07-31 23:54 CST将嵌入式Linux amd64构建原子安装到`~/.local/bin/cgm`，SHA-256为
+  `72e10e6c53b77c5bc942ae182acd41d6238e4d9f1ec8efd39f0e003b3953386b`。
+- 替换前二进制备份为`/tmp/cgm-before-on-demand-lightbox-20260731`，SHA-256为
+  `c1503fe9653617789e0e522a2dd122aaf4c5b146cf03392160275076e67d1007`。
+- 用户服务为`active`，`/healthz`与`/readyz`均为204；启动日志确认2个工作器正常启动，无迁移或
+  缓存维护错误。
+- 迁移后只读数据库核验：108条`CARD_480`仍为BASE（3,733,456 bytes）；108条
+  `LIGHTBOX_4096`均为ENHANCED（152,529,881 bytes），108条相关任务Payload也全部为ENHANCED。
+- 缓存物理文件仍为216个、156,263,337 bytes，说明部署没有立即清理或重建；配置SHA-256仍为
+  `1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，数据库inode仍为
+  `19679716`。本阶段没有修改媒体来源、Manifest或缓存位置。
+
+## 1.5-12 Cosplay/Album双分区与GalleryEpic实体页面层级
+
+### 需求确认与边界
+
+- Browse侧栏主结构调整为Cosplay（Lists/Cosers/Parodies/Magic）与Album（Lists/Models）。
+- Cosplay Lists只显示`COSPLAY + NON_ADULT`，Magic只显示`COSPLAY + ADULT`；Album Lists与Models按用户确认展示全部分级ALBUM。
+- Model不进入核心实体模型。GalleryCredit继续统一引用Coser，Gallery仍以Cast非空/空实时推导COSPLAY/ALBUM；同一UUID可以在两个人物索引和详情视图中出现。
+- 保持既定Gallery/Coser/Work-Character分页24/30/60、Gallery网格6/5/4/3/2、无远程字体/CDN和原创本地图标约束。
+
+### 查询与路由实现
+
+- Browse Gallery、Coser索引和Coser详情增加可选`collectionType`参数；旧客户端不传时保持原有混合查询行为。
+- 实体索引增加最多300字符的名称、Sort name和Alias包含搜索；筛选在数据库分页前完成，不使用只过滤当前页的前端假搜索。
+- 新增`/albums`、`/models`、`/model/:slug`；Model详情复用Coser DTO和规范Slug重定向，但Gallery查询固定为`ALL + ALBUM`。
+- Cosers固定查询`ALL + COSPLAY`，Models固定查询`ALL + ALBUM`；Work和Character仍只能由Cast关系进入Cosplay层级。
+- Gallery卡片按派生类型生成Coser或Model人物链接。Characters不再位于主侧栏，旧路由仍可直接访问；Timeline、Random、Favorites、History、Tags和管理入口保留在次级区域。
+
+### 视觉实现
+
+- Coser/Model索引使用Breadcrumb、居中搜索、四列36px圆形头像文字行和数字分页。
+- Parodies/作品来源使用四列高密度文字索引；Work详情先显示Character，Character详情再显示Gallery网格。
+- Coser详情保留4:1 Banner、资料、LIST/MAGIC/ALL和Timeline；Model详情不伪造独立资料，按参考页直接显示Breadcrumb与Album网格。
+- 新增原创Palette和Lock线性SVG，调整侧栏标题、字号、行距和白色表面；没有复制GalleryEpic Logo、媒体、代码或远程资产。
+
+### 阶段验证
+
+```text
+go test ./internal/persistence/productdb ./internal/productapi
+2 packages PASS
+
+pnpm run check
+PASS
+
+pnpm run test
+21 files / 49 tests PASS
+
+pnpm run build
+670 modules transformed; production build PASS
+main JS 473.18 KiB; no large-chunk warning
+
+playwright test e2e/offline-lifecycle.spec.ts
+1 passed; Album/Cosplay隔离、Models归属、Model/Coser桌面与移动基线、axe A/AA、备份恢复和重扫PASS
+```
+
+E2E的ALBUM样本明确验证：不出现在`/list`或`/magic`，不出现在`/cosers`，会出现在`/albums`与`/models`，卡片人物入口进入`/model/:slug`。恢复期间的短暂`WEB_ROUTE 503`仍是既有数据库交换窗口，随后工作器恢复并完成路径映射和来源重扫。
+
+### 增量部署
+
+- 2026-08-01 01:54 CST将Cosplay/Album双分区构建安装到`~/.local/bin/cgm`，SHA-256为`c1ffa2edc8f9086b8e6e160c1bd17c325dbe4db9b10dfb5b4be68ac482ef6a0b`。
+- 替换前二进制备份为`/tmp/cgm-before-cosplay-album-20260801`，SHA-256为`72e10e6c53b77c5bc942ae182acd41d6238e4d9f1ec8efd39f0e003b3953386b`。
+- 用户服务为`active`，`/healthz`与`/readyz`均为204；`/about.json`报告`version=1.5.0-dev`、`gitHash=local`、`buildTime=2026-08-01`和`exactSourceAvailable=false`。
+- 嵌入入口引用`index-DXmm-gQE.js`与`index-WDjoyUJX.css`；导航、Gallery索引、实体索引、实体详情和Gallery卡片Chunk均来自本轮670模块构建。
+- 配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，数据库inode仍为`19679716`。重启时SQLite将既有WAL正常检查点到主文件，未替换数据库，也未修改媒体来源、Manifest、缓存位置或启动配置。
+
+## 1.5-13 Coser/Model索引头像与主名称垂直居中
+
+### 问题与修复边界
+
+- Cosplay的Coser索引和Album的Model索引共用人物索引组件。原样式让36px头像跨越两条隐式Grid行；即使人物没有显示Alias，主名称仍位于第一行，因此名称中心高于头像中心。
+- 按本轮确认，人物索引只展示主名称，不考虑Alias展示；名称、Sort name和Alias的后端搜索能力不变，Work、Character等纯文字索引的Alias展示也不受影响。
+- 人物索引显式固定为36px单行Grid，头像只占第一行，主名称使用同一行的`align-items: center`和`align-self: center`完成垂直居中。
+
+### 阶段验证
+
+```text
+pnpm run test
+21 files / 49 tests PASS
+
+pnpm run check
+PASS
+
+pnpm run build
+670 modules transformed; production build PASS
+main JS 473.18 KiB; no large-chunk warning
+
+playwright test e2e/offline-lifecycle.spec.ts
+1 passed; Coser/Model人物行头像与主名称中心点误差小于1px，完整离线生命周期PASS
+```
+
+组件测试额外使用带Alias的人物夹具确认列表不渲染Alias；E2E使用浏览器实际布局盒验证头像与主名称中心线，不只检查CSS类名。
+
+### 增量部署
+
+- 2026-08-01 02:26 CST将人物索引对齐修复安装到`~/.local/bin/cgm`，SHA-256为`53bfdbc288f8e9aecd7f89167fab877234b3edc53e88f5c878e58ad4dfe3f041`。
+- 替换前二进制备份为`/tmp/cgm-before-person-index-alignment-20260801`，SHA-256为`c1ffa2edc8f9086b8e6e160c1bd17c325dbe4db9b10dfb5b4be68ac482ef6a0b`。
+- 用户服务保持`enabled/active`，`/healthz`与`/readyz`均为204；入口引用`index-B-wD7SgW.js`、`index-pRt2Qbb1.css`和人物索引块`EntityIndexPage-ikuTtgbU.js`。
+- 配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库inode仍为`19679716`；没有替换数据库，也没有修改媒体来源、Manifest或缓存。
+
+## 1.5-14 Coser/Model人物名称字型对齐
+
+### 参考证据与根因
+
+- 2026-08-01重新读取用户指定的GalleryEpic Coser公开列表页。人物名称节点明确使用`text-sm leading-none font-medium`，其公开CSS计算值为`14px / 14px / 500`；36px头像与名称之间使用8px左间距。
+- CGM人物名称此前先继承通用实体索引的`18px / 1.35 / 550`，再仅把字号覆盖为16px，因此最终计算值是`16px / 21.6px / 550`。字号、字重和行高都大于参考站，视觉上明显偏大、偏厚。
+
+### 修复与验证
+
+- Coser/Model人物索引专属样式改为`14px / 14px / 500`，头像与名称间距改为8px；Work、Character等通用实体文字索引不变。
+- Playwright直接读取浏览器`getComputedStyle`并严格断言上述三个值，同时继续约束头像与名称中心点误差小于1px。
+
+```text
+pnpm run test
+21 files / 49 tests PASS
+
+pnpm run check
+PASS
+
+pnpm run build
+670 modules transformed; production build PASS
+
+playwright test e2e/offline-lifecycle.spec.ts
+1 passed; computed font 14px / 14px / 500 and vertical alignment PASS
+```
+
+### 增量部署
+
+- 2026-08-01 02:39 CST将人物名称字型对齐修复安装到`~/.local/bin/cgm`，SHA-256为`5bbf3557bd3e56ed0eb3839797561f70336db2ebde4258e58ff457020d80ec55`。
+- 替换前二进制备份为`/tmp/cgm-before-person-name-typography-20260801`，SHA-256为`53bfdbc288f8e9aecd7f89167fab877234b3edc53e88f5c878e58ad4dfe3f041`。
+- 用户服务保持`enabled/active`，`/healthz`与`/readyz`均为204；入口引用`index-Dagulhjn.js`与`index-DUKMwGwd.css`。
+- 配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库inode仍为`19679716`；未替换数据库或修改媒体、Manifest与缓存。
+
+## 1.5-15 项目README产品化改写
+
+- 删除原Stash README中的上游构建徽章、下载入口、StashDB、网络Scraper、插件、社区、Windows/macOS安装和旧产品宣传，避免把CGM不存在或已延期的能力误写成当前功能。
+- README改为CGM中文项目入口，覆盖Gallery优先定位、候选/DRAFT/扫描/激活闭环、核心实体、Cosplay/Album双分区、媒体派生缓存、Manifest、备份恢复、单所有者安全模型和明确排除能力。
+- 增加真实平台状态矩阵，区分Linux amd64已部署验证、Linux arm64仅构建通过、Docker amd64已运行验证、Docker arm64待runner和Windows/macOS原生延期。
+- 增加可执行的源码构建、原生配置、首次Setup、Docker Compose、数据安全、测试入口和文档导航；明确不能把CGM指向原Stash数据库，不能并发运行两个实例，完整备份也不包含媒体或Gallery sidecar。
+- 使用现有离线E2E Browse基线作为项目截图，不新增远程品牌或媒体资产；保留Stash衍生归属、GalleryEpic仅作视觉参考且无隶属关系的说明，以及AGPL、第三方通知和SPDX链接。
+
+### 文档验证
+
+```text
+README local-link validation
+All local README links exist
+
+git diff --check -- README.md
+PASS
+```
+
+本阶段只修改仓库文档，不改变应用二进制、运行服务、配置、数据库、媒体、Manifest或缓存，因此无需执行增量部署。

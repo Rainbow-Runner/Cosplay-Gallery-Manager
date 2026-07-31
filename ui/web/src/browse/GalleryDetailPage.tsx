@@ -9,6 +9,7 @@ import { itemResourceURL } from "./resourceUrl";
 import type { BrowseUISettings, GalleryDetail, GalleryMember, GalleryMemberIndex } from "./types";
 import { Breadcrumbs } from "../ui/Patterns";
 import { Icon } from "../ui/Icon";
+import { useOnDemandLightbox } from "./useOnDemandLightbox";
 
 const memberBatchSize = 24;
 type MediaFilter = "ALL" | "PHOTO" | "SELFIE" | "GIF" | "VIDEO";
@@ -171,7 +172,8 @@ function Lightbox({ item, onClose, canPrevious, canNext, onPrevious, onNext }: {
   onPrevious: () => void;
   onNext: () => void;
 }) {
-  const resource = item.largeResource ?? item.cardResource;
+	const onDemand = useOnDemandLightbox(item);
+	const resource = onDemand.resource ?? item.largeResource ?? item.cardResource;
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -186,6 +188,8 @@ function Lightbox({ item, onClose, canPrevious, canNext, onPrevious, onNext }: {
       <button className="lightbox__previous" type="button" aria-label="Previous media" disabled={!canPrevious} onClick={(event) => { event.stopPropagation(); onPrevious(); }}><Icon name="chevron-left" /></button>
       <div className="lightbox__content" onClick={(event) => event.stopPropagation()}>
         {resource ? <img src={itemResourceURL(resource) ?? undefined} alt={item.caption} /> : <span>{item.processingState}</span>}
+		{onDemand.preparing ? <span className="lightbox__status">Preparing full-size view…</span> : null}
+		{onDemand.failed ? <span className="lightbox__status" role="alert">Full-size view is temporarily unavailable.</span> : null}
         {item.caption ? <p>{item.caption}</p> : null}
       </div>
       <button className="lightbox__next" type="button" aria-label="Next media" disabled={!canNext} onClick={(event) => { event.stopPropagation(); onNext(); }}><Icon name="chevron-right" /></button>

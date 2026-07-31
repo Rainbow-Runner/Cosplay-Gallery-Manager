@@ -19,9 +19,9 @@ const (
 // tier through job payloads.
 func RequiredCacheTier(variant string) (CacheTier, bool) {
 	switch variant {
-	case VariantCard480, VariantLightbox4096, VariantStaticPoster:
+	case VariantCard480, VariantStaticPoster:
 		return CacheBase, true
-	case VariantCard960, VariantCard1600, VariantAnimatedPreview, VariantVideoPlayback:
+	case VariantCard960, VariantCard1600, VariantLightbox4096, VariantAnimatedPreview, VariantVideoPlayback:
 		return CacheEnhanced, true
 	default:
 		return "", false

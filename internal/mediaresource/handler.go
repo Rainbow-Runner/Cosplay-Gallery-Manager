@@ -83,6 +83,10 @@ func (handler Handler) ServeHTTP(response http.ResponseWriter, request *http.Req
 		return
 	}
 	defer file.Close()
+	// Opening the authorized file proves a real cache hit. LRU bookkeeping is
+	// best-effort so a transient database write failure never breaks viewing.
+	_ = handler.Database.Derivatives().Touch(request.Context(), descriptor.ItemUUID, descriptor.Variant,
+		descriptor.ContentRevision, descriptor.ProfileHash, time.Now())
 	etag := `"` + descriptor.ItemUUID + "-r" + strconv.FormatInt(descriptor.ContentRevision, 10) + "-" + descriptor.ProfileHash + "-" + descriptor.Variant + `"`
 	response.Header().Set("ETag", etag)
 	response.Header().Set("Cache-Control", "private, max-age=31536000, immutable")

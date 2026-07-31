@@ -3,11 +3,15 @@ package productserver
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/stashapp/stash/internal/archivecheck"
 	"github.com/stashapp/stash/internal/build"
+	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/persistence/productdb"
+	"github.com/stashapp/stash/internal/processingworker"
+	"golang.org/x/sys/unix"
 )
 
 const dailyBackupTaskKey = "DAILY_BACKUP"
@@ -16,17 +20,60 @@ const automaticScanTaskKey = "AUTOMATIC_SCAN"
 func (s *Server) runSchedulerLoop(ctx context.Context) {
 	s.runDailyBackup(ctx, time.Now())
 	s.runAutomaticScan(ctx, time.Now())
-	ticker := time.NewTicker(time.Hour)
-	defer ticker.Stop()
+	s.runCacheMaintenance(ctx, time.Now())
+	hourly := time.NewTicker(time.Hour)
+	cacheTicker := time.NewTicker(time.Minute)
+	defer hourly.Stop()
+	defer cacheTicker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case now := <-ticker.C:
+		case now := <-hourly.C:
 			s.runDailyBackup(ctx, now)
 			s.runAutomaticScan(ctx, now)
+		case now := <-cacheTicker.C:
+			s.runCacheMaintenance(ctx, now)
 		}
 	}
+}
+
+func (s *Server) runCacheMaintenance(ctx context.Context, now time.Time) {
+	result, err := s.RunCacheMaintenanceOnce(ctx, now)
+	if err != nil {
+		if ctx.Err() == nil {
+			slog.Error("CGM_CACHE_MAINTENANCE_FAILED")
+		}
+		return
+	}
+	if result.Removed > 0 {
+		slog.Info("CGM_CACHE_MAINTENANCE_COMPLETED", "removed", result.Removed, "freed_bytes", result.FreedBytes)
+	}
+}
+
+// RunCacheMaintenanceOnce enforces the configured reclaimable cache limit.
+// It can delete only database-confirmed ENHANCED derivatives; user media and
+// permanent CARD_480/static-poster resources are outside its authority.
+func (s *Server) RunCacheMaintenanceOnce(ctx context.Context, now time.Time) (processingworker.CacheMaintenanceResult, error) {
+	settings, err := s.Database.Settings().Find(ctx)
+	if err != nil {
+		return processingworker.CacheMaintenanceResult{}, err
+	}
+	_, enhanced, err := s.Database.Derivatives().CacheTierBytes(ctx)
+	if err != nil {
+		return processingworker.CacheMaintenanceResult{}, err
+	}
+	var stat unix.Statfs_t
+	if err := unix.Statfs(s.Config.CachePath, &stat); err != nil {
+		return processingworker.CacheMaintenanceResult{}, err
+	}
+	available := int64(stat.Bavail) * int64(stat.Bsize)
+	total := int64(stat.Blocks) * int64(stat.Bsize)
+	return processingworker.MaintainEnhancedCache(ctx, s.Database, mediaprocessing.CacheWriter{Root: s.Config.CachePath}, mediaprocessing.CachePressure{
+		EnhancedBytes: enhanced, AvailableBytes: available, TotalBytes: total,
+		MaximumEnhancedBytes: settings.EnhancedCacheMaximumBytes, MinimumFreeBytes: settings.MinimumFreeBytes,
+		MinimumFreePercent: settings.MinimumFreePercent,
+	}, 10000, now)
 }
 
 func (s *Server) runAutomaticScan(ctx context.Context, now time.Time) {

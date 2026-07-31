@@ -30,8 +30,10 @@ describe("BrowseShell navigation", () => {
     expect(sidebar).not.toBeNull();
     expect(within(sidebar!).getByRole("link", { name: "Home" })).toHaveClass("active");
     expect(within(sidebar!).getByRole("link", { name: "History" })).toHaveAttribute("href", "/history");
-    expect(within(sidebar!).getByText("Galleries")).toBeInTheDocument();
-    expect(within(sidebar!).getByText("Library")).toBeInTheDocument();
+    expect(within(sidebar!).getByText("Cosplay")).toBeInTheDocument();
+    expect(within(sidebar!).getByText("Album")).toBeInTheDocument();
+    expect(within(sidebar!).getByRole("link", { name: "Parodies" })).toHaveAttribute("href", "/works");
+    expect(within(sidebar!).getByRole("link", { name: "Models" })).toHaveAttribute("href", "/models");
     expect(within(sidebar!).getByText("Explore")).toBeInTheDocument();
   });
 
@@ -40,7 +42,7 @@ describe("BrowseShell navigation", () => {
     const menu = screen.getByRole("button", { name: "Open navigation" });
     fireEvent.click(menu);
     const dialog = screen.getByRole("dialog", { name: "Primary navigation" });
-    fireEvent.click(within(dialog).getByRole("link", { name: "List" }));
+    fireEvent.click(within(dialog).getAllByRole("link", { name: "Lists" })[0]);
     expect(await screen.findByText("List content")).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "Primary navigation" })).not.toBeInTheDocument();
     expect(menu).toHaveFocus();

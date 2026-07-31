@@ -15,6 +15,7 @@ import (
 	"github.com/stashapp/stash/internal/build"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/portableid"
+	"github.com/stashapp/stash/internal/productapi"
 	"github.com/stashapp/stash/internal/productauth"
 )
 
@@ -43,6 +44,62 @@ type restorePathMappingDecision struct {
 	ExpectedRootPath string `json:"expected_root_path"`
 	RootPath         string `json:"root_path"`
 	Disable          bool   `json:"disable"`
+}
+
+// CacheStorageStatus reports the configured cache root and the logical size of
+// regular files currently stored beneath it. It never follows symbolic links.
+func (s *Server) CacheStorageStatus(ctx context.Context) (productapi.CacheStorageStatus, error) {
+	root, err := filepath.Abs(s.Config.CachePath)
+	if err != nil {
+		return productapi.CacheStorageStatus{}, err
+	}
+	root = filepath.Clean(root)
+	info, err := os.Lstat(root)
+	if err != nil {
+		return productapi.CacheStorageStatus{}, err
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return productapi.CacheStorageStatus{}, errors.New("cache root must be a real directory")
+	}
+	status := productapi.CacheStorageStatus{Path: root}
+	err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if path == root {
+			return nil
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			if entry.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		fileInfo, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if !fileInfo.Mode().IsRegular() {
+			return nil
+		}
+		status.ByteSize += fileInfo.Size()
+		status.FileCount++
+		return nil
+	})
+	if err != nil {
+		return productapi.CacheStorageStatus{}, err
+	}
+	status.BaseByteSize, status.EnhancedByteSize, err = s.Database.Derivatives().CacheTierBytes(ctx)
+	if err != nil {
+		return productapi.CacheStorageStatus{}, err
+	}
+	return status, nil
 }
 
 func (s *Server) CreateFullBackup(ctx context.Context) (productdb.BackupRecord, error) {

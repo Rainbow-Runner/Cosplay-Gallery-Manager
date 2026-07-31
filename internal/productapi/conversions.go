@@ -59,6 +59,10 @@ func resourceIdentity(value *browse.ResourceIdentity) *ResourceIdentity {
 		Variant: value.Variant, MimeType: value.MIMEType}
 }
 
+func onDemandResource(value browse.OnDemandResource) *OnDemandResource {
+	return &OnDemandResource{Status: ProcessingState(value.Status), Resource: resourceIdentity(value.Resource), ErrorCode: value.ErrorCode}
+}
+
 func entitySummary(value browse.EntitySummary) *EntitySummary {
 	return &EntitySummary{UUID: value.UUID, Name: value.Name}
 }

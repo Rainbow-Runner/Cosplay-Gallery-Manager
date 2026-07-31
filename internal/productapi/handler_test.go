@@ -257,6 +257,7 @@ func TestOperationsContractUsesServerServiceWithoutExposingRoots(t *testing.T) {
 	for _, body := range []string{
 		`{"query":"mutation { createFullBackup { id kind fileName byteSize databaseSchemaVersion } }"}`,
 		`{"query":"mutation { restoreBackup(backupID: \"018f4c8e-7a9b-7def-8123-456789abcdef\") { state restoreBackupID } }"}`,
+		`{"query":"query { manageCacheStorage { path byteSize fileCount } }"}`,
 	} {
 		request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
 		request.Header.Set("Content-Type", "application/json")
@@ -397,6 +398,10 @@ func (s fakeOperationsService) CreateFullBackup(context.Context) (productdb.Back
 
 func (s fakeOperationsService) RestoreBackup(context.Context, string) (productdb.MaintenanceState, error) {
 	return s.maintenance, nil
+}
+
+func (s fakeOperationsService) CacheStorageStatus(context.Context) (CacheStorageStatus, error) {
+	return CacheStorageStatus{Path: "/var/cache/cgm", ByteSize: 4096, FileCount: 2, BaseByteSize: 1024, EnhancedByteSize: 3072}, nil
 }
 
 func openTestDatabase(t *testing.T) *productdb.Database {

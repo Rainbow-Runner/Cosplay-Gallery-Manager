@@ -26,8 +26,8 @@ export const GALLERY_CARD_FIELDS = gql`
 
 export const BROWSE_GALLERIES = gql`
   ${GALLERY_CARD_FIELDS}
-  query BrowseGalleries($scope: BrowseScope!, $page: Int!, $sort: GallerySort!) {
-    browseGalleries(scope: $scope, page: $page, sort: $sort) {
+  query BrowseGalleries($scope: BrowseScope!, $page: Int!, $sort: GallerySort!, $collectionType: CollectionType) {
+    browseGalleries(scope: $scope, page: $page, sort: $sort, collectionType: $collectionType) {
       page pageSize totalItems totalPages
       items { ...GalleryCardFields }
     }
@@ -86,6 +86,24 @@ export const GALLERY_MEMBER_INDEX = gql`
   }
 `;
 
+export const ITEM_LIGHTBOX_STATUS = gql`
+  query ItemLightboxStatus($itemUUID: ID!) {
+    itemLightboxStatus(itemUUID: $itemUUID) {
+      status errorCode
+      resource { itemUUID contentRevision profileHash variant mimeType }
+    }
+  }
+`;
+
+export const REQUEST_ITEM_LIGHTBOX = gql`
+  mutation RequestItemLightbox($itemUUID: ID!) {
+    requestItemLightbox(itemUUID: $itemUUID) {
+      status errorCode
+      resource { itemUUID contentRevision profileHash variant mimeType }
+    }
+  }
+`;
+
 export const RELATED_GALLERIES = gql`
   ${GALLERY_CARD_FIELDS}
   query RelatedGalleries($setID: ID!) {
@@ -116,8 +134,8 @@ export const RANDOM_MEDIA = gql`
 `;
 
 export const ENTITY_INDEX = gql`
-  query EntityIndex($kind: SearchEntityKind!, $scope: BrowseScope!, $page: Int!, $sort: EntitySort!) {
-    entityIndex(kind: $kind, scope: $scope, page: $page, sort: $sort) {
+  query EntityIndex($kind: SearchEntityKind!, $scope: BrowseScope!, $page: Int!, $sort: EntitySort!, $collectionType: CollectionType, $query: String!) {
+    entityIndex(kind: $kind, scope: $scope, page: $page, sort: $sort, collectionType: $collectionType, query: $query) {
       page pageSize totalItems totalPages
       items { kind uuid slug name aliases avatarURL }
     }
@@ -139,8 +157,8 @@ export const SEARCH_PREVIEW = gql`
 
 export const COSER_DETAIL = gql`
   ${GALLERY_CARD_FIELDS}
-  query CoserDetail($slug: String!, $scope: BrowseScope!, $page: Int!) {
-    coserDetail(slug: $slug, scope: $scope, page: $page) {
+  query CoserDetail($slug: String!, $scope: BrowseScope!, $page: Int!, $collectionType: CollectionType) {
+    coserDetail(slug: $slug, scope: $scope, page: $page, collectionType: $collectionType) {
       entity { kind uuid slug name aliases avatarURL }
       profileSummary biography countryOrRegion bannerURL redirected
       socialAccounts { uuid platformKey label handle url status position }

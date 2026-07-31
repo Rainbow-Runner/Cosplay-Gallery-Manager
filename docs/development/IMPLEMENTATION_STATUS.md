@@ -2,17 +2,31 @@
 
 > 当前里程碑：1.5 本机业务迭代与可诊断性增强
 > 状态：进行中
-> 更新日期：2026-07-30
+> 更新日期：2026-08-01
 
 ## 已完成
 
+- 1.5（Cosplay/Album双分区）：Browse主侧栏按GalleryEpic参考结构重组为Cosplay（Lists/Cosers/Parodies/Magic）与Album（Lists/Models）；新增`/albums`、`/models`、`/model/:slug`，Characters退出主导航但旧路由继续保留。
+- 1.5（派生人物视图）：不新增Model实体，继续由GalleryCast是否存在推导COSPLAY/ALBUM并统一使用Coser UUID；Cosers只列出有可见COSPLAY的人物，Models只列出有可见ALBUM的人物，同一人物可同时出现于两边，卡片按类型进入对应详情路由。
+- 1.5（分区查询口径）：Cosplay Lists固定`COSPLAY + NON_ADULT`，Magic固定`COSPLAY + ADULT`；Album Lists与Models按确认方案展示全部分级ALBUM。Browse GraphQL新增向后兼容的可选`collectionType`，旧调用不传时保持原行为。
+- 1.5（GalleryEpic实体索引层级）：Coser/Model索引采用居中搜索、四列圆形头像文字行和数字分页；作品来源使用四列文字索引，Work详情先列Character，Character详情再列Gallery；Model详情采用Breadcrumb后直接显示Album网格。
+- 1.5（人物索引垂直对齐）：Cosplay/Coser与Album/Model列表固定为36px头像加主名称的单行Grid，不显示Alias；头像与名称中心线由浏览器几何回归约束在1px内，人物Alias搜索和其他实体索引的Alias展示保持不变。
+- 1.5（人物索引字型对齐）：根据GalleryEpic公开页实际类名和CSS，将Coser/Model名称精确收敛为14px字号、14px行高、500字重及8px头像间距；Playwright读取浏览器计算样式执行严格回归，通用实体索引不受影响。
+- 1.5（项目README产品化）：根README已从原Stash宣传与安装内容改写为CGM项目入口，准确记录Gallery业务闭环、功能/安全边界、Linux与Docker支持矩阵、构建/Setup步骤、数据保护、测试和文档导航，并保留Stash衍生归属与AGPL源码对应要求。
+- 1.5（按需Lightbox缓存）：`CARD_480`与静态Poster继续作为不可回收BASE，扫描不再预生成4096大图；首次打开静态图Lightbox/媒体详情时幂等排队`LIGHTBOX_4096`，页面先显示480图并轮询单Item状态，生成结果属于ENHANCED。
+- 1.5（缓存容量管理）：Manage → Settings显示缓存绝对路径、文件数/总量及BASE/可回收分层占用，并以GiB编辑可回收上限；后台每分钟按上限和磁盘余量执行真实访问时间LRU，只删除ENHANCED，回收后在下次查看时重建。
+- 1.5（缓存兼容迁移）：启动工作器前幂等地把已有`LIGHTBOX_4096`记录和任务Payload迁为ENHANCED，不立即删除文件；默认50 GiB上限不会使当前145.46 MiB大图缓存因部署自动消失。
+- 1.5（来源访问审计）：显式Gallery扫描完整读取来源并计算BLAKE3，普通静态图只预生成480；首次查看尚未缓存的大图会由后台任务读取来源，HTTP仍只服务CGM派生缓存且不直接暴露原图。
 - 1.5（Gallery卡片计数）：P/S/G/V媒体数量改为后置类型缩写并过滤零值，例如`100P`或`96P 4S 2V`；四类全为0时不渲染计数，既有后端计数口径和顺序不变。
 - 1.5（GalleryEpic视觉改造起步）：建立2026-07-30参考版本的浅色语义Token与208/256px侧栏、64px顶栏等冻结几何变量；新增原创内嵌SVG图标、原创CGM字标及首批Button/Input/Badge/Alert基础组件，Browse顶栏不再使用Unicode搜索、收藏、信息和设置符号。
-- 1.5（GalleryEpic BrowseShell）：Browse已迁移为浅色固定桌面侧栏、64px粘性品牌顶栏和1024px以下移动Drawer；原路由按Galleries/Library/Explore分组，保留Search、Manage、Legal、Favorites和History，Drawer支持遮罩/Escape关闭、焦点循环与菜单按钮焦点恢复。
+- 1.5（GalleryEpic BrowseShell）：Browse已迁移为浅色固定桌面侧栏、64px粘性品牌顶栏和1024px以下移动Drawer；主路由按Cosplay/Album分组，扩展功能保留在Explore与底部工具区，Drawer支持遮罩/Escape关闭、焦点循环与菜单按钮焦点恢复。
 - 1.5（Browse无障碍与视觉回归）：新增BrowseShell/Drawer/分页/Tab/DataTable组件测试；修复浅色迁移暴露的侧栏标题与Gallery facts低对比度，Chromium离线主流程axe A/AA、键盘、1440桌面与390移动截图回归通过。
 - 1.5（GalleryEpic UI-03～UI-05）：Gallery卡片完成Character/Work/Coser三层信息、头像组和封面右下零值过滤计数；Gallery详情完成Breadcrumb、小封面紧凑标题、Related右栏、4/3/2媒体网格及首尾不循环Lightbox；实体、搜索、时间线、随机、个人和媒体详情统一浅色高密度视觉。
 - 1.5（GalleryEpic UI-06～UI-07）：Manage及Setup、Login、Legal、Maintenance统一浅色Token与无衬线层级；恢复、Gallery删除、实体生命周期和Coser托管资源清理共用可聚焦Dialog，原确认词、密码、revision、Mutation和危险语义不变。
 - 1.5（GalleryEpic UI-08）：视觉回归阈值由1%收紧为0.2%，桌面Browse和390px Gallery详情基线已更新；离线完整业务流程、axe A/AA、键盘和焦点恢复回归通过。
+- 1.5（Gallery卡片Coser入口）：卡片中每个Coser头像与名称均可通过鼠标或键盘进入对应详情页；复用UUID入口到规范slug的既有重定向，不扩展DTO或增加查询；同名不同UUID不会被错误合并。
+- 1.5（Coser详情高保真复核）：按指定GalleryEpic Coser页冻结4:1 Banner、128/80px方形头像叠层、紧凑名称/社交行、36px控件和移动两列几何；增加Breadcrumb与无Banner中性占位，保留Country、Profile、Biography、社交链接、Scope和Timeline原语义。
+- 1.5（Coser Gallery数字分页）：多页作品集使用居中的Chevron和最多5个连续数字页码，当前页浅边框圆角高亮；点击更新现有`scope/page`并读取本机GraphQL，不改变24项分页、DTO、数据库或已确认的6/5/4/3/2列约束。
 - 1.5（开发日志）：启动配置新增`DEBUG/INFO/WARN/ERROR`日志级别；systemd journal可按稳定事件码、请求ID、端点类别、状态和耗时关联排查，默认不记录查询字符串、GraphQL变量、媒体路径或业务元数据。
 - 1.5（增量开发）：React开发服务器固定在loopback `3100`，通过同源代理复用`127.0.0.1:9999`后端、真实数据库和Session，可使用Vite HMR检查前端；后端继续采用单进程增量构建与用户服务重启，避免两个进程同时访问SQLite。
 - 1.5（扫描规则管理）：媒体库确定性扫描规则已补齐编辑和二次确认删除；可修改名称、类型、顺序、启用、自动建DRAFT、深度或RE2模板，类型切换会清空不适用字段。
@@ -128,7 +142,7 @@
 - 运维集成测试验证每日快照到期租约/保留、自动扫描opt-in、完整恢复、Session撤销、任务取消、安全备份注册、异机路径映射门槛、人工恢复，以及数据库交换后故障的自动回滚。
 - 完整备份损坏矩阵验证POSIX/Windows路径穿越、重复/大小写/NFC碰撞、保留名、符号链接、未知Entry、畸形JSON、缺项、无效SQLite产品身份、压缩炸弹和截断ZIP均在替换前拒绝。
 - Operations GraphQL测试验证备份/恢复由Server服务执行且响应不泄漏数据库或存储根。
-- React 19 TypeScript `--noEmit`通过；Vitest当前16个文件、37项测试全部通过。
+- React 19 TypeScript `--noEmit`通过；Vitest当前21个文件、49项测试全部通过。
 - Vite生产构建通过，共转换669个模块；当前主JS minify后、gzip前约472KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。
 - `cgm_web_embed`标签下的产品UI嵌入和Server回归测试通过；`make build-cgm`生成约24MiB单文件验证产物，深层SPA路由、哈希资源immutable缓存和旧UI依赖隔离均已验证。
 - 实体生命周期回归验证了按关系类型返回删除阻断、合并冲突时禁用提交、明确确认词、GraphQL预览/提交、永久Alias/Tombstone和管理审计。
@@ -137,7 +151,7 @@
 - Coser未引用资源回归验证了现用组排除、已替换/已删除分组、未知文件与符号链接跳过、引用变化后过期审阅拒绝、密码/确认词/同源门禁、选择性清理、Manifest保留和无路径审计。
 - BLAKE3依赖固定为`github.com/zeebo/blake3 v0.2.4`并记录模块校验和。
 - 用户来源能力审计未发现删除调用；应用删除仅限失败备份、缓存、临时文件等明确生成数据。
-- Chromium离线Playwright主流程通过，Setup/Browse/Gallery/Operations axe扫描无WCAG A/AA违规，桌面与390px移动截图在0.2%像素差异门禁下回归通过。
+- Chromium离线Playwright主流程通过，Setup/Browse/Gallery/Coser/Operations axe扫描无WCAG A/AA违规，桌面与390px移动截图在0.2%像素差异门禁下回归通过；Coser详情新增独立桌面/移动基线。
 - 真实媒体门禁通过：合成标准DNG由dcraw实际生成代理，动画GIF与FFmpeg生成MP4实际生成Poster，内容分类与扩展名无关。
 - 危险归档单元矩阵通过；完整备份损坏矩阵继续在替换前拒绝危险输入。
 - 固定`GOMAXPROCS=4`的百万Item性能门禁通过：最慢Gallery列表p95约493ms、时间线约477ms，均低于500ms；Tag未缓存约141ms、缓存约143ms，其他目标均通过。
@@ -147,6 +161,15 @@
 
 ## 本机实际业务应用测试部署（2026-07-27）
 
+- 2026-08-01 02:39 CST已增量部署Coser/Model人物名称14px/14px/500字型对齐修复，SHA-256为`5bbf3557bd3e56ed0eb3839797561f70336db2ebde4258e58ff457020d80ec55`；旧二进制备份于`/tmp/cgm-before-person-name-typography-20260801`，服务保持`enabled/active`且Health/Ready为204。
+- 当前入口引用`index-Dagulhjn.js`与`index-DUKMwGwd.css`；配置校验和与产品数据库inode部署前后不变。
+- 2026-08-01 02:26 CST已增量部署Coser/Model索引单行垂直对齐修复，SHA-256为`53bfdbc288f8e9aecd7f89167fab877234b3edc53e88f5c878e58ad4dfe3f041`；旧二进制备份于`/tmp/cgm-before-person-index-alignment-20260801`，服务保持`enabled/active`且Health/Ready为204。
+- 该阶段入口引用`index-B-wD7SgW.js`与`index-pRt2Qbb1.css`，人物索引块为`EntityIndexPage-ikuTtgbU.js`；配置校验和与产品数据库inode部署前后不变。
+- 2026-07-31 00:58 CST已增量部署Manage缓存位置/占用只读状态，SHA-256为`c1503fe9653617789e0e522a2dd122aaf4c5b146cf03392160275076e67d1007`；旧二进制备份于`/tmp/cgm-before-cache-status-20260731`，服务保持`enabled/active`且Health/Ready为204。
+- 2026-07-31 00:29 CST已增量部署Coser详情高保真与数字分页最终构建，SHA-256为`1aac8277d217cac3a5c5d7d0ab41970937a7802b26ee28f2555c069d17b5e2b0`；旧二进制备份于`/tmp/cgm-before-coser-detail-20260731`，服务保持`enabled/active`且Health/Ready为204。
+- 2026-08-01 01:54 CST已增量部署Cosplay/Album双分区与Model视图构建，SHA-256为`c1ffa2edc8f9086b8e6e160c1bd17c325dbe4db9b10dfb5b4be68ac482ef6a0b`；旧二进制备份于`/tmp/cgm-before-cosplay-album-20260801`，服务为`active`且Health/Ready为204。
+- 该阶段入口引用`index-DXmm-gQE.js`与`index-WDjoyUJX.css`；配置校验和与产品数据库inode部署前后不变。
+- 2026-07-30 23:56 CST已增量部署Gallery卡片Coser详情入口构建，SHA-256为`87e87d2128f1fd2d258d6ef2768b991c152c0c41adeb74643a536bb6912c99ce`；旧二进制备份于`/tmp/cgm-before-coser-card-links-20260730`，服务保持`enabled/active`且Health/Ready为204。
 - 2026-07-30 02:40 CST已增量部署UI-03～UI-08完成后的`1.5.0-dev (local)`单文件构建，SHA-256为`38af89d5afe479a6f38d88d3a08735b68a03044c5648cf5a00f28a79e089dded`；旧二进制备份于`/tmp/cgm-before-galleryepic-ui-20260730`。
 - 用户服务保持`enabled/active`，Health/Ready为204，Root/Legal为200；入口HTML已确认引用本轮GalleryCard、GalleryDetail和Patterns哈希资源。
 - 配置校验和和产品数据库inode部署前后不变；没有替换数据库、配置、媒体库、缓存或Manifest。运行中的SQLite文件大小变化属于服务重启后的正常写入/检查点。

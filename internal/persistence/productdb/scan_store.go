@@ -332,21 +332,12 @@ func enqueueScanProcessingJobs(ctx context.Context, tx *sql.Tx, galleryID int64,
 			tier    mediaprocessing.CacheTier
 		}{
 			{mediaprocessing.VariantCard480, mediaprocessing.CacheBase},
-			{mediaprocessing.VariantLightbox4096, mediaprocessing.CacheBase},
 		}
 		if item.kind == gallery.MediaKindAnimatedImage || item.kind == gallery.MediaKindVideo {
 			plans = []struct {
 				variant string
 				tier    mediaprocessing.CacheTier
 			}{{mediaprocessing.VariantStaticPoster, mediaprocessing.CacheBase}}
-		} else if item.format == gallery.ContentFormatRAW {
-			plans = []struct {
-				variant string
-				tier    mediaprocessing.CacheTier
-			}{
-				{mediaprocessing.VariantLightbox4096, mediaprocessing.CacheBase},
-				{mediaprocessing.VariantCard480, mediaprocessing.CacheBase},
-			}
 		}
 		for _, plan := range plans {
 			key := ItemDerivativeJobKey(item.uuid, plan.variant, item.revision, profileHash)

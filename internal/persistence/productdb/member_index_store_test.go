@@ -25,8 +25,12 @@ func TestGalleryMemberIndexIsCompleteGroupedPathFreeAndKeepsPending(t *testing.T
 		gallery.AvailabilityMissing, gallery.ProcessingError, 3072, now)
 	profile := mediaprocessing.DefaultProfileHash()
 	for _, variant := range []string{mediaprocessing.VariantCard480, mediaprocessing.VariantLightbox4096} {
+		tier := mediaprocessing.CacheBase
+		if variant == mediaprocessing.VariantLightbox4096 {
+			tier = mediaprocessing.CacheEnhanced
+		}
 		if _, err := db.Derivatives().Publish(ctx, PublishDerivativeInput{ItemUUID: photo.UUID, Variant: variant,
-			CacheTier: mediaprocessing.CacheBase, ContentRevision: photo.ContentRevision, ProfileHash: profile,
+			CacheTier: tier, ContentRevision: photo.ContentRevision, ProfileHash: profile,
 			CacheRelativePath: "members/" + variant + ".jpg", MIMEType: "image/jpeg", ByteSize: 10}, now); err != nil {
 			t.Fatal(err)
 		}

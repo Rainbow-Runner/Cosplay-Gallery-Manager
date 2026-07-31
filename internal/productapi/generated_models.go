@@ -238,6 +238,14 @@ type ManageBackupRecord struct {
 	LastErrorCode          string  `json:"lastErrorCode"`
 }
 
+type ManageCacheStorage struct {
+	Path             string `json:"path"`
+	ByteSize         int64  `json:"byteSize"`
+	FileCount        int64  `json:"fileCount"`
+	BaseByteSize     int64  `json:"baseByteSize"`
+	EnhancedByteSize int64  `json:"enhancedByteSize"`
+}
+
 type ManageCandidate struct {
 	ID              int64               `json:"id"`
 	RootPath        string              `json:"rootPath"`
@@ -607,6 +615,12 @@ type MediaPage struct {
 }
 
 type Mutation struct {
+}
+
+type OnDemandResource struct {
+	Status    ProcessingState   `json:"status"`
+	Resource  *ResourceIdentity `json:"resource,omitempty"`
+	ErrorCode string            `json:"errorCode"`
 }
 
 type PersonalStateResult struct {

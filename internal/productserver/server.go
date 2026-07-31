@@ -182,6 +182,9 @@ func (s *Server) RunWorkers(ctx context.Context) error {
 	if state.Mode != productdb.MaintenanceNormal {
 		return nil
 	}
+	if err := s.Database.Derivatives().AdoptOnDemandLightboxPolicy(ctx); err != nil {
+		return err
+	}
 	return s.startWorkers(ctx)
 }
 

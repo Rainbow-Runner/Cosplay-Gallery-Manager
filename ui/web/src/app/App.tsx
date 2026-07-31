@@ -12,6 +12,7 @@ const GalleryIndexPage = lazy(() => import("../browse/GalleryIndexPage").then((m
 const EntityIndexPage = lazy(() => import("../browse/EntityIndexPage").then((module) => ({ default: module.EntityIndexPage })));
 const CharacterDetailPage = lazy(() => import("../browse/EntityDetailPages").then((module) => ({ default: module.CharacterDetailPage })));
 const CoserDetailPage = lazy(() => import("../browse/EntityDetailPages").then((module) => ({ default: module.CoserDetailPage })));
+const ModelDetailPage = lazy(() => import("../browse/EntityDetailPages").then((module) => ({ default: module.ModelDetailPage })));
 const CoserTimelinePage = lazy(() => import("../browse/EntityDetailPages").then((module) => ({ default: module.CoserTimelinePage })));
 const TagDetailPage = lazy(() => import("../browse/EntityDetailPages").then((module) => ({ default: module.TagDetailPage })));
 const WorkDetailPage = lazy(() => import("../browse/EntityDetailPages").then((module) => ({ default: module.WorkDetailPage })));
@@ -52,13 +53,16 @@ export function AppRoutes() {
         <Route path="/maintenance" element={<MaintenancePage />} />
         <Route element={<BrowseShell />}>
           <Route index element={<GalleryIndexPage home />} />
-          <Route path="list" element={<GalleryIndexPage scope="LIST" />} />
-          <Route path="magic" element={<GalleryIndexPage scope="MAGIC" />} />
+          <Route path="list" element={<GalleryIndexPage scope="LIST" collectionType="COSPLAY" titleID="page.list" />} />
+          <Route path="magic" element={<GalleryIndexPage scope="MAGIC" collectionType="COSPLAY" titleID="page.magic" />} />
+          <Route path="albums" element={<GalleryIndexPage scope="ALL" collectionType="ALBUM" titleID="page.albums" />} />
           <Route path="gallery/:slug" element={<GalleryDetailPage />} />
-          <Route path="cosers" element={<EntityIndexPage kind="COSER" titleID="page.cosers" />} />
+          <Route path="cosers" element={<EntityIndexPage kind="COSER" titleID="page.cosers" collectionType="COSPLAY" routeName="coser" fixedScope="ALL" searchable />} />
           <Route path="coser/:slug" element={<CoserDetailPage />} />
           <Route path="coser/:slug/timeline" element={<CoserTimelinePage />} />
-          <Route path="works" element={<EntityIndexPage kind="WORK" titleID="page.works" />} />
+          <Route path="models" element={<EntityIndexPage kind="COSER" titleID="page.models" collectionType="ALBUM" routeName="model" fixedScope="ALL" searchable />} />
+          <Route path="model/:slug" element={<ModelDetailPage />} />
+          <Route path="works" element={<EntityIndexPage kind="WORK" titleID="page.works" collectionType="COSPLAY" fixedScope="ALL" />} />
           <Route path="work/:slug" element={<WorkDetailPage />} />
           <Route path="characters" element={<EntityIndexPage kind="CHARACTER" titleID="page.characters" />} />
           <Route path="character/:slug" element={<CharacterDetailPage />} />

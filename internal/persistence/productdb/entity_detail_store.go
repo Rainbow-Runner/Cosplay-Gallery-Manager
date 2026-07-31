@@ -10,6 +10,10 @@ import (
 )
 
 func (s *BrowseStore) CoserDetail(ctx context.Context, value string, scope browse.Scope, page int) (browse.CoserDetail, error) {
+	return s.CoserDetailByCollection(ctx, value, scope, page, "")
+}
+
+func (s *BrowseStore) CoserDetailByCollection(ctx context.Context, value string, scope browse.Scope, page int, collectionType browse.CollectionType) (browse.CoserDetail, error) {
 	uuid, redirected, err := s.resolveEntityRoute(ctx, portableid.KindCoser, value)
 	if err != nil {
 		return browse.CoserDetail{}, err
@@ -47,8 +51,12 @@ func (s *BrowseStore) CoserDetail(ctx context.Context, value string, scope brows
 	if err := rows.Close(); err != nil {
 		return browse.CoserDetail{}, err
 	}
+	collectionSQL, err := browseCollectionPredicate(collectionType)
+	if err != nil {
+		return browse.CoserDetail{}, err
+	}
 	result.Galleries, err = s.galleryPage(ctx, scope, page, browse.GallerySortRecentlyAdded,
-		` AND EXISTS(SELECT 1 FROM gallery_credits detail_credit WHERE detail_credit.gallery_id=gallery.id AND detail_credit.coser_uuid=?)`, []any{uuid}, "")
+		` AND EXISTS(SELECT 1 FROM gallery_credits detail_credit WHERE detail_credit.gallery_id=gallery.id AND detail_credit.coser_uuid=?)`+collectionSQL, []any{uuid}, "")
 	return result, err
 }
 

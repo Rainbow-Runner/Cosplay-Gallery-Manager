@@ -121,6 +121,58 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
   if (browserName === "chromium") {
     await expect(page).toHaveScreenshot("browse-desktop.png", { fullPage: true });
   }
+
+  await page.goto("/list");
+  await expect(page.getByRole("link", { name: "Offline E2E Gallery" })).toHaveCount(0);
+  await page.goto("/magic");
+  await expect(page.getByRole("link", { name: "Offline E2E Gallery" })).toHaveCount(0);
+  await page.goto("/albums");
+  await expect(page.getByRole("link", { name: "Offline E2E Gallery" }).last()).toBeVisible();
+  await page.goto("/cosers");
+  await expect(page.getByRole("link", { name: "Offline E2E Coser" })).toHaveCount(0);
+  await page.goto("/models");
+  const modelIndexLink = page.getByRole("link", { name: "Offline E2E Coser" });
+  await expect(modelIndexLink).toHaveAttribute("href", /^\/model\/.+/);
+  const avatarBox = await modelIndexLink.locator(".entity-index__avatar").boundingBox();
+  const nameBox = await modelIndexLink.locator("strong").boundingBox();
+  const nameStyle = await modelIndexLink.locator("strong").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { fontSize: style.fontSize, fontWeight: style.fontWeight, lineHeight: style.lineHeight };
+  });
+  expect(avatarBox).not.toBeNull();
+  expect(nameBox).not.toBeNull();
+  expect(Math.abs((avatarBox!.y + avatarBox!.height / 2) - (nameBox!.y + nameBox!.height / 2))).toBeLessThan(1);
+  expect(nameStyle).toEqual({ fontSize: "14px", fontWeight: "500", lineHeight: "14px" });
+  await page.goto("/");
+  const modelLink = page.getByRole("link", { name: "Offline E2E Coser" });
+  await expect(modelLink).toHaveAttribute("href", /^\/model\/.+/);
+  const modelPath = await modelLink.getAttribute("href");
+  await modelLink.click();
+  await expect(page).toHaveURL(/\/model\/.+/);
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toContainText("Offline E2E Coser");
+  await expectAccessible(page);
+  if (browserName === "chromium") {
+    await expect(page).toHaveScreenshot("model-detail-desktop.png", { fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page).toHaveScreenshot("model-detail-mobile.png");
+    await page.setViewportSize({ width: 1280, height: 720 });
+  }
+
+  await page.goto(modelPath!.replace("/model/", "/coser/"));
+  await expect(page.getByRole("heading", { name: "Offline E2E Coser" })).toBeVisible();
+  await expectAccessible(page);
+  if (browserName === "chromium") {
+    await expect(page).toHaveScreenshot("coser-detail-desktop.png", { fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+      for (const element of document.querySelectorAll<HTMLElement>("*")) element.scrollTop = 0;
+    });
+    await expect(page.locator(".browse-topbar")).toBeInViewport();
+    await expect(page).toHaveScreenshot("coser-detail-mobile.png");
+    await page.setViewportSize({ width: 1280, height: 720 });
+  }
+  await page.goto("/");
   await galleryLink.click();
   await expect(page.getByRole("heading", { name: "Offline E2E Gallery" })).toBeVisible();
   await expect(page.getByText("3", { exact: true }).first()).toBeVisible();

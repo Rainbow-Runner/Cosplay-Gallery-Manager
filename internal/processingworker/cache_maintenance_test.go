@@ -98,8 +98,8 @@ func TestMaintainEnhancedCacheNeverEvictsBaseResources(t *testing.T) {
 	if _, err := db.Derivatives().Current(ctx, item.UUID, mediaprocessing.VariantCard960, now); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("evicted derivative still current: %v", err)
 	}
-	requeued, err := db.ProcessingJobs().FindByKey(ctx, key)
-	if err != nil || requeued.Status != mediaprocessing.JobPending {
-		t.Fatalf("requeued job = %#v, %v", requeued, err)
+	retained, err := db.ProcessingJobs().FindByKey(ctx, key)
+	if err != nil || retained.Status != mediaprocessing.JobCompleted {
+		t.Fatalf("retained job = %#v, %v", retained, err)
 	}
 }

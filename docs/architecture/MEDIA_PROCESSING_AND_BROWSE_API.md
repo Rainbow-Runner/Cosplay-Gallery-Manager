@@ -4,7 +4,8 @@
 
 - 扫描事务只发现和对账，派生资源进入SQLite持久化租约队列。
 - 任务身份包含`item_uuid`、内容revision、variant和媒体处理profile；重复投递幂等，内容替换硬失效旧资源并取消旧任务。
-- `CARD_480`、`LIGHTBOX_4096`和`STATIC_POSTER`固定属于不可被LRU淘汰的BASE层；更高卡片尺寸、动画预览和播放代理属于ENHANCED层。
+- `CARD_480`和`STATIC_POSTER`固定属于不可被LRU淘汰的BASE层；`LIGHTBOX_4096`、更高卡片尺寸、动画预览和播放代理属于可重建、受容量上限约束的ENHANCED层。
+- 扫描只预生成BASE资源。Browse首次打开静态图Lightbox或媒体详情时，通过路径无关且幂等的GraphQL请求排队`LIGHTBOX_4096`；前端先显示`CARD_480`并轮询单Item状态，发布后无刷新切换大图。
 - 新profile成功发布前继续服务旧profile；发布在数据库事务中切换current，缓存文件使用同目录临时文件、fsync和原子rename。
 - 缓存读取和删除拒绝绝对路径、路径穿越、符号链接及特殊文件。应用只能删除自身生成的缓存。
 
@@ -28,6 +29,7 @@
 - AccessResolver负责把Session转换为Browse或Manage能力；未认证返回401，不可见、跨scope和未知资源统一返回404。
 - Browse校验ACTIVE、LIST/MAGIC/ALL、Hidden、来源可访问、OVER_LIMIT、阻断Issue、成员AVAILABLE且未排除。
 - 资源支持GET/HEAD、Range、ETag、私有不可变缓存和`nosniff`，响应中不包含物理路径。
+- 成功打开派生资源会刷新数据库`last_accessed_at_utc`；后台每分钟按设置的ENHANCED上限和磁盘余量执行LRU，只删除数据库确认的可回收派生文件。回收不立即重排任务，下次显式查看才重新生成。
 
 ## 5. Browse白名单DTO
 

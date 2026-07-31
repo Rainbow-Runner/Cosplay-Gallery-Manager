@@ -278,6 +278,14 @@ type MediaDetail struct {
 	MetadataRevision int64
 }
 
+// OnDemandResource reports the lifecycle of an optional generated Browse
+// resource without exposing a source or cache path.
+type OnDemandResource struct {
+	Status    gallery.ProcessingState
+	Resource  *ResourceIdentity
+	ErrorCode string
+}
+
 type MediaPage struct {
 	Items      []RandomMediaItem
 	Page       int

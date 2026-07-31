@@ -72,6 +72,15 @@ func (r *mutationResolver) RecordGalleryView(ctx context.Context, setID string, 
 	return true, nil
 }
 
+// RequestItemLightbox is the resolver for the requestItemLightbox field.
+func (r *mutationResolver) RequestItemLightbox(ctx context.Context, itemUUID string) (*OnDemandResource, error) {
+	value, err := r.Database.Browse().RequestLightbox(ctx, itemUUID, time.Now())
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return onDemandResource(value), nil
+}
+
 // UpdateGalleryMetadata is the resolver for the updateGalleryMetadata field.
 func (r *mutationResolver) UpdateGalleryMetadata(ctx context.Context, setID string, expectedMetadataRevision int64, input UpdateGalleryMetadataInput) (*ManageGalleryDetail, error) {
 	id, err := r.Database.Manage().GalleryID(ctx, setID)
@@ -768,8 +777,12 @@ func (r *queryResolver) HomeGalleries(ctx context.Context, page int) (*HomeGalle
 }
 
 // BrowseGalleries is the resolver for the browseGalleries field.
-func (r *queryResolver) BrowseGalleries(ctx context.Context, scope BrowseScope, page int, sort GallerySort) (*GalleryPage, error) {
-	value, err := r.Database.Browse().Galleries(ctx, browse.Scope(scope), page, browse.GallerySort(sort))
+func (r *queryResolver) BrowseGalleries(ctx context.Context, scope BrowseScope, page int, sort GallerySort, collectionType *CollectionType) (*GalleryPage, error) {
+	collection := browse.CollectionType("")
+	if collectionType != nil {
+		collection = browse.CollectionType(*collectionType)
+	}
+	value, err := r.Database.Browse().GalleriesByCollection(ctx, browse.Scope(scope), page, browse.GallerySort(sort), collection)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -834,8 +847,12 @@ func (r *queryResolver) RandomMedia(ctx context.Context, scope BrowseScope, filt
 }
 
 // EntityIndex is the resolver for the entityIndex field.
-func (r *queryResolver) EntityIndex(ctx context.Context, kind SearchEntityKind, scope BrowseScope, page int, sort EntitySort) (*EntityPage, error) {
-	value, err := r.Database.Browse().EntityIndex(ctx, browse.SearchEntityKind(kind), browse.Scope(scope), page, browse.EntitySort(sort))
+func (r *queryResolver) EntityIndex(ctx context.Context, kind SearchEntityKind, scope BrowseScope, page int, sort EntitySort, collectionType *CollectionType, query string) (*EntityPage, error) {
+	collection := browse.CollectionType("")
+	if collectionType != nil {
+		collection = browse.CollectionType(*collectionType)
+	}
+	value, err := r.Database.Browse().EntityIndexFiltered(ctx, browse.SearchEntityKind(kind), browse.Scope(scope), page, browse.EntitySort(sort), collection, query)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -852,8 +869,12 @@ func (r *queryResolver) SearchPreview(ctx context.Context, query string, scope B
 }
 
 // CoserDetail is the resolver for the coserDetail field.
-func (r *queryResolver) CoserDetail(ctx context.Context, slug string, scope BrowseScope, page int) (*CoserDetail, error) {
-	value, err := r.Database.Browse().CoserDetail(ctx, slug, browse.Scope(scope), page)
+func (r *queryResolver) CoserDetail(ctx context.Context, slug string, scope BrowseScope, page int, collectionType *CollectionType) (*CoserDetail, error) {
+	collection := browse.CollectionType("")
+	if collectionType != nil {
+		collection = browse.CollectionType(*collectionType)
+	}
+	value, err := r.Database.Browse().CoserDetailByCollection(ctx, slug, browse.Scope(scope), page, collection)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -894,6 +915,15 @@ func (r *queryResolver) MediaDetail(ctx context.Context, itemUUID string) (*Medi
 		return nil, publicError(err)
 	}
 	return &MediaDetail{Item: galleryMemberModel(value.Item), DisplayResource: resourceIdentity(value.DisplayResource), Gallery: galleryCard(value.Gallery), MetadataRevision: value.MetadataRevision}, nil
+}
+
+// ItemLightboxStatus is the resolver for the itemLightboxStatus field.
+func (r *queryResolver) ItemLightboxStatus(ctx context.Context, itemUUID string) (*OnDemandResource, error) {
+	value, err := r.Database.Browse().LightboxStatus(ctx, itemUUID)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return onDemandResource(value), nil
 }
 
 // FavoriteGalleries is the resolver for the favoriteGalleries field.
@@ -1000,6 +1030,19 @@ func (r *queryResolver) ManageRuntimeSettings(ctx context.Context) (*ManageRunti
 		return nil, manageError(err)
 	}
 	return manageRuntimeSettings(value), nil
+}
+
+// ManageCacheStorage is the resolver for the manageCacheStorage field.
+func (r *queryResolver) ManageCacheStorage(ctx context.Context) (*ManageCacheStorage, error) {
+	if r.Operations == nil {
+		return nil, manageError(errors.New("cache storage status is unavailable"))
+	}
+	status, err := r.Operations.CacheStorageStatus(ctx)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	return &ManageCacheStorage{Path: status.Path, ByteSize: status.ByteSize, FileCount: status.FileCount,
+		BaseByteSize: status.BaseByteSize, EnhancedByteSize: status.EnhancedByteSize}, nil
 }
 
 // ManageProcessingJobs is the resolver for the manageProcessingJobs field.

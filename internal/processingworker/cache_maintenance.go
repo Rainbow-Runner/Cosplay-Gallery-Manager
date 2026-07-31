@@ -17,7 +17,7 @@ type CacheMaintenanceResult struct {
 
 // MaintainEnhancedCache deletes only database-confirmed ENHANCED derivatives.
 // BASE resources and all user media sources are outside this operation.
-func MaintainEnhancedCache(ctx context.Context, db *productdb.Database, cache mediaprocessing.CacheWriter, pressure mediaprocessing.CachePressure, limit int, now time.Time) (CacheMaintenanceResult, error) {
+func MaintainEnhancedCache(ctx context.Context, db *productdb.Database, cache mediaprocessing.CacheWriter, pressure mediaprocessing.CachePressure, limit int, _ time.Time) (CacheMaintenanceResult, error) {
 	plan := mediaprocessing.PlanCacheCleanup(pressure)
 	result := CacheMaintenanceResult{PlannedBytes: plan.BytesToFree, PauseNewProcessing: plan.PauseNewProcessing}
 	if plan.BytesToFree <= 0 {
@@ -31,13 +31,10 @@ func MaintainEnhancedCache(ctx context.Context, db *productdb.Database, cache me
 		if err := db.Derivatives().ForgetGenerated(ctx, candidate.ID); err != nil {
 			return result, err
 		}
-		key := productdb.ItemDerivativeJobKey(candidate.ItemUUID, candidate.Variant, candidate.ContentRevision, candidate.ProfileHash)
-		if _, err := db.ProcessingJobs().Requeue(ctx, key, 50, now); err != nil {
-			return result, err
-		}
 		// The database stops serving the derivative before bytes are removed.
 		// A deletion failure therefore leaves only an unreachable generated
-		// orphan, never a database pointer to a missing cache file.
+		// orphan, never a database pointer to a missing cache file. Its terminal
+		// job deliberately stays terminal until a later on-demand request requeues it.
 		if err := cache.RemoveEnhanced(candidate.CacheRelativePath); err != nil {
 			return result, err
 		}

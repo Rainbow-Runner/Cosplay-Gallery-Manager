@@ -93,6 +93,14 @@ func TestBrowseGalleryCardScopeCountsRelationsAndOpaqueCover(t *testing.T) {
 	if err != nil || all.TotalItems != 2 || all.Items[0].SetID != magic.SetID {
 		t.Fatalf("ALL page = %#v, %v", all, err)
 	}
+	cosplay, err := db.Browse().GalleriesByCollection(ctx, browse.ScopeAll, 1, browse.GallerySortRecentlyAdded, browse.CollectionCosplay)
+	if err != nil || cosplay.TotalItems != 1 || cosplay.Items[0].SetID != cardGallery.SetID {
+		t.Fatalf("COSPLAY page = %#v, %v", cosplay, err)
+	}
+	album, err := db.Browse().GalleriesByCollection(ctx, browse.ScopeAll, 1, browse.GallerySortRecentlyAdded, browse.CollectionAlbum)
+	if err != nil || album.TotalItems != 1 || album.Items[0].SetID != magic.SetID {
+		t.Fatalf("ALBUM page = %#v, %v", album, err)
+	}
 }
 
 func TestTimelineNormalizesMonthPrecisionSkipsUnknownAndFiltersCoser(t *testing.T) {

@@ -1,5 +1,6 @@
 export type Scope = "LIST" | "MAGIC" | "ALL";
 export type ContentRating = "NON_ADULT" | "ADULT";
+export type CollectionType = "COSPLAY" | "ALBUM";
 
 export interface ResourceIdentity {
   itemUUID: string;
@@ -18,7 +19,7 @@ export interface BrowseGalleryCard {
   setID: string;
   slug: string;
   title: string;
-  collectionType: "COSPLAY" | "ALBUM";
+  collectionType: CollectionType;
   contentRating: ContentRating;
   cover: {
     kind: string;
@@ -97,6 +98,12 @@ export interface GalleryMemberIndex {
   metadataRevision: number;
   scanRevision: number;
   items: GalleryMember[];
+}
+
+export interface OnDemandResource {
+  status: GalleryMember["processingState"];
+  resource?: ResourceIdentity | null;
+  errorCode: string;
 }
 
 export type SearchEntityKind = "GALLERY" | "COSER" | "WORK" | "CHARACTER" | "TAG";

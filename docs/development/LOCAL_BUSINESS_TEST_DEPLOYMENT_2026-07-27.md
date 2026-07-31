@@ -2,11 +2,11 @@
 
 ## 1.5 增量开发状态
 
-- 2026-07-30 02:40 CST已将本机用户服务增量升级为UI-03～UI-08完成后的`1.5.0-dev`开发构建。
-- 当前二进制SHA-256：`38af89d5afe479a6f38d88d3a08735b68a03044c5648cf5a00f28a79e089dded`。
-- 替换前二进制保存在`/tmp/cgm-before-galleryepic-ui-20260730`，SHA-256为`e10dacab3fc167dc536bde86fa733507c3de2532319f1fb05d1e34fa644c15cb`。
-- 部署后用户服务保持`enabled/active`；`/healthz`和`/readyz`为204，首页与Legal为200，`/about.json`报告`buildTime=2026-07-30`、`gitHash=local`、`exactSourceAvailable=false`。
-- 首页已核对实际引用本轮`index-DMxPCGgd.js`、`index-De7_OG72.css`、GalleryCard、GalleryDetail和Patterns哈希Chunk；浏览器若保留旧页面，只需正常刷新以取得新的入口HTML。
+- 2026-08-01 02:39 CST已将本机用户服务增量升级为包含Coser/Model人物名称字型对齐修复的`1.5.0-dev`开发构建。
+- 当前二进制SHA-256：`5bbf3557bd3e56ed0eb3839797561f70336db2ebde4258e58ff457020d80ec55`。
+- 替换前二进制保存在`/tmp/cgm-before-person-name-typography-20260801`，SHA-256为`53bfdbc288f8e9aecd7f89167fab877234b3edc53e88f5c878e58ad4dfe3f041`。
+- 部署后用户服务保持`enabled/active`；`/healthz`和`/readyz`为204，`/about.json`报告`buildTime=2026-08-01`、`gitHash=local`、`exactSourceAvailable=false`。
+- 首页已核对实际引用本轮`index-Dagulhjn.js`和`index-DUKMwGwd.css`。浏览器若保留旧页面，只需正常刷新以取得新的入口HTML。
 - 配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库inode仍为`19679716`；本次部署没有替换配置、数据库、媒体库、缓存或Manifest。
 - 本构建来自包含尚未提交1.5修改的本地工作树，因此`/about.json`正确报告`exactSourceAvailable=false`，不能作为正式发行源码对应证明。
 - 启动配置已加入`"log_level": "DEBUG"`；journal可查看结构化请求、管理操作和工作器事件。日志不记录GraphQL变量、搜索词、媒体路径或业务元数据。
@@ -16,7 +16,13 @@
 - Gallery与核心实体详情始终从本机CGM GraphQL后端读取最新值；保存关系后再次主动读取，避免Apollo内存缓存让已保存Credit/Cast看似丢失。该行为不访问互联网。
 - Character必须选择Primary Work后才能创建；Gallery空关系行、非法外部URL、无效媒体库/扫描规则/运行时设置等同类输入均在前端禁用提交。
 - Browse、Gallery详情、实体/搜索/个人页面、Manage和系统页面已迁移到GalleryEpic参考几何的浅色设计系统；Gallery媒体计数只显示非零类型，详情媒体网格为4/3/2列，Lightbox首尾不循环。
-- Chromium离线完整业务流程、axe A/AA、键盘焦点以及1440桌面/390移动截图在0.2%视觉差异门禁下通过；Firefox/WebKit、真实移动设备、读屏和200%缩放仍需目标环境人工验收。
+- Gallery卡片中的每个Coser头像和名称均可点击或通过键盘进入对应Coser详情；部署入口为`index-DIaGmrZF.js`，GalleryCard Chunk为`GalleryCard-BmxDwNEF.js`。
+- Coser详情已按指定GalleryEpic页面复核为4:1 Banner、方形头像叠层、紧凑社交行和36px控件；多页作品集显示居中数字分页并保留`scope/page`URL。当前入口为`index-DQfwh2rp.js`，样式为`index-DpMxJ2Aj.css`，详情块为`EntityDetailPages-EWnHhW4q.js`。
+- Browse侧栏现在按Cosplay（作品集/Coser/作品来源/Magic）与Album（作品集/Model）分区；Cosplay Lists和Magic分别只显示非成人/成人COSPLAY，Album与Model展示全部分级ALBUM。同一人物仍共享一个Coser UUID，可依据实际作品类型同时出现在Coser与Model视图。
+- Coser/Model人物索引只显示主名称，不显示Alias；36px头像与名称固定在同一Grid行并垂直居中。名称按参考站使用14px字号、14px行高、500字重和8px头像间距；Alias仍可用于搜索，Work、Character等其他实体索引的Alias展示不变。
+- 新增`/albums`、`/models`和`/model/:slug`；Album卡片人物入口进入Model详情。作品来源页先显示Work文字索引，Work详情显示Character，Character详情再显示Gallery。
+- Manage → Settings现在只读显示实际缓存绝对路径、逻辑占用和文件数；不提供修改、迁移、清理或重建操作。当前部署入口为`index-CPpPzbO_.js`，样式为`index-DZkfDa2M.css`，Settings块为`ManageSettingsPage-D4q1vbqz.js`。
+- Chromium离线完整业务流程、Album/Cosplay隔离、Models归属、axe A/AA、键盘焦点以及桌面/390px Model与Coser截图在0.2%视觉差异门禁下通过；Firefox/WebKit、真实移动设备、读屏和200%缩放仍需目标环境人工验收。
 - `make web-ui-start`可在`127.0.0.1:3100`启动Vite HMR并同源代理当前9999后端。已验证首页与`/session/status`代理均返回200；开发服务器验证后已停止。
 - 详细实现、测试和回退记录见[V1_5_DEVELOPMENT_LOG.md](./V1_5_DEVELOPMENT_LOG.md)。
 
@@ -83,6 +89,13 @@ curl -fsS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9999/readyz
 预期状态码为 `204`。补齐后再用真实 MP4 样本完成 Poster、Range 播放和必要代理验收。
 
 ## 日常操作
+
+Manage → Settings中的`Generated cache`显示实际缓存位置、总量、永久BASE和可回收ENHANCED占用。
+`Reclaimable cache limit (GiB)`可设置按需Lightbox等可重建缓存的上限；保存后后台最多约一分钟内
+执行LRU。`CARD_480`与静态Poster不会被该上限删除，缓存位置仍只能通过部署配置设置。
+
+首次打开尚未生成大图的静态媒体时，页面会先显示480代理并提示正在准备全尺寸视图；后台只读
+访问该来源媒体生成4096代理，完成后自动切换。回收后的大图在下次打开时按相同流程重建。
 
 ```bash
 systemctl --user status cosplay-gallery-manager.service

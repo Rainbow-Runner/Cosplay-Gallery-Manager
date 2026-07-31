@@ -16,14 +16,16 @@ interface Props {
   scrubberEnabled: boolean;
   favoriteControlVisible?: boolean;
   ratingSummaryVisible?: boolean;
+  peopleVisible?: boolean;
 }
 
-export function GalleryCard({ card, scrubberEnabled, favoriteControlVisible = true, ratingSummaryVisible = true }: Props) {
+export function GalleryCard({ card, scrubberEnabled, favoriteControlVisible = true, ratingSummaryVisible = true, peopleVisible = true }: Props) {
   const coverURL = itemResourceURL(card.cover.resource);
   const previewURL = useCallback((ordinal: number) => galleryPreviewURL(card, ordinal), [card]);
   const presentation = galleryCardPresentation(card);
   const mediaCount = formatGalleryMediaCount(card.media);
   const rating = card.ratingHalfSteps ? (card.ratingHalfSteps / 2).toFixed(1) : null;
+  const personRoute = card.collectionType === "ALBUM" ? "model" : "coser";
   const [favorite, setFavorite] = useState(card.favorite);
   const [saveFavorite] = useMutation(SET_GALLERY_FAVORITE);
   useEffect(() => setFavorite(card.favorite), [card.favorite]);
@@ -42,11 +44,18 @@ export function GalleryCard({ card, scrubberEnabled, favoriteControlVisible = tr
       <div className="gallery-card__body">
         <h2 title={card.title}><Link to={`/gallery/${encodeURIComponent(card.slug)}`}>{presentation.primary}</Link></h2>
         <p className="gallery-card__work" title={presentation.secondary}>{presentation.secondary || "\u00a0"}</p>
-        <div className="gallery-card__people">
-          <span className="gallery-card__avatars">{presentation.cosers.slice(0, 3).map((name) => <Avatar key={name} name={name} size="small" />)}</span>
-          <span className="gallery-card__cosers" title={presentation.cosers.join(" · ")}>{presentation.cosers.join(" · ") || "\u00a0"}</span>
+        {peopleVisible ? <div className="gallery-card__people">
+          <span className="gallery-card__cosers" title={presentation.cosers.map((coser) => coser.name).join(" · ")}>
+            {presentation.cosers.map((coser) => (
+              <Link className="gallery-card__coser-link" key={coser.uuid} to={`/${personRoute}/${encodeURIComponent(coser.uuid)}`} aria-label={coser.name}>
+                <Avatar name={coser.name} size="small" />
+                <span>{coser.name}</span>
+              </Link>
+            ))}
+            {presentation.cosers.length === 0 ? "\u00a0" : null}
+          </span>
           {rating && ratingSummaryVisible ? <span aria-label={`Rating ${rating} of 5`}>★ {rating}</span> : null}
-        </div>
+        </div> : null}
       </div>
     </article>
   );

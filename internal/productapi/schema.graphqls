@@ -23,6 +23,12 @@ type ResourceIdentity {
   mimeType: String!
 }
 
+type OnDemandResource {
+  status: ProcessingState!
+  resource: ResourceIdentity
+  errorCode: String!
+}
+
 type GalleryCover {
   kind: String!
   revision: Int64!
@@ -281,6 +287,13 @@ type ManageRuntimeSettings {
   dailyBackupEnabled: Boolean! dailyBackupRetention: Int!
   archiveMaxEntries: Int! archiveMaxEntryBytes: Int64! archiveMaxTotalBytes: Int64! archiveMaxCompressionRatio: Float! archiveMaxImagePixels: Int64!
 }
+type ManageCacheStorage {
+  path: String!
+  byteSize: Int64!
+  fileCount: Int64!
+  baseByteSize: Int64!
+  enhancedByteSize: Int64!
+}
 input RuntimeSettingsInput {
   homeScope: BrowseScope! galleryCardScrubberEnabled: Boolean! galleryDetailMediaFilterEnabled: Boolean!
   galleryCardControlsVisible: Boolean! mediaCardControlsVisible: Boolean! detailPersonalControlsVisible: Boolean!
@@ -336,19 +349,20 @@ input ExpectedTagRevisionInput { uuid: ID! metadataRevision: Int64! }
 
 type Query {
   homeGalleries(page: Int!): HomeGalleryPage!
-  browseGalleries(scope: BrowseScope!, page: Int!, sort: GallerySort!): GalleryPage!
+  browseGalleries(scope: BrowseScope!, page: Int!, sort: GallerySort!, collectionType: CollectionType): GalleryPage!
   timelineGalleries(scope: BrowseScope!, page: Int!, coserUUID: ID): GalleryPage!
   galleryDetail(slug: String!, scope: BrowseScope! = ALL): GalleryDetail!
   galleryMemberIndex(setID: ID!): GalleryMemberIndex!
   relatedGalleries(setID: ID!, scope: BrowseScope! = ALL): [GalleryRecommendation!]!
   randomMedia(scope: BrowseScope! = LIST, filter: RandomMediaFilter! = ALL): [RandomMediaItem!]!
-  entityIndex(kind: SearchEntityKind!, scope: BrowseScope!, page: Int!, sort: EntitySort! = NAME): EntityPage!
+  entityIndex(kind: SearchEntityKind!, scope: BrowseScope!, page: Int!, sort: EntitySort! = NAME, collectionType: CollectionType, query: String! = ""): EntityPage!
   searchPreview(query: String!, scope: BrowseScope!): SearchPreview!
-  coserDetail(slug: String!, scope: BrowseScope! = ALL, page: Int! = 1): CoserDetail!
+  coserDetail(slug: String!, scope: BrowseScope! = ALL, page: Int! = 1, collectionType: CollectionType): CoserDetail!
   workDetail(slug: String!, scope: BrowseScope! = ALL): WorkDetail!
   characterDetail(slug: String!, scope: BrowseScope! = ALL, page: Int! = 1): CharacterDetail!
   tagDetail(slug: String!, scope: BrowseScope! = ALL, page: Int! = 1): TagDetail!
   mediaDetail(itemUUID: ID!): MediaDetail!
+  itemLightboxStatus(itemUUID: ID!): OnDemandResource!
   favoriteGalleries(scope: BrowseScope! = LIST, page: Int! = 1): GalleryPage!
   galleryHistory(scope: BrowseScope! = LIST, page: Int! = 1): GalleryPage!
   favoriteMedia(scope: BrowseScope! = LIST, page: Int! = 1, ratingSort: Boolean! = false): MediaPage!
@@ -359,6 +373,7 @@ type Query {
   manageLibraries: [ManageLibrary!]!
   manageDiscovery(libraryID: Int64!): ManageDiscoverySnapshot!
   manageRuntimeSettings: ManageRuntimeSettings!
+  manageCacheStorage: ManageCacheStorage!
   manageProcessingJobs(status: String! = "ALL", page: Int! = 1): ManageProcessingJobPage!
   manageBackups: [ManageBackupRecord!]!
   manageMaintenance: ManageMaintenanceState!
@@ -378,6 +393,7 @@ type Mutation {
   setItemFavorite(itemUUID: ID!, favorite: Boolean!): PersonalStateResult!
   setItemRating(itemUUID: ID!, ratingHalfSteps: Int, expectedMetadataRevision: Int64!): PersonalStateResult!
   recordGalleryView(setID: ID!, itemUUID: ID): Boolean!
+  requestItemLightbox(itemUUID: ID!): OnDemandResource!
   updateGalleryMetadata(setID: ID!, expectedMetadataRevision: Int64!, input: UpdateGalleryMetadataInput!): ManageGalleryDetail!
   setGalleryState(setID: ID!, expectedMetadataRevision: Int64!, state: GalleryState!): ManageGalleryDetail!
   updateGalleryItem(setID: ID!, itemUUID: ID!, expectedMetadataRevision: Int64!, input: UpdateGalleryItemInput!): ManageGalleryDetail!

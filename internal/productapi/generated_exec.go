@@ -232,6 +232,14 @@ type ComplexityRoot struct {
 		Status                 func(childComplexity int) int
 	}
 
+	ManageCacheStorage struct {
+		BaseByteSize     func(childComplexity int) int
+		ByteSize         func(childComplexity int) int
+		EnhancedByteSize func(childComplexity int) int
+		FileCount        func(childComplexity int) int
+		Path             func(childComplexity int) int
+	}
+
 	ManageCandidate struct {
 		AutoCreateDraft func(childComplexity int) int
 		HasConflict     func(childComplexity int) int
@@ -617,6 +625,7 @@ type ComplexityRoot struct {
 		RecordGalleryView       func(childComplexity int, setID string, itemUUID *string) int
 		ReplaceGalleryRelations func(childComplexity int, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) int
 		ReplaceTagParents       func(childComplexity int, childUUID string, expectedChildRevision int64, parents []*ReplaceTagParentInput, expectedParents []*ExpectedTagRevisionInput) int
+		RequestItemLightbox     func(childComplexity int, itemUUID string) int
 		ResetGalleryCover       func(childComplexity int, setID string, expectedMetadataRevision int64) int
 		ResolveCoserManifest    func(childComplexity int, coserUUID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
 		ResolveGalleryManifest  func(childComplexity int, setID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
@@ -637,24 +646,32 @@ type ComplexityRoot struct {
 		UpdateRuntimeSettings   func(childComplexity int, expectedSettingsRevision int64, input RuntimeSettingsInput) int
 	}
 
+	OnDemandResource struct {
+		ErrorCode func(childComplexity int) int
+		Resource  func(childComplexity int) int
+		Status    func(childComplexity int) int
+	}
+
 	PersonalStateResult struct {
 		MetadataRevision func(childComplexity int) int
 	}
 
 	Query struct {
-		BrowseGalleries         func(childComplexity int, scope BrowseScope, page int, sort GallerySort) int
+		BrowseGalleries         func(childComplexity int, scope BrowseScope, page int, sort GallerySort, collectionType *CollectionType) int
 		BrowseUISettings        func(childComplexity int) int
 		CharacterDetail         func(childComplexity int, slug string, scope BrowseScope, page int) int
-		CoserDetail             func(childComplexity int, slug string, scope BrowseScope, page int) int
-		EntityIndex             func(childComplexity int, kind SearchEntityKind, scope BrowseScope, page int, sort EntitySort) int
+		CoserDetail             func(childComplexity int, slug string, scope BrowseScope, page int, collectionType *CollectionType) int
+		EntityIndex             func(childComplexity int, kind SearchEntityKind, scope BrowseScope, page int, sort EntitySort, collectionType *CollectionType, query string) int
 		FavoriteGalleries       func(childComplexity int, scope BrowseScope, page int) int
 		FavoriteMedia           func(childComplexity int, scope BrowseScope, page int, ratingSort bool) int
 		GalleryDetail           func(childComplexity int, slug string, scope BrowseScope) int
 		GalleryHistory          func(childComplexity int, scope BrowseScope, page int) int
 		GalleryMemberIndex      func(childComplexity int, setID string) int
 		HomeGalleries           func(childComplexity int, page int) int
+		ItemLightboxStatus      func(childComplexity int, itemUUID string) int
 		ManageAudit             func(childComplexity int, page int) int
 		ManageBackups           func(childComplexity int) int
+		ManageCacheStorage      func(childComplexity int) int
 		ManageCoreEntities      func(childComplexity int, kind SearchEntityKind, page int) int
 		ManageCoreEntity        func(childComplexity int, kind SearchEntityKind, uuid string) int
 		ManageCoreEntityOptions func(childComplexity int, kind SearchEntityKind, query string, limit int) int
@@ -747,6 +764,7 @@ type MutationResolver interface {
 	SetItemFavorite(ctx context.Context, itemUUID string, favorite bool) (*PersonalStateResult, error)
 	SetItemRating(ctx context.Context, itemUUID string, ratingHalfSteps *int, expectedMetadataRevision int64) (*PersonalStateResult, error)
 	RecordGalleryView(ctx context.Context, setID string, itemUUID *string) (bool, error)
+	RequestItemLightbox(ctx context.Context, itemUUID string) (*OnDemandResource, error)
 	UpdateGalleryMetadata(ctx context.Context, setID string, expectedMetadataRevision int64, input UpdateGalleryMetadataInput) (*ManageGalleryDetail, error)
 	SetGalleryState(ctx context.Context, setID string, expectedMetadataRevision int64, state GalleryState) (*ManageGalleryDetail, error)
 	UpdateGalleryItem(ctx context.Context, setID string, itemUUID string, expectedMetadataRevision int64, input UpdateGalleryItemInput) (*ManageGalleryDetail, error)
@@ -784,19 +802,20 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	HomeGalleries(ctx context.Context, page int) (*HomeGalleryPage, error)
-	BrowseGalleries(ctx context.Context, scope BrowseScope, page int, sort GallerySort) (*GalleryPage, error)
+	BrowseGalleries(ctx context.Context, scope BrowseScope, page int, sort GallerySort, collectionType *CollectionType) (*GalleryPage, error)
 	TimelineGalleries(ctx context.Context, scope BrowseScope, page int, coserUUID *string) (*GalleryPage, error)
 	GalleryDetail(ctx context.Context, slug string, scope BrowseScope) (*GalleryDetail, error)
 	GalleryMemberIndex(ctx context.Context, setID string) (*GalleryMemberIndex, error)
 	RelatedGalleries(ctx context.Context, setID string, scope BrowseScope) ([]*GalleryRecommendation, error)
 	RandomMedia(ctx context.Context, scope BrowseScope, filter RandomMediaFilter) ([]*RandomMediaItem, error)
-	EntityIndex(ctx context.Context, kind SearchEntityKind, scope BrowseScope, page int, sort EntitySort) (*EntityPage, error)
+	EntityIndex(ctx context.Context, kind SearchEntityKind, scope BrowseScope, page int, sort EntitySort, collectionType *CollectionType, query string) (*EntityPage, error)
 	SearchPreview(ctx context.Context, query string, scope BrowseScope) (*SearchPreview, error)
-	CoserDetail(ctx context.Context, slug string, scope BrowseScope, page int) (*CoserDetail, error)
+	CoserDetail(ctx context.Context, slug string, scope BrowseScope, page int, collectionType *CollectionType) (*CoserDetail, error)
 	WorkDetail(ctx context.Context, slug string, scope BrowseScope) (*WorkDetail, error)
 	CharacterDetail(ctx context.Context, slug string, scope BrowseScope, page int) (*CharacterDetail, error)
 	TagDetail(ctx context.Context, slug string, scope BrowseScope, page int) (*TagDetail, error)
 	MediaDetail(ctx context.Context, itemUUID string) (*MediaDetail, error)
+	ItemLightboxStatus(ctx context.Context, itemUUID string) (*OnDemandResource, error)
 	FavoriteGalleries(ctx context.Context, scope BrowseScope, page int) (*GalleryPage, error)
 	GalleryHistory(ctx context.Context, scope BrowseScope, page int) (*GalleryPage, error)
 	FavoriteMedia(ctx context.Context, scope BrowseScope, page int, ratingSort bool) (*MediaPage, error)
@@ -807,6 +826,7 @@ type QueryResolver interface {
 	ManageLibraries(ctx context.Context) ([]*ManageLibrary, error)
 	ManageDiscovery(ctx context.Context, libraryID int64) (*ManageDiscoverySnapshot, error)
 	ManageRuntimeSettings(ctx context.Context) (*ManageRuntimeSettings, error)
+	ManageCacheStorage(ctx context.Context) (*ManageCacheStorage, error)
 	ManageProcessingJobs(ctx context.Context, status string, page int) (*ManageProcessingJobPage, error)
 	ManageBackups(ctx context.Context) ([]*ManageBackupRecord, error)
 	ManageMaintenance(ctx context.Context) (*ManageMaintenanceState, error)
@@ -1720,6 +1740,41 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageBackupRecord.Status(childComplexity), true
+
+	case "ManageCacheStorage.baseByteSize":
+		if e.complexity.ManageCacheStorage.BaseByteSize == nil {
+			break
+		}
+
+		return e.complexity.ManageCacheStorage.BaseByteSize(childComplexity), true
+
+	case "ManageCacheStorage.byteSize":
+		if e.complexity.ManageCacheStorage.ByteSize == nil {
+			break
+		}
+
+		return e.complexity.ManageCacheStorage.ByteSize(childComplexity), true
+
+	case "ManageCacheStorage.enhancedByteSize":
+		if e.complexity.ManageCacheStorage.EnhancedByteSize == nil {
+			break
+		}
+
+		return e.complexity.ManageCacheStorage.EnhancedByteSize(childComplexity), true
+
+	case "ManageCacheStorage.fileCount":
+		if e.complexity.ManageCacheStorage.FileCount == nil {
+			break
+		}
+
+		return e.complexity.ManageCacheStorage.FileCount(childComplexity), true
+
+	case "ManageCacheStorage.path":
+		if e.complexity.ManageCacheStorage.Path == nil {
+			break
+		}
+
+		return e.complexity.ManageCacheStorage.Path(childComplexity), true
 
 	case "ManageCandidate.autoCreateDraft":
 		if e.complexity.ManageCandidate.AutoCreateDraft == nil {
@@ -3732,6 +3787,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.ReplaceTagParents(childComplexity, args["childUUID"].(string), args["expectedChildRevision"].(int64), args["parents"].([]*ReplaceTagParentInput), args["expectedParents"].([]*ExpectedTagRevisionInput)), true
 
+	case "Mutation.requestItemLightbox":
+		if e.complexity.Mutation.RequestItemLightbox == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_requestItemLightbox_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RequestItemLightbox(childComplexity, args["itemUUID"].(string)), true
+
 	case "Mutation.resetGalleryCover":
 		if e.complexity.Mutation.ResetGalleryCover == nil {
 			break
@@ -3948,6 +4015,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.UpdateRuntimeSettings(childComplexity, args["expectedSettingsRevision"].(int64), args["input"].(RuntimeSettingsInput)), true
 
+	case "OnDemandResource.errorCode":
+		if e.complexity.OnDemandResource.ErrorCode == nil {
+			break
+		}
+
+		return e.complexity.OnDemandResource.ErrorCode(childComplexity), true
+
+	case "OnDemandResource.resource":
+		if e.complexity.OnDemandResource.Resource == nil {
+			break
+		}
+
+		return e.complexity.OnDemandResource.Resource(childComplexity), true
+
+	case "OnDemandResource.status":
+		if e.complexity.OnDemandResource.Status == nil {
+			break
+		}
+
+		return e.complexity.OnDemandResource.Status(childComplexity), true
+
 	case "PersonalStateResult.metadataRevision":
 		if e.complexity.PersonalStateResult.MetadataRevision == nil {
 			break
@@ -3965,7 +4053,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.BrowseGalleries(childComplexity, args["scope"].(BrowseScope), args["page"].(int), args["sort"].(GallerySort)), true
+		return e.complexity.Query.BrowseGalleries(childComplexity, args["scope"].(BrowseScope), args["page"].(int), args["sort"].(GallerySort), args["collectionType"].(*CollectionType)), true
 
 	case "Query.browseUISettings":
 		if e.complexity.Query.BrowseUISettings == nil {
@@ -3996,7 +4084,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.CoserDetail(childComplexity, args["slug"].(string), args["scope"].(BrowseScope), args["page"].(int)), true
+		return e.complexity.Query.CoserDetail(childComplexity, args["slug"].(string), args["scope"].(BrowseScope), args["page"].(int), args["collectionType"].(*CollectionType)), true
 
 	case "Query.entityIndex":
 		if e.complexity.Query.EntityIndex == nil {
@@ -4008,7 +4096,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.EntityIndex(childComplexity, args["kind"].(SearchEntityKind), args["scope"].(BrowseScope), args["page"].(int), args["sort"].(EntitySort)), true
+		return e.complexity.Query.EntityIndex(childComplexity, args["kind"].(SearchEntityKind), args["scope"].(BrowseScope), args["page"].(int), args["sort"].(EntitySort), args["collectionType"].(*CollectionType), args["query"].(string)), true
 
 	case "Query.favoriteGalleries":
 		if e.complexity.Query.FavoriteGalleries == nil {
@@ -4082,6 +4170,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.HomeGalleries(childComplexity, args["page"].(int)), true
 
+	case "Query.itemLightboxStatus":
+		if e.complexity.Query.ItemLightboxStatus == nil {
+			break
+		}
+
+		args, err := ec.field_Query_itemLightboxStatus_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ItemLightboxStatus(childComplexity, args["itemUUID"].(string)), true
+
 	case "Query.manageAudit":
 		if e.complexity.Query.ManageAudit == nil {
 			break
@@ -4100,6 +4200,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.ManageBackups(childComplexity), true
+
+	case "Query.manageCacheStorage":
+		if e.complexity.Query.ManageCacheStorage == nil {
+			break
+		}
+
+		return e.complexity.Query.ManageCacheStorage(childComplexity), true
 
 	case "Query.manageCoreEntities":
 		if e.complexity.Query.ManageCoreEntities == nil {
@@ -5928,6 +6035,34 @@ func (ec *executionContext) field_Mutation_replaceTagParents_argsExpectedParents
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Mutation_requestItemLightbox_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_requestItemLightbox_argsItemUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["itemUUID"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_requestItemLightbox_argsItemUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["itemUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("itemUUID"))
+	if tmp, ok := rawArgs["itemUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Mutation_resetGalleryCover_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -7076,6 +7211,11 @@ func (ec *executionContext) field_Query_browseGalleries_args(ctx context.Context
 		return nil, err
 	}
 	args["sort"] = arg2
+	arg3, err := ec.field_Query_browseGalleries_argsCollectionType(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["collectionType"] = arg3
 	return args, nil
 }
 func (ec *executionContext) field_Query_browseGalleries_argsScope(
@@ -7129,6 +7269,24 @@ func (ec *executionContext) field_Query_browseGalleries_argsSort(
 	}
 
 	var zeroVal GallerySort
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_browseGalleries_argsCollectionType(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*CollectionType, error) {
+	if _, ok := rawArgs["collectionType"]; !ok {
+		var zeroVal *CollectionType
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("collectionType"))
+	if tmp, ok := rawArgs["collectionType"]; ok {
+		return ec.unmarshalOCollectionType2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐCollectionType(ctx, tmp)
+	}
+
+	var zeroVal *CollectionType
 	return zeroVal, nil
 }
 
@@ -7224,6 +7382,11 @@ func (ec *executionContext) field_Query_coserDetail_args(ctx context.Context, ra
 		return nil, err
 	}
 	args["page"] = arg2
+	arg3, err := ec.field_Query_coserDetail_argsCollectionType(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["collectionType"] = arg3
 	return args, nil
 }
 func (ec *executionContext) field_Query_coserDetail_argsSlug(
@@ -7280,6 +7443,24 @@ func (ec *executionContext) field_Query_coserDetail_argsPage(
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Query_coserDetail_argsCollectionType(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*CollectionType, error) {
+	if _, ok := rawArgs["collectionType"]; !ok {
+		var zeroVal *CollectionType
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("collectionType"))
+	if tmp, ok := rawArgs["collectionType"]; ok {
+		return ec.unmarshalOCollectionType2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐCollectionType(ctx, tmp)
+	}
+
+	var zeroVal *CollectionType
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Query_entityIndex_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -7303,6 +7484,16 @@ func (ec *executionContext) field_Query_entityIndex_args(ctx context.Context, ra
 		return nil, err
 	}
 	args["sort"] = arg3
+	arg4, err := ec.field_Query_entityIndex_argsCollectionType(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["collectionType"] = arg4
+	arg5, err := ec.field_Query_entityIndex_argsQuery(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["query"] = arg5
 	return args, nil
 }
 func (ec *executionContext) field_Query_entityIndex_argsKind(
@@ -7374,6 +7565,42 @@ func (ec *executionContext) field_Query_entityIndex_argsSort(
 	}
 
 	var zeroVal EntitySort
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_entityIndex_argsCollectionType(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*CollectionType, error) {
+	if _, ok := rawArgs["collectionType"]; !ok {
+		var zeroVal *CollectionType
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("collectionType"))
+	if tmp, ok := rawArgs["collectionType"]; ok {
+		return ec.unmarshalOCollectionType2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐCollectionType(ctx, tmp)
+	}
+
+	var zeroVal *CollectionType
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_entityIndex_argsQuery(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["query"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
+	if tmp, ok := rawArgs["query"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
+	}
+
+	var zeroVal string
 	return zeroVal, nil
 }
 
@@ -7657,6 +7884,34 @@ func (ec *executionContext) field_Query_homeGalleries_argsPage(
 	}
 
 	var zeroVal int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_itemLightboxStatus_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_itemLightboxStatus_argsItemUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["itemUUID"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Query_itemLightboxStatus_argsItemUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["itemUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("itemUUID"))
+	if tmp, ok := rawArgs["itemUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
 	return zeroVal, nil
 }
 
@@ -14614,6 +14869,226 @@ func (ec *executionContext) fieldContext_ManageBackupRecord_lastErrorCode(_ cont
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCacheStorage_path(ctx context.Context, field graphql.CollectedField, obj *ManageCacheStorage) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCacheStorage_path(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Path, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCacheStorage_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCacheStorage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCacheStorage_byteSize(ctx context.Context, field graphql.CollectedField, obj *ManageCacheStorage) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCacheStorage_byteSize(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ByteSize, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCacheStorage_byteSize(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCacheStorage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCacheStorage_fileCount(ctx context.Context, field graphql.CollectedField, obj *ManageCacheStorage) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCacheStorage_fileCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FileCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCacheStorage_fileCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCacheStorage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCacheStorage_baseByteSize(ctx context.Context, field graphql.CollectedField, obj *ManageCacheStorage) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCacheStorage_baseByteSize(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BaseByteSize, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCacheStorage_baseByteSize(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCacheStorage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCacheStorage_enhancedByteSize(ctx context.Context, field graphql.CollectedField, obj *ManageCacheStorage) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCacheStorage_enhancedByteSize(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EnhancedByteSize, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCacheStorage_enhancedByteSize(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCacheStorage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
 		},
 	}
 	return fc, nil
@@ -26475,6 +26950,69 @@ func (ec *executionContext) fieldContext_Mutation_recordGalleryView(ctx context.
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_requestItemLightbox(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_requestItemLightbox(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().RequestItemLightbox(rctx, fc.Args["itemUUID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*OnDemandResource)
+	fc.Result = res
+	return ec.marshalNOnDemandResource2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐOnDemandResource(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_requestItemLightbox(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "status":
+				return ec.fieldContext_OnDemandResource_status(ctx, field)
+			case "resource":
+				return ec.fieldContext_OnDemandResource_resource(ctx, field)
+			case "errorCode":
+				return ec.fieldContext_OnDemandResource_errorCode(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type OnDemandResource", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_requestItemLightbox_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_updateGalleryMetadata(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_updateGalleryMetadata(ctx, field)
 	if err != nil {
@@ -29036,6 +29574,147 @@ func (ec *executionContext) fieldContext_Mutation_resolveCoserManifest(ctx conte
 	return fc, nil
 }
 
+func (ec *executionContext) _OnDemandResource_status(ctx context.Context, field graphql.CollectedField, obj *OnDemandResource) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_OnDemandResource_status(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Status, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(ProcessingState)
+	fc.Result = res
+	return ec.marshalNProcessingState2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐProcessingState(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_OnDemandResource_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OnDemandResource",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ProcessingState does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OnDemandResource_resource(ctx context.Context, field graphql.CollectedField, obj *OnDemandResource) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_OnDemandResource_resource(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Resource, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*ResourceIdentity)
+	fc.Result = res
+	return ec.marshalOResourceIdentity2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐResourceIdentity(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_OnDemandResource_resource(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OnDemandResource",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "itemUUID":
+				return ec.fieldContext_ResourceIdentity_itemUUID(ctx, field)
+			case "contentRevision":
+				return ec.fieldContext_ResourceIdentity_contentRevision(ctx, field)
+			case "profileHash":
+				return ec.fieldContext_ResourceIdentity_profileHash(ctx, field)
+			case "variant":
+				return ec.fieldContext_ResourceIdentity_variant(ctx, field)
+			case "mimeType":
+				return ec.fieldContext_ResourceIdentity_mimeType(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ResourceIdentity", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OnDemandResource_errorCode(ctx context.Context, field graphql.CollectedField, obj *OnDemandResource) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_OnDemandResource_errorCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ErrorCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_OnDemandResource_errorCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OnDemandResource",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _PersonalStateResult_metadataRevision(ctx context.Context, field graphql.CollectedField, obj *PersonalStateResult) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_PersonalStateResult_metadataRevision(ctx, field)
 	if err != nil {
@@ -29155,7 +29834,7 @@ func (ec *executionContext) _Query_browseGalleries(ctx context.Context, field gr
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().BrowseGalleries(rctx, fc.Args["scope"].(BrowseScope), fc.Args["page"].(int), fc.Args["sort"].(GallerySort))
+		return ec.resolvers.Query().BrowseGalleries(rctx, fc.Args["scope"].(BrowseScope), fc.Args["page"].(int), fc.Args["sort"].(GallerySort), fc.Args["collectionType"].(*CollectionType))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -29569,7 +30248,7 @@ func (ec *executionContext) _Query_entityIndex(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().EntityIndex(rctx, fc.Args["kind"].(SearchEntityKind), fc.Args["scope"].(BrowseScope), fc.Args["page"].(int), fc.Args["sort"].(EntitySort))
+		return ec.resolvers.Query().EntityIndex(rctx, fc.Args["kind"].(SearchEntityKind), fc.Args["scope"].(BrowseScope), fc.Args["page"].(int), fc.Args["sort"].(EntitySort), fc.Args["collectionType"].(*CollectionType), fc.Args["query"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -29707,7 +30386,7 @@ func (ec *executionContext) _Query_coserDetail(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().CoserDetail(rctx, fc.Args["slug"].(string), fc.Args["scope"].(BrowseScope), fc.Args["page"].(int))
+		return ec.resolvers.Query().CoserDetail(rctx, fc.Args["slug"].(string), fc.Args["scope"].(BrowseScope), fc.Args["page"].(int), fc.Args["collectionType"].(*CollectionType))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -30016,6 +30695,69 @@ func (ec *executionContext) fieldContext_Query_mediaDetail(ctx context.Context, 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_mediaDetail_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_itemLightboxStatus(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_itemLightboxStatus(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ItemLightboxStatus(rctx, fc.Args["itemUUID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*OnDemandResource)
+	fc.Result = res
+	return ec.marshalNOnDemandResource2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐOnDemandResource(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_itemLightboxStatus(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "status":
+				return ec.fieldContext_OnDemandResource_status(ctx, field)
+			case "resource":
+				return ec.fieldContext_OnDemandResource_resource(ctx, field)
+			case "errorCode":
+				return ec.fieldContext_OnDemandResource_errorCode(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type OnDemandResource", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_itemLightboxStatus_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -30731,6 +31473,62 @@ func (ec *executionContext) fieldContext_Query_manageRuntimeSettings(_ context.C
 				return ec.fieldContext_ManageRuntimeSettings_archiveMaxImagePixels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageRuntimeSettings", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_manageCacheStorage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_manageCacheStorage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ManageCacheStorage(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageCacheStorage)
+	fc.Result = res
+	return ec.marshalNManageCacheStorage2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCacheStorage(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_manageCacheStorage(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "path":
+				return ec.fieldContext_ManageCacheStorage_path(ctx, field)
+			case "byteSize":
+				return ec.fieldContext_ManageCacheStorage_byteSize(ctx, field)
+			case "fileCount":
+				return ec.fieldContext_ManageCacheStorage_fileCount(ctx, field)
+			case "baseByteSize":
+				return ec.fieldContext_ManageCacheStorage_baseByteSize(ctx, field)
+			case "enhancedByteSize":
+				return ec.fieldContext_ManageCacheStorage_enhancedByteSize(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageCacheStorage", field.Name)
 		},
 	}
 	return fc, nil
@@ -37758,6 +38556,65 @@ func (ec *executionContext) _ManageBackupRecord(ctx context.Context, sel ast.Sel
 	return out
 }
 
+var manageCacheStorageImplementors = []string{"ManageCacheStorage"}
+
+func (ec *executionContext) _ManageCacheStorage(ctx context.Context, sel ast.SelectionSet, obj *ManageCacheStorage) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageCacheStorageImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageCacheStorage")
+		case "path":
+			out.Values[i] = ec._ManageCacheStorage_path(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "byteSize":
+			out.Values[i] = ec._ManageCacheStorage_byteSize(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "fileCount":
+			out.Values[i] = ec._ManageCacheStorage_fileCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "baseByteSize":
+			out.Values[i] = ec._ManageCacheStorage_baseByteSize(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "enhancedByteSize":
+			out.Values[i] = ec._ManageCacheStorage_enhancedByteSize(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var manageCandidateImplementors = []string{"ManageCandidate"}
 
 func (ec *executionContext) _ManageCandidate(ctx context.Context, sel ast.SelectionSet, obj *ManageCandidate) graphql.Marshaler {
@@ -40291,6 +41148,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "requestItemLightbox":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_requestItemLightbox(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "updateGalleryMetadata":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateGalleryMetadata(ctx, field)
@@ -40526,6 +41390,52 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_resolveCoserManifest(ctx, field)
 			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var onDemandResourceImplementors = []string{"OnDemandResource"}
+
+func (ec *executionContext) _OnDemandResource(ctx context.Context, sel ast.SelectionSet, obj *OnDemandResource) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, onDemandResourceImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("OnDemandResource")
+		case "status":
+			out.Values[i] = ec._OnDemandResource_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resource":
+			out.Values[i] = ec._OnDemandResource_resource(ctx, field, obj)
+		case "errorCode":
+			out.Values[i] = ec._OnDemandResource_errorCode(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -40918,6 +41828,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "itemLightboxStatus":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_itemLightboxStatus(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "favoriteGalleries":
 			field := field
 
@@ -41126,6 +42058,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_manageRuntimeSettings(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "manageCacheStorage":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_manageCacheStorage(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -43024,6 +43978,20 @@ func (ec *executionContext) marshalNManageBackupRecord2ᚖgithubᚗcomᚋstashap
 	return ec._ManageBackupRecord(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNManageCacheStorage2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCacheStorage(ctx context.Context, sel ast.SelectionSet, v ManageCacheStorage) graphql.Marshaler {
+	return ec._ManageCacheStorage(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManageCacheStorage2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCacheStorage(ctx context.Context, sel ast.SelectionSet, v *ManageCacheStorage) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageCacheStorage(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNManageCandidate2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCandidateᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageCandidate) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -44322,6 +45290,20 @@ func (ec *executionContext) marshalNMediaPage2ᚖgithubᚗcomᚋstashappᚋstash
 	return ec._MediaPage(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNOnDemandResource2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐOnDemandResource(ctx context.Context, sel ast.SelectionSet, v OnDemandResource) graphql.Marshaler {
+	return ec._OnDemandResource(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNOnDemandResource2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐOnDemandResource(ctx context.Context, sel ast.SelectionSet, v *OnDemandResource) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._OnDemandResource(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNPersonalStateResult2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPersonalStateResult(ctx context.Context, sel ast.SelectionSet, v PersonalStateResult) graphql.Marshaler {
 	return ec._PersonalStateResult(ctx, sel, &v)
 }
@@ -45027,6 +46009,22 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	_ = ctx
 	res := graphql.MarshalBoolean(*v)
 	return res
+}
+
+func (ec *executionContext) unmarshalOCollectionType2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐCollectionType(ctx context.Context, v any) (*CollectionType, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(CollectionType)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOCollectionType2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐCollectionType(ctx context.Context, sel ast.SelectionSet, v *CollectionType) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) unmarshalOContentRating2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐContentRating(ctx context.Context, v any) (*ContentRating, error) {

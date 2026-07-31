@@ -13,7 +13,9 @@ export type IconName =
   | "home"
   | "images"
   | "info"
+  | "lock"
   | "menu"
+  | "palette"
   | "search"
   | "settings"
   | "shuffle"
@@ -82,6 +84,12 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M12 7.3h.01" />
     </>
   ),
+  lock: (
+    <>
+      <rect x="5" y="10" width="14" height="11" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+    </>
+  ),
   search: (
     <>
       <circle cx="10.8" cy="10.8" r="6.8" />
@@ -95,6 +103,12 @@ const paths: Record<IconName, ReactNode> = {
     </>
   ),
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  palette: (
+    <>
+      <path d="M12 3a9 9 0 1 0 0 18h1.4a1.8 1.8 0 0 0 1.2-3.1 1.8 1.8 0 0 1 1.2-3.1H18A3 3 0 0 0 21 12a9 9 0 0 0-9-9Z" />
+      <circle cx="7.5" cy="10" r="1" /><circle cx="10" cy="6.8" r="1" /><circle cx="14.3" cy="6.8" r="1" /><circle cx="17" cy="10" r="1" />
+    </>
+  ),
   shuffle: (
     <>
       <path d="M3 7h3c4 0 6 10 10 10h5" />

@@ -44,3 +44,66 @@ func TestEntityIndexesUseConfirmedPageSizesScopeAndVisibleAssociations(t *testin
 		}
 	}
 }
+
+func TestCoserIndexSeparatesCosplayAndAlbumWithoutSplittingIdentity(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+	cosplayOnly, err := db.CoreEntities().CreateCoser(ctx, CreateCoserInput{CreateNamedEntityInput: CreateNamedEntityInput{Name: "Cosplay Only"}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	albumOnly, err := db.CoreEntities().CreateCoser(ctx, CreateCoserInput{CreateNamedEntityInput: CreateNamedEntityInput{Name: "Album Only"}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	both, err := db.CoreEntities().CreateCoser(ctx, CreateCoserInput{CreateNamedEntityInput: CreateNamedEntityInput{Name: "Both"}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	work, err := db.CoreEntities().CreateWork(ctx, CreateNamedEntityInput{Name: "Work"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	character, err := db.CoreEntities().CreateCharacter(ctx, work.UUID, CreateNamedEntityInput{Name: "Character"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index, person := range []struct {
+		coserUUID string
+		cosplay   bool
+	}{
+		{cosplayOnly.UUID, true},
+		{albumOnly.UUID, false},
+		{both.UUID, true},
+		{both.UUID, false},
+	} {
+		galleryRecord, _ := createBrowseGallery(t, db, person.coserUUID, gallery.ContentRatingNonAdult, now.Add(time.Duration(index)*time.Minute))
+		creditID, err := db.Galleries().AddCredit(ctx, galleryRecord.ID, person.coserUUID, 1024, galleryRecord.MetadataRevision, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if person.cosplay {
+			if err := db.Galleries().AddCast(ctx, galleryRecord.ID, creditID, character.UUID, 1024, galleryRecord.MetadataRevision+1, now); err != nil {
+				t.Fatal(err)
+			}
+		}
+		activateBrowseFixture(t, db, galleryRecord.ID, now.Add(time.Duration(index)*time.Minute))
+	}
+	cosers, err := db.Browse().EntityIndexByCollection(ctx, browse.SearchCoser, browse.ScopeAll, 1, browse.EntitySortName, browse.CollectionCosplay)
+	if err != nil || cosers.TotalItems != 2 || cosers.Items[0].UUID != both.UUID || cosers.Items[1].UUID != cosplayOnly.UUID {
+		t.Fatalf("COSPLAY people = %#v, %v", cosers, err)
+	}
+	models, err := db.Browse().EntityIndexByCollection(ctx, browse.SearchCoser, browse.ScopeAll, 1, browse.EntitySortName, browse.CollectionAlbum)
+	if err != nil || models.TotalItems != 2 || models.Items[0].UUID != albumOnly.UUID || models.Items[1].UUID != both.UUID {
+		t.Fatalf("ALBUM people = %#v, %v", models, err)
+	}
+	filtered, err := db.Browse().EntityIndexFiltered(ctx, browse.SearchCoser, browse.ScopeAll, 1, browse.EntitySortName, browse.CollectionAlbum, "Both")
+	if err != nil || filtered.TotalItems != 1 || filtered.Items[0].UUID != both.UUID {
+		t.Fatalf("filtered ALBUM people = %#v, %v", filtered, err)
+	}
+	recent, err := db.Browse().EntityIndexByCollection(ctx, browse.SearchCoser, browse.ScopeAll, 1, browse.EntitySortRecentlyAdded, browse.CollectionCosplay)
+	if err != nil || recent.TotalItems != 2 || recent.Items[0].UUID != both.UUID {
+		t.Fatalf("recent COSPLAY people = %#v, %v", recent, err)
+	}
+}

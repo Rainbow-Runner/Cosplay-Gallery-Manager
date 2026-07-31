@@ -187,6 +187,36 @@ CGM不能引入热门语义，但可复用这一几何位置显示“相关作�
 - 每项为约36px圆形头像+名称，没有大边框卡片。
 - 分页为居中的紧凑数字分页，当前页使用浅边框圆角按钮。
 
+### 3.8 指定Coser详情页冻结基线（2026-07-31）
+
+本轮按用户指定的[GalleryEpic Coser详情页](https://galleryepic.com/zh/coser/298/1)重新取证，桌面使用1440×1000视口，移动使用390×844视口。只观察页面自身内容，广告及广告造成的额外留白不作为CGM实现依据。
+
+桌面测量：
+
+- 主内容在256px侧栏之后从`x=288`开始，可用宽度1120px；顶部栏仍为64px。
+- Breadcrumb位于`y=77`，14px常规字重、20px行高，距4:1 Banner顶部12px。
+- Banner为1120×280px，严格4:1；资料白底区高约94px。
+- 头像为128×128px方形图，白色内边距8px、1px浅灰边界，向上覆盖Banner约51px。
+- Coser名称为20px/600/28px；社交图标为20～24px单色图标，紧跟在名称下方。
+- 筛选控件高36px、8px圆角、1px浅灰边界；资料区到控件约24px，控件到Gallery网格约24px。
+- 参考站此视口为4列，每列268px、横向间距16px；CGM继续服从已经确认的6/5/4/3/2列产品约束，只复用卡片比例、文字密度与间距语言。
+- 分页居中显示：36×36px左右箭头与页码按钮，按钮间距4px；当前页使用1px浅灰边界、8px圆角和极弱阴影，参考样本显示连续`1 2 3 4 5`。
+
+移动测量：
+
+- 内容左右各32px，可用宽度326px；Breadcrumb后12px进入Banner。
+- Banner约326×81.5px，头像为80×80px并向上叠入Banner；名称为18px，白字叠在Banner下沿。
+- 社交图标落在Banner下方白色资料区；整个Banner+资料区约124px高。
+- 控件改为纵向两行，Gallery为2列；卡片约155×206px，横向间距16px。
+- 移动分页继续使用36px数字按钮，不改成大号“上一页/下一页”文本按钮。
+
+实现边界：
+
+- 不复制参考站Logo、媒体、广告、代码或远程图标；截图只保存在`/tmp`用于测量。
+- 不引入参考站的下载、作品/角色筛选、浏览量或广告功能。CGM现有Scope与Shoot timeline继续保持原语义，只采用相同的控件几何。
+- Coser头像、Banner、Country、社交账号、Profile、Biography与Timeline能力全部保留；没有Banner时使用本地中性占位，不访问互联网。
+- Gallery分页继续由本机GraphQL的`page/totalPages`驱动，并写入现有`scope/page`查询参数，不改变24项页大小、DTO或数据库。
+
 ## 4. 当前CGM前端实现基线
 
 ### 4.1 当前设计Token
@@ -568,11 +598,13 @@ Coser索引：
 
 Coser详情：
 
-- Banner继续保留，这是CGM已确认扩展；
-- Banner下使用64～96px头像、名称、Country、社交账号和Timeline按钮；
+- Banner继续保留，这是CGM已确认扩展；桌面严格4:1，移动继续4:1；
+- Banner下使用桌面128px、移动80px方形头像叠层，以及20/18px名称、Country和紧凑社交图标；
 - 不使用超大Georgia标题；
-- Biography使用正常14～16px正文；
+- Profile与Biography使用轻边框可折叠正文，避免重新形成大Hero；
+- Scope与Timeline保持现有功能，但采用36px高、8px圆角、1px浅灰边界的参考站控件几何；
 - Gallery网格复用统一卡片。
+- Gallery有多页时使用居中的36px数字分页：连续显示最多5个页码、当前页描边、左右Chevron；URL继续保留`scope/page`。
 
 Work/Character/Tag：
 
@@ -968,3 +1000,40 @@ Token / Icon
 - 最终前端结果：TypeScript通过，16个Vitest文件/37项测试通过，669模块生产构建通过，主入口约472.07KiB且无大Chunk警告。
 
 本计划的本地代码阶段已经完成。Firefox/WebKit、真实移动设备、读屏、200%缩放及低性能设备仍属于目标环境验收，不能根据Chromium自动化结果推定通过。
+
+### 2026-07-31：指定Coser详情页高保真复核
+
+- 对用户指定的`/zh/coser/298/1`重新抓取1440×1000桌面、390×844移动和页面底部分页画面，冻结了4:1 Banner、128/80px方形头像叠层、名称/社交行、36px控件及数字分页的精确几何。
+- Coser详情新增Home/Cosers/当前Coser Breadcrumb；无Banner时仍保留4:1中性占位，避免首屏结构跳变。
+- 社交账号由大块文字卡收敛为20～24px紧凑平台标记；链接、ACTIVE/INACTIVE状态和自定义platform key回退保持不变。
+- LIST/MAGIC/ALL与Shoot timeline没有改成参考站并不存在于CGM的作品/角色筛选，只采用相同的轻边框输入控件外观。
+- Coser详情Gallery隐藏重复的Coser行，继续使用统一3:4卡片；全局6/5/4/3/2列产品约束保持不变。
+- 新增可操作的居中数字分页，最多连续显示5页，当前页使用圆角描边；点击后更新原有`scope/page`查询参数并重新读取本机GraphQL。
+- 新增Coser详情桌面/移动视觉基线和页面组件测试；离线完整生命周期、axe A/AA、路由及生产构建作为本阶段门禁。
+
+### 2026-08-01：Cosplay/Album双分区与实体层级补齐
+
+经登录状态参考页复核并由用户确认，Browse信息架构固定为：
+
+- Cosplay：Lists、Cosers、Parodies、Magic；
+- Album：Lists、Models；
+- Cosplay Lists只显示非成人COSPLAY，Magic只显示成人COSPLAY；
+- Album Lists和Models显示全部分级ALBUM，不再另建Album Magic；
+- Model不是新的核心实体或关系角色，只是现有Coser在ALBUM集合中的展示标题和路由上下文。
+
+本阶段已经实现：
+
+- 新增`/albums`、`/models`、`/model/:slug`，原`/list`、`/works`、`/work/:slug`和隐藏的Character索引路由继续兼容；
+- 侧栏使用原创相机、人物、调色板和锁形本地SVG，几何与参考站对齐，不复制Logo、代码、远程字体或专有资产；
+- Coser/Model采用同一四列头像文字索引组件，但通过派生CollectionType分别筛选，并支持名称/Alias搜索；
+- Work/Parody索引为四列纯文字，Work详情为Character文字索引，Character详情才进入Gallery网格；
+- Coser详情继续保留已确认的资料Hero、Scope和Timeline；Model详情按参考站使用Breadcrumb后直接显示Album网格；
+- Album卡片中的人物入口改为`/model/:slug`，COSPLAY卡片继续进入`/coser/:slug`。
+
+查询层只增加向后兼容的可选`collectionType`和实体索引`query`参数。类型仍由Cast实时推导，未新增数据库字段、Model表或Coser/Model角色字段；24/30/60分页以及Gallery网格`6/5/4/3/2`列约束保持不变。
+
+离线E2E使用真实ALBUM夹具验证了该Gallery不会出现在Cosplay Lists或Magic，人物不会出现在Cosers但会出现在Models，并通过Model卡片进入Model详情。Home、Model详情桌面/移动、Coser详情桌面/移动视觉基线及axe A/AA均通过0.2%门禁。
+
+后续实机复核发现，人物索引头像沿用了可容纳Alias的双行跨度，而无Alias时主名称停留在第一行，造成名称中心高于头像中心。2026-08-01按用户确认将Coser/Model列表收敛为只显示主名称的36px单行结构；Alias仍可参与搜索，但不在人物列表展示。离线E2E已增加头像与名称中心点误差小于1px的实际几何断言。
+
+同日再次读取参考站公开页面源码，确认人物名称节点为`text-sm leading-none font-medium`，即14px字号、14px行高和500字重，头像后间距为8px。CGM原专属覆盖只把通用18px名称降至16px，仍保留550字重和1.35行高，因而视觉偏大、偏厚；现已按参考值完整覆盖并用浏览器计算样式锁定。

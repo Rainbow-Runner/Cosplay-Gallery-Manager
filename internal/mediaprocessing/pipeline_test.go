@@ -18,7 +18,7 @@ func TestPrimaryPlansKeepAnimationAndVideoScrubbersStatic(t *testing.T) {
 		tier    CacheTier
 	}{
 		{gallery.MediaKindStaticImage, gallery.ContentFormatImage, VariantCard480, CacheBase},
-		{gallery.MediaKindStaticImage, gallery.ContentFormatRAW, VariantLightbox4096, CacheBase},
+		{gallery.MediaKindStaticImage, gallery.ContentFormatRAW, VariantCard480, CacheBase},
 		{gallery.MediaKindAnimatedImage, gallery.ContentFormatImage, VariantStaticPoster, CacheBase},
 		{gallery.MediaKindVideo, gallery.ContentFormatVideo, VariantStaticPoster, CacheBase},
 	}

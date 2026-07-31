@@ -17,6 +17,15 @@ type AuthorizeRequest func(*http.Request) bool
 type OperationsService interface {
 	CreateFullBackup(context.Context) (productdb.BackupRecord, error)
 	RestoreBackup(context.Context, string) (productdb.MaintenanceState, error)
+	CacheStorageStatus(context.Context) (CacheStorageStatus, error)
+}
+
+type CacheStorageStatus struct {
+	Path             string
+	ByteSize         int64
+	FileCount        int64
+	BaseByteSize     int64
+	EnhancedByteSize int64
 }
 
 type OwnerPasswordVerifier interface {

@@ -30,7 +30,15 @@ func (s *BrowseStore) Home(ctx context.Context, page int) (browse.GalleryPage, b
 }
 
 func (s *BrowseStore) Galleries(ctx context.Context, scope browse.Scope, page int, sortBy browse.GallerySort) (browse.GalleryPage, error) {
-	return s.galleryPage(ctx, scope, page, sortBy, "", nil, "")
+	return s.GalleriesByCollection(ctx, scope, page, sortBy, "")
+}
+
+func (s *BrowseStore) GalleriesByCollection(ctx context.Context, scope browse.Scope, page int, sortBy browse.GallerySort, collectionType browse.CollectionType) (browse.GalleryPage, error) {
+	collectionSQL, err := browseCollectionPredicate(collectionType)
+	if err != nil {
+		return browse.GalleryPage{}, err
+	}
+	return s.galleryPage(ctx, scope, page, sortBy, collectionSQL, nil, "")
 }
 
 // Timeline is the only Browse list that excludes unknown shoot dates and
@@ -167,6 +175,19 @@ func browseScopePredicate(scope browse.Scope) (string, any, error) {
 		return "", "", nil
 	default:
 		return "", "", errors.New("invalid Browse scope")
+	}
+}
+
+func browseCollectionPredicate(collectionType browse.CollectionType) (string, error) {
+	switch collectionType {
+	case "":
+		return "", nil
+	case browse.CollectionCosplay:
+		return ` AND EXISTS(SELECT 1 FROM gallery_cast collection_cast WHERE collection_cast.gallery_id=gallery.id)`, nil
+	case browse.CollectionAlbum:
+		return ` AND NOT EXISTS(SELECT 1 FROM gallery_cast collection_cast WHERE collection_cast.gallery_id=gallery.id)`, nil
+	default:
+		return "", errors.New("invalid Gallery collection type")
 	}
 }
 

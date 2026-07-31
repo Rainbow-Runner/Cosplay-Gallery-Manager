@@ -27,7 +27,19 @@ func TestCoserDetailIsUnifiedAcrossScopesAndPreservesSocialOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	listGallery, _ := createBrowseGallery(t, db, "List", gallery.ContentRatingNonAdult, now)
-	if _, err := db.Galleries().AddCredit(ctx, listGallery.ID, coser.UUID, 1024, listGallery.MetadataRevision, now); err != nil {
+	creditID, err := db.Galleries().AddCredit(ctx, listGallery.ID, coser.UUID, 1024, listGallery.MetadataRevision, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	work, err := db.CoreEntities().CreateWork(ctx, CreateNamedEntityInput{Name: "Work"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	character, err := db.CoreEntities().CreateCharacter(ctx, work.UUID, CreateNamedEntityInput{Name: "Character"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Galleries().AddCast(ctx, listGallery.ID, creditID, character.UUID, 1024, listGallery.MetadataRevision+1, now); err != nil {
 		t.Fatal(err)
 	}
 	activateBrowseFixture(t, db, listGallery.ID, now)
@@ -44,5 +56,13 @@ func TestCoserDetailIsUnifiedAcrossScopesAndPreservesSocialOrder(t *testing.T) {
 	if !detail.Redirected || detail.Entity.Slug != coser.Slug || detail.Galleries.TotalItems != 2 ||
 		len(detail.SocialAccounts) != 2 || detail.SocialAccounts[0].UUID != first.UUID || detail.SocialAccounts[0].Status != "INACTIVE" {
 		t.Fatalf("Coser detail = %#v", detail)
+	}
+	cosplay, err := db.Browse().CoserDetailByCollection(ctx, coser.UUID, browse.ScopeAll, 1, browse.CollectionCosplay)
+	if err != nil || cosplay.Galleries.TotalItems != 1 || cosplay.Galleries.Items[0].SetID != listGallery.SetID {
+		t.Fatalf("Coser COSPLAY detail = %#v, %v", cosplay, err)
+	}
+	album, err := db.Browse().CoserDetailByCollection(ctx, coser.UUID, browse.ScopeAll, 1, browse.CollectionAlbum)
+	if err != nil || album.Galleries.TotalItems != 1 || album.Galleries.Items[0].SetID != magicGallery.SetID {
+		t.Fatalf("Coser ALBUM detail = %#v, %v", album, err)
 	}
 }

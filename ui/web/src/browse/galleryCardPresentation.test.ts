@@ -9,13 +9,20 @@ const base = {
 
 describe("galleryCardPresentation", () => {
   it("uses Character, Work and Coser hierarchy for cosplay", () => {
-    expect(galleryCardPresentation(base)).toEqual({ primary: "Saber", secondary: "Fate/stay night", cosers: ["Alice"] });
+    expect(galleryCardPresentation(base)).toEqual({
+      primary: "Saber",
+      secondary: "Fate/stay night",
+      cosers: [{ uuid: "p", name: "Alice" }],
+    });
   });
   it("uses the Gallery title and Album fallback for albums", () => {
     expect(galleryCardPresentation({ ...base, collectionType: "ALBUM", characters: [], works: [] }))
-      .toEqual({ primary: "Saber at the lake", secondary: "Album", cosers: ["Alice"] });
+      .toEqual({ primary: "Saber at the lake", secondary: "Album", cosers: [{ uuid: "p", name: "Alice" }] });
   });
-  it("deduplicates repeated relation names", () => {
-    expect(galleryCardPresentation({ ...base, credits: [...base.credits, ...base.credits] }).cosers).toEqual(["Alice"]);
+  it("deduplicates repeated entity identities without collapsing different cosers with the same name", () => {
+    expect(galleryCardPresentation({
+      ...base,
+      credits: [...base.credits, ...base.credits, { uuid: "p2", name: "Alice" }],
+    }).cosers).toEqual([{ uuid: "p", name: "Alice" }, { uuid: "p2", name: "Alice" }]);
   });
 });

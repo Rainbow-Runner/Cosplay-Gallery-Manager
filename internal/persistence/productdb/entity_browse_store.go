@@ -4,13 +4,26 @@ import (
 	"context"
 	"errors"
 	"math"
+	"strings"
 
 	"github.com/stashapp/stash/internal/browse"
 )
 
 func (s *BrowseStore) EntityIndex(ctx context.Context, kind browse.SearchEntityKind, scope browse.Scope, page int, sortBy browse.EntitySort) (browse.EntityPage, error) {
+	return s.EntityIndexByCollection(ctx, kind, scope, page, sortBy, "")
+}
+
+func (s *BrowseStore) EntityIndexByCollection(ctx context.Context, kind browse.SearchEntityKind, scope browse.Scope, page int, sortBy browse.EntitySort, collectionType browse.CollectionType) (browse.EntityPage, error) {
+	return s.EntityIndexFiltered(ctx, kind, scope, page, sortBy, collectionType, "")
+}
+
+func (s *BrowseStore) EntityIndexFiltered(ctx context.Context, kind browse.SearchEntityKind, scope browse.Scope, page int, sortBy browse.EntitySort, collectionType browse.CollectionType, query string) (browse.EntityPage, error) {
 	if page < 1 || page > 1_000_000 {
 		return browse.EntityPage{}, errors.New("entity page is out of range")
+	}
+	query = normalizedDisplay(strings.TrimSpace(query))
+	if len([]rune(query)) > 300 {
+		return browse.EntityPage{}, errors.New("entity query must contain at most 300 characters")
 	}
 	config, err := entityBrowseConfiguration(kind)
 	if err != nil {
@@ -26,10 +39,23 @@ func (s *BrowseStore) EntityIndex(ctx context.Context, kind browse.SearchEntityK
 	if err != nil {
 		return browse.EntityPage{}, err
 	}
-	visibility := config.visiblePrefix + browseVisibleGalleryPredicate + scopeSQL + `)`
+	collectionSQL, err := browseCollectionPredicate(collectionType)
+	if err != nil {
+		return browse.EntityPage{}, err
+	}
+	if collectionType == browse.CollectionAlbum && kind != browse.SearchCoser {
+		return browse.EntityPage{}, errors.New("Album entity indexes only support people")
+	}
+	visibility := config.visiblePrefix + browseVisibleGalleryPredicate + scopeSQL + collectionSQL + `)`
 	var args []any
 	if scopeArg != "" {
 		args = append(args, scopeArg)
+	}
+	if query != "" {
+		contains := "%" + literalLike(query) + "%"
+		visibility += ` AND (entity.name LIKE ? ESCAPE '\' OR entity.sort_name LIKE ? ESCAPE '\'
+			OR EXISTS(SELECT 1 FROM ` + config.aliasTable + ` query_alias WHERE query_alias.` + config.aliasKey + `=entity.uuid AND query_alias.alias LIKE ? ESCAPE '\'))`
+		args = append(args, contains, contains, contains)
 	}
 	var total int
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM `+config.table+` entity WHERE `+visibility, args...).Scan(&total); err != nil {
@@ -50,7 +76,7 @@ func (s *BrowseStore) EntityIndex(ctx context.Context, kind browse.SearchEntityK
 			WHERE recent_relation.coser_uuid=entity.uuid AND gallery_recent.state='ACTIVE' AND gallery_recent.added_at_utc IS NOT NULL
 			AND recent_source.availability_state='AVAILABLE' AND recent_source.over_limit=0 AND COALESCE(recent_personal.hidden,0)=0
 			AND NOT EXISTS(SELECT 1 FROM gallery_source_issues issue WHERE issue.source_id=recent_source.id
-				AND issue.severity='BLOCKING' AND issue.resolved_at_utc IS NULL)` + recentScope + `) DESC,entity.uuid`
+				AND issue.severity='BLOCKING' AND issue.resolved_at_utc IS NULL)` + recentScope + strings.ReplaceAll(collectionSQL, "gallery.", "gallery_recent.") + `) DESC,entity.uuid`
 	}
 	queryArgs = append(queryArgs, config.pageSize, (page-1)*config.pageSize)
 	rows, err := s.db.QueryContext(ctx, `SELECT entity.uuid,entity.slug,entity.name FROM `+config.table+` entity

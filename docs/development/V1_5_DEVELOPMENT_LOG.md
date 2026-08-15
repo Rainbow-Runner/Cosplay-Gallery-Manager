@@ -1373,3 +1373,17 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 
 - 本轮验证覆盖备份可解包、逻辑内容等价和迁移安全，但没有实际把正式库恢复回v1；恢复演练仍必须在隔离副本或下一次明确维护窗口执行。
 - 仍需所有者在已登录目标浏览器中使用真实DIRECT、Remux和Transcode样本核对首次等待、拖动、暂停、全屏、长时播放与代理缓存重用；自动化合成媒体和服务健康检查不能替代这部分人工业务验收。
+
+## 1.5-34 Gallery详情Video标识取消黑色背景
+
+### 问题与实现
+
+- Gallery详情媒体卡片右上角`.media-tile__kind`使用75%不透明黑色背景和`.25rem .35rem`内边距，VIDEO文字形成突兀的小型黑色块，与当前GalleryEpic参考风格不一致。
+- 移除背景与内边距，类型文字继续固定在卡片右上角；使用82%白色和轻量文字阴影兼顾明暗Poster可读性，但不产生新遮罩。VIDEO/GIF文案、媒体顺序、菜单层级、点击区域和Lightbox逻辑保持不变。
+
+### 验证与增量部署
+
+- `GalleryDetailPage.ui.test.tsx`专项Vitest 7项PASS；TypeScript检查PASS；Vite生产构建675模块PASS；Chromium离线完整业务Playwright 1项PASS，现有视觉基线无需更新。
+- 样式修复提交为`4b3c1ec982544da46dd48791d5ad17057b09d930`；`cgm_web_embed cgm_galleryepic`正式构建报告`vcs.modified=false`，SHA-256为`2561c13c628f3fef8a244ac74e866fa62b059b05989e511fb3f4660314b813e2`。
+- 2026-08-15 21:46 CST完成本机增量部署。旧二进制保存在`/tmp/cgm-before-video-label-20260815-2145`，SHA-256为`e9dc5dc4fe3f1143cdecad8a6a2c86934015a4b63310423bd28d43b96959200c`；此前额外完整回滚包及schema v1迁移快照继续保留。
+- 服务保持`enabled/active`、`NRestarts=0`，Health/Ready为204、首页为200；`about.json`报告完整提交和`exactSourceAvailable=true`。实际CSS资源`index-Btj_g1dP.css`确认使用`padding:0;background:transparent`，启动后journal未发现错误或警告。本轮未修改数据库、配置、媒体、Manifest或缓存。

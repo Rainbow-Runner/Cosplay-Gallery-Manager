@@ -2,6 +2,13 @@
 
 ## 1.5 增量开发状态
 
+### 2026-08-15 Gallery视频标识透明化增量部署
+
+- 2026-08-15 21:46 CST将Gallery详情媒体卡片右上角VIDEO/GIF类型标识改为无背景、无内边距的轻量文字；82%白字与轻微文字阴影只保证不同Poster上的基本可读性，不形成新的遮罩或色块。媒体类型识别、文字内容、右上角操作菜单和Lightbox均未改变。
+- 源码提交为`4b3c1ec982544da46dd48791d5ad17057b09d930`，正式二进制SHA-256为`2561c13c628f3fef8a244ac74e866fa62b059b05989e511fb3f4660314b813e2`；构建报告`vcs.modified=false`和`exactSourceAvailable=true`。替换前二进制保存为`/tmp/cgm-before-video-label-20260815-2145`，SHA-256为`e9dc5dc4fe3f1143cdecad8a6a2c86934015a4b63310423bd28d43b96959200c`。
+- Gallery详情专项Vitest 7项、TypeScript检查、675模块生产构建及Chromium离线完整业务Playwright 1项均通过；视觉基线无需更新。实际部署CSS资源`index-Btj_g1dP.css`已核对包含`padding:0;background:transparent`。
+- 用户服务保持`enabled/active`且`NRestarts=0`，Health/Ready为204、首页为200；本次启动后未发现ERROR、WARN、FAILED、panic或fatal。没有修改数据库、配置、媒体、Manifest或缓存，也没有触发schema迁移。
+
 ### 2026-08-15 视频第一、第二阶段正式部署
 
 - 2026-08-15 21:32 CST已将本机用户服务升级到提交`135174fc3a17d76c8887ebfba99120b55dfb976a`。部署产物版本为`1.5.0-dev`，使用`cgm_web_embed cgm_galleryepic`标签从清洁工作树构建，二进制SHA-256为`e9dc5dc4fe3f1143cdecad8a6a2c86934015a4b63310423bd28d43b96959200c`；发行校验确认`vcs.modified=false`且源码归档与完整提交对应。
@@ -55,10 +62,10 @@
 ## 部署基线
 
 - 运行形态：Linux amd64 原生单所有者服务。
-- 当前源码提交：`135174fc3a17d76c8887ebfba99120b55dfb976a`。
+- 当前源码提交：`4b3c1ec982544da46dd48791d5ad17057b09d930`。
 - 当前产品版本：`1.5.0-dev`。
 - 二进制：`/home/rainbowrunner/.local/bin/cgm`。
-- 当前二进制SHA-256：`e9dc5dc4fe3f1143cdecad8a6a2c86934015a4b63310423bd28d43b96959200c`。
+- 当前二进制SHA-256：`2561c13c628f3fef8a244ac74e866fa62b059b05989e511fb3f4660314b813e2`。
 - 启动配置：`/home/rainbowrunner/.config/cosplay-gallery-manager/cgm.json`，权限 `0600`。
 - 产品数据库：`/home/rainbowrunner/.local/share/cosplay-gallery-manager/product.sqlite`，权限 `0600`。
 - 生成缓存：`/home/rainbowrunner/.cache/cosplay-gallery-manager/`。

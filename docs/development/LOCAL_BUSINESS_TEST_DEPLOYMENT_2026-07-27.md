@@ -2,6 +2,19 @@
 
 ## 1.5 增量开发状态
 
+### 2026-08-15 视频第一、第二阶段正式部署
+
+- 2026-08-15 21:32 CST已将本机用户服务升级到提交`135174fc3a17d76c8887ebfba99120b55dfb976a`。部署产物版本为`1.5.0-dev`，使用`cgm_web_embed cgm_galleryepic`标签从清洁工作树构建，二进制SHA-256为`e9dc5dc4fe3f1143cdecad8a6a2c86934015a4b63310423bd28d43b96959200c`；发行校验确认`vcs.modified=false`且源码归档与完整提交对应。
+- 替换前先停止服务，在实际备份根创建额外回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260815T132857Z-135174f.tar.gz`，SHA-256为`e94a134919ec0b1e334096eb798c00e59e472accaf6386f21ee65be6707dce4c`，文件与校验记录权限均为`0600`。回滚包包含一致SQLite快照、启动配置、Coser托管元数据、替换前二进制和systemd用户服务定义，不包含媒体来源、可重建缓存或日志。
+- 回滚包已执行SHA-256校验、实际解包、配置/旧二进制/systemd定义/Coser文件树比对；源库与解包库`integrity_check`均为`ok`，规范化SQL dump SHA-256同为`15cbb03765bb65d352f4bcc890b5b294693d3b5a7691ae8bcbee4547f400aa3`，54张表、1648行及产品身份/Setup根一致。
+- 新版本首次打开正式数据库时已完成schema v1→v2前向迁移；产品数据库inode仍为`19679716`。迁移前自动快照为`product.sqlite.pre-schema-v1-1786800729629296221.bak`，权限`0600`、SHA-256为`5572e531562c6d77333af522fdf2267b2185a11d8b54d1919495367c48f924f6`，单独验证`integrity_check=ok`且仍报告schema v1；正式库验证`integrity_check=ok`并报告schema v2。
+- 宿主机`/usr/bin/ffmpeg`、`/usr/bin/ffprobe`和`/usr/bin/dcraw`均可用。启动配置保持不变，空`ffmpeg_path`和缺省`ffprobe_path`由新适配器按PATH解析；启动日志确认`ffmpeg_enabled=true`、`ffprobe_enabled=true`、`libraw_enabled=true`。
+- 启动后11个既有DIRECTORY视频均完成技术探测并写入READY状态，随后11个新版960px BASE Poster任务全部完成；本轮任务ID 382～403均为COMPLETED且无错误码。该回填会只读访问原视频并新增可重建缓存，不修改媒体来源或Manifest。
+- 用户服务保持`enabled/active`且`NRestarts=0`；Health/Ready均为204，首页为200。`/about.json`报告完整提交、`buildTime=2026-08-15 20:15:00`和`exactSourceAvailable=true`；主JS/CSS、Gallery详情块和按需视频播放块均返回200，启动后journal未发现ERROR、WARN、FAILED、panic或fatal。
+- 自动化与正式部署验证已经完成；仍需由所有者在已登录目标浏览器中以真实DIRECT、Remux和Transcode视频人工验证拖动、暂停、全屏、长时播放及代理首次等待体验。尚未实际执行回滚恢复演练，不应把“备份可校验”等同于“恢复演练已通过”。
+
+### 2026-08-13 上一增量部署
+
 - 2026-08-13 01:44 CST已将本机用户服务增量升级为Manage Settings输入控件浅色主题修复构建；Coser详情头像直达管理、精确社交图标、Browse人物头像链路、GalleryEpic可拔除Provider与此前1.5功能一并保留。
 - 当前二进制SHA-256：`a42fb73f919daf1aa8abef6e8f1bf24936f17684ab09f7b08de4cc7ae9c52e0a`。产物以`cgm_web_embed cgm_galleryepic`标签构建，Provider仍与核心业务保持构建期解耦。
 - 替换前二进制保存在`/tmp/cgm-before-settings-light-controls-20260813`，SHA-256为`0674c59a06dcb305ab2c6f46c2e5758e5855009a2a7e7534ee02f6486ef11d8d`；更早的Coser管理直达部署备份仍为`/tmp/cgm-before-coser-manage-link-20260813`。
@@ -42,10 +55,10 @@
 ## 部署基线
 
 - 运行形态：Linux amd64 原生单所有者服务。
-- 源码提交：`3dc86fb6be38216349fb039a6b3253fb392ae422`。
-- 初始产品版本：`0.1.0-dev`；当前运行版本见上方1.5增量开发状态。
+- 当前源码提交：`135174fc3a17d76c8887ebfba99120b55dfb976a`。
+- 当前产品版本：`1.5.0-dev`。
 - 二进制：`/home/rainbowrunner/.local/bin/cgm`。
-- 二进制 SHA-256：`ef2dc87446daaee84ddc8c187aebfb877e6419545d4782ee987a5d6c688e918a`。
+- 当前二进制SHA-256：`e9dc5dc4fe3f1143cdecad8a6a2c86934015a4b63310423bd28d43b96959200c`。
 - 启动配置：`/home/rainbowrunner/.config/cosplay-gallery-manager/cgm.json`，权限 `0600`。
 - 产品数据库：`/home/rainbowrunner/.local/share/cosplay-gallery-manager/product.sqlite`，权限 `0600`。
 - 生成缓存：`/home/rainbowrunner/.cache/cosplay-gallery-manager/`。
@@ -63,36 +76,39 @@
 - `/healthz`、`/readyz` 返回 204，`/setup` 与 `/legal` 返回 200。
 - `/about.json` 显示精确提交源码 URL，`exactSourceAvailable=true`。
 - 只监听 IPv4 loopback `127.0.0.1:9999`，不对局域网或公网开放。
-- 当前 `/setup/status` 为 `{"complete":false}`；尚未代替所有者设置密码、配置媒体库或启动扫描。
+- 当前`/session/status`确认`setupComplete=true`；本次无浏览器Cookie的部署探针显示`authenticated=false`属于预期，不改变所有者浏览器中的既有Session和业务配置。
 
-本机已安装 `/usr/bin/dcraw`。系统尚未安装 FFmpeg/FFprobe，因为系统包安装需要所有者在交互式终端输入 sudo 密码；当前配置将 `ffmpeg_path` 留空。应用可正常启动，图片与 RAW 流程可测试，但 Video Poster/代理处理必须等 FFmpeg 安装并写入配置后再验收。
+本机已安装`/usr/bin/ffmpeg`、`/usr/bin/ffprobe`和`/usr/bin/dcraw`。当前配置继续将`ffmpeg_path`留空且未显式写入`ffprobe_path`，1.5适配器已按PATH正确解析成对工具；正式启动与既有视频探测/Poster回填已验证。显式路径仍可用于固定部署依赖，但不是当前本机运行的必要条件。
 
-## 首次真实业务初始化
+## 首次真实业务初始化（历史流程，已完成）
+
+本机最初按以下真实业务流程完成Setup；这些路径以正式数据库中的当前记录为准：
 
 1. 浏览器打开 `http://127.0.0.1:9999/setup`。
 2. 环境选择“本机直接运行 / NATIVE”；loopback 原生 Setup 不需要一次性票据。
 3. 由所有者设置不少于 8 位的独立密码，选择 `zh-CN` 和实际拍摄时区。
 4. Coser 元数据根填写：
-   `/home/rainbowrunner/.local/share/cosplay-gallery-manager/cosers`
+   `/home/rainbowrunner/cos/coser`
 5. 备份根填写：
-   `/home/rainbowrunner/.local/share/cosplay-gallery-manager/backups`
+   `/home/rainbowrunner/cos/bk`
 6. 完成 Setup 并重新登录。Setup 不会自动扫描媒体。
 7. 进入 Manage → Libraries，新建实际媒体库并填写真实绝对路径；先用小型代表性目录验证权限、规则和发现结果，再扩大范围。
 8. 显式执行发现，审阅 Candidate 后导入为 DRAFT；再显式扫描、解决阻断问题、补充 Cast/关系并激活。
 
 媒体库根应优先以只读权限开始验收。只有需要显式 Gallery Manifest Push 时才授予对应来源写权限；CGM 不删除、移动或改写源媒体，但 Manifest Push 会按产品确认流程写入 sidecar。
 
-## FFmpeg 补齐
+## FFmpeg/FFprobe诊断
 
-所有者在自己的交互式终端执行：
+当前无需再次安装。可使用以下命令确认宿主机工具，并在Manage → Settings查看CGM解析后的版本、来源和稳定错误码：
 
 ```bash
-sudo apt-get install -y ffmpeg
 command -v ffmpeg
 command -v ffprobe
+ffmpeg -version
+ffprobe -version
 ```
 
-确认路径后，将启动配置中的 `ffmpeg_path` 从空字符串改为 `/usr/bin/ffmpeg`，然后执行：
+如以后需要把PATH解析改为固定路径，可在启动配置同时设置`ffmpeg_path`和`ffprobe_path`后重启：
 
 ```bash
 systemctl --user restart cosplay-gallery-manager.service

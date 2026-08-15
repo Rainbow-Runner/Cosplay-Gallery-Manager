@@ -12,7 +12,7 @@
 
 - 1.5（视频第一阶段）：产品schema v1→v2迁移在写入前创建并校验SQLite Online Backup；新增FFmpeg/FFprobe成对诊断、产品自有技术元数据、确定性主轨探测、每分钟25项有界存量回填、人工重试，以及20%时间点/960px/不放大/旋转/HDR到SDR的BASE Poster链路。Manage Settings、Gallery媒体行与媒体详情只显示白名单技术状态和稳定错误码。
 - 1.5（视频第二阶段）：实现MP4/H.264/AAC保守DIRECT矩阵、认证且路径无关的原视频GET/HEAD/Range路由，以及按Lightbox/媒体详情实际需求才排队的Remux/H.264-AAC Fast Start MP4代理；代理固定为ENHANCED并受容量、磁盘余量、原子发布和LRU约束。前端准备态保持Poster，完成后切换原生播放器，成员切换会卸载上一视频；Gallery卡片和Scrubber不触发播放。
-- 1.5（视频安全与真实工具门禁）：原视频授权复核ACTIVE/Scope/Hidden/可用性/Exclude/Blocking Issue/current revision与DIRECT方案，逐级拒绝符号链接并保持同一文件描述符响应；日志只写稳定`CGM_VIDEO_*`技术事件。本机FFmpeg/FFprobe/dcraw合成媒体门禁已实际覆盖MP4、MOV、MKV、WebM、无音频、双音轨、旋转、HDR、Poster、Remux和Transcode；本轮未部署，正式数据库迁移及目标浏览器真实业务验收仍待执行。
+- 1.5（视频安全、真实工具与正式部署门禁）：原视频授权复核ACTIVE/Scope/Hidden/可用性/Exclude/Blocking Issue/current revision与DIRECT方案，逐级拒绝符号链接并保持同一文件描述符响应；日志只写稳定`CGM_VIDEO_*`技术事件。本机FFmpeg/FFprobe/dcraw合成媒体门禁已实际覆盖MP4、MOV、MKV、WebM、无音频、双音轨、旋转、HDR、Poster、Remux和Transcode。2026-08-15已先创建并完整校验额外回滚包，再将正式库由schema v1迁至v2；自动v1快照和迁移后主库`integrity_check`均通过，11个既有视频探测与11个新版Poster全部READY。目标浏览器中的真实DIRECT/Remux/Transcode交互及实际回滚恢复演练仍待人工执行。
 - 1.5（Manage设置输入框浅色收敛）：清除Settings页数字输入框残留的旧`#100e10`黑底/白字规则，数字输入和Home source下拉统一使用浅色设计Token，并补齐主色边框与键盘焦点环；浏览器回归锁定全部相关控件的白底深色计算样式和axe A/AA结果。
 - 1.5（Coser详情直达管理）：Coser详情头像改为指向`/manage/cosers?uuid=<coser UUID>`的认证后台深链接，点击后直接载入对应Coser资料编辑器，不依赖目标是否出现在后台当前分页；入口保留原头像视觉，新增中英文可访问名称、悬浮边框与键盘焦点反馈。Model详情不展示人物资料头像，因此不扩展该入口。
 - 1.5（Browse人物头像与社交视觉）：修复Coser/Model索引转换遗漏`avatarURL`以及Gallery卡片人物摘要没有头像资源身份的问题；两处均使用认证、不透明、带revision的`/resource/coser/.../avatar-480`，不暴露托管文件路径。Gallery卡片人物行对齐为32px头像、6px图文间距和14px/500名称；Coser详情按参考站固定显示X、Facebook、Instagram、微博、Patreon、Linktree六项精确实心SVG，缺失账号以灰色不可点击图标占位，自定义平台继续追加并保留通用回退。

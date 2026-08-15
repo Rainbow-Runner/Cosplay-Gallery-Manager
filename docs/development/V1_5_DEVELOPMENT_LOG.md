@@ -1346,3 +1346,30 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 最终验证结果：视频相关Go/SQLite/API/Server目标包全部PASS；`CGM_TEST_FFMPEG=/usr/bin/ffmpeg CGM_TEST_FFPROBE=/usr/bin/ffprobe CGM_TEST_LIBRAW=/usr/bin/dcraw`真实媒体矩阵PASS；TypeScript检查PASS；Vitest 25个文件、64项PASS；Vite生产构建675模块PASS；`cgm_web_embed`产品Server/UI回归PASS；现有Chromium离线完整业务Playwright 1项PASS且没有更新视觉快照。
 - `go test ./internal/...`额外探测只有原Stash遗留`internal/api`、`internal/api/urlbuilders`和`internal/manager`因项目明确移除的`ui/v2.5/build`嵌入目录而setup failed，其他执行到的内部包通过；CGM不以恢复旧UI来规避该隔离边界，产品入口已由上述`cgm_web_embed`门禁替代验证。
 - 本轮没有构建安装或重启本机服务，没有修改正式配置、数据库、媒体、Manifest或缓存。正式部署会触发schema v2维护迁移，必须先额外完整备份并保留自动v1快照；部署与人工浏览器验收另行执行。
+
+## 1.5-33 累计提交、额外完整备份与视频阶段正式部署
+
+### 部署基线
+
+- 将当前127个累计变更文件完整提交为`135174fc3a17d76c8887ebfba99120b55dfb976a`（`Complete CGM 1.5 frontend metadata and video workflows`）；提交前`git diff --cached --check`通过，提交后工作树清洁。
+- 从该清洁提交以`cgm_web_embed cgm_galleryepic`构建`1.5.0-dev`正式产物；二进制报告完整提交且`go version -m`确认`vcs.modified=false`，SHA-256为`e9dc5dc4fe3f1143cdecad8a6a2c86934015a4b63310423bd28d43b96959200c`。
+- `scripts/verify-cgm-release.sh`重新构建产品、生成提交源码归档并确认二进制版本/完整提交和AGPL源码对应关系；Vite生产构建仍为675个模块。
+
+### 额外完整回滚备份
+
+- 2026-08-15 21:29 CST停止`cosplay-gallery-manager.service`并确认MainPID为0；没有让第二个CGM进程与正式SQLite并行运行。
+- 在真实备份根创建`/home/rainbowrunner/cos/bk/cgm-predeploy-20260815T132857Z-135174f.tar.gz`，包含SQLite一致快照、启动配置、Coser托管元数据、替换前二进制和systemd用户服务定义；媒体来源、可重建缓存、日志和既有备份未递归打包。
+- 归档及校验文件权限均为`0600`；归档SHA-256为`e94a134919ec0b1e334096eb798c00e59e472accaf6386f21ee65be6707dce4c`。实际解包后，源库与备份库`integrity_check`均为`ok`，规范化SQL dump SHA-256同为`15cbb03765bb65d352f4bcc890b5b294693d3b5a7691ae8bcbee4547f400aa3`，54表/1648行、产品身份和Setup存储根一致；配置、旧二进制、服务定义及Coser文件树逐项一致。
+
+### 安装、迁移与运行验证
+
+- 经校验的新二进制先写入同目录临时名、复核SHA-256后原子替换`/home/rainbowrunner/.local/bin/cgm`，再启动用户服务；配置文件保持SHA-256 `ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`且没有修改媒体库、Manifest或来源文件。
+- 正式数据库inode保持`19679716`并由schema v1前向迁移至v2。迁移前自动快照`product.sqlite.pre-schema-v1-1786800729629296221.bak`权限`0600`、SHA-256 `5572e531562c6d77333af522fdf2267b2185a11d8b54d1919495367c48f924f6`，单独验证`integrity_check=ok`和schema v1；迁移后主库`integrity_check=ok`并报告schema v2。
+- 服务保持`enabled/active`、`NRestarts=0`；Health/Ready为204，首页为200。`about.json`报告`1.5.0-dev`、完整提交、`buildTime=2026-08-15 20:15:00`及`exactSourceAvailable=true`。
+- 启动日志确认`libraw_enabled=true`、`ffmpeg_enabled=true`和`ffprobe_enabled=true`；11个既有DIRECTORY视频完成`ITEM_TECHNICAL_METADATA`并全部READY，随后11个`STATIC_POSTER`任务全部COMPLETED/READY。部署后journal未检出ERROR、WARN、FAILED、panic或fatal。
+- 新主JS/CSS、Gallery详情Chunk与`useOnDemandVideoPlayback` Chunk均返回200。缓存因新版Poster从约161 MiB轻微增加到约162 MiB，符合BASE派生写入预期。
+
+### 保留验收与回退边界
+
+- 本轮验证覆盖备份可解包、逻辑内容等价和迁移安全，但没有实际把正式库恢复回v1；恢复演练仍必须在隔离副本或下一次明确维护窗口执行。
+- 仍需所有者在已登录目标浏览器中使用真实DIRECT、Remux和Transcode样本核对首次等待、拖动、暂停、全屏、长时播放与代理缓存重用；自动化合成媒体和服务健康检查不能替代这部分人工业务验收。

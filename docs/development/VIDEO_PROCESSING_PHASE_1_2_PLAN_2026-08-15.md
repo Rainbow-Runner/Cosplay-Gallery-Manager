@@ -1,6 +1,6 @@
 # CGM 1.5 视频处理第一、第二阶段功能规划
 
-> 状态：第一、第二阶段代码已实现；本机合成样本真实工具门禁已通过，部署配置与目标浏览器人工业务验收待执行
+> 状态：第一、第二阶段代码及本机正式部署已完成；目标浏览器人工业务验收与恢复演练待执行
 > 记录日期：2026-08-15
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 适用范围：1.5 本机业务迭代；Windows原生构建继续延期
@@ -224,7 +224,8 @@
 
 - Go目标包、SQLite迁移/安全快照、回填、并发按需任务、Worker、GraphQL和DIRECT HTTP测试通过；React TypeScript与全部Vitest通过。
 - 使用本机`/usr/bin/ffmpeg`、`/usr/bin/ffprobe`和`/usr/bin/dcraw`实际通过合成MP4、MOV、MKV、WebM、无音频、双音轨、旋转、HDR标记、Poster、Remux和Transcode门禁，并修复FFprobe返回`matroska,webm`时容器错误归类为MKV的问题。
-- 本轮按要求未部署、未迁移正式数据库、未改正式配置或媒体。真实业务媒体来源只读校验、DIRECT/代理在Chrome/Firefox/Safari中的拖动/暂停/全屏以及部署后回退恢复仍待维护窗口人工验收，不能据合成样本标记为全部业务通过。
+- 2026-08-15维护窗口已先创建并校验包含数据库、配置、Coser托管元数据、旧二进制和systemd定义的额外回滚包，再将提交`135174fc3a17d76c8887ebfba99120b55dfb976a`部署到本机正式用户服务。正式库由schema v1迁至v2，自动v1快照与迁移后主库`integrity_check`均为`ok`；启动后11个既有视频探测和11个新版Poster全部READY，FFmpeg/FFprobe/dcraw诊断均启用，Health/Ready和新UI资源通过。
+- 本次没有修改启动配置、媒体来源或Manifest；视频回填按设计只读访问原视频并新增可重建缓存。DIRECT/代理在目标Chrome/Firefox/Safari中的拖动、暂停、全屏、长时播放体验以及实际回滚恢复仍待人工验收，不能据自动化和部署健康门禁标记为全部业务通过。
 
 ## 8. 明确延期
 

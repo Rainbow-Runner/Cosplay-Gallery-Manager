@@ -4,6 +4,7 @@ import { useIntl } from "react-intl";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { CHARACTER_DETAIL, COSER_DETAIL, TAG_DETAIL, WORK_DETAIL } from "../api/browse";
 import { Icon } from "../ui/Icon";
+import { SocialAccounts } from "./SocialAccounts";
 import { Breadcrumbs, Pagination } from "../ui/Patterns";
 import { GalleryCard } from "./GalleryCard";
 import { ScopeSelector } from "./ScopeSelector";
@@ -46,15 +47,17 @@ function PersonDetailPage({ collectionType, routeKind, indexPath, indexTitleID, 
     {profileVisible ? <section className="coser-profile">
       <div className={`coser-banner${detail.bannerURL ? "" : " coser-banner--empty"}`}>{detail.bannerURL ? <img src={detail.bannerURL} alt="" /> : null}</div>
       <div className="coser-hero">
-        <div className="coser-avatar">{detail.entity.avatarURL ? <img src={detail.entity.avatarURL} alt="" /> : detail.entity.name.slice(0, 1)}</div>
+        <Link
+          className="coser-avatar"
+          to={`/manage/cosers?uuid=${encodeURIComponent(detail.entity.uuid)}`}
+          aria-label={intl.formatMessage({ id: "coser.manage" }, { name: detail.entity.name })}
+          title={intl.formatMessage({ id: "coser.manage" }, { name: detail.entity.name })}
+        >
+          {detail.entity.avatarURL ? <img src={detail.entity.avatarURL} alt="" /> : detail.entity.name.slice(0, 1)}
+        </Link>
         <div className="coser-identity">
           <div className="coser-identity__title"><h1>{detail.entity.name}</h1>{detail.countryOrRegion ? <span>{detail.countryOrRegion}</span> : null}</div>
-          {detail.socialAccounts.length ? <div className="social-accounts">{detail.socialAccounts.map((account) => {
-            const label = account.label || account.handle || account.platformKey;
-            return <a key={account.uuid} className={account.status === "INACTIVE" ? "is-inactive" : ""} href={account.url} target="_blank" rel="noreferrer" aria-label={`${account.platformKey}: ${label}`} title={label}>
-              <span aria-hidden="true">{socialPlatformMark(account.platformKey)}</span>
-            </a>;
-          })}</div> : null}
+          <SocialAccounts accounts={detail.socialAccounts} />
         </div>
       </div>
     </section> : <h1 className="sr-only">{detail.entity.name}</h1>}
@@ -123,13 +126,4 @@ function Loading() { const intl = useIntl(); return <main className="browse-main
 function ErrorState() { const intl = useIntl(); return <main className="browse-main"><p className="state-message" role="alert">{intl.formatMessage({ id: "state.error" })}</p></main>; }
 function useCanonicalDetail(detail: { entity: { slug: string }; redirected: boolean } | undefined, slug: string, kind: string, navigate: ReturnType<typeof useNavigate>) {
   useEffect(() => { if (detail?.redirected && detail.entity.slug !== slug) navigate(`/${kind}/${detail.entity.slug}`, { replace: true }); }, [detail, kind, navigate, slug]);
-}
-
-function socialPlatformMark(platformKey: string) {
-  const marks: Record<string, string> = {
-    instagram: "◎", twitter: "X", weibo: "微", bilibili: "B", xiaohongshu: "小",
-    douyin: "♪", tiktok: "♪", youtube: "▶", pixiv: "P", facebook: "f",
-    bluesky: "B", patreon: "P", fanbox: "F", website: "↗",
-  };
-  return marks[platformKey.toLowerCase()] ?? platformKey.slice(0, 2).toUpperCase();
 }

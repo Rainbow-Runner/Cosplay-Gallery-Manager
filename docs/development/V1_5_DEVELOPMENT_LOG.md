@@ -729,3 +729,620 @@ PASS
 ```
 
 本阶段只修改仓库文档，不改变应用二进制、运行服务、配置、数据库、媒体、Manifest或缓存，因此无需执行增量部署。
+
+## 1.5-16 Gallery详情页高保真与单媒体操作
+
+### 已冻结范围
+
+- 2026-08-01用户确认采用GalleryEpic作品集详情页的紧凑标题、详情媒体2/3/4/6列和256px相关推荐栏布局。
+- 混合媒体继续按Photo/Selfie、GIF、Video既定顺序依次展示并按组每次展开24项，但所有媒体分类标题均隐藏。
+- 本阶段补齐V1原定的单媒体收藏、静态图片设封面与Lightbox URL/返回/定位行为；不增加浏览数、下载、评论或热门能力，不修改媒体、实体和Gallery数据模型。
+
+### 实施状态
+
+- 已完成：移除独立封面Hero，将标题、非零媒体计数、拍摄/收录日期、Gallery收藏和“更多详情”收敛到紧凑页头；详细元数据继续可访问，但不再挤占首屏媒体区域。
+- 已完成：媒体区按Photo/Selfie、GIF、Video后端顺序连续排布，视觉上使用统一2/3/4/6列网格和12px间距，不显示媒体分类标题；各后端分组仍独立保留每次24项的增量展开边界。
+- 已完成：相关推荐改为256px右栏的紧凑缩略图行；窄屏自动回落到主内容下方，不改变既有推荐查询和分级口径。
+- 已完成：媒体卡片补齐收藏/取消收藏、静态图片设为封面、当前封面标识和媒体详情入口；封面Mutation继续携带Item的`metadata_revision`并在成功后重新读取Gallery与成员数据。
+- 已完成：Lightbox由`?item=<uuid>`驱动，支持浏览器前进/后退、当前筛选范围内首尾不循环导航、关闭后滚回原媒体、记录`last_item_id`，并提供单媒体收藏、半星评分、静态图片设封面和媒体详情入口。
+- 已完成：新增Gallery详情组件测试与桌面视觉基线；离线E2E实际执行单媒体收藏、封面切换、Lightbox深链打开/关闭和关闭后可视区定位。
+
+### 验证结果
+
+```text
+go test ./internal/persistence/productdb ./internal/productapi
+PASS（2个包）
+
+pnpm run check
+PASS
+
+pnpm run test
+PASS（22个文件，54项测试）
+
+pnpm run build
+PASS（670个模块；主JS 474.24 KiB；无大分包警告）
+
+pnpm exec playwright test e2e/offline-lifecycle.spec.ts
+PASS（1项；实际Mutation、URL/返回、定位、axe与视觉基线均通过）
+
+git diff --check
+PASS
+```
+
+### 增量部署
+
+- 2026-08-01 03:57 CST将包含本阶段改动的嵌入式Linux amd64开发构建安装到`~/.local/bin/cgm`，SHA-256为`66b235a1f93babc839fd3245c9c8305ff578c1f6b9ba02b1b75128504e49901f`。
+- 替换前二进制备份为`/tmp/cgm-before-gallery-detail-20260801`，SHA-256为`5bbf3557bd3e56ed0eb3839797561f70336db2ebde4258e58ff457020d80ec55`。
+- 服务重启后保持`enabled/active`，Health/Ready均为204；入口HTML引用`index-BB00ESCj.js`与`index-B5AaBjOr.css`。
+- 配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库inode仍为`19679716`；没有替换配置、数据库、媒体、Manifest或缓存。
+
+## 1.5-25 可拔除Coser网络资料导入
+
+### 架构决策
+
+- 将网络资料导入拆成站点无关契约、产品导入编排和GalleryEpic站点适配器三层。核心数据库、资产、Manifest和产品Server不包含GalleryEpic域名、路由、DOM选择器或远端ID语义。
+- `cmd/cgm`只在`cgm_galleryepic`构建标签存在时注册GalleryEpic；默认核心构建完全不导入站点包。正式CGM构建包含适配器，但启动配置`metadata_scraping_enabled`默认`false`。
+- 无Provider时Provider集合为空，Manage资料页自动隐藏导入面板；普通Coser编辑、社交账号、托管资源、Manifest和Browse保持完整可用。删除适配器不需要数据库迁移。
+- 架构和拆除步骤持久化到`docs/architecture/COSER_METADATA_PROVIDER_BOUNDARY.md`；Make增加依赖图门禁，验证默认构建不含适配器且显式标签构建才包含。
+
+### 实现
+
+- Manage → Cosers → Profile新增“导入网络Coser资料”：默认用当前名称搜索候选人，用户必须选择具体候选、预览头像/Banner/账号并逐项勾选后才能应用。
+- 已存在的相同URL账号显示为已保存且不能重复选择；已有头像/Banner默认不覆盖，必须额外勾选替换确认。不会自动修改Coser名称、Alias、简介或其他核心资料。
+- GalleryEpic适配器兼容`.com/.xyz`页面域名和当前Next.js流式HTML：以`/coser/<id>/<page>`识别候选，以资料头部数字alt图片顺序提取Banner/头像，并从主HTML及隐藏流式模板中收集受支持社交平台。
+- 账号按URL Host映射为Twitter/X、Instagram、Weibo、Patreon、Facebook、YouTube、Pixiv、Bilibili、TikTok或Website/Linktree；广告、下载及未知域名不进入建议。
+- 出站客户端不使用系统代理；仅允许固定HTTPS页面/图片域名，限制5次重定向、15秒请求、30秒客户端操作、4MiB HTML和20MiB图片，检查响应为图片并以实际字节探测JPEG/PNG/WebP（GalleryEpic CDN当前会把JPEG标为WebP），检查最终重定向资源域名，并拒绝环回、私网、链路本地、组播和未指定地址。
+- 预览使用随机不透明令牌，仅保存在进程内15分钟，最多8份/96MiB；前端只从认证同源端点显示短期图片，不直接热链接第三方资源。
+- 应用时先通过现有Coser资产规则校验全部选中图片并生成托管派生资源，再在一个SQLite事务中发布头像、Banner和SocialAccount。Coser metadata revision只递增一次，既有Coser Manifest标记`DB_DIRTY`；事务失败最多留下可集中审阅的未引用应用资源，不产生半套数据库资料。
+- 日志/审计只记录Provider key、成功/失败、头像/Banner布尔值和账号数量，不记录搜索词、Coser名称或完整远端URL。启动、Browse、Gallery扫描、自动计划和社交账号目标网站检查均不触发外联。
+
+### 阶段验证
+
+```text
+go test ./internal/cosermetadata/... ./internal/coserasset \
+  ./internal/persistence/productdb ./internal/productserver ./cmd/cgm
+PASS
+
+go build -o /tmp/cgm-without-providers ./cmd/cgm
+PASS（默认核心依赖图不含GalleryEpic）
+
+go build -tags cgm_galleryepic -o /tmp/cgm-with-galleryepic ./cmd/cgm
+PASS（显式标签组合GalleryEpic）
+
+make verify-cgm-metadata-provider-boundary
+PASS
+
+pnpm run check
+PASS
+
+pnpm exec vitest run src/manage/ManageCoserMetadataImport.test.tsx \
+  src/manage/ManageCoserAssetsPanel.test.tsx \
+  src/manage/ManageCoreEntitiesPage.test.tsx --maxWorkers=1
+PASS（3个文件，5项测试）
+```
+
+- 后端测试覆盖无Provider/配置关闭、候选预览、托管头像与账号应用、单事务单revision、失败不改变聚合、预览过期、内存上限基础行为、当前HTML形态、隐藏流式账号、未知社交域过滤和私网IP拒绝。
+- 前端测试覆盖无Provider自动隐藏、候选人工选择、已存在账号去重和仅提交勾选项。
+- 使用`CGM_LIVE_GALLERYEPIC_TEST=1`显式执行受控在线兼容性测试，已知公开Coser `298`的名称搜索、详情、头像、Banner及不少于2个社交账号全部通过。该测试默认Skip，CI和离线发布门禁不依赖第三方站点。
+- 在线校核发现GalleryEpic CDN当前对已知头像返回`Content-Type: image/webp`但实际字节是JPEG；实现保留图片响应要求，并以实际字节安全探测JPEG/PNG/WebP后再交给现有资产解码管线，不盲信错误标头。
+- 最终产品包定向回归（archivecheck、browse、资产、Provider、discovery、gallery、manifest、媒体、数据库、API、认证、日志、Server、扫描、cmd及新UI）全部通过；带`cgm_web_embed cgm_galleryepic`的正式组合标签回归通过，UI/Provider两项依赖边界门禁和`git diff --check`通过。
+- 前端最终全量结果为24个Vitest文件、61项测试通过；TypeScript及Vite生产构建通过，共转换672个模块，主JS 476.59 KiB，无大包警告。
+- 产品默认升级仍保持`metadata_scraping_enabled=false`和零外联；本机实际业务测试部署已按所有者本次明确要求单独启用，详见下方部署记录。
+- 启动日志只有正常的`CGM_SERVICE_STOPPED`、`CGM_WORKERS_STARTED`与`CGM_SERVICE_STARTED`事件，没有迁移或运行错误。
+
+### 增量部署与实装验证
+
+- 2026-08-12 23:37 CST完成包含`cgm_web_embed cgm_galleryepic`组合标签的本机Linux amd64增量部署。新二进制安装到`/home/rainbowrunner/.local/bin/cgm`，SHA-256为`c1ae56fd42f79935d5e5b8ed6916af0a926374f61eb38bb11e0f8d0d846d4d6e`；`go tool nm`确认产物包含GalleryEpic Provider的`Search`、`FetchProfile`与`OpenAsset`实现。
+- 替换前二进制备份为`/tmp/cgm-before-galleryepic-scraper-20260812`，SHA-256为`9e9477e36d1572150a7fe0502d7981e3fcd0dcff533168254e34baf06a43bf35`。替换前配置备份为`/tmp/cgm-config-before-galleryepic-scraper-20260812.json`，SHA-256为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`。
+- 本机启动配置已显式加入`"metadata_scraping_enabled": true`并继续保持`0600`，新配置SHA-256为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`。该值只启用认证Manage页面中的人工操作入口，不产生启动、扫描、Browse或计划任务外联。
+- 用户服务重启后保持`enabled/active`；Health/Ready均为204，About为200并报告`version=1.5.0-dev`、`gitHash=local`与`buildTime=20260812`。入口实际引用本轮`index-C2e4nvxI.js`和`index-BaLfZSme.css`；未认证访问Provider端点返回401，确认认证边界未被放宽。
+- 重启journal只出现正常停止、两个工作器启动与服务启动事件，没有配置解析、数据库迁移、Provider初始化或任务错误。产品数据库SHA-256仍为`797b2aa899ac7cd85e1e05f3c4d90b8088b7afde4be26e0124da2c6ef5fd6828`，inode仍为`19679716`；没有替换数据库、媒体、Manifest或缓存。
+- 部署后显式联网测试第一次在`static.galleryepic.xyz`发生瞬时TLS握手超时；随后直连资源返回HTTP 200，完整重试通过，确认已知公开Coser `298`的名称搜索、候选选择、头像、Banner及不少于2个关联账号可正常取得。第三方站点或网络异常仍会作为人工导入错误显示，不影响其他本地业务。
+
+## 1.5-26 Browse人物头像链路与社交视觉对齐
+
+### 问题求证
+
+- 只读校核真实业务数据库和Coser托管目录确认，目标Coser已经保存头像/Banner，`avatar-480`、`banner-960`和`banner-1600`派生资源均存在；运行日志也确认Coser详情页对这些认证资源的请求返回200。因此问题不在网络资料导入、图片生成或资源服务。
+- Coser/Model索引仓储已经计算`AvatarAvailable`和`AssetRevision`，但GraphQL `entityPage`转换手工重建条目时遗漏了`avatarURL`；列表因此只能渲染名称首字母占位。
+- Gallery卡片的Credit原来使用只有UUID和名称的通用`EntitySummary`，前端也没有给`Avatar`传入`src`；该链路从契约层开始就不具备展示头像的能力。
+- 参考站实际人物行使用32px头像/行高、6px图文间距、14px字号、14px行高和500字重。CGM原卡片采用约21.6px头像和更小文字，视觉密度明显偏小。Coser详情社交账号虽然布局已收紧，但仍是文字缩写，不是参考站的20～24px平台图标。
+
+### 实现
+
+- Browse领域新增专用、无物理路径的`PersonSummary`，Gallery卡片和Gallery Credit查询一次联表读取头像是否存在及Coser revision，不产生逐人物N+1查询。GraphQL据此只生成带revision的同源认证URL`/resource/coser/{uuid}/{revision}/avatar-480`，不会返回头像文件名、托管根目录或源站URL。
+- `entityPage`统一复用既有`entityIndexItem`转换，恢复Coser/Model索引已有的头像URL；Gallery卡片将人物URL传给通用Avatar组件。无头像人物继续稳定回退为名称首字符。
+- Gallery卡片人物行调整为32px头像和高度、6px图文间距、14px/14px、500字重名称；多人物仍按原有顺序展示并进入对应Coser/Model详情。字号被限定在人物链接内，不改变同一行评分摘要的既有11px视觉。
+- Coser详情新增本地`SocialPlatformIcon`组件，覆盖Twitter/X、Facebook、Instagram、Weibo、Bilibili、YouTube、Pixiv、TikTok/Douyin、Bluesky、Patreon、FANBOX和Xiaohongshu；未知自定义Platform key继续显示通用网站图标。图标不复用参考站文件、不访问互联网，外链、ACTIVE/INACTIVE状态、`aria-label`、`title`和键盘焦点语义保持不变。
+
+### 阶段验证
+
+```text
+go test ./internal/browse ./internal/coserasset ./internal/persistence/productdb \
+  ./internal/productapi ./internal/productserver ./cmd/cgm ./ui/web -count=1
+PASS
+
+go test -tags "cgm_web_embed cgm_galleryepic" \
+  ./internal/productserver ./cmd/cgm ./ui/web -count=1
+PASS
+
+pnpm run check
+PASS
+
+pnpm run test
+PASS（24个文件，61项测试）
+
+pnpm run build
+PASS（673个模块；主JS 476.59 KiB）
+
+pnpm exec playwright test e2e/offline-lifecycle.spec.ts
+PASS（1项；32px人物行/头像、6px间距、14px/500名称计算样式及0.2%截图门禁）
+
+make build-cgm
+PASS（正式单文件验证产物：/tmp/cgm-avatar-social-check）
+```
+
+- SQLite及GraphQL回归验证Coser/Model索引和Gallery卡片均返回相同的认证头像URL，并显式拒绝物理`avatar_path`及媒体根路径泄露；前端组件回归覆盖两处头像`img src`和Coser详情SVG社交图标。
+
+### 增量部署
+
+- 2026-08-13 00:47 CST完成包含本阶段修复的本机Linux amd64增量部署。正式产物使用`cgm_web_embed cgm_galleryepic`组合标签构建并安装到`/home/rainbowrunner/.local/bin/cgm`，SHA-256为`91ab21dbb979544d8fb5beb195c6c690c4c25bb182edfaa932c60ae95002cd51`；`go tool nm`确认仍包含GalleryEpic Provider的`Search`、`FetchProfile`和`OpenAsset`。
+- 替换前二进制备份为`/tmp/cgm-before-avatar-social-20260813`，SHA-256为`c1ae56fd42f79935d5e5b8ed6916af0a926374f61eb38bb11e0f8d0d846d4d6e`。新文件先写入同目录临时名称，再以`mv`原子替换，服务只重启一次。
+- 用户服务保持`enabled/active`，新进程启动于00:47:02 CST；`/healthz`和`/readyz`均为204，`/session/status`、`/legal`及新JS/CSS资源均为200。入口实际引用`index-B65da5eI.js`和`index-DM9Wuy91.css`；`/about.json`报告`version=1.5.0-dev`、`gitHash=local`、`buildTime=20260813`和`exactSourceAvailable=false`。
+- 启动journal确认2个工作器、LibRaw和服务正常启动，未发现WARN、ERROR、panic、fatal或迁移错误。配置SHA-256仍为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`且权限为0600，产品数据库inode仍为`19679716`；没有替换配置、数据库、媒体、Manifest或缓存。
+
+### 社交图标二次视觉复核与部署
+
+- 2026-08-13重新读取用户指定参考页`/zh/coser/26/1`的实时DOM、SVG与浏览器计算样式，确认首轮只对齐尺寸和间距，图标本体仍是手工近似轮廓。参考站实际固定显示X、Facebook、Instagram、微博、Patreon、Linktree六项：X为20px，其余24px，间距4px、行高24px；已有账号为`#101828`链接，缺失账号仍以`#99a1af`不可点击图标占位。
+- 新增独立`SocialAccounts`展示组件：按固定六项匹配并消费已有账号，缺失项输出无链接的灰色`span`，剩余自定义平台继续按数据库顺序追加。`website + Linktree`以及URL Host为`linktr.ee`的现有记录显示精确Linktree图标，无需迁移或重写业务数据；INACTIVE已有账号仍可显示其已保存链接但采用灰色状态。
+- X、Facebook、Instagram、微博、Patreon与Linktree改为参考页逐路径实心SVG；参考集合之外的既有平台图标和未知平台地球回退继续由本地组件提供，运行时不请求GalleryEpic静态资源。
+- 定向组件回归验证固定顺序、四个缺失占位、Linktree历史映射、INACTIVE自定义平台追加和缺失项无链接；完整结果为24个Vitest文件、61项测试通过，TypeScript及674模块生产构建通过。离线Chromium更新Coser移动视觉基线后连续两次通过，计算样式精确锁定24px行高、4px间距、20/24px图标尺寸、六项标题顺序及`rgb(153, 161, 175)`缺失颜色，并继续通过axe A/AA和0.2%截图门禁。
+- 2026-08-13 01:17 CST完成本机增量部署。正式`cgm_web_embed cgm_galleryepic`产物SHA-256为`c9143fe559281b826104f0f73252b57edc045be39818feba5d3cb5404387ce71`；替换前二进制备份为`/tmp/cgm-before-social-exact-20260813`，SHA-256为`91ab21dbb979544d8fb5beb195c6c690c4c25bb182edfaa932c60ae95002cd51`。
+- 服务保持`enabled/active`，新进程启动于01:17:47 CST；Health/Ready均为204，入口引用`index-DCePnCFw.js`与`index-D_Nx6NG6.css`且资源返回200，About报告`buildTime=20260813`、`gitHash=local`和`exactSourceAvailable=false`。启动journal确认2个工作器与LibRaw正常，没有WARN、ERROR、panic、fatal或迁移错误；配置SHA-256和数据库inode保持不变，未修改配置、数据库、媒体、Manifest或缓存。
+
+## 1.5-27 Coser详情头像直达管理编辑器
+
+### 实现
+
+- Coser详情资料区头像由纯展示容器改为React Router内部链接，目标为`/manage/cosers?uuid=<coser UUID>`；使用不可变UUID而不是名称或Slug，避免重名、改名和Slug历史影响管理定位。
+- Manage Coser页原有`uuid`查询参数会直接以`network-only`读取目标实体，因此目标无需出现在后台当前30项分页中，点击头像后也无需再从大量Coser列表中人工翻找。
+- 入口只应用于具有完整人物资料区的Coser详情；Model详情本来不渲染该头像，不改变其既有页面结构。后台仍受现有SessionBoundary保护，未认证访问不会绕过所有者登录。
+- 链接保持头像原有尺寸、位置、图片回退和视觉结构，补充中英文`Manage/管理 {name}`可访问名称及`title`，并增加轻量悬浮边框和清晰的`focus-visible`键盘焦点反馈。
+
+### 阶段验证
+
+```text
+pnpm run check
+PASS
+
+pnpm exec vitest run src/browse/EntityDetailPages.test.tsx \
+  src/manage/ManageCoreEntitiesPage.test.tsx
+PASS（2个文件，4项测试）
+
+pnpm test
+PASS（24个文件，61项测试）
+
+pnpm run build
+PASS（674个模块；生产构建完成）
+
+pnpm run e2e
+PASS（1项离线所有者完整业务链路）
+```
+
+- 组件回归锁定头像链接的可访问入口及精确UUID目标；浏览器回归实际点击Coser头像，验证进入`/manage/cosers?uuid=...`后显示Coser管理页并加载目标人物名称，同时继续通过既有axe A/AA和0.2%视觉门禁。
+
+### 增量部署
+
+- 2026-08-13 01:34 CST完成本机Linux amd64增量部署。正式产物继续使用`cgm_web_embed cgm_galleryepic`组合标签，安装到`/home/rainbowrunner/.local/bin/cgm`，SHA-256为`0674c59a06dcb305ab2c6f46c2e5758e5855009a2a7e7534ee02f6486ef11d8d`；`go tool nm`确认GalleryEpic Provider的`Search`、`FetchProfile`和`OpenAsset`仍在产物中。
+- 替换前二进制备份为`/tmp/cgm-before-coser-manage-link-20260813`，SHA-256为`c9143fe559281b826104f0f73252b57edc045be39818feba5d3cb5404387ce71`。构建产物先写入同目录临时名称再以`mv`原子替换，未改动配置、数据库、媒体、Manifest或缓存。
+- 首次通用Make产物短暂将脏工作树误标为当前HEAD精确源码；发现`exactSourceAvailable=true`后立即以相同源码和功能重建，并显式标记`gitHash=local`。最终`/about.json`报告`version=1.5.0-dev`、`buildTime=20260813`和`exactSourceAvailable=false`，没有把未提交累计修改声明为精确提交产物。
+- 用户服务保持`enabled/active`，最终进程启动于01:34:01 CST；Health/Ready均为204，入口引用`index-ZJow6_NO.js`与`index-DX30qN0Z.css`且两项资源均返回200。启动journal确认2个工作器和LibRaw正常启动，没有WARN、ERROR、panic、fatal或迁移错误。
+
+## 1.5-28 Manage设置输入控件浅色主题收敛
+
+### 问题与修复
+
+- Manage Shell已经声明`color-scheme: light`并对普通`input/textarea/select`应用浅色设计Token，但Settings遗留规则`.settings-form input[type="number"]`具有更高CSS选择器优先级，继续覆盖为旧主题的`#100e10`黑底和白字；这解释了为什么主要是数字输入框残留，而同页下拉框通常已正常变白。
+- Settings数字输入框和下拉框现在直接使用`--cgm-surface`、`--cgm-foreground`与`--cgm-border`，不再依赖低优先级的外层补丁；键盘聚焦时使用主色边框、`--cgm-focus`轮廓和1px偏移，与当前浅色Manage设计系统一致。
+- 修改范围限定在`.settings-form`，不改变Browse、Lightbox、Setup、Login、Maintenance或其他刻意保留深色舞台的页面。
+
+### 阶段验证
+
+```text
+pnpm run check
+PASS
+
+pnpm exec vitest run src/manage/ManageSettingsPage.test.tsx
+PASS（1个文件，3项测试）
+
+pnpm test
+PASS（24个文件，61项测试）
+
+pnpm run build
+PASS（674个模块；生产构建完成）
+
+pnpm run e2e
+PASS（1项离线所有者完整业务链路）
+```
+
+- Chromium在真实Manage Settings页面读取全部数字输入和下拉控件的计算样式，统一得到白色背景`rgb(255, 255, 255)`及深色文字`rgb(10, 10, 10)`；同页axe A/AA检查及既有完整视觉/业务回归继续通过。
+
+### 增量部署
+
+- 2026-08-13 01:44 CST完成本机Linux amd64增量部署。正式`cgm_web_embed cgm_galleryepic`产物安装到`/home/rainbowrunner/.local/bin/cgm`，SHA-256为`a42fb73f919daf1aa8abef6e8f1bf24936f17684ab09f7b08de4cc7ae9c52e0a`；替换前二进制备份为`/tmp/cgm-before-settings-light-controls-20260813`，SHA-256为`0674c59a06dcb305ab2c6f46c2e5758e5855009a2a7e7534ee02f6486ef11d8d`。
+- 服务保持`enabled/active`，最终进程启动于01:44:14 CST；Health/Ready均为204，入口引用`index-fsxEioKQ.js`与`index-OhZ8A7Bj.css`且两项资源均返回200。About正确报告`gitHash=local`、`buildTime=20260813`和`exactSourceAvailable=false`；启动journal确认2个工作器与LibRaw正常，没有WARN、ERROR、panic、fatal或迁移错误。
+- 部署只原子替换本机测试二进制并重启一次用户服务；未改动启动配置、业务数据库、媒体、Manifest或缓存。
+
+## 1.5-17 单媒体操作菜单点击外部关闭
+
+### 问题与修复
+
+- 原实现直接使用浏览器原生`<details>`，它只负责点击自身`<summary>`时切换开关，不会在用户点击组件外部时自动关闭，因此媒体三点菜单会持续停留。
+- 每个媒体菜单现在只在打开期间注册文档级`pointerdown`与`keydown`监听；指针落在菜单外时关闭，菜单内部点击保持原行为，`Escape`也可关闭。菜单关闭或组件卸载后立即移除监听，不为未打开的媒体卡片常驻全局监听器。
+- 进入媒体详情和“设为封面”操作会显式关闭当前菜单；封面Mutation、revision校验、混合媒体排序和视觉布局均未改变。
+
+### 验证与增量部署
+
+```text
+pnpm run check
+PASS
+
+pnpm run test
+PASS（22个文件，55项测试）
+
+pnpm run build
+PASS（670个模块；主JS 474.24 KiB）
+
+pnpm exec playwright test e2e/offline-lifecycle.spec.ts
+PASS（1项；真实浏览器执行打开菜单、点击Gallery标题关闭、重新打开并设封面）
+
+git diff --check
+PASS
+```
+
+- 2026-08-01 04:06 CST安装增量构建，SHA-256为`30c9a63ec9c176043d8b92956e8a7283abcdf4cc77dd4344583ea9d61064ede7`；替换前二进制保存在`/tmp/cgm-before-media-menu-dismiss-20260801`，SHA-256为`66b235a1f93babc839fd3245c9c8305ff578c1f6b9ba02b1b75128504e49901f`。
+- 服务保持`enabled/active`且Health/Ready为204，入口引用`index-BzI7BpIi.js`与`index-B5AaBjOr.css`。
+- 配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，数据库inode仍为`19679716`；没有替换业务数据、媒体、Manifest或缓存。
+
+## 1.5-18 单媒体菜单悬浮提示误定位（已撤销）
+
+### 实施与验证
+
+- 本阶段曾把“单个媒体右上角菜单按钮”误解为Gallery列表卡片的三点按钮，并为其添加本地化`title`。用户随后明确目标是点击媒体后Lightbox右上角的一组操作按钮。
+- 该误定位版本仅在本机于04:13短暂部署；没有数据模型、Mutation、数据库、媒体、Manifest或缓存变更。
+- 04:20纠正版本已移除列表三点按钮的`title`并替代本构建，详见1.5-19。本段保留用于记录判断修正和二进制回退链，不代表当前产品行为。
+
+```text
+pnpm run check
+PASS
+
+pnpm run test
+PASS（22个文件，55项测试）
+
+pnpm run build
+PASS（670个模块；主JS 474.24 KiB）
+
+pnpm exec playwright test e2e/offline-lifecycle.spec.ts
+PASS（1项）
+
+git diff --check
+PASS
+```
+
+### 增量部署
+
+- 2026-08-01 04:13 CST安装增量构建，SHA-256为`543c40f5995bf2d812d37ce23020514cad94bbe7e8796d8c3d8b65eeb1ccbdd5`；替换前二进制保存在`/tmp/cgm-before-media-menu-tooltip-20260801`，SHA-256为`30c9a63ec9c176043d8b92956e8a7283abcdf4cc77dd4344583ea9d61064ede7`。
+- 服务保持`enabled/active`且Health/Ready为204，入口引用`index-BrpLuX8R.js`与`index-B5AaBjOr.css`。
+- 配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，数据库inode仍为`19679716`；没有替换配置、业务数据、媒体、Manifest或缓存。
+
+## 1.5-19 Lightbox右上角操作提示
+
+### 纠正后的范围
+
+- Gallery列表卡片三点按钮恢复为仅有`aria-label`、没有悬浮`title`；点击外部或按`Escape`关闭菜单的1.5-17交互保留。
+- 点击单个媒体后，Lightbox右上角工具栏的收藏/取消收藏、媒体评分、设为封面/当前封面、打开媒体详情和关闭媒体查看器均显示与当前状态及界面语言一致的悬浮提示。
+- 新增`gallery.closeViewer`中英文文案，关闭按钮不再硬编码英文可访问名称；所有提示与各控件`aria-label`使用同一变量，避免屏幕阅读器名称和视觉提示不一致。
+
+### 验证与增量部署
+
+```text
+pnpm run check
+PASS
+
+pnpm run test
+PASS（22个文件，55项测试）
+
+pnpm run build
+PASS（670个模块；主JS 474.33 KiB）
+
+pnpm exec playwright test e2e/offline-lifecycle.spec.ts
+PASS（1项；验证列表按钮无title及Lightbox五项提示）
+
+git diff --check
+PASS
+```
+
+- 2026-08-01 04:20 CST安装纠正后的增量构建，SHA-256为`d482e86092d1831b00266b431ad52e3430902ad07c11c4af781e2f94a3cdfb1c`；替换前误定位版本保存在`/tmp/cgm-before-lightbox-toolbar-tooltips-20260801`，SHA-256为`543c40f5995bf2d812d37ce23020514cad94bbe7e8796d8c3d8b65eeb1ccbdd5`。
+- 服务保持`enabled/active`且Health/Ready为204，入口引用`index-BPUu1Roj.js`与`index-B5AaBjOr.css`。
+- 配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，数据库inode仍为`19679716`；没有替换配置、业务数据、媒体、Manifest或缓存。
+
+## 1.5-20 核心实体选择后自动关闭候选列表
+
+### 问题与修复
+
+- Character编辑器的Primary Work使用通用`ManageEntitySelector`。原组件选择候选项后只清空搜索文本，但Apollo `useLazyQuery`仍保留`called=true`和上一批`data`，候选列表的渲染条件继续成立，导致选择成功后下拉列表不关闭。
+- 选择器现在用独立`open`状态管理弹层可见性：输入框聚焦或继续输入时打开，选择任一实体后清空搜索并显式关闭；再次聚焦仍按原查询规则加载最近候选，不清除已写入父表单的UUID。
+- 修复位于通用实体选择器，因此Character Primary Work、Gallery的Coser/Character/Tag关系、Tag父级和实体合并目标选择均获得一致行为；GraphQL查询、实体校验和保存Mutation未改变。
+
+### 验证与增量部署
+
+```text
+pnpm run check
+PASS
+
+pnpm run test
+PASS（22个文件，55项测试）
+
+pnpm run build
+PASS（670个模块；主JS 474.33 KiB）
+
+pnpm exec playwright test e2e/offline-lifecycle.spec.ts
+PASS（1项；真实浏览器验证选择后listbox从DOM移除）
+
+git diff --check
+PASS
+```
+
+- 2026-08-08 16:27 CST安装增量构建，SHA-256为`6766a0c08c714af46face98239953d614cdaa12bdc5c97cdd78aa2848cc56817`；替换前二进制保存在`/tmp/cgm-before-entity-selector-dismiss-20260808`，SHA-256为`d482e86092d1831b00266b431ad52e3430902ad07c11c4af781e2f94a3cdfb1c`。
+- 服务保持`enabled/active`且Health/Ready为204，入口引用`index-D45_orVP.js`与`index-B5AaBjOr.css`；实体选择器Chunk为`ManageEntitySelector-Be-gqGJ9.js`。
+- 配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，数据库inode仍为`19679716`；没有替换配置、数据库、媒体、Manifest或缓存。
+
+## 1.5-21 Gallery媒体完整父目录排序与根目录默认排除
+
+### 已确认业务语义
+
+- Manage媒体页以`relative_path`的完整父目录分组，不引入新的Folder业务实体；同名文件通过父目录区块、单独文件名和完整路径提示区分。
+- 固定媒体类型顺序继续为PHOTO、SELFIE、ANIMATED_IMAGE、VIDEO。Gallery根目录是每个类型中的独立分组并固定排在全部文件夹之前；文件夹排序只在各自媒体类型组中生效。
+- 移动文件夹保留其内部既有Item顺序；用户可对具体文件夹显式执行“按文件名自然排序”，比较basename而不是完整相对路径。文件夹内仍允许逐项上移/下移，但不能越过当前完整父目录。
+- 默认扫描策略仅把本次真正新建的根目录Item设为excluded，人工扫描页提供默认开启的本次开关。按路径命中或唯一指纹重绑定的既有Item保留人工Exclude/Restore决定，不会被重扫覆盖。
+
+### 实现
+
+- GraphQL新增`reorderGalleryItems`，客户端提交一个媒体类型组的完整Item UUID顺序。仓储在同一SQLite事务中校验完整集合、重复、跨Gallery/跨组与`metadata_revision`，先迁移到临时高水位，再复用原组Position槽位，最终只递增一次revision并把Manifest标为`DB_DIRTY`。
+- Manage媒体页新增完整父目录区块、根目录固定标识、文件夹上移/下移、具体文件夹文件名自然排序、文件夹内Item上移/下移，以及文件名/父目录分行和同名文件提示。排序完成后清除Browse成员索引缓存。
+- `scanGallerySource`新增默认值为`true`的`excludeNewRootMedia`参数；产品默认扫描和自动计划均采用根目录新Item排除策略，人工扫描可关闭。有效成员上限在提交前按同一选项计算，排除Item不生成基础派生任务。
+- `SetItemExcluded(false)`现在会在同一事务中立即为所有可用、PENDING且未排除的成员补排基础派生任务，避免自动排除Item被Restore后等待下一次扫描。
+- 离线E2E夹具包含两个根目录媒体，因此主流程在首次扫描时明确关闭新开关，既验证开关可选，也保留原3成员生命周期断言；恢复后的重扫继续验证既有选择不会被默认策略覆盖。
+
+### 阶段验证
+
+```text
+go test ./internal/persistence/productdb ./internal/productapi ./internal/productserver
+PASS
+
+pnpm run check
+PASS
+
+pnpm run test
+PASS（23个文件，58项测试）
+
+pnpm run build
+PASS（671个模块；主JS 474.33 KiB）
+
+go test ./internal/gallery ./internal/media ./internal/mediaprocessing ./internal/sourcescan ./internal/persistence/productdb ./internal/productapi ./internal/productserver ./ui/web
+PASS
+
+go test -tags cgm_web_embed ./internal/productserver ./ui/web
+PASS
+
+pnpm exec playwright test e2e/offline-lifecycle.spec.ts
+PASS（1项；首次扫描关闭根目录自动排除，恢复后默认开启重扫仍保留既有Item选择）
+
+make ... build-cgm
+PASS（正式单文件产物：/tmp/cgm-folder-order-check）
+
+git diff --check
+PASS
+```
+
+- 新增SQLite回归覆盖根目录新Item默认排除、子目录默认纳入、仅为纳入Item排任务、Restore立即补任务、重扫保留Restore、关闭选项后根目录新Item纳入，以及完整组排序/跨组/缺项/重复拒绝和其他媒体组Position不变。
+- 新增前端回归覆盖完整父目录分组、根目录置顶、文件夹内部顺序保留、basename数字自然排序，以及人工扫描开关默认开启和不覆盖既有选择的说明。
+- 生产构建、产品Go包、正式嵌入模式和离线Chromium E2E已经通过。首次替换后发现构建把脏工作树误标为精确提交，随即只修正版本元数据并于2026-08-09 17:30 CST完成最终增量部署：新二进制SHA-256为`007347be19cd1058d94bb554a0dcfd55df5fbcbd90493f613eb44f9ba65cc90b`，`about.json`正确报告`gitHash=local`、`buildTime=20260809`和`exactSourceAvailable=false`。旧版本备份为`/tmp/cgm-before-gallery-media-folders-20260809`且校验和为`6766a0c08c714af46face98239953d614cdaa12bdc5c97cdd78aa2848cc56817`。服务保持`enabled/active`，Health/Ready均为204，入口引用`index-Br2kDKX5.js`与`index-dwLJ7y5E.css`；启动日志确认两个工作器正常启动且没有迁移、启动或任务错误。配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，数据库inode仍为`19679716`，没有替换配置、业务数据库、媒体、Manifest或缓存。
+
+## 1.5-22 Browse桌面滚动与Gallery更多详情目录定位
+
+### 已确认边界
+
+- 桌面Logo/品牌栏随页面滚动离开视口，左侧Cosplay/Album分区菜单保持固定；1024px以下继续保留粘性顶部栏，确保Drawer入口可用。
+- Gallery“更多详情”点击外部或按`Escape`关闭；弹层内显示所有非MISSING实际媒体的去重绝对父目录，并提供直达该Gallery Manage媒体页的入口。
+- `GalleryDetail.mediaParentDirectories`是用户确认的认证单所有者有限路径例外。DIRECTORY包含excluded但仍存在的Item，根目录优先、其余按自然序；ARCHIVE只显示归档所在目录。不得返回文件名、Item相对路径、指纹、缓存路径、`file://`或文件管理器/外部命令入口。
+
+### 实现
+
+- Browse仓储只在Gallery详情查询聚合父目录；Gallery卡片、列表、轻量成员索引和媒体资源身份保持无路径。GraphQL、前端类型和中英文文案同步新增目录摘要字段。
+- `GalleryDetailPage`使用受控`details`、按需document监听器和组件ref处理外部点击/Escape；Manage入口直接使用既有`setID`路由并定位`media`页签。
+- 桌面`.browse-topbar`恢复普通文档流，固定`.browse-sidebar`不变；移动断点显式恢复`position: sticky`，桌面Related吸附偏移从Topbar高度加16px收敛为16px。
+
+### 阶段验证
+
+```text
+go test ./internal/persistence/productdb ./internal/productapi
+PASS
+
+pnpm run check
+PASS
+
+pnpm run test
+PASS（23个文件，59项测试）
+
+pnpm run build
+PASS（671个模块；主JS 474.48 KiB）
+
+go test ./internal/browse ./internal/media ./internal/persistence/productdb ./internal/productapi ./internal/productserver ./ui/web
+PASS
+
+go test -tags cgm_web_embed ./internal/productserver ./ui/web
+PASS
+
+pnpm exec playwright test e2e/offline-lifecycle.spec.ts
+PASS（1项；真实验证目录摘要、Manage直达、外部关闭、桌面Topbar滚离/Sidebar固定及移动Topbar sticky）
+
+make ... build-cgm
+PASS（正式单文件产物：/tmp/cgm-gallery-detail-locations）
+
+git diff --check
+PASS
+```
+
+- SQLite回归覆盖根目录、自然排序子目录、excluded、UNREADABLE、MISSING忽略及ARCHIVE仅返回容器目录；GraphQL集成回归确认认证详情返回父目录但不返回媒体文件名。
+- 前端回归覆盖目录与Manage链接呈现、弹层内部点击保留、外部点击/Escape关闭；离线Chromium继续通过axe/截图/备份恢复完整业务闭环。
+- 2026-08-09 20:28 CST完成本机增量部署：新二进制SHA-256为`e3e595503e80082d15d0c6c49e225b47ce159aa5c34b47b239567f7360685041`，旧版本备份为`/tmp/cgm-before-gallery-detail-locations-20260809`且SHA-256为`007347be19cd1058d94bb554a0dcfd55df5fbcbd90493f613eb44f9ba65cc90b`。服务保持`enabled/active`，Health/Ready均为204，入口引用`index-9hJr0i02.js`与`index-hDZ83M8Y.css`；`about.json`正确报告`gitHash=local`、`buildTime=20260809`和`exactSourceAvailable=false`。配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，数据库inode仍为`19679716`；没有替换配置、业务数据库、媒体、Manifest或缓存，启动journal没有迁移、启动或任务错误。
+
+## 1.5-23 Gallery详情标题响应式修复
+
+### 问题与实现
+
+- Gallery详情主标题没有组件级硬换行，但CSS以`max-width: 34ch`限制标题宽度；Header右侧操作区继续占位，700px以下仍使用两列和固定30px标题，导致中等长度中文标题在实际空间充足时也提前分行。
+- 移除`34ch`上限，为标题容器补充`min-width: 0`，并用`overflow-wrap: break-word`保护允许最长300字符的异常长标题。桌面继续使用标题/操作两列，正常标题可以使用左列全部宽度。
+- 700px以下Header切换单列，收藏/更多详情操作在标题与统计区下方右对齐；标题字号使用24～30px响应式范围。没有使用`nowrap`、省略号或行数截断，完整业务标题仍然可见。
+
+### 阶段验证
+
+```text
+pnpm run check
+PASS
+
+pnpm run test
+PASS（23个文件，59项测试）
+
+pnpm run build
+PASS（671个模块；主JS 474.48 KiB）
+
+pnpm exec playwright test e2e/offline-lifecycle.spec.ts --update-snapshots
+PASS（1项；桌面中等长度标题单行、移动操作区分行、300字符标题无横向溢出）
+
+pnpm exec playwright test e2e/offline-lifecycle.spec.ts
+PASS（1项；更新后的0.2%视觉基线稳定通过）
+```
+
+- Playwright按计算样式确认桌面主标题`max-width: none`，扣除padding后的内容高度不超过一个line-height；390px下操作区纵坐标位于完整标题/统计区之后，300个连续`W`仍满足`scrollWidth <= clientWidth`。
+- 更新后的390px Gallery截图已人工检查：标题、统计、右对齐操作区与两列媒体网格间距正常，没有重叠、截断或横向滚动。
+- 按用户要求，本阶段只完成源码、测试与开发记录，未构建安装本机服务、未重启systemd，也未修改配置、数据库、媒体、Manifest或缓存；当前部署仍是2026-08-09 20:28 CST的`e3e595503e80082d15d0c6c49e225b47ce159aa5c34b47b239567f7360685041`版本。
+
+## 1.5-24 Gallery卡片参考站密度与弱化覆盖层
+
+### 已确认范围与实现
+
+- 以2026-08-12实测`galleryepic.xyz/zh`公开页面为准，用户确认将Gallery索引从CGM原6/5/4/3/2列改为参考站2/3/4/5列：默认2列、768px起3列、1024px起4列、1536px起5列，横纵间距统一16px。所有复用`GalleryCard`的首页、分区、实体详情、收藏、历史和时间线保持一致；Gallery详情媒体与Random媒体的独立网格不变。
+- 右下媒体计数保持8px定位和现有非零P/S/G/V格式，视觉收敛为Inter 12px/16px、400字重白字；移除76%黑底、内边距、圆角、背景模糊和额外字间距。
+- Gallery收藏按钮继续调用既有Mutation；在`hover:hover + pointer:fine`设备默认透明且不接收指针，封面悬浮或`focus-within`时显示；触屏或粗指针设备保持常驻。键盘仍能Tab聚焦隐藏按钮并触发显示，`aria-pressed`收藏状态不变。
+- 上一阶段Gallery详情标题响应式修复与本阶段将作为同一个增量构建部署，不修改后端模型、GraphQL、数据库、配置、媒体、Manifest或缓存。
+
+### 阶段验证
+
+```text
+pnpm run check
+PASS
+
+pnpm run test
+PASS（23个文件，59项测试）
+
+pnpm run build
+PASS（671个模块；主JS 474.48 KiB）
+
+go test ./internal/browse ./internal/media ./internal/persistence/productdb ./internal/productapi ./internal/productserver ./ui/web
+PASS
+
+go test -tags cgm_web_embed ./internal/productserver ./ui/web
+PASS
+
+pnpm exec playwright test e2e/offline-lifecycle.spec.ts --update-snapshots
+PASS（1项；更新Browse及Model详情桌面/移动视觉基线）
+
+pnpm exec playwright test e2e/offline-lifecycle.spec.ts
+PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键盘收藏可见性）
+```
+
+- 已人工检查更新后的Browse、Model详情桌面与390px截图：卡片尺寸和间距已按目标放大收敛，计数无底色且视觉弱化，文字与卡片没有重叠或溢出。
+
+### 增量部署
+
+- 2026-08-12 00:29 CST完成包含1.5-23 Gallery标题响应式修复和本阶段Gallery卡片调整的本机增量部署。新二进制SHA-256为`9e9477e36d1572150a7fe0502d7981e3fcd0dcff533168254e34baf06a43bf35`；旧版本备份为`/tmp/cgm-before-gallery-cards-20260812`，SHA-256为`e3e595503e80082d15d0c6c49e225b47ce159aa5c34b47b239567f7360685041`。
+- 用户服务保持`enabled/active`，重启后Health/Ready均为204；首次紧随`systemctl restart`的Health请求发生在监听端口就绪前并返回连接失败，随后带连接重试的核验立即通过。journal确认两个工作器和服务正常启动，没有迁移、启动或任务错误。
+- `/about.json`正确报告`version=1.5.0-dev`、`gitHash=local`、`buildTime=20260812`和`exactSourceAvailable=false`；入口实际引用`index-BN0Udqs0.js`与`index-qdWPUXcG.css`。
+- 配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库inode仍为`19679716`；没有替换配置、数据库、媒体、Manifest或缓存。
+
+## 1.5-29 视频处理第一、第二阶段功能规划
+
+### 现状核验
+
+- 当前产品可以发现VIDEO、计算指纹并排队`STATIC_POSTER`，但Poster固定取第0秒；`DIRECT | REMUX | TRANSCODE`目前只是未接入技术元数据、资源路由和前端的规划函数。
+- `VIDEO_PLAYBACK`已声明为ENHANCED variant，媒体详情前端也能渲染`video/*`，但没有生成器、请求入口或原视频直读路由，因此尚未形成实际播放闭环。
+- 本机业务部署仍未配置FFmpeg/FFprobe，当前不能把Video Poster或播放真实业务验收记录为通过。
+
+### 已冻结规划
+
+- 第一阶段：FFmpeg/FFprobe成对诊断、受控数据库前向迁移、GalleryItem 1:1视频技术元数据、确定性主轨选择、有界回填，以及约20%位置/960px/快速seek失败精确回退的BASE Poster。
+- 第二阶段：经认证且不泄漏路径的DIRECT Range路由；Lightbox或媒体详情实际打开时才按需Remux/转码；H.264/AAC Fast Start MP4代理归入ENHANCED并沿用现有LRU。
+- Gallery卡片和Scrubber继续只使用静态Poster；不增加字幕、多音轨、画质档、时间轴Sprite、HLS/DASH、播放进度、硬件编码或Windows构建任务。
+- 完整数据字段、错误码、资源授权、缓存生命周期、测试矩阵和实施顺序记录于[视频处理第一、第二阶段功能规划](VIDEO_PROCESSING_PHASE_1_2_PLAN_2026-08-15.md)。
+
+### 本阶段结果
+
+- 本阶段只修改开发规范和计划，没有修改业务代码、数据库、配置或部署，也没有运行媒体功能测试。
+- 后续从VP1-01开始按阶段实施；首次schema升级部署必须先创建并校验完整安全备份，不能按普通无schema热替换处理。
+
+## 1.5-30 视频处理第三阶段条件式功能规划
+
+### 阶段定位
+
+- 第三阶段不是第一、第二阶段的完成条件，也不改变当前第一版明确延期范围；只有基础探测、Poster、DIRECT、Remux和MP4代理真实业务稳定后才考虑实施。
+- 第三阶段A独立规划按需Storyboard Sprite/WebVTT及媒体详情/Lightbox辅助时间轴。Gallery卡片、网格和Gallery卡片Scrubber继续只显示静态Poster。
+- 第三阶段B先执行无观看画像的本地大视频冷启动/seek基准；只有第二阶段完整MP4代理反复不能满足实际业务，才通过ADR启用单清晰度渐进HLS。
+
+### 已冻结边界
+
+- Storyboard与HLS均属于ENHANCED，受容量、磁盘余量和LRU约束，不参与Gallery可展示或BASE Poster判定。
+- 渐进HLS采用受认证的短期会话和完成后整体bundle；不同时实现DASH，不做多清晰度、硬件编码、字幕、多音轨或观看进度。
+- 视频pHash和重复建议属于独立未来项目，不并入播放第三阶段。
+- 完整启用门槛、资源身份、采样、会话、缓存、安全、回退和测试规格见[视频处理第三阶段功能规划](VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)。
+
+### 本阶段结果
+
+- 本阶段只持久化后续规划，没有修改业务代码、数据库、配置或部署，也没有运行视频媒体测试。
+- 后续开发顺序仍从VP1-01开始；不得越过第一、第二阶段直接实现Storyboard或HLS。
+
+## 1.5-31 视频处理第一阶段：探测、技术元数据与可靠Poster
+
+### 实现结果
+
+- 启动配置保留`ffmpeg_path`并新增向后兼容的可选`ffprobe_path`；解析时优先使用FFmpeg同目录FFprobe，分别校验可执行性和最低主版本5。Manage → Settings新增路径无关的可用性、来源、版本和稳定错误码诊断，缺失工具不阻止图片/RAW业务启动。
+- 产品数据库schema提升至v2。旧v1库打开时先通过SQLite Online Backup创建权限0600、独占命名的`pre-schema-v1`快照，重新验证完整性、产品身份与v1结构后才迁移；新增GalleryItem 1:1的`video_technical_metadata`和独立`ITEM_TECHNICAL_METADATA`任务。
+- FFprobe适配器使用固定参数、30秒超时、context取消和4MiB/64KiB输出上限；忽略attached picture与字幕，主视频/音频按default后first选取，只持久化规范技术字段，不保存原始JSON、stderr、标题、文件名或路径。
+- 新发现/替换VIDEO只先排探测，成功后再排STATIC Poster；存量DIRECTORY视频每分钟低优先级回填最多25项，已记录ERROR只允许人工重试，避免后台无限读取。内容revision变化会删除旧技术状态、取消旧任务并HARD_INVALID旧派生。
+- Poster改为有效时长20%，快速seek失败后精确seek、再以第0秒保底；固定960px JPEG、不放大，使用已选视频轨并显式处理旋转与HDR到SDR。Manage媒体行支持探测状态/错误/摘要与重试，MediaDetail仅返回白名单技术摘要。
+
+### 阶段验证
+
+- SQLite迁移测试确认v1约束真实不含新任务种类，迁移后v2表/约束存在，自动快照仍保持v1身份；回填有界、幂等、不自动重试ERROR且不改变Gallery metadata revision。
+- 单元/Worker/API覆盖轨道选择、WebM容器规范化、旋转/HDR、20%时间点、未知/短时长、探测→Poster顺序、错误码、Manage重试和路径不泄漏。
+- 本机真实`/usr/bin/ffmpeg`、`/usr/bin/ffprobe`、`/usr/bin/dcraw`合成门禁通过MP4、MOV、MKV、WebM、无音频、双音轨、旋转、HDR技术探测和960px Poster；测试实际发现并修复`format_name=matroska,webm`被错误归类为MKV的问题。
+
+## 1.5-32 视频处理第二阶段：认证直放与按需兼容代理
+
+### 实现结果
+
+- 播放矩阵以当前revision READY技术元数据为唯一输入：只有MP4/H.264/AAC、MP3或无音频，且无需旋转、非HDR时DIRECT；H.264容器/音频不兼容优先Remux，其余转CPU libx264/AAC Fast Start MP4。WebM/VP9/Opus暂不进入共同浏览器直放白名单。
+- 新增`/resource/video/<item_uuid>/<content_revision>/direct`：无路径参数，未认证/无权限统一404；授权复核ACTIVE、Scope、Hidden、Source/Item AVAILABLE、Exclude、Over-limit、Blocking Issue、当前revision和DIRECT方案。仅DIRECTORY可用，路径逐级拒绝符号链接并保持同一已打开普通文件描述符完成GET/HEAD、单/多Range、416和ETag响应。
+- GraphQL新增路径无关播放状态和请求契约。DIRECT立即就绪且不创建任务；Remux/Transcode按item/revision/profile并发汇聚，profile包含矩阵、轨道、FFmpeg版本、目标编码、分辨率、旋转/HDR和参数。VIDEO_PLAYBACK固定为ENHANCED，生成前执行缓存容量/磁盘余量检查，失败返回`DISK_SPACE_LOW`。
+- FFmpeg生成器显式map一条视频与可选音频、去除字幕/附件/metadata；Remux复制H.264并按需音频转AAC，Transcode使用libx264 medium/CRF20/high/yuv420p与AAC 192k、不放大、旋转清理和确定性HDR到SDR。滤镜不可用返回`VIDEO_TONEMAP_UNAVAILABLE`，命令和stderr不进入公共错误。
+- Lightbox当前视频和媒体详情挂载时才发请求并750ms轮询；准备中保留Poster，完成后无刷新切换原生播放器，失败可重试。切换成员以item UUID卸载旧Lightbox/播放器；卡片、网格、Scrubber、推荐和相邻媒体均不触发播放。直接与代理响应清除普通2分钟写超时，但客户端断开仍通过请求context终止读取。
+- 增加`CGM_VIDEO_PROBE_*`、`CGM_VIDEO_POSTER_*`、`CGM_VIDEO_PLAYBACK_REQUESTED`、`CGM_VIDEO_DIRECT_SERVED`和`CGM_VIDEO_PROXY_*`事件；默认只包含技术状态、job ID、短item前缀、耗时和稳定错误码，不形成观看Audit或保存进度。
+
+### 阶段验证与边界
+
+- 播放规划、输出尺寸、并发请求幂等、DIRECT不排任务、代理任务/Worker/ENHANCED发布、来源size/mtime/字节不变、GraphQL路径不泄漏均有回归；DIRECT HTTP覆盖未认证、Scope、Hidden、旧revision、HEAD、Range、多Range和416。
+- 真实工具门禁已实际生成并重新FFprobe验证H.264 MP4 Remux与Transcode代理，并验证HDR标记输入可完成固定SDR流程；自动化门禁结果不替代Chrome/Firefox/Safari真实业务媒体播放体验。
+- 最终验证结果：视频相关Go/SQLite/API/Server目标包全部PASS；`CGM_TEST_FFMPEG=/usr/bin/ffmpeg CGM_TEST_FFPROBE=/usr/bin/ffprobe CGM_TEST_LIBRAW=/usr/bin/dcraw`真实媒体矩阵PASS；TypeScript检查PASS；Vitest 25个文件、64项PASS；Vite生产构建675模块PASS；`cgm_web_embed`产品Server/UI回归PASS；现有Chromium离线完整业务Playwright 1项PASS且没有更新视觉快照。
+- `go test ./internal/...`额外探测只有原Stash遗留`internal/api`、`internal/api/urlbuilders`和`internal/manager`因项目明确移除的`ui/v2.5/build`嵌入目录而setup failed，其他执行到的内部包通过；CGM不以恢复旧UI来规避该隔离边界，产品入口已由上述`cgm_web_embed`门禁替代验证。
+- 本轮没有构建安装或重启本机服务，没有修改正式配置、数据库、媒体、Manifest或缓存。正式部署会触发schema v2维护迁移，必须先额外完整备份并保留自动v1快照；部署与人工浏览器验收另行执行。

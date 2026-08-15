@@ -4,7 +4,7 @@ const MANAGE_GALLERY_DETAIL = gql`
   fragment ManageGalleryDetailFields on ManageGalleryDetail {
     row { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues }
     aliases description shootDate shootDatePrecision photographerName studioName
-    items { uuid relativePath mediaKind contentFormat imageCategory position caption excluded availability processingState byteSize }
+    items { uuid relativePath mediaKind contentFormat imageCategory position caption excluded availability processingState byteSize videoProbeState videoErrorCode videoContainer videoDurationSeconds videoWidth videoHeight videoCodec audioCodec }
     credits { coserUUID coserName position cast { characterUUID characterName workUUID workName position } }
     tags { uuid name position }
     externalLinks { uuid type label url position }
@@ -58,6 +58,12 @@ export const MOVE_GALLERY_ITEM = gql`
     moveGalleryItem(setID: $setID, itemUUID: $itemUUID, beforeItemUUID: $beforeItemUUID, expectedMetadataRevision: $expectedMetadataRevision) { ...ManageGalleryDetailFields }
   }
 `;
+export const REORDER_GALLERY_ITEMS = gql`
+  ${MANAGE_GALLERY_DETAIL}
+  mutation ReorderGalleryItems($setID: ID!, $itemUUIDs: [ID!]!, $expectedMetadataRevision: Int64!) {
+    reorderGalleryItems(setID: $setID, itemUUIDs: $itemUUIDs, expectedMetadataRevision: $expectedMetadataRevision) { ...ManageGalleryDetailFields }
+  }
+`;
 export const SET_GALLERY_COVER_ITEM = gql`
   ${MANAGE_GALLERY_DETAIL}
   mutation SetGalleryCoverItem($setID: ID!, $itemUUID: ID!, $expectedMetadataRevision: Int64!) {
@@ -96,7 +102,9 @@ export const IMPORT_GALLERY_CANDIDATE = gql`
 `;
 export const SCAN_GALLERY_SOURCE = gql`
   ${MANAGE_GALLERY_DETAIL}
-  mutation ScanGallerySource($setID: ID!) { scanGallerySource(setID: $setID) { ...ManageGalleryDetailFields } }
+  mutation ScanGallerySource($setID: ID!, $excludeNewRootMedia: Boolean! = true) {
+    scanGallerySource(setID: $setID, excludeNewRootMedia: $excludeNewRootMedia) { ...ManageGalleryDetailFields }
+  }
 `;
 export const REPLACE_GALLERY_RELATIONS = gql`
   ${MANAGE_GALLERY_DETAIL}
@@ -121,12 +129,13 @@ export const PUSH_COSER_MANIFEST = gql`${MANAGE_COSER_MANIFEST_FIELDS} mutation 
 export const PULL_COSER_MANIFEST = gql`${MANAGE_COSER_MANIFEST_FIELDS} mutation PullCoserManifest($coserUUID: ID!, $expectedMetadataRevision: Int64!) { pullCoserManifest(coserUUID: $coserUUID, expectedMetadataRevision: $expectedMetadataRevision) { ...ManageCoserManifestFields } }`;
 export const RESOLVE_COSER_MANIFEST = gql`${MANAGE_COSER_MANIFEST_FIELDS} mutation ResolveCoserManifest($coserUUID: ID!, $expectedMetadataRevision: Int64!, $choices: [ManifestConflictChoiceInput!]!) { resolveCoserManifest(coserUUID: $coserUUID, expectedMetadataRevision: $expectedMetadataRevision, choices: $choices) { ...ManageCoserManifestFields } }`;
 const RUNTIME_SETTINGS_FIELDS = gql`fragment RuntimeSettingsFields on ManageRuntimeSettings { settingsRevision homeScope galleryCardScrubberEnabled galleryDetailMediaFilterEnabled galleryCardControlsVisible mediaCardControlsVisible detailPersonalControlsVisible relatedLimit tagParentWeight tagMinimumScore tagMaximumDepth randomLimit randomStaticQuota randomGIFQuota randomVideoQuota randomGalleryRepeatDecay enhancedCacheMaximumBytes minimumFreeBytes minimumFreePercent automaticScanEnabled automaticSchedulesSuspended dailyBackupEnabled dailyBackupRetention archiveMaxEntries archiveMaxEntryBytes archiveMaxTotalBytes archiveMaxCompressionRatio archiveMaxImagePixels }`;
-export const MANAGE_RUNTIME_SETTINGS = gql`${RUNTIME_SETTINGS_FIELDS} query ManageRuntimeSettings { manageRuntimeSettings { ...RuntimeSettingsFields } manageCacheStorage { path byteSize fileCount baseByteSize enhancedByteSize } }`;
+export const MANAGE_RUNTIME_SETTINGS = gql`${RUNTIME_SETTINGS_FIELDS} query ManageRuntimeSettings { manageRuntimeSettings { ...RuntimeSettingsFields } manageCacheStorage { path byteSize fileCount baseByteSize enhancedByteSize } manageVideoDependencyStatus { ffmpegAvailable ffmpegSource ffmpegVersion ffmpegErrorCode ffprobeAvailable ffprobeSource ffprobeVersion ffprobeErrorCode } }`;
 export const UPDATE_RUNTIME_SETTINGS = gql`${RUNTIME_SETTINGS_FIELDS} mutation UpdateRuntimeSettings($expectedSettingsRevision: Int64!, $input: RuntimeSettingsInput!) { updateRuntimeSettings(expectedSettingsRevision: $expectedSettingsRevision, input: $input) { ...RuntimeSettingsFields } }`;
 const PROCESSING_JOB_PAGE_FIELDS = gql`fragment ProcessingJobPageFields on ManageProcessingJobPage { page pageSize totalItems totalPages items { id kind galleryID itemUUID variant status priority attemptCount maxAttempts lastErrorCode structuralFailure createdAt updatedAt } }`;
 export const MANAGE_PROCESSING_JOBS = gql`${PROCESSING_JOB_PAGE_FIELDS} query ManageProcessingJobs($status: String!, $page: Int!) { manageProcessingJobs(status: $status, page: $page) { ...ProcessingJobPageFields } }`;
 export const CANCEL_PROCESSING_JOB = gql`${PROCESSING_JOB_PAGE_FIELDS} mutation CancelProcessingJob($id: Int64!) { cancelProcessingJob(id: $id) { ...ProcessingJobPageFields } }`;
 export const RETRY_PROCESSING_JOB = gql`${PROCESSING_JOB_PAGE_FIELDS} mutation RetryProcessingJob($id: Int64!) { retryProcessingJob(id: $id) { ...ProcessingJobPageFields } }`;
+export const RETRY_GALLERY_ITEM_VIDEO = gql`mutation RetryGalleryItemVideo($itemUUID: ID!) { retryGalleryItemVideo(itemUUID: $itemUUID) }`;
 const BACKUP_FIELDS = gql`fragment BackupFields on ManageBackupRecord { id kind fileName status byteSize archiveSHA256 productVersion databaseSchemaVersion manifestSchemaVersion mediaProcessingVersion createdAt completedAt lastErrorCode }`;
 export const MANAGE_OPERATIONS = gql`${BACKUP_FIELDS} query ManageOperations($page: Int!) {
   manageBackups { ...BackupFields }

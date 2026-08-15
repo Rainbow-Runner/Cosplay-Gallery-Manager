@@ -1,7 +1,7 @@
 # Cosplay Gallery Manager 开发备忘录
 
 > 状态：第一版产品与架构基线；0.1～0.7 主干功能已进入实现与联调
-> 最后更新：2026-07-27
+> 最后更新：2026-08-15
 > 原始代码基线：Stash `develop` / `c7d2fe4f97b99c6a2aac968ac8a2aad3adf5b800`  
 > 分支策略：独立产品，不考虑与 Stash 上游合并  
 > 工作名：Cosplay Gallery Manager；最终品牌名延期决定  
@@ -21,7 +21,7 @@
 - 一个 Gallery 对应一个物理来源，包含图片、动态图和视频，并统一管理 Coser、Character、Work、Tag、日期、分级和成员顺序。
 - 保留并重构 Stash 的底层文件扫描、图片处理、FFmpeg、GraphQL、SQLite和任务能力。
 - 新建 GalleryEpic 风格的浏览前台，同时重建适用于作品集聚合编辑的管理后台。
-- 元数据以人工数据库编辑和本地 Manifest 为核心，不依赖网络刮削。
+- 元数据仍以人工数据库编辑和本地 Manifest 为核心；1.5允许默认关闭、所有者显式触发、人工逐项确认且可完全拆除的Coser网络资料Provider，只导入托管头像、Banner和SocialAccount，不参与核心业务正确性。
 
 ### 2.2 明确非目标
 
@@ -29,8 +29,8 @@
 - 不支持原 Stash 数据库、旧 Tag、NFO、插件或 GraphQL 兼容迁移。
 - 不保留独立 Image/Scene 业务页面、单媒体网络刮削或单文件物理删除。
 - 不支持跨 Gallery 共享媒体身份。
-- 不实现网络刮削、社交账号检测Provider、AI视觉推荐或向量数据库。
-- 不实现服务端主动外联、遥测、更新检查、CDN资源或运行时插件市场。
+- 第一版不实现自动网络刮削、社交账号联网检测、定时Provider任务、AI视觉推荐或向量数据库；1.5的Coser资料导入是用户确认后的可选外联例外。
+- 除1.5已确认的所有者显式Coser资料导入外，不实现服务端主动外联、遥测、更新检查、CDN资源或运行时插件市场。
 - 不实现应用内静态加密、内置HTTPS、外部数据库或实时文件监听。
 
 ## 3. 原 Stash Code View 结论
@@ -141,7 +141,7 @@ SocialAccount：
 - account_uuid、可扩展字符串platform_key、label、handle、HTTP(S) URL、ACTIVE/INACTIVE、visible、position。
 - platform_key格式 `[a-z0-9][a-z0-9_-]{0,63}`；未知平台使用通用本地图标。
 - INACTIVE不改变顺序，只原位弱化；visible=false时Browse不返回。
-- 第一版仅定义未来检测Provider接口，不实现Provider、定时任务或结果表。
+- 第一版仅定义未来检测Provider接口，不实现账号状态检测、定时任务或结果表。1.5新增的可拔除资料导入Provider只提供候选、头像、Banner和账号建议，与检测Provider分离。
 
 ### 6.4 Work与Character
 
@@ -216,7 +216,9 @@ SocialAccount：
 - 初始成员按固定组顺序及规范化完整相对路径自然排序；数字按数值比较，DIRECTORY和归档一致。
 - 初始间隔1024；后续新增或重新分类追加到目标组末尾。
 - 同组拖拽优先写中点；间隔耗尽时只把当前组按原顺序迁移到Gallery全局高水位后的新区间。
-- 重新按文件名排序必须人工预览触发。
+- Manage媒体页按完整父目录分组；Gallery根目录作为独立分组并固定排在该媒体类型的所有文件夹之前。
+- 文件夹排序只在所属PHOTO、SELFIE、ANIMATED_IMAGE或VIDEO组内生效；移动文件夹时保持文件夹内部既有顺序。
+- 按文件名自然排序必须由用户对具体文件夹显式触发，比较文件名而非完整父目录；整个媒体组顺序在单事务和单次metadata_revision递增中提交。
 
 ### 8.4 Credit/Cast Position
 
@@ -292,6 +294,7 @@ SocialAccount：
 - 扫描只做发现与对账；缩略图、RAW、动画、Video进入独立持久化处理队列。
 - 每次扫描有scan_run_id，观察结果先暂存；以单GallerySource完整成功为最小原子提交。
 - 取消、网络中断或失败时丢弃未完成暂存，保留上一版成员状态，不产生半扫描MISSING。
+- 用户发起扫描时默认把本次新发现的Gallery根目录媒体记录为excluded，并可在扫描前关闭该选项；子目录媒体仍默认纳入。该策略只作用新Item，按路径或唯一指纹识别出的既有Item继续保留人工Exclude/Restore决定。
 - 移除原Stash Clean：`Reconcile Sources`只标记来源/成员状态，`Cache Maintenance`只清理应用生成的缓存、临时文件、轮换备份和明确托管的元数据资源。
 - 应用任何路径都不能删除用户媒体来源文件；文件物理删除和移动完全由外部文件系统完成。
 
@@ -358,6 +361,9 @@ SocialAccount：
 - 第一版只做基础播放：确定性选择default/首个可解码主视频轨和音轨，不提供音轨选择、字幕、画质档、预览精灵、360°或外部播放器。
 - 正确应用旋转；代理将HDR Tone Map为SDR。
 - 不持久化播放进度、观看状态、次数或时长。
+- 1.5按两个实现阶段补齐该闭环：第一阶段完成FFmpeg/FFprobe诊断、产品自有技术元数据与约20%位置可靠Poster；第二阶段完成认证DIRECT Range路由、按需Remux/H.264-AAC代理及Lightbox/媒体详情播放。完整任务、数据、缓存、安全和测试规格见[视频处理第一、第二阶段功能规划](development/VIDEO_PROCESSING_PHASE_1_2_PLAN_2026-08-15.md)。
+- Gallery列表、卡片曝光和Gallery卡片Scrubber不得触发原视频读取、Remux或转码；只有当前Lightbox视频或媒体详情实际打开才请求播放资源。
+- Storyboard辅助时间轴和条件式单清晰度渐进HLS已形成[第三阶段后续规划](development/VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)，但不加入当前第一版/1.5完成门禁；HLS必须先由第二阶段真实大视频指标证明必要并另行ADR确认。
 
 ### 11.7 复用Stash底层
 
@@ -569,6 +575,8 @@ SocialAccount：
 - Lightbox停止上一动画/视频，只预取相邻图片代理，视频只预取Poster。
 - 详情“拍摄时间”为主、“收录于”为次，不显示文字标签，以图标、字体、字号、颜色区分，并保留Tooltip/aria-label。
 - 总大小只统计当前AVAILABLE Item实际存储大小；归档用压缩后成员大小。
+- 已认证单所有者可在详情“更多详情”中查看该Gallery实际存在媒体的去重绝对父目录，并直达其Manage媒体页；这是Browse物理路径约束的有限例外。DIRECTORY包含被排除但非MISSING的Item，根目录优先、其余自然排序；ARCHIVE只显示归档文件所在目录。不得返回文件名、Item相对路径、指纹、缓存路径，也不得提供`file://`、文件管理器或外部命令入口。
+- “更多详情”点击弹层外或按`Escape`关闭，弹层内部操作不得误关闭。
 
 ### 18.6 媒体详情与媒体卡片
 
@@ -745,7 +753,7 @@ SocialAccount：
 
 - item_uuid仅定位，不是凭证；全部Browse/Manage媒体资源统一认证。
 - 路由只接受UUID和variant白名单，校验Source归属、路径边界、状态和可见性，不接受任意路径。
-- Browse和Manage使用不同可见性规则；Browse DTO永不返回路径、指纹或技术详情。
+- Browse和Manage使用不同可见性规则；除第18.5节已确认的认证单所有者Gallery详情父目录摘要外，Browse DTO永不返回路径、指纹或技术详情。该摘要只聚合文件夹路径，不扩散到卡片、索引、成员轻量DTO或资源URL。
 - MIME正确、nosniff、inline、private cache；带不可变revision派生资源可长期缓存；原图/视频支持Range。
 - 不生成永久公开、无认证签名或CDN URL。
 
@@ -780,7 +788,7 @@ SocialAccount：
 
 ### 25.4 离线与插件
 
-- 服务端零主动外联；前端资产全部本地；核心功能断网可用。
+- 服务端核心流程零主动外联；前端资产全部本地；核心功能断网可用。1.5 Coser资料导入默认关闭，只在所有者显式操作时外联，移除全部Provider后产品仍可完整编译和使用。
 - 第一版彻底移除原Stash插件市场、执行入口、旧Hook、Scraper和主题兼容。
 - 只保留内部代码级Recommendation、Account Check和Derivative Generator接口。
 - Manifest `extensions`只保存JSON，不执行代码。
@@ -870,7 +878,7 @@ SocialAccount：
 - 最终产品名称、Logo和完整品牌系统。
 - AI/视觉向量相似推荐、Embedding模型和向量存储。
 - Coser社交账号联网检测Provider和结果建议表。
-- 任何网络Scraper、在线更新、遥测或远程素材获取。
+- 自动网络Scraper、在线更新、遥测或后台远程素材获取；1.5已确认的人工Coser资料导入例外不得扩展到扫描、Browse或定时任务。
 - Coser真实姓名、出生日期、身高、体重、三围等结构化字段；第一版写Biography。
 - 字幕/多音轨UI、视频进度、硬件转码、360°/VR、Dolby Vision专用处理。
 - 应用内加密备份、SQLCipher、内置TLS、外部数据库和多用户。

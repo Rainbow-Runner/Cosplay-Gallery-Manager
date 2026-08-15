@@ -140,15 +140,16 @@ type ComplexityRoot struct {
 	}
 
 	GalleryDetail struct {
-		AvailableBytes   func(childComplexity int) int
-		Card             func(childComplexity int) int
-		Credits          func(childComplexity int) int
-		Description      func(childComplexity int) int
-		ExternalLinks    func(childComplexity int) int
-		PhotographerName func(childComplexity int) int
-		Redirected       func(childComplexity int) int
-		StudioName       func(childComplexity int) int
-		Tags             func(childComplexity int) int
+		AvailableBytes         func(childComplexity int) int
+		Card                   func(childComplexity int) int
+		Credits                func(childComplexity int) int
+		Description            func(childComplexity int) int
+		ExternalLinks          func(childComplexity int) int
+		MediaParentDirectories func(childComplexity int) int
+		PhotographerName       func(childComplexity int) int
+		Redirected             func(childComplexity int) int
+		StudioName             func(childComplexity int) int
+		Tags                   func(childComplexity int) int
 	}
 
 	GalleryMember struct {
@@ -405,17 +406,25 @@ type ComplexityRoot struct {
 	}
 
 	ManageGalleryItem struct {
-		Availability    func(childComplexity int) int
-		ByteSize        func(childComplexity int) int
-		Caption         func(childComplexity int) int
-		ContentFormat   func(childComplexity int) int
-		Excluded        func(childComplexity int) int
-		ImageCategory   func(childComplexity int) int
-		MediaKind       func(childComplexity int) int
-		Position        func(childComplexity int) int
-		ProcessingState func(childComplexity int) int
-		RelativePath    func(childComplexity int) int
-		UUID            func(childComplexity int) int
+		AudioCodec           func(childComplexity int) int
+		Availability         func(childComplexity int) int
+		ByteSize             func(childComplexity int) int
+		Caption              func(childComplexity int) int
+		ContentFormat        func(childComplexity int) int
+		Excluded             func(childComplexity int) int
+		ImageCategory        func(childComplexity int) int
+		MediaKind            func(childComplexity int) int
+		Position             func(childComplexity int) int
+		ProcessingState      func(childComplexity int) int
+		RelativePath         func(childComplexity int) int
+		UUID                 func(childComplexity int) int
+		VideoCodec           func(childComplexity int) int
+		VideoContainer       func(childComplexity int) int
+		VideoDurationSeconds func(childComplexity int) int
+		VideoErrorCode       func(childComplexity int) int
+		VideoHeight          func(childComplexity int) int
+		VideoProbeState      func(childComplexity int) int
+		VideoWidth           func(childComplexity int) int
 	}
 
 	ManageGalleryManifestState struct {
@@ -581,6 +590,17 @@ type ComplexityRoot struct {
 		ParentPath func(childComplexity int) int
 	}
 
+	ManageVideoDependencyStatus struct {
+		FfmpegAvailable  func(childComplexity int) int
+		FfmpegErrorCode  func(childComplexity int) int
+		FfmpegSource     func(childComplexity int) int
+		FfmpegVersion    func(childComplexity int) int
+		FfprobeAvailable func(childComplexity int) int
+		FfprobeErrorCode func(childComplexity int) int
+		FfprobeSource    func(childComplexity int) int
+		FfprobeVersion   func(childComplexity int) int
+	}
+
 	MediaCounts struct {
 		Gif    func(childComplexity int) int
 		Photo  func(childComplexity int) int
@@ -593,6 +613,7 @@ type ComplexityRoot struct {
 		Gallery          func(childComplexity int) int
 		Item             func(childComplexity int) int
 		MetadataRevision func(childComplexity int) int
+		VideoTechnical   func(childComplexity int) int
 	}
 
 	MediaPage struct {
@@ -604,46 +625,49 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddCoserSocialAccount   func(childComplexity int, coserUUID string, expectedMetadataRevision int64, input SocialAccountInput) int
-		AddGalleryExternalLink  func(childComplexity int, setID string, expectedMetadataRevision int64, input GalleryExternalLinkInput) int
-		CancelProcessingJob     func(childComplexity int, id int64) int
-		CreateCoreEntity        func(childComplexity int, input CoreEntityInput) int
-		CreateFullBackup        func(childComplexity int) int
-		CreateMediaLibrary      func(childComplexity int, input CreateMediaLibraryInput) int
-		CreateRecognitionRule   func(childComplexity int, input CreateRecognitionRuleInput) int
-		DeleteCoreEntity        func(childComplexity int, kind SearchEntityKind, uuid string, expectedMetadataRevision int64) int
-		DeleteGallery           func(childComplexity int, setID string, expectedMetadataRevision int64, password string, confirmation string) int
-		DeleteRecognitionRule   func(childComplexity int, id int64) int
-		DiscoverMediaLibrary    func(childComplexity int, libraryID int64) int
-		ImportGalleryCandidate  func(childComplexity int, candidateID int64) int
-		MergeCoreEntities       func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string, expectedSourceRevision int64, expectedTargetRevision int64) int
-		MoveGalleryItem         func(childComplexity int, setID string, itemUUID string, beforeItemUUID *string, expectedMetadataRevision int64) int
-		PullCoserManifest       func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
-		PullGalleryManifest     func(childComplexity int, setID string, expectedMetadataRevision int64) int
-		PushCoserManifest       func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
-		PushGalleryManifest     func(childComplexity int, setID string, expectedMetadataRevision int64) int
-		RecordGalleryView       func(childComplexity int, setID string, itemUUID *string) int
-		ReplaceGalleryRelations func(childComplexity int, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) int
-		ReplaceTagParents       func(childComplexity int, childUUID string, expectedChildRevision int64, parents []*ReplaceTagParentInput, expectedParents []*ExpectedTagRevisionInput) int
-		RequestItemLightbox     func(childComplexity int, itemUUID string) int
-		ResetGalleryCover       func(childComplexity int, setID string, expectedMetadataRevision int64) int
-		ResolveCoserManifest    func(childComplexity int, coserUUID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
-		ResolveGalleryManifest  func(childComplexity int, setID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
-		RestoreBackup           func(childComplexity int, backupID string) int
-		RetryProcessingJob      func(childComplexity int, id int64) int
-		ScanGallerySource       func(childComplexity int, setID string) int
-		SetGalleryCoverItem     func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64) int
-		SetGalleryFavorite      func(childComplexity int, setID string, favorite bool) int
-		SetGalleryItemExcluded  func(childComplexity int, setID string, itemUUID string, excluded bool, expectedMetadataRevision int64) int
-		SetGalleryRating        func(childComplexity int, setID string, ratingHalfSteps *int, expectedMetadataRevision int64) int
-		SetGalleryState         func(childComplexity int, setID string, expectedMetadataRevision int64, state GalleryState) int
-		SetItemFavorite         func(childComplexity int, itemUUID string, favorite bool) int
-		SetItemRating           func(childComplexity int, itemUUID string, ratingHalfSteps *int, expectedMetadataRevision int64) int
-		UpdateCoreEntity        func(childComplexity int, uuid string, expectedMetadataRevision int64, input CoreEntityInput) int
-		UpdateGalleryItem       func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64, input UpdateGalleryItemInput) int
-		UpdateGalleryMetadata   func(childComplexity int, setID string, expectedMetadataRevision int64, input UpdateGalleryMetadataInput) int
-		UpdateRecognitionRule   func(childComplexity int, input UpdateRecognitionRuleInput) int
-		UpdateRuntimeSettings   func(childComplexity int, expectedSettingsRevision int64, input RuntimeSettingsInput) int
+		AddCoserSocialAccount    func(childComplexity int, coserUUID string, expectedMetadataRevision int64, input SocialAccountInput) int
+		AddGalleryExternalLink   func(childComplexity int, setID string, expectedMetadataRevision int64, input GalleryExternalLinkInput) int
+		CancelProcessingJob      func(childComplexity int, id int64) int
+		CreateCoreEntity         func(childComplexity int, input CoreEntityInput) int
+		CreateFullBackup         func(childComplexity int) int
+		CreateMediaLibrary       func(childComplexity int, input CreateMediaLibraryInput) int
+		CreateRecognitionRule    func(childComplexity int, input CreateRecognitionRuleInput) int
+		DeleteCoreEntity         func(childComplexity int, kind SearchEntityKind, uuid string, expectedMetadataRevision int64) int
+		DeleteGallery            func(childComplexity int, setID string, expectedMetadataRevision int64, password string, confirmation string) int
+		DeleteRecognitionRule    func(childComplexity int, id int64) int
+		DiscoverMediaLibrary     func(childComplexity int, libraryID int64) int
+		ImportGalleryCandidate   func(childComplexity int, candidateID int64) int
+		MergeCoreEntities        func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string, expectedSourceRevision int64, expectedTargetRevision int64) int
+		MoveGalleryItem          func(childComplexity int, setID string, itemUUID string, beforeItemUUID *string, expectedMetadataRevision int64) int
+		PullCoserManifest        func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
+		PullGalleryManifest      func(childComplexity int, setID string, expectedMetadataRevision int64) int
+		PushCoserManifest        func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
+		PushGalleryManifest      func(childComplexity int, setID string, expectedMetadataRevision int64) int
+		RecordGalleryView        func(childComplexity int, setID string, itemUUID *string) int
+		ReorderGalleryItems      func(childComplexity int, setID string, itemUUIDs []string, expectedMetadataRevision int64) int
+		ReplaceGalleryRelations  func(childComplexity int, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) int
+		ReplaceTagParents        func(childComplexity int, childUUID string, expectedChildRevision int64, parents []*ReplaceTagParentInput, expectedParents []*ExpectedTagRevisionInput) int
+		RequestItemLightbox      func(childComplexity int, itemUUID string) int
+		RequestItemVideoPlayback func(childComplexity int, itemUUID string) int
+		ResetGalleryCover        func(childComplexity int, setID string, expectedMetadataRevision int64) int
+		ResolveCoserManifest     func(childComplexity int, coserUUID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
+		ResolveGalleryManifest   func(childComplexity int, setID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
+		RestoreBackup            func(childComplexity int, backupID string) int
+		RetryGalleryItemVideo    func(childComplexity int, itemUUID string) int
+		RetryProcessingJob       func(childComplexity int, id int64) int
+		ScanGallerySource        func(childComplexity int, setID string, excludeNewRootMedia bool) int
+		SetGalleryCoverItem      func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64) int
+		SetGalleryFavorite       func(childComplexity int, setID string, favorite bool) int
+		SetGalleryItemExcluded   func(childComplexity int, setID string, itemUUID string, excluded bool, expectedMetadataRevision int64) int
+		SetGalleryRating         func(childComplexity int, setID string, ratingHalfSteps *int, expectedMetadataRevision int64) int
+		SetGalleryState          func(childComplexity int, setID string, expectedMetadataRevision int64, state GalleryState) int
+		SetItemFavorite          func(childComplexity int, itemUUID string, favorite bool) int
+		SetItemRating            func(childComplexity int, itemUUID string, ratingHalfSteps *int, expectedMetadataRevision int64) int
+		UpdateCoreEntity         func(childComplexity int, uuid string, expectedMetadataRevision int64, input CoreEntityInput) int
+		UpdateGalleryItem        func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64, input UpdateGalleryItemInput) int
+		UpdateGalleryMetadata    func(childComplexity int, setID string, expectedMetadataRevision int64, input UpdateGalleryMetadataInput) int
+		UpdateRecognitionRule    func(childComplexity int, input UpdateRecognitionRuleInput) int
+		UpdateRuntimeSettings    func(childComplexity int, expectedSettingsRevision int64, input RuntimeSettingsInput) int
 	}
 
 	OnDemandResource struct {
@@ -652,48 +676,56 @@ type ComplexityRoot struct {
 		Status    func(childComplexity int) int
 	}
 
+	PersonSummary struct {
+		AvatarURL func(childComplexity int) int
+		Name      func(childComplexity int) int
+		UUID      func(childComplexity int) int
+	}
+
 	PersonalStateResult struct {
 		MetadataRevision func(childComplexity int) int
 	}
 
 	Query struct {
-		BrowseGalleries         func(childComplexity int, scope BrowseScope, page int, sort GallerySort, collectionType *CollectionType) int
-		BrowseUISettings        func(childComplexity int) int
-		CharacterDetail         func(childComplexity int, slug string, scope BrowseScope, page int) int
-		CoserDetail             func(childComplexity int, slug string, scope BrowseScope, page int, collectionType *CollectionType) int
-		EntityIndex             func(childComplexity int, kind SearchEntityKind, scope BrowseScope, page int, sort EntitySort, collectionType *CollectionType, query string) int
-		FavoriteGalleries       func(childComplexity int, scope BrowseScope, page int) int
-		FavoriteMedia           func(childComplexity int, scope BrowseScope, page int, ratingSort bool) int
-		GalleryDetail           func(childComplexity int, slug string, scope BrowseScope) int
-		GalleryHistory          func(childComplexity int, scope BrowseScope, page int) int
-		GalleryMemberIndex      func(childComplexity int, setID string) int
-		HomeGalleries           func(childComplexity int, page int) int
-		ItemLightboxStatus      func(childComplexity int, itemUUID string) int
-		ManageAudit             func(childComplexity int, page int) int
-		ManageBackups           func(childComplexity int) int
-		ManageCacheStorage      func(childComplexity int) int
-		ManageCoreEntities      func(childComplexity int, kind SearchEntityKind, page int) int
-		ManageCoreEntity        func(childComplexity int, kind SearchEntityKind, uuid string) int
-		ManageCoreEntityOptions func(childComplexity int, kind SearchEntityKind, query string, limit int) int
-		ManageCoserManifest     func(childComplexity int, coserUUID string) int
-		ManageDiscovery         func(childComplexity int, libraryID int64) int
-		ManageGalleries         func(childComplexity int, page int) int
-		ManageGallery           func(childComplexity int, setID string) int
-		ManageGalleryManifest   func(childComplexity int, setID string) int
-		ManageLibraries         func(childComplexity int) int
-		ManageMaintenance       func(childComplexity int) int
-		ManageProcessingJobs    func(childComplexity int, status string, page int) int
-		ManageRuntimeSettings   func(childComplexity int) int
-		MediaDetail             func(childComplexity int, itemUUID string) int
-		PreviewCoreEntityDelete func(childComplexity int, kind SearchEntityKind, uuid string) int
-		PreviewCoreEntityMerge  func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string) int
-		PreviewGalleryDelete    func(childComplexity int, setID string) int
-		RandomMedia             func(childComplexity int, scope BrowseScope, filter RandomMediaFilter) int
-		RelatedGalleries        func(childComplexity int, setID string, scope BrowseScope) int
-		SearchPreview           func(childComplexity int, query string, scope BrowseScope) int
-		TagDetail               func(childComplexity int, slug string, scope BrowseScope, page int) int
-		TimelineGalleries       func(childComplexity int, scope BrowseScope, page int, coserUUID *string) int
-		WorkDetail              func(childComplexity int, slug string, scope BrowseScope) int
+		BrowseGalleries             func(childComplexity int, scope BrowseScope, page int, sort GallerySort, collectionType *CollectionType) int
+		BrowseUISettings            func(childComplexity int) int
+		CharacterDetail             func(childComplexity int, slug string, scope BrowseScope, page int) int
+		CoserDetail                 func(childComplexity int, slug string, scope BrowseScope, page int, collectionType *CollectionType) int
+		EntityIndex                 func(childComplexity int, kind SearchEntityKind, scope BrowseScope, page int, sort EntitySort, collectionType *CollectionType, query string) int
+		FavoriteGalleries           func(childComplexity int, scope BrowseScope, page int) int
+		FavoriteMedia               func(childComplexity int, scope BrowseScope, page int, ratingSort bool) int
+		GalleryDetail               func(childComplexity int, slug string, scope BrowseScope) int
+		GalleryHistory              func(childComplexity int, scope BrowseScope, page int) int
+		GalleryMemberIndex          func(childComplexity int, setID string) int
+		HomeGalleries               func(childComplexity int, page int) int
+		ItemLightboxStatus          func(childComplexity int, itemUUID string) int
+		ItemVideoPlaybackStatus     func(childComplexity int, itemUUID string) int
+		ManageAudit                 func(childComplexity int, page int) int
+		ManageBackups               func(childComplexity int) int
+		ManageCacheStorage          func(childComplexity int) int
+		ManageCoreEntities          func(childComplexity int, kind SearchEntityKind, page int) int
+		ManageCoreEntity            func(childComplexity int, kind SearchEntityKind, uuid string) int
+		ManageCoreEntityOptions     func(childComplexity int, kind SearchEntityKind, query string, limit int) int
+		ManageCoserManifest         func(childComplexity int, coserUUID string) int
+		ManageDiscovery             func(childComplexity int, libraryID int64) int
+		ManageGalleries             func(childComplexity int, page int) int
+		ManageGallery               func(childComplexity int, setID string) int
+		ManageGalleryManifest       func(childComplexity int, setID string) int
+		ManageLibraries             func(childComplexity int) int
+		ManageMaintenance           func(childComplexity int) int
+		ManageProcessingJobs        func(childComplexity int, status string, page int) int
+		ManageRuntimeSettings       func(childComplexity int) int
+		ManageVideoDependencyStatus func(childComplexity int) int
+		MediaDetail                 func(childComplexity int, itemUUID string) int
+		PreviewCoreEntityDelete     func(childComplexity int, kind SearchEntityKind, uuid string) int
+		PreviewCoreEntityMerge      func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string) int
+		PreviewGalleryDelete        func(childComplexity int, setID string) int
+		RandomMedia                 func(childComplexity int, scope BrowseScope, filter RandomMediaFilter) int
+		RelatedGalleries            func(childComplexity int, setID string, scope BrowseScope) int
+		SearchPreview               func(childComplexity int, query string, scope BrowseScope) int
+		TagDetail                   func(childComplexity int, slug string, scope BrowseScope, page int) int
+		TimelineGalleries           func(childComplexity int, scope BrowseScope, page int, coserUUID *string) int
+		WorkDetail                  func(childComplexity int, slug string, scope BrowseScope) int
 	}
 
 	RandomMediaItem struct {
@@ -751,6 +783,27 @@ type ComplexityRoot struct {
 		Redirected func(childComplexity int) int
 	}
 
+	VideoPlaybackStatus struct {
+		ContentRevision func(childComplexity int) int
+		ErrorCode       func(childComplexity int) int
+		ItemUUID        func(childComplexity int) int
+		Mode            func(childComplexity int) int
+		Resource        func(childComplexity int) int
+		Status          func(childComplexity int) int
+	}
+
+	VideoTechnicalSummary struct {
+		AudioCodec      func(childComplexity int) int
+		Container       func(childComplexity int) int
+		DurationSeconds func(childComplexity int) int
+		ErrorCode       func(childComplexity int) int
+		FrameRate       func(childComplexity int) int
+		Height          func(childComplexity int) int
+		ProbeState      func(childComplexity int) int
+		VideoCodec      func(childComplexity int) int
+		Width           func(childComplexity int) int
+	}
+
 	WorkDetail struct {
 		Characters func(childComplexity int) int
 		Entity     func(childComplexity int) int
@@ -765,11 +818,13 @@ type MutationResolver interface {
 	SetItemRating(ctx context.Context, itemUUID string, ratingHalfSteps *int, expectedMetadataRevision int64) (*PersonalStateResult, error)
 	RecordGalleryView(ctx context.Context, setID string, itemUUID *string) (bool, error)
 	RequestItemLightbox(ctx context.Context, itemUUID string) (*OnDemandResource, error)
+	RequestItemVideoPlayback(ctx context.Context, itemUUID string) (*VideoPlaybackStatus, error)
 	UpdateGalleryMetadata(ctx context.Context, setID string, expectedMetadataRevision int64, input UpdateGalleryMetadataInput) (*ManageGalleryDetail, error)
 	SetGalleryState(ctx context.Context, setID string, expectedMetadataRevision int64, state GalleryState) (*ManageGalleryDetail, error)
 	UpdateGalleryItem(ctx context.Context, setID string, itemUUID string, expectedMetadataRevision int64, input UpdateGalleryItemInput) (*ManageGalleryDetail, error)
 	SetGalleryItemExcluded(ctx context.Context, setID string, itemUUID string, excluded bool, expectedMetadataRevision int64) (*ManageGalleryDetail, error)
 	MoveGalleryItem(ctx context.Context, setID string, itemUUID string, beforeItemUUID *string, expectedMetadataRevision int64) (*ManageGalleryDetail, error)
+	ReorderGalleryItems(ctx context.Context, setID string, itemUUIDs []string, expectedMetadataRevision int64) (*ManageGalleryDetail, error)
 	SetGalleryCoverItem(ctx context.Context, setID string, itemUUID string, expectedMetadataRevision int64) (*ManageGalleryDetail, error)
 	ResetGalleryCover(ctx context.Context, setID string, expectedMetadataRevision int64) (*ManageGalleryDetail, error)
 	CreateMediaLibrary(ctx context.Context, input CreateMediaLibraryInput) (*ManageLibrary, error)
@@ -778,10 +833,11 @@ type MutationResolver interface {
 	DeleteRecognitionRule(ctx context.Context, id int64) (bool, error)
 	DiscoverMediaLibrary(ctx context.Context, libraryID int64) (*ManageDiscoverySnapshot, error)
 	ImportGalleryCandidate(ctx context.Context, candidateID int64) (*ManageGalleryDetail, error)
-	ScanGallerySource(ctx context.Context, setID string) (*ManageGalleryDetail, error)
+	ScanGallerySource(ctx context.Context, setID string, excludeNewRootMedia bool) (*ManageGalleryDetail, error)
 	UpdateRuntimeSettings(ctx context.Context, expectedSettingsRevision int64, input RuntimeSettingsInput) (*ManageRuntimeSettings, error)
 	CancelProcessingJob(ctx context.Context, id int64) (*ManageProcessingJobPage, error)
 	RetryProcessingJob(ctx context.Context, id int64) (*ManageProcessingJobPage, error)
+	RetryGalleryItemVideo(ctx context.Context, itemUUID string) (bool, error)
 	CreateFullBackup(ctx context.Context) (*ManageBackupRecord, error)
 	RestoreBackup(ctx context.Context, backupID string) (*ManageMaintenanceState, error)
 	CreateCoreEntity(ctx context.Context, input CoreEntityInput) (*ManageCoreEntity, error)
@@ -816,6 +872,7 @@ type QueryResolver interface {
 	TagDetail(ctx context.Context, slug string, scope BrowseScope, page int) (*TagDetail, error)
 	MediaDetail(ctx context.Context, itemUUID string) (*MediaDetail, error)
 	ItemLightboxStatus(ctx context.Context, itemUUID string) (*OnDemandResource, error)
+	ItemVideoPlaybackStatus(ctx context.Context, itemUUID string) (*VideoPlaybackStatus, error)
 	FavoriteGalleries(ctx context.Context, scope BrowseScope, page int) (*GalleryPage, error)
 	GalleryHistory(ctx context.Context, scope BrowseScope, page int) (*GalleryPage, error)
 	FavoriteMedia(ctx context.Context, scope BrowseScope, page int, ratingSort bool) (*MediaPage, error)
@@ -827,6 +884,7 @@ type QueryResolver interface {
 	ManageDiscovery(ctx context.Context, libraryID int64) (*ManageDiscoverySnapshot, error)
 	ManageRuntimeSettings(ctx context.Context) (*ManageRuntimeSettings, error)
 	ManageCacheStorage(ctx context.Context) (*ManageCacheStorage, error)
+	ManageVideoDependencyStatus(ctx context.Context) (*ManageVideoDependencyStatus, error)
 	ManageProcessingJobs(ctx context.Context, status string, page int) (*ManageProcessingJobPage, error)
 	ManageBackups(ctx context.Context) ([]*ManageBackupRecord, error)
 	ManageMaintenance(ctx context.Context) (*ManageMaintenanceState, error)
@@ -1334,6 +1392,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.GalleryDetail.ExternalLinks(childComplexity), true
+
+	case "GalleryDetail.mediaParentDirectories":
+		if e.complexity.GalleryDetail.MediaParentDirectories == nil {
+			break
+		}
+
+		return e.complexity.GalleryDetail.MediaParentDirectories(childComplexity), true
 
 	case "GalleryDetail.photographerName":
 		if e.complexity.GalleryDetail.PhotographerName == nil {
@@ -2546,6 +2611,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageGalleryFolderMatch.WorkUUID(childComplexity), true
 
+	case "ManageGalleryItem.audioCodec":
+		if e.complexity.ManageGalleryItem.AudioCodec == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryItem.AudioCodec(childComplexity), true
+
 	case "ManageGalleryItem.availability":
 		if e.complexity.ManageGalleryItem.Availability == nil {
 			break
@@ -2622,6 +2694,55 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageGalleryItem.UUID(childComplexity), true
+
+	case "ManageGalleryItem.videoCodec":
+		if e.complexity.ManageGalleryItem.VideoCodec == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryItem.VideoCodec(childComplexity), true
+
+	case "ManageGalleryItem.videoContainer":
+		if e.complexity.ManageGalleryItem.VideoContainer == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryItem.VideoContainer(childComplexity), true
+
+	case "ManageGalleryItem.videoDurationSeconds":
+		if e.complexity.ManageGalleryItem.VideoDurationSeconds == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryItem.VideoDurationSeconds(childComplexity), true
+
+	case "ManageGalleryItem.videoErrorCode":
+		if e.complexity.ManageGalleryItem.VideoErrorCode == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryItem.VideoErrorCode(childComplexity), true
+
+	case "ManageGalleryItem.videoHeight":
+		if e.complexity.ManageGalleryItem.VideoHeight == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryItem.VideoHeight(childComplexity), true
+
+	case "ManageGalleryItem.videoProbeState":
+		if e.complexity.ManageGalleryItem.VideoProbeState == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryItem.VideoProbeState(childComplexity), true
+
+	case "ManageGalleryItem.videoWidth":
+		if e.complexity.ManageGalleryItem.VideoWidth == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryItem.VideoWidth(childComplexity), true
 
 	case "ManageGalleryManifestState.conflicts":
 		if e.complexity.ManageGalleryManifestState.Conflicts == nil {
@@ -3449,6 +3570,62 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageUnassignedDiagnostic.ParentPath(childComplexity), true
 
+	case "ManageVideoDependencyStatus.ffmpegAvailable":
+		if e.complexity.ManageVideoDependencyStatus.FfmpegAvailable == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoDependencyStatus.FfmpegAvailable(childComplexity), true
+
+	case "ManageVideoDependencyStatus.ffmpegErrorCode":
+		if e.complexity.ManageVideoDependencyStatus.FfmpegErrorCode == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoDependencyStatus.FfmpegErrorCode(childComplexity), true
+
+	case "ManageVideoDependencyStatus.ffmpegSource":
+		if e.complexity.ManageVideoDependencyStatus.FfmpegSource == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoDependencyStatus.FfmpegSource(childComplexity), true
+
+	case "ManageVideoDependencyStatus.ffmpegVersion":
+		if e.complexity.ManageVideoDependencyStatus.FfmpegVersion == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoDependencyStatus.FfmpegVersion(childComplexity), true
+
+	case "ManageVideoDependencyStatus.ffprobeAvailable":
+		if e.complexity.ManageVideoDependencyStatus.FfprobeAvailable == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoDependencyStatus.FfprobeAvailable(childComplexity), true
+
+	case "ManageVideoDependencyStatus.ffprobeErrorCode":
+		if e.complexity.ManageVideoDependencyStatus.FfprobeErrorCode == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoDependencyStatus.FfprobeErrorCode(childComplexity), true
+
+	case "ManageVideoDependencyStatus.ffprobeSource":
+		if e.complexity.ManageVideoDependencyStatus.FfprobeSource == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoDependencyStatus.FfprobeSource(childComplexity), true
+
+	case "ManageVideoDependencyStatus.ffprobeVersion":
+		if e.complexity.ManageVideoDependencyStatus.FfprobeVersion == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoDependencyStatus.FfprobeVersion(childComplexity), true
+
 	case "MediaCounts.gif":
 		if e.complexity.MediaCounts.Gif == nil {
 			break
@@ -3504,6 +3681,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.MediaDetail.MetadataRevision(childComplexity), true
+
+	case "MediaDetail.videoTechnical":
+		if e.complexity.MediaDetail.VideoTechnical == nil {
+			break
+		}
+
+		return e.complexity.MediaDetail.VideoTechnical(childComplexity), true
 
 	case "MediaPage.items":
 		if e.complexity.MediaPage.Items == nil {
@@ -3763,6 +3947,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.RecordGalleryView(childComplexity, args["setID"].(string), args["itemUUID"].(*string)), true
 
+	case "Mutation.reorderGalleryItems":
+		if e.complexity.Mutation.ReorderGalleryItems == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_reorderGalleryItems_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ReorderGalleryItems(childComplexity, args["setID"].(string), args["itemUUIDs"].([]string), args["expectedMetadataRevision"].(int64)), true
+
 	case "Mutation.replaceGalleryRelations":
 		if e.complexity.Mutation.ReplaceGalleryRelations == nil {
 			break
@@ -3798,6 +3994,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RequestItemLightbox(childComplexity, args["itemUUID"].(string)), true
+
+	case "Mutation.requestItemVideoPlayback":
+		if e.complexity.Mutation.RequestItemVideoPlayback == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_requestItemVideoPlayback_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RequestItemVideoPlayback(childComplexity, args["itemUUID"].(string)), true
 
 	case "Mutation.resetGalleryCover":
 		if e.complexity.Mutation.ResetGalleryCover == nil {
@@ -3847,6 +4055,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.RestoreBackup(childComplexity, args["backupID"].(string)), true
 
+	case "Mutation.retryGalleryItemVideo":
+		if e.complexity.Mutation.RetryGalleryItemVideo == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_retryGalleryItemVideo_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RetryGalleryItemVideo(childComplexity, args["itemUUID"].(string)), true
+
 	case "Mutation.retryProcessingJob":
 		if e.complexity.Mutation.RetryProcessingJob == nil {
 			break
@@ -3869,7 +4089,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.ScanGallerySource(childComplexity, args["setID"].(string)), true
+		return e.complexity.Mutation.ScanGallerySource(childComplexity, args["setID"].(string), args["excludeNewRootMedia"].(bool)), true
 
 	case "Mutation.setGalleryCoverItem":
 		if e.complexity.Mutation.SetGalleryCoverItem == nil {
@@ -4036,6 +4256,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.OnDemandResource.Status(childComplexity), true
 
+	case "PersonSummary.avatarURL":
+		if e.complexity.PersonSummary.AvatarURL == nil {
+			break
+		}
+
+		return e.complexity.PersonSummary.AvatarURL(childComplexity), true
+
+	case "PersonSummary.name":
+		if e.complexity.PersonSummary.Name == nil {
+			break
+		}
+
+		return e.complexity.PersonSummary.Name(childComplexity), true
+
+	case "PersonSummary.uuid":
+		if e.complexity.PersonSummary.UUID == nil {
+			break
+		}
+
+		return e.complexity.PersonSummary.UUID(childComplexity), true
+
 	case "PersonalStateResult.metadataRevision":
 		if e.complexity.PersonalStateResult.MetadataRevision == nil {
 			break
@@ -4181,6 +4422,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.ItemLightboxStatus(childComplexity, args["itemUUID"].(string)), true
+
+	case "Query.itemVideoPlaybackStatus":
+		if e.complexity.Query.ItemVideoPlaybackStatus == nil {
+			break
+		}
+
+		args, err := ec.field_Query_itemVideoPlaybackStatus_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ItemVideoPlaybackStatus(childComplexity, args["itemUUID"].(string)), true
 
 	case "Query.manageAudit":
 		if e.complexity.Query.ManageAudit == nil {
@@ -4336,6 +4589,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.ManageRuntimeSettings(childComplexity), true
+
+	case "Query.manageVideoDependencyStatus":
+		if e.complexity.Query.ManageVideoDependencyStatus == nil {
+			break
+		}
+
+		return e.complexity.Query.ManageVideoDependencyStatus(childComplexity), true
 
 	case "Query.mediaDetail":
 		if e.complexity.Query.MediaDetail == nil {
@@ -4715,6 +4975,111 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.TagDetail.Redirected(childComplexity), true
+
+	case "VideoPlaybackStatus.contentRevision":
+		if e.complexity.VideoPlaybackStatus.ContentRevision == nil {
+			break
+		}
+
+		return e.complexity.VideoPlaybackStatus.ContentRevision(childComplexity), true
+
+	case "VideoPlaybackStatus.errorCode":
+		if e.complexity.VideoPlaybackStatus.ErrorCode == nil {
+			break
+		}
+
+		return e.complexity.VideoPlaybackStatus.ErrorCode(childComplexity), true
+
+	case "VideoPlaybackStatus.itemUUID":
+		if e.complexity.VideoPlaybackStatus.ItemUUID == nil {
+			break
+		}
+
+		return e.complexity.VideoPlaybackStatus.ItemUUID(childComplexity), true
+
+	case "VideoPlaybackStatus.mode":
+		if e.complexity.VideoPlaybackStatus.Mode == nil {
+			break
+		}
+
+		return e.complexity.VideoPlaybackStatus.Mode(childComplexity), true
+
+	case "VideoPlaybackStatus.resource":
+		if e.complexity.VideoPlaybackStatus.Resource == nil {
+			break
+		}
+
+		return e.complexity.VideoPlaybackStatus.Resource(childComplexity), true
+
+	case "VideoPlaybackStatus.status":
+		if e.complexity.VideoPlaybackStatus.Status == nil {
+			break
+		}
+
+		return e.complexity.VideoPlaybackStatus.Status(childComplexity), true
+
+	case "VideoTechnicalSummary.audioCodec":
+		if e.complexity.VideoTechnicalSummary.AudioCodec == nil {
+			break
+		}
+
+		return e.complexity.VideoTechnicalSummary.AudioCodec(childComplexity), true
+
+	case "VideoTechnicalSummary.container":
+		if e.complexity.VideoTechnicalSummary.Container == nil {
+			break
+		}
+
+		return e.complexity.VideoTechnicalSummary.Container(childComplexity), true
+
+	case "VideoTechnicalSummary.durationSeconds":
+		if e.complexity.VideoTechnicalSummary.DurationSeconds == nil {
+			break
+		}
+
+		return e.complexity.VideoTechnicalSummary.DurationSeconds(childComplexity), true
+
+	case "VideoTechnicalSummary.errorCode":
+		if e.complexity.VideoTechnicalSummary.ErrorCode == nil {
+			break
+		}
+
+		return e.complexity.VideoTechnicalSummary.ErrorCode(childComplexity), true
+
+	case "VideoTechnicalSummary.frameRate":
+		if e.complexity.VideoTechnicalSummary.FrameRate == nil {
+			break
+		}
+
+		return e.complexity.VideoTechnicalSummary.FrameRate(childComplexity), true
+
+	case "VideoTechnicalSummary.height":
+		if e.complexity.VideoTechnicalSummary.Height == nil {
+			break
+		}
+
+		return e.complexity.VideoTechnicalSummary.Height(childComplexity), true
+
+	case "VideoTechnicalSummary.probeState":
+		if e.complexity.VideoTechnicalSummary.ProbeState == nil {
+			break
+		}
+
+		return e.complexity.VideoTechnicalSummary.ProbeState(childComplexity), true
+
+	case "VideoTechnicalSummary.videoCodec":
+		if e.complexity.VideoTechnicalSummary.VideoCodec == nil {
+			break
+		}
+
+		return e.complexity.VideoTechnicalSummary.VideoCodec(childComplexity), true
+
+	case "VideoTechnicalSummary.width":
+		if e.complexity.VideoTechnicalSummary.Width == nil {
+			break
+		}
+
+		return e.complexity.VideoTechnicalSummary.Width(childComplexity), true
 
 	case "WorkDetail.characters":
 		if e.complexity.WorkDetail.Characters == nil {
@@ -5864,6 +6229,80 @@ func (ec *executionContext) field_Mutation_recordGalleryView_argsItemUUID(
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Mutation_reorderGalleryItems_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_reorderGalleryItems_argsSetID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["setID"] = arg0
+	arg1, err := ec.field_Mutation_reorderGalleryItems_argsItemUUIDs(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["itemUUIDs"] = arg1
+	arg2, err := ec.field_Mutation_reorderGalleryItems_argsExpectedMetadataRevision(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["expectedMetadataRevision"] = arg2
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_reorderGalleryItems_argsSetID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["setID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("setID"))
+	if tmp, ok := rawArgs["setID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_reorderGalleryItems_argsItemUUIDs(
+	ctx context.Context,
+	rawArgs map[string]any,
+) ([]string, error) {
+	if _, ok := rawArgs["itemUUIDs"]; !ok {
+		var zeroVal []string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("itemUUIDs"))
+	if tmp, ok := rawArgs["itemUUIDs"]; ok {
+		return ec.unmarshalNID2ᚕstringᚄ(ctx, tmp)
+	}
+
+	var zeroVal []string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_reorderGalleryItems_argsExpectedMetadataRevision(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int64, error) {
+	if _, ok := rawArgs["expectedMetadataRevision"]; !ok {
+		var zeroVal int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedMetadataRevision"))
+	if tmp, ok := rawArgs["expectedMetadataRevision"]; ok {
+		return ec.unmarshalNInt642int64(ctx, tmp)
+	}
+
+	var zeroVal int64
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Mutation_replaceGalleryRelations_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -6046,6 +6485,34 @@ func (ec *executionContext) field_Mutation_requestItemLightbox_args(ctx context.
 	return args, nil
 }
 func (ec *executionContext) field_Mutation_requestItemLightbox_argsItemUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["itemUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("itemUUID"))
+	if tmp, ok := rawArgs["itemUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_requestItemVideoPlayback_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_requestItemVideoPlayback_argsItemUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["itemUUID"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_requestItemVideoPlayback_argsItemUUID(
 	ctx context.Context,
 	rawArgs map[string]any,
 ) (string, error) {
@@ -6290,6 +6757,34 @@ func (ec *executionContext) field_Mutation_restoreBackup_argsBackupID(
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Mutation_retryGalleryItemVideo_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_retryGalleryItemVideo_argsItemUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["itemUUID"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_retryGalleryItemVideo_argsItemUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["itemUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("itemUUID"))
+	if tmp, ok := rawArgs["itemUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Mutation_retryProcessingJob_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -6326,6 +6821,11 @@ func (ec *executionContext) field_Mutation_scanGallerySource_args(ctx context.Co
 		return nil, err
 	}
 	args["setID"] = arg0
+	arg1, err := ec.field_Mutation_scanGallerySource_argsExcludeNewRootMedia(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["excludeNewRootMedia"] = arg1
 	return args, nil
 }
 func (ec *executionContext) field_Mutation_scanGallerySource_argsSetID(
@@ -6343,6 +6843,24 @@ func (ec *executionContext) field_Mutation_scanGallerySource_argsSetID(
 	}
 
 	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_scanGallerySource_argsExcludeNewRootMedia(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (bool, error) {
+	if _, ok := rawArgs["excludeNewRootMedia"]; !ok {
+		var zeroVal bool
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("excludeNewRootMedia"))
+	if tmp, ok := rawArgs["excludeNewRootMedia"]; ok {
+		return ec.unmarshalNBoolean2bool(ctx, tmp)
+	}
+
+	var zeroVal bool
 	return zeroVal, nil
 }
 
@@ -7915,6 +8433,34 @@ func (ec *executionContext) field_Query_itemLightboxStatus_argsItemUUID(
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Query_itemVideoPlaybackStatus_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_itemVideoPlaybackStatus_argsItemUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["itemUUID"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Query_itemVideoPlaybackStatus_argsItemUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["itemUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("itemUUID"))
+	if tmp, ok := rawArgs["itemUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Query_manageAudit_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -9265,9 +9811,9 @@ func (ec *executionContext) _BrowseGalleryCard_credits(ctx context.Context, fiel
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*EntitySummary)
+	res := resTmp.([]*PersonSummary)
 	fc.Result = res
-	return ec.marshalNEntitySummary2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐEntitySummaryᚄ(ctx, field.Selections, res)
+	return ec.marshalNPersonSummary2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPersonSummaryᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_BrowseGalleryCard_credits(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -9279,11 +9825,13 @@ func (ec *executionContext) fieldContext_BrowseGalleryCard_credits(_ context.Con
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "uuid":
-				return ec.fieldContext_EntitySummary_uuid(ctx, field)
+				return ec.fieldContext_PersonSummary_uuid(ctx, field)
 			case "name":
-				return ec.fieldContext_EntitySummary_name(ctx, field)
+				return ec.fieldContext_PersonSummary_name(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_PersonSummary_avatarURL(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type EntitySummary", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type PersonSummary", field.Name)
 		},
 	}
 	return fc, nil
@@ -11765,9 +12313,9 @@ func (ec *executionContext) _GalleryCreditDetail_coser(ctx context.Context, fiel
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*EntitySummary)
+	res := resTmp.(*PersonSummary)
 	fc.Result = res
-	return ec.marshalNEntitySummary2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐEntitySummary(ctx, field.Selections, res)
+	return ec.marshalNPersonSummary2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPersonSummary(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_GalleryCreditDetail_coser(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -11779,11 +12327,13 @@ func (ec *executionContext) fieldContext_GalleryCreditDetail_coser(_ context.Con
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "uuid":
-				return ec.fieldContext_EntitySummary_uuid(ctx, field)
+				return ec.fieldContext_PersonSummary_uuid(ctx, field)
 			case "name":
-				return ec.fieldContext_EntitySummary_name(ctx, field)
+				return ec.fieldContext_PersonSummary_name(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_PersonSummary_avatarURL(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type EntitySummary", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type PersonSummary", field.Name)
 		},
 	}
 	return fc, nil
@@ -12146,6 +12696,50 @@ func (ec *executionContext) fieldContext_GalleryDetail_availableBytes(_ context.
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GalleryDetail_mediaParentDirectories(ctx context.Context, field graphql.CollectedField, obj *GalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryDetail_mediaParentDirectories(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MediaParentDirectories, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryDetail_mediaParentDirectories(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -19512,6 +20106,22 @@ func (ec *executionContext) fieldContext_ManageGalleryDetail_items(_ context.Con
 				return ec.fieldContext_ManageGalleryItem_processingState(ctx, field)
 			case "byteSize":
 				return ec.fieldContext_ManageGalleryItem_byteSize(ctx, field)
+			case "videoProbeState":
+				return ec.fieldContext_ManageGalleryItem_videoProbeState(ctx, field)
+			case "videoErrorCode":
+				return ec.fieldContext_ManageGalleryItem_videoErrorCode(ctx, field)
+			case "videoContainer":
+				return ec.fieldContext_ManageGalleryItem_videoContainer(ctx, field)
+			case "videoDurationSeconds":
+				return ec.fieldContext_ManageGalleryItem_videoDurationSeconds(ctx, field)
+			case "videoWidth":
+				return ec.fieldContext_ManageGalleryItem_videoWidth(ctx, field)
+			case "videoHeight":
+				return ec.fieldContext_ManageGalleryItem_videoHeight(ctx, field)
+			case "videoCodec":
+				return ec.fieldContext_ManageGalleryItem_videoCodec(ctx, field)
+			case "audioCodec":
+				return ec.fieldContext_ManageGalleryItem_audioCodec(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryItem", field.Name)
 		},
@@ -20699,6 +21309,358 @@ func (ec *executionContext) fieldContext_ManageGalleryItem_byteSize(_ context.Co
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryItem_videoProbeState(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryItem_videoProbeState(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoProbeState, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryItem_videoProbeState(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryItem_videoErrorCode(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryItem_videoErrorCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoErrorCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryItem_videoErrorCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryItem_videoContainer(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryItem_videoContainer(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoContainer, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryItem_videoContainer(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryItem_videoDurationSeconds(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryItem_videoDurationSeconds(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoDurationSeconds, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryItem_videoDurationSeconds(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryItem_videoWidth(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryItem_videoWidth(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoWidth, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryItem_videoWidth(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryItem_videoHeight(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryItem_videoHeight(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoHeight, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryItem_videoHeight(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryItem_videoCodec(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryItem_videoCodec(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoCodec, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryItem_videoCodec(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryItem_audioCodec(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryItem_audioCodec(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AudioCodec, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryItem_audioCodec(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -25990,6 +26952,358 @@ func (ec *executionContext) fieldContext_ManageUnassignedDiagnostic_mediaCount(_
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageVideoDependencyStatus_ffmpegAvailable(ctx context.Context, field graphql.CollectedField, obj *ManageVideoDependencyStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoDependencyStatus_ffmpegAvailable(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FfmpegAvailable, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoDependencyStatus_ffmpegAvailable(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoDependencyStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoDependencyStatus_ffmpegSource(ctx context.Context, field graphql.CollectedField, obj *ManageVideoDependencyStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoDependencyStatus_ffmpegSource(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FfmpegSource, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoDependencyStatus_ffmpegSource(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoDependencyStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoDependencyStatus_ffmpegVersion(ctx context.Context, field graphql.CollectedField, obj *ManageVideoDependencyStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoDependencyStatus_ffmpegVersion(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FfmpegVersion, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoDependencyStatus_ffmpegVersion(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoDependencyStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoDependencyStatus_ffmpegErrorCode(ctx context.Context, field graphql.CollectedField, obj *ManageVideoDependencyStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoDependencyStatus_ffmpegErrorCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FfmpegErrorCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoDependencyStatus_ffmpegErrorCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoDependencyStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoDependencyStatus_ffprobeAvailable(ctx context.Context, field graphql.CollectedField, obj *ManageVideoDependencyStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoDependencyStatus_ffprobeAvailable(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FfprobeAvailable, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoDependencyStatus_ffprobeAvailable(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoDependencyStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoDependencyStatus_ffprobeSource(ctx context.Context, field graphql.CollectedField, obj *ManageVideoDependencyStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoDependencyStatus_ffprobeSource(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FfprobeSource, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoDependencyStatus_ffprobeSource(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoDependencyStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoDependencyStatus_ffprobeVersion(ctx context.Context, field graphql.CollectedField, obj *ManageVideoDependencyStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoDependencyStatus_ffprobeVersion(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FfprobeVersion, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoDependencyStatus_ffprobeVersion(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoDependencyStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoDependencyStatus_ffprobeErrorCode(ctx context.Context, field graphql.CollectedField, obj *ManageVideoDependencyStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoDependencyStatus_ffprobeErrorCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FfprobeErrorCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoDependencyStatus_ffprobeErrorCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoDependencyStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _MediaCounts_photo(ctx context.Context, field graphql.CollectedField, obj *MediaCounts) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_MediaCounts_photo(ctx, field)
 	if err != nil {
@@ -26412,6 +27726,67 @@ func (ec *executionContext) fieldContext_MediaDetail_metadataRevision(_ context.
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MediaDetail_videoTechnical(ctx context.Context, field graphql.CollectedField, obj *MediaDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MediaDetail_videoTechnical(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoTechnical, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*VideoTechnicalSummary)
+	fc.Result = res
+	return ec.marshalOVideoTechnicalSummary2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐVideoTechnicalSummary(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MediaDetail_videoTechnical(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MediaDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "probeState":
+				return ec.fieldContext_VideoTechnicalSummary_probeState(ctx, field)
+			case "errorCode":
+				return ec.fieldContext_VideoTechnicalSummary_errorCode(ctx, field)
+			case "container":
+				return ec.fieldContext_VideoTechnicalSummary_container(ctx, field)
+			case "durationSeconds":
+				return ec.fieldContext_VideoTechnicalSummary_durationSeconds(ctx, field)
+			case "width":
+				return ec.fieldContext_VideoTechnicalSummary_width(ctx, field)
+			case "height":
+				return ec.fieldContext_VideoTechnicalSummary_height(ctx, field)
+			case "frameRate":
+				return ec.fieldContext_VideoTechnicalSummary_frameRate(ctx, field)
+			case "videoCodec":
+				return ec.fieldContext_VideoTechnicalSummary_videoCodec(ctx, field)
+			case "audioCodec":
+				return ec.fieldContext_VideoTechnicalSummary_audioCodec(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type VideoTechnicalSummary", field.Name)
 		},
 	}
 	return fc, nil
@@ -27013,6 +28388,75 @@ func (ec *executionContext) fieldContext_Mutation_requestItemLightbox(ctx contex
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_requestItemVideoPlayback(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_requestItemVideoPlayback(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().RequestItemVideoPlayback(rctx, fc.Args["itemUUID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*VideoPlaybackStatus)
+	fc.Result = res
+	return ec.marshalNVideoPlaybackStatus2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐVideoPlaybackStatus(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_requestItemVideoPlayback(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "itemUUID":
+				return ec.fieldContext_VideoPlaybackStatus_itemUUID(ctx, field)
+			case "mode":
+				return ec.fieldContext_VideoPlaybackStatus_mode(ctx, field)
+			case "status":
+				return ec.fieldContext_VideoPlaybackStatus_status(ctx, field)
+			case "contentRevision":
+				return ec.fieldContext_VideoPlaybackStatus_contentRevision(ctx, field)
+			case "resource":
+				return ec.fieldContext_VideoPlaybackStatus_resource(ctx, field)
+			case "errorCode":
+				return ec.fieldContext_VideoPlaybackStatus_errorCode(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type VideoPlaybackStatus", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_requestItemVideoPlayback_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_updateGalleryMetadata(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_updateGalleryMetadata(ctx, field)
 	if err != nil {
@@ -27412,6 +28856,87 @@ func (ec *executionContext) fieldContext_Mutation_moveGalleryItem(ctx context.Co
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_moveGalleryItem_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_reorderGalleryItems(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_reorderGalleryItems(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().ReorderGalleryItems(rctx, fc.Args["setID"].(string), fc.Args["itemUUIDs"].([]string), fc.Args["expectedMetadataRevision"].(int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageGalleryDetail)
+	fc.Result = res
+	return ec.marshalNManageGalleryDetail2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryDetail(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_reorderGalleryItems(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "row":
+				return ec.fieldContext_ManageGalleryDetail_row(ctx, field)
+			case "aliases":
+				return ec.fieldContext_ManageGalleryDetail_aliases(ctx, field)
+			case "description":
+				return ec.fieldContext_ManageGalleryDetail_description(ctx, field)
+			case "shootDate":
+				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
+			case "shootDatePrecision":
+				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "photographerName":
+				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
+			case "studioName":
+				return ec.fieldContext_ManageGalleryDetail_studioName(ctx, field)
+			case "items":
+				return ec.fieldContext_ManageGalleryDetail_items(ctx, field)
+			case "credits":
+				return ec.fieldContext_ManageGalleryDetail_credits(ctx, field)
+			case "tags":
+				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
+			case "externalLinks":
+				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_reorderGalleryItems_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -28014,7 +29539,7 @@ func (ec *executionContext) _Mutation_scanGallerySource(ctx context.Context, fie
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().ScanGallerySource(rctx, fc.Args["setID"].(string))
+		return ec.resolvers.Mutation().ScanGallerySource(rctx, fc.Args["setID"].(string), fc.Args["excludeNewRootMedia"].(bool))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -28322,6 +29847,61 @@ func (ec *executionContext) fieldContext_Mutation_retryProcessingJob(ctx context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_retryProcessingJob_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_retryGalleryItemVideo(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_retryGalleryItemVideo(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().RetryGalleryItemVideo(rctx, fc.Args["itemUUID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_retryGalleryItemVideo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_retryGalleryItemVideo_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -29715,6 +31295,135 @@ func (ec *executionContext) fieldContext_OnDemandResource_errorCode(_ context.Co
 	return fc, nil
 }
 
+func (ec *executionContext) _PersonSummary_uuid(ctx context.Context, field graphql.CollectedField, obj *PersonSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PersonSummary_uuid(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PersonSummary_uuid(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PersonSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PersonSummary_name(ctx context.Context, field graphql.CollectedField, obj *PersonSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PersonSummary_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PersonSummary_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PersonSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PersonSummary_avatarURL(ctx context.Context, field graphql.CollectedField, obj *PersonSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PersonSummary_avatarURL(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AvatarURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PersonSummary_avatarURL(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PersonSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _PersonalStateResult_metadataRevision(ctx context.Context, field graphql.CollectedField, obj *PersonalStateResult) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_PersonalStateResult_metadataRevision(ctx, field)
 	if err != nil {
@@ -30003,6 +31712,8 @@ func (ec *executionContext) fieldContext_Query_galleryDetail(ctx context.Context
 				return ec.fieldContext_GalleryDetail_studioName(ctx, field)
 			case "availableBytes":
 				return ec.fieldContext_GalleryDetail_availableBytes(ctx, field)
+			case "mediaParentDirectories":
+				return ec.fieldContext_GalleryDetail_mediaParentDirectories(ctx, field)
 			case "credits":
 				return ec.fieldContext_GalleryDetail_credits(ctx, field)
 			case "tags":
@@ -30683,6 +32394,8 @@ func (ec *executionContext) fieldContext_Query_mediaDetail(ctx context.Context, 
 				return ec.fieldContext_MediaDetail_gallery(ctx, field)
 			case "metadataRevision":
 				return ec.fieldContext_MediaDetail_metadataRevision(ctx, field)
+			case "videoTechnical":
+				return ec.fieldContext_MediaDetail_videoTechnical(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MediaDetail", field.Name)
 		},
@@ -30758,6 +32471,75 @@ func (ec *executionContext) fieldContext_Query_itemLightboxStatus(ctx context.Co
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_itemLightboxStatus_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_itemVideoPlaybackStatus(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_itemVideoPlaybackStatus(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ItemVideoPlaybackStatus(rctx, fc.Args["itemUUID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*VideoPlaybackStatus)
+	fc.Result = res
+	return ec.marshalNVideoPlaybackStatus2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐVideoPlaybackStatus(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_itemVideoPlaybackStatus(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "itemUUID":
+				return ec.fieldContext_VideoPlaybackStatus_itemUUID(ctx, field)
+			case "mode":
+				return ec.fieldContext_VideoPlaybackStatus_mode(ctx, field)
+			case "status":
+				return ec.fieldContext_VideoPlaybackStatus_status(ctx, field)
+			case "contentRevision":
+				return ec.fieldContext_VideoPlaybackStatus_contentRevision(ctx, field)
+			case "resource":
+				return ec.fieldContext_VideoPlaybackStatus_resource(ctx, field)
+			case "errorCode":
+				return ec.fieldContext_VideoPlaybackStatus_errorCode(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type VideoPlaybackStatus", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_itemVideoPlaybackStatus_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -31529,6 +33311,68 @@ func (ec *executionContext) fieldContext_Query_manageCacheStorage(_ context.Cont
 				return ec.fieldContext_ManageCacheStorage_enhancedByteSize(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageCacheStorage", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_manageVideoDependencyStatus(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_manageVideoDependencyStatus(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ManageVideoDependencyStatus(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageVideoDependencyStatus)
+	fc.Result = res
+	return ec.marshalNManageVideoDependencyStatus2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageVideoDependencyStatus(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_manageVideoDependencyStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "ffmpegAvailable":
+				return ec.fieldContext_ManageVideoDependencyStatus_ffmpegAvailable(ctx, field)
+			case "ffmpegSource":
+				return ec.fieldContext_ManageVideoDependencyStatus_ffmpegSource(ctx, field)
+			case "ffmpegVersion":
+				return ec.fieldContext_ManageVideoDependencyStatus_ffmpegVersion(ctx, field)
+			case "ffmpegErrorCode":
+				return ec.fieldContext_ManageVideoDependencyStatus_ffmpegErrorCode(ctx, field)
+			case "ffprobeAvailable":
+				return ec.fieldContext_ManageVideoDependencyStatus_ffprobeAvailable(ctx, field)
+			case "ffprobeSource":
+				return ec.fieldContext_ManageVideoDependencyStatus_ffprobeSource(ctx, field)
+			case "ffprobeVersion":
+				return ec.fieldContext_ManageVideoDependencyStatus_ffprobeVersion(ctx, field)
+			case "ffprobeErrorCode":
+				return ec.fieldContext_ManageVideoDependencyStatus_ffprobeErrorCode(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageVideoDependencyStatus", field.Name)
 		},
 	}
 	return fc, nil
@@ -34178,6 +36022,675 @@ func (ec *executionContext) fieldContext_TagDetail_redirected(_ context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoPlaybackStatus_itemUUID(ctx context.Context, field graphql.CollectedField, obj *VideoPlaybackStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoPlaybackStatus_itemUUID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ItemUUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoPlaybackStatus_itemUUID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoPlaybackStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoPlaybackStatus_mode(ctx context.Context, field graphql.CollectedField, obj *VideoPlaybackStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoPlaybackStatus_mode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Mode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoPlaybackStatus_mode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoPlaybackStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoPlaybackStatus_status(ctx context.Context, field graphql.CollectedField, obj *VideoPlaybackStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoPlaybackStatus_status(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Status, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(ProcessingState)
+	fc.Result = res
+	return ec.marshalNProcessingState2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐProcessingState(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoPlaybackStatus_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoPlaybackStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ProcessingState does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoPlaybackStatus_contentRevision(ctx context.Context, field graphql.CollectedField, obj *VideoPlaybackStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoPlaybackStatus_contentRevision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ContentRevision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoPlaybackStatus_contentRevision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoPlaybackStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoPlaybackStatus_resource(ctx context.Context, field graphql.CollectedField, obj *VideoPlaybackStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoPlaybackStatus_resource(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Resource, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*ResourceIdentity)
+	fc.Result = res
+	return ec.marshalOResourceIdentity2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐResourceIdentity(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoPlaybackStatus_resource(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoPlaybackStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "itemUUID":
+				return ec.fieldContext_ResourceIdentity_itemUUID(ctx, field)
+			case "contentRevision":
+				return ec.fieldContext_ResourceIdentity_contentRevision(ctx, field)
+			case "profileHash":
+				return ec.fieldContext_ResourceIdentity_profileHash(ctx, field)
+			case "variant":
+				return ec.fieldContext_ResourceIdentity_variant(ctx, field)
+			case "mimeType":
+				return ec.fieldContext_ResourceIdentity_mimeType(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ResourceIdentity", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoPlaybackStatus_errorCode(ctx context.Context, field graphql.CollectedField, obj *VideoPlaybackStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoPlaybackStatus_errorCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ErrorCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoPlaybackStatus_errorCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoPlaybackStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoTechnicalSummary_probeState(ctx context.Context, field graphql.CollectedField, obj *VideoTechnicalSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoTechnicalSummary_probeState(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ProbeState, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoTechnicalSummary_probeState(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoTechnicalSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoTechnicalSummary_errorCode(ctx context.Context, field graphql.CollectedField, obj *VideoTechnicalSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoTechnicalSummary_errorCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ErrorCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoTechnicalSummary_errorCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoTechnicalSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoTechnicalSummary_container(ctx context.Context, field graphql.CollectedField, obj *VideoTechnicalSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoTechnicalSummary_container(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Container, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoTechnicalSummary_container(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoTechnicalSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoTechnicalSummary_durationSeconds(ctx context.Context, field graphql.CollectedField, obj *VideoTechnicalSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoTechnicalSummary_durationSeconds(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DurationSeconds, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoTechnicalSummary_durationSeconds(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoTechnicalSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoTechnicalSummary_width(ctx context.Context, field graphql.CollectedField, obj *VideoTechnicalSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoTechnicalSummary_width(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Width, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoTechnicalSummary_width(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoTechnicalSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoTechnicalSummary_height(ctx context.Context, field graphql.CollectedField, obj *VideoTechnicalSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoTechnicalSummary_height(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Height, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoTechnicalSummary_height(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoTechnicalSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoTechnicalSummary_frameRate(ctx context.Context, field graphql.CollectedField, obj *VideoTechnicalSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoTechnicalSummary_frameRate(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FrameRate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoTechnicalSummary_frameRate(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoTechnicalSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoTechnicalSummary_videoCodec(ctx context.Context, field graphql.CollectedField, obj *VideoTechnicalSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoTechnicalSummary_videoCodec(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoCodec, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoTechnicalSummary_videoCodec(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoTechnicalSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VideoTechnicalSummary_audioCodec(ctx context.Context, field graphql.CollectedField, obj *VideoTechnicalSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VideoTechnicalSummary_audioCodec(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AudioCodec, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VideoTechnicalSummary_audioCodec(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VideoTechnicalSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -37952,6 +40465,11 @@ func (ec *executionContext) _GalleryDetail(ctx context.Context, sel ast.Selectio
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "mediaParentDirectories":
+			out.Values[i] = ec._GalleryDetail_mediaParentDirectories(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "credits":
 			out.Values[i] = ec._GalleryDetail_credits(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -39819,6 +42337,46 @@ func (ec *executionContext) _ManageGalleryItem(ctx context.Context, sel ast.Sele
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "videoProbeState":
+			out.Values[i] = ec._ManageGalleryItem_videoProbeState(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoErrorCode":
+			out.Values[i] = ec._ManageGalleryItem_videoErrorCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoContainer":
+			out.Values[i] = ec._ManageGalleryItem_videoContainer(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoDurationSeconds":
+			out.Values[i] = ec._ManageGalleryItem_videoDurationSeconds(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoWidth":
+			out.Values[i] = ec._ManageGalleryItem_videoWidth(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoHeight":
+			out.Values[i] = ec._ManageGalleryItem_videoHeight(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoCodec":
+			out.Values[i] = ec._ManageGalleryItem_videoCodec(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "audioCodec":
+			out.Values[i] = ec._ManageGalleryItem_audioCodec(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -40930,6 +43488,80 @@ func (ec *executionContext) _ManageUnassignedDiagnostic(ctx context.Context, sel
 	return out
 }
 
+var manageVideoDependencyStatusImplementors = []string{"ManageVideoDependencyStatus"}
+
+func (ec *executionContext) _ManageVideoDependencyStatus(ctx context.Context, sel ast.SelectionSet, obj *ManageVideoDependencyStatus) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageVideoDependencyStatusImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageVideoDependencyStatus")
+		case "ffmpegAvailable":
+			out.Values[i] = ec._ManageVideoDependencyStatus_ffmpegAvailable(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ffmpegSource":
+			out.Values[i] = ec._ManageVideoDependencyStatus_ffmpegSource(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ffmpegVersion":
+			out.Values[i] = ec._ManageVideoDependencyStatus_ffmpegVersion(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ffmpegErrorCode":
+			out.Values[i] = ec._ManageVideoDependencyStatus_ffmpegErrorCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ffprobeAvailable":
+			out.Values[i] = ec._ManageVideoDependencyStatus_ffprobeAvailable(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ffprobeSource":
+			out.Values[i] = ec._ManageVideoDependencyStatus_ffprobeSource(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ffprobeVersion":
+			out.Values[i] = ec._ManageVideoDependencyStatus_ffprobeVersion(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ffprobeErrorCode":
+			out.Values[i] = ec._ManageVideoDependencyStatus_ffprobeErrorCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var mediaCountsImplementors = []string{"MediaCounts"}
 
 func (ec *executionContext) _MediaCounts(ctx context.Context, sel ast.SelectionSet, obj *MediaCounts) graphql.Marshaler {
@@ -41012,6 +43644,8 @@ func (ec *executionContext) _MediaDetail(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "videoTechnical":
+			out.Values[i] = ec._MediaDetail_videoTechnical(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -41155,6 +43789,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "requestItemVideoPlayback":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_requestItemVideoPlayback(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "updateGalleryMetadata":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateGalleryMetadata(ctx, field)
@@ -41186,6 +43827,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "moveGalleryItem":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_moveGalleryItem(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "reorderGalleryItems":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_reorderGalleryItems(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -41270,6 +43918,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "retryProcessingJob":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_retryProcessingJob(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "retryGalleryItemVideo":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_retryGalleryItemVideo(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -41439,6 +44094,52 @@ func (ec *executionContext) _OnDemandResource(ctx context.Context, sel ast.Selec
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var personSummaryImplementors = []string{"PersonSummary"}
+
+func (ec *executionContext) _PersonSummary(ctx context.Context, sel ast.SelectionSet, obj *PersonSummary) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, personSummaryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PersonSummary")
+		case "uuid":
+			out.Values[i] = ec._PersonSummary_uuid(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._PersonSummary_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "avatarURL":
+			out.Values[i] = ec._PersonSummary_avatarURL(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -41850,6 +44551,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "itemVideoPlaybackStatus":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_itemVideoPlaybackStatus(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "favoriteGalleries":
 			field := field
 
@@ -42080,6 +44803,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_manageCacheStorage(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "manageVideoDependencyStatus":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_manageVideoDependencyStatus(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -42722,6 +45467,146 @@ func (ec *executionContext) _TagDetail(ctx context.Context, sel ast.SelectionSet
 			}
 		case "redirected":
 			out.Values[i] = ec._TagDetail_redirected(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var videoPlaybackStatusImplementors = []string{"VideoPlaybackStatus"}
+
+func (ec *executionContext) _VideoPlaybackStatus(ctx context.Context, sel ast.SelectionSet, obj *VideoPlaybackStatus) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, videoPlaybackStatusImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("VideoPlaybackStatus")
+		case "itemUUID":
+			out.Values[i] = ec._VideoPlaybackStatus_itemUUID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "mode":
+			out.Values[i] = ec._VideoPlaybackStatus_mode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._VideoPlaybackStatus_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "contentRevision":
+			out.Values[i] = ec._VideoPlaybackStatus_contentRevision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resource":
+			out.Values[i] = ec._VideoPlaybackStatus_resource(ctx, field, obj)
+		case "errorCode":
+			out.Values[i] = ec._VideoPlaybackStatus_errorCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var videoTechnicalSummaryImplementors = []string{"VideoTechnicalSummary"}
+
+func (ec *executionContext) _VideoTechnicalSummary(ctx context.Context, sel ast.SelectionSet, obj *VideoTechnicalSummary) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, videoTechnicalSummaryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("VideoTechnicalSummary")
+		case "probeState":
+			out.Values[i] = ec._VideoTechnicalSummary_probeState(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "errorCode":
+			out.Values[i] = ec._VideoTechnicalSummary_errorCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "container":
+			out.Values[i] = ec._VideoTechnicalSummary_container(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "durationSeconds":
+			out.Values[i] = ec._VideoTechnicalSummary_durationSeconds(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "width":
+			out.Values[i] = ec._VideoTechnicalSummary_width(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "height":
+			out.Values[i] = ec._VideoTechnicalSummary_height(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "frameRate":
+			out.Values[i] = ec._VideoTechnicalSummary_frameRate(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoCodec":
+			out.Values[i] = ec._VideoTechnicalSummary_videoCodec(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "audioCodec":
+			out.Values[i] = ec._VideoTechnicalSummary_audioCodec(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -43788,6 +46673,36 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNID2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNID2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNID2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNID2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v any) (int, error) {
@@ -45222,6 +48137,20 @@ func (ec *executionContext) marshalNManageUnassignedDiagnostic2ᚖgithubᚗcom�
 	return ec._ManageUnassignedDiagnostic(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNManageVideoDependencyStatus2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageVideoDependencyStatus(ctx context.Context, sel ast.SelectionSet, v ManageVideoDependencyStatus) graphql.Marshaler {
+	return ec._ManageVideoDependencyStatus(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManageVideoDependencyStatus2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageVideoDependencyStatus(ctx context.Context, sel ast.SelectionSet, v *ManageVideoDependencyStatus) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageVideoDependencyStatus(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNManifestConflictChoiceInput2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManifestConflictChoiceInputᚄ(ctx context.Context, v any) ([]*ManifestConflictChoiceInput, error) {
 	var vSlice []any
 	vSlice = graphql.CoerceList(v)
@@ -45302,6 +48231,60 @@ func (ec *executionContext) marshalNOnDemandResource2ᚖgithubᚗcomᚋstashapp�
 		return graphql.Null
 	}
 	return ec._OnDemandResource(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNPersonSummary2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPersonSummaryᚄ(ctx context.Context, sel ast.SelectionSet, v []*PersonSummary) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPersonSummary2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPersonSummary(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPersonSummary2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPersonSummary(ctx context.Context, sel ast.SelectionSet, v *PersonSummary) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PersonSummary(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNPersonalStateResult2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPersonalStateResult(ctx context.Context, sel ast.SelectionSet, v PersonalStateResult) graphql.Marshaler {
@@ -45712,6 +48695,20 @@ func (ec *executionContext) unmarshalNUpdateGalleryMetadataInput2githubᚗcomᚋ
 func (ec *executionContext) unmarshalNUpdateRecognitionRuleInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐUpdateRecognitionRuleInput(ctx context.Context, v any) (UpdateRecognitionRuleInput, error) {
 	res, err := ec.unmarshalInputUpdateRecognitionRuleInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNVideoPlaybackStatus2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐVideoPlaybackStatus(ctx context.Context, sel ast.SelectionSet, v VideoPlaybackStatus) graphql.Marshaler {
+	return ec._VideoPlaybackStatus(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNVideoPlaybackStatus2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐVideoPlaybackStatus(ctx context.Context, sel ast.SelectionSet, v *VideoPlaybackStatus) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._VideoPlaybackStatus(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNWorkDetail2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐWorkDetail(ctx context.Context, sel ast.SelectionSet, v WorkDetail) graphql.Marshaler {
@@ -46150,6 +49147,13 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	_ = ctx
 	res := graphql.MarshalString(*v)
 	return res
+}
+
+func (ec *executionContext) marshalOVideoTechnicalSummary2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐVideoTechnicalSummary(ctx context.Context, sel ast.SelectionSet, v *VideoTechnicalSummary) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._VideoTechnicalSummary(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

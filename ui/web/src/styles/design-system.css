@@ -388,7 +388,7 @@
   font-weight: 650;
 }
 
-.cgm-avatar--small { width: 1.35rem; height: 1.35rem; font-size: .48rem; }
+.cgm-avatar--small { width: 2rem; height: 2rem; font-size: .625rem; }
 .cgm-avatar--medium { width: 2.5rem; height: 2.5rem; font-size: .75rem; }
 .cgm-avatar--large { width: 5rem; height: 5rem; font-size: 1.25rem; }
 .cgm-avatar img { width: 100%; height: 100%; object-fit: cover; }

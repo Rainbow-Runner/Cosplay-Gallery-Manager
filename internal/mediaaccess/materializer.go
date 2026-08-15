@@ -27,6 +27,40 @@ type Materialized struct {
 	cleanup func() error
 }
 
+// OpenDirectoryFile validates the complete DIRECTORY path and returns the
+// already-open regular file. Callers stream this descriptor rather than
+// reopening the path after authorization, limiting path-swap races.
+func OpenDirectoryFile(source Source) (*os.File, os.FileInfo, error) {
+	if err := validateRelative(source.RelativePath); err != nil {
+		return nil, nil, err
+	}
+	if source.Type != gallery.SourceTypeDirectory {
+		return nil, nil, errors.New("direct media access requires a DIRECTORY source")
+	}
+	materialized, err := openDirectory(source)
+	if err != nil {
+		return nil, nil, err
+	}
+	before, err := os.Lstat(materialized.Path)
+	if err != nil {
+		return nil, nil, err
+	}
+	file, err := os.Open(materialized.Path)
+	if err != nil {
+		return nil, nil, err
+	}
+	after, err := file.Stat()
+	if err != nil {
+		_ = file.Close()
+		return nil, nil, err
+	}
+	if before.Mode()&os.ModeSymlink != 0 || !after.Mode().IsRegular() || !os.SameFile(before, after) {
+		_ = file.Close()
+		return nil, nil, errors.New("media source changed while opening")
+	}
+	return file, after, nil
+}
+
 func (value Materialized) Close() error {
 	if value.cleanup == nil {
 		return nil

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stashapp/stash/internal/gallery"
+	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/portableid"
 )
@@ -76,6 +77,138 @@ func TestHandlerServesPathFreeBrowseContract(t *testing.T) {
 	}
 	if bytes.Contains(response.Body.Bytes(), []byte(filepath.Dir(database.Path()))) {
 		t.Fatal("Browse response leaked a database or source path")
+	}
+}
+
+func TestVideoPlaybackGraphQLReturnsOpaqueDirectIdentityWithoutQueuing(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 8, 15, 17, 0, 0, 0, time.UTC)
+	record, err := database.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "GraphQL video", ContentRating: gallery.ContentRatingNonAdult}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceRoot := t.TempDir()
+	source, err := database.Galleries().AddSource(ctx, record.ID, productdb.CreateSourceInput{Type: gallery.SourceTypeDirectory, Path: sourceRoot, Availability: gallery.AvailabilityAvailable}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item, err := database.Galleries().AddItem(ctx, record.ID, source.ID, productdb.CreateItemInput{RelativePath: "private-name.mp4", MediaKind: gallery.MediaKindVideo,
+		ContentFormat: gallery.ContentFormatVideo, Position: 1024, Availability: gallery.AvailabilityAvailable, ProcessingState: gallery.ProcessingReady}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.ExecContext(ctx, `UPDATE galleries SET state='ACTIVE',added_at_utc=? WHERE id=?`, now.Format(time.RFC3339Nano), record.ID); err != nil {
+		t.Fatal(err)
+	}
+	profile := mediaprocessing.VideoProbeProfileHash("6.1")
+	if err := database.VideoMetadata().MarkPending(ctx, item.UUID, item.ContentRevision, profile); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.VideoMetadata().PublishReady(ctx, mediaprocessing.VideoTechnicalMetadata{ItemUUID: item.UUID, ContentRevision: item.ContentRevision,
+		ProbeProfileHash: profile, Container: "mp4", VideoStreamIndex: 0, VideoCodec: "h264", DisplayWidth: 1920, DisplayHeight: 1080}, now); err != nil {
+		t.Fatal(err)
+	}
+	query := fmt.Sprintf(`mutation { requestItemVideoPlayback(itemUUID:%q) { mode status contentRevision resource { itemUUID } errorCode } }`, item.UUID)
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(fmt.Sprintf(`{"query":%q}`, query)))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	NewHandlerWithOperations(database, func(*http.Request) bool { return true }, fakeOperationsService{}).ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) || !bytes.Contains(response.Body.Bytes(), []byte(`"mode":"DIRECT"`)) || !bytes.Contains(response.Body.Bytes(), []byte(`"status":"READY"`)) {
+		t.Fatalf("video playback response = %d %s", response.Code, response.Body.String())
+	}
+	for _, private := range []string{sourceRoot, "private-name.mp4"} {
+		if bytes.Contains(response.Body.Bytes(), []byte(private)) {
+			t.Fatalf("video playback response leaked %q: %s", private, response.Body.String())
+		}
+	}
+	var jobs int
+	if err := database.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_jobs WHERE item_uuid=? AND variant=?`, item.UUID, mediaprocessing.VariantVideoPlayback).Scan(&jobs); err != nil || jobs != 0 {
+		t.Fatalf("direct GraphQL queued jobs = %d, %v", jobs, err)
+	}
+}
+
+func TestBrowseCoserAndGalleryCardsExposeManagedAvatarURLs(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 8, 13, 0, 0, 0, 0, time.UTC)
+	coser, err := database.CoreEntities().CreateCoser(ctx, productdb.CreateCoserInput{CreateNamedEntityInput: productdb.CreateNamedEntityInput{Name: "Avatar Coser"}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.ExecContext(ctx, `UPDATE cosers SET avatar_path='assets/avatar.webp',metadata_revision=2 WHERE uuid=?`, coser.UUID); err != nil {
+		t.Fatal(err)
+	}
+	galleryRecord, err := database.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Avatar Gallery", ContentRating: gallery.ContentRatingNonAdult}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceRoot := t.TempDir()
+	if _, err := database.Galleries().AddSource(ctx, galleryRecord.ID, productdb.CreateSourceInput{
+		Type: gallery.SourceTypeDirectory, Path: sourceRoot, Availability: gallery.AvailabilityAvailable,
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Galleries().AddCredit(ctx, galleryRecord.ID, coser.UUID, 1024, galleryRecord.MetadataRevision, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.ExecContext(ctx, `UPDATE galleries SET state='ACTIVE',added_at_utc=? WHERE id=?`, now.Format(time.RFC3339Nano), galleryRecord.ID); err != nil {
+		t.Fatal(err)
+	}
+	body := fmt.Sprintf(`{"query":%q}`, `query { entityIndex(kind:COSER,scope:LIST,page:1,sort:NAME,query:"") { items { uuid avatarURL } } browseGalleries(scope:LIST,page:1,sort:RECENTLY_ADDED) { items { credits { uuid avatarURL } } } }`)
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	NewHandler(database, func(*http.Request) bool { return true }).ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) {
+		t.Fatalf("avatar Browse response = %d %s", response.Code, response.Body.String())
+	}
+	want := fmt.Sprintf(`/resource/coser/%s/2/avatar-480`, coser.UUID)
+	if bytes.Count(response.Body.Bytes(), []byte(want)) != 2 {
+		t.Fatalf("avatar URL should appear in entity and Gallery card responses: %s", response.Body.String())
+	}
+	if bytes.Contains(response.Body.Bytes(), []byte("avatar.webp")) || bytes.Contains(response.Body.Bytes(), []byte(sourceRoot)) {
+		t.Fatalf("Browse avatar response leaked a physical path: %s", response.Body.String())
+	}
+}
+
+func TestAuthenticatedGalleryDetailReturnsOnlyMediaParentDirectorySummary(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 8, 9, 20, 30, 0, 0, time.UTC)
+	created, err := database.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Directory detail", ContentRating: gallery.ContentRatingNonAdult}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceRoot := t.TempDir()
+	source, err := database.Galleries().AddSource(ctx, created.ID, productdb.CreateSourceInput{
+		Type: gallery.SourceTypeDirectory, Path: sourceRoot, Availability: gallery.AvailabilityAvailable,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Galleries().AddItem(ctx, created.ID, source.ID, productdb.CreateItemInput{
+		RelativePath: "Disc 2/private-name.jpg", MediaKind: gallery.MediaKindStaticImage, ContentFormat: gallery.ContentFormatImage,
+		ImageCategory: gallery.ImageCategoryPhoto, Position: 1024, Availability: gallery.AvailabilityAvailable, ProcessingState: gallery.ProcessingPending,
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.ExecContext(ctx, `UPDATE galleries SET state='ACTIVE',added_at_utc=? WHERE id=?`, now.Format(time.RFC3339Nano), created.ID); err != nil {
+		t.Fatal(err)
+	}
+	query := fmt.Sprintf(`query { galleryDetail(slug:%q,scope:LIST) { mediaParentDirectories } }`, created.Slug)
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(fmt.Sprintf(`{"query":%q}`, query)))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	NewHandler(database, func(*http.Request) bool { return true }).ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) {
+		t.Fatalf("Gallery detail response = %d %s", response.Code, response.Body.String())
+	}
+	if !bytes.Contains(response.Body.Bytes(), []byte(filepath.Join(sourceRoot, "Disc 2"))) {
+		t.Fatalf("Gallery detail omitted media parent directory: %s", response.Body.String())
+	}
+	if bytes.Contains(response.Body.Bytes(), []byte("private-name.jpg")) {
+		t.Fatalf("Gallery detail leaked a media filename: %s", response.Body.String())
 	}
 }
 
@@ -402,6 +535,10 @@ func (s fakeOperationsService) RestoreBackup(context.Context, string) (productdb
 
 func (s fakeOperationsService) CacheStorageStatus(context.Context) (CacheStorageStatus, error) {
 	return CacheStorageStatus{Path: "/var/cache/cgm", ByteSize: 4096, FileCount: 2, BaseByteSize: 1024, EnhancedByteSize: 3072}, nil
+}
+
+func (s fakeOperationsService) VideoDependencyStatus(context.Context) (VideoDependencyStatus, error) {
+	return VideoDependencyStatus{FFmpegAvailable: true, FFmpegSource: "PATH", FFmpegVersion: "6.1", FFprobeAvailable: true, FFprobeSource: "FFMPEG_SIBLING", FFprobeVersion: "6.1"}, nil
 }
 
 func openTestDatabase(t *testing.T) *productdb.Database {

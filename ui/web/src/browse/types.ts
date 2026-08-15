@@ -15,6 +15,10 @@ export interface EntitySummary {
   name: string;
 }
 
+export interface PersonSummary extends EntitySummary {
+  avatarURL?: string | null;
+}
+
 export interface BrowseGalleryCard {
   setID: string;
   slug: string;
@@ -28,7 +32,7 @@ export interface BrowseGalleryCard {
     resource?: ResourceIdentity | null;
     warning: boolean;
   };
-  credits: EntitySummary[];
+  credits: PersonSummary[];
   creditCount: number;
   characters: EntitySummary[];
   characterCount: number;
@@ -62,7 +66,7 @@ export interface BrowseUISettings {
 }
 
 export interface GalleryCreditDetail {
-  coser: EntitySummary;
+  coser: PersonSummary;
   characters: EntitySummary[];
   works: EntitySummary[];
 }
@@ -73,6 +77,7 @@ export interface GalleryDetail {
   photographerName: string;
   studioName: string;
   availableBytes: number;
+  mediaParentDirectories: string[];
   credits: GalleryCreditDetail[];
   tags: EntitySummary[];
   externalLinks: Array<{ uuid: string; type: string; label: string; url: string }>;
@@ -106,6 +111,15 @@ export interface OnDemandResource {
   errorCode: string;
 }
 
+export interface VideoPlaybackStatus {
+  itemUUID: string;
+  mode: "" | "DIRECT" | "REMUX" | "TRANSCODE";
+  status: GalleryMember["processingState"];
+  contentRevision: number;
+  resource?: ResourceIdentity | null;
+  errorCode: string;
+}
+
 export type SearchEntityKind = "GALLERY" | "COSER" | "WORK" | "CHARACTER" | "TAG";
 export interface EntityIndexItem { kind: SearchEntityKind; uuid: string; slug: string; name: string; aliases: string[]; avatarURL?: string | null }
 export interface EntityPage { items: EntityIndexItem[]; page: number; pageSize: number; totalItems: number; totalPages: number }
@@ -121,5 +135,5 @@ export interface CoserDetail { entity: EntityIndexItem; profileSummary: string; 
 export interface WorkDetail { entity: EntityIndexItem; characters: EntityIndexItem[]; redirected: boolean }
 export interface CharacterDetail { entity: EntityIndexItem; work: EntityIndexItem; galleries: GalleryPage; redirected: boolean }
 export interface TagDetail { entity: EntityIndexItem; galleries: GalleryPage; redirected: boolean }
-export interface MediaDetail { item: GalleryMember; displayResource?: ResourceIdentity | null; gallery: BrowseGalleryCard; metadataRevision: number }
+export interface MediaDetail { item: GalleryMember; displayResource?: ResourceIdentity | null; gallery: BrowseGalleryCard; metadataRevision: number; videoTechnical?: { probeState: string; errorCode: string; container: string; durationSeconds: number; width: number; height: number; frameRate: number; videoCodec: string; audioCodec: string } | null }
 export interface MediaPage { items: RandomMediaItem[]; page: number; pageSize: number; totalItems: number; totalPages: number }

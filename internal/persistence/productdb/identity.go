@@ -205,7 +205,7 @@ func validateInspection(inspection Inspection) error {
 		if inspection.Identity.ProductID != product.ID {
 			return &ProductIDMismatchError{Found: inspection.Identity.ProductID}
 		}
-		if inspection.Identity.DatabaseSchemaVersion != product.DatabaseSchemaVersion {
+		if inspection.Identity.DatabaseSchemaVersion > product.DatabaseSchemaVersion {
 			return &SchemaVersionMismatchError{
 				Found:    inspection.Identity.DatabaseSchemaVersion,
 				Required: product.DatabaseSchemaVersion,
@@ -238,6 +238,11 @@ func initialiseIdentity(ctx context.Context, db *sql.DB, now time.Time) (Identit
 	}
 	if err := createSchemaV1(ctx, tx); err != nil {
 		return Identity{}, err
+	}
+	if product.DatabaseSchemaVersion >= 2 {
+		if err := createMediaProcessingSchemaV2(ctx, tx); err != nil {
+			return Identity{}, err
+		}
 	}
 
 	createdAt := now.UTC().Format(time.RFC3339Nano)

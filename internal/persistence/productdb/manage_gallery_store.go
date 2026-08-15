@@ -74,15 +74,17 @@ func (s *ManageStore) GalleryDetail(ctx context.Context, setID string) (manage.G
 	if err != nil {
 		return manage.GalleryDetail{}, err
 	}
-	items, err := s.db.QueryContext(ctx, `SELECT item_uuid,relative_path,media_kind,content_format,COALESCE(image_category,''),position,caption,excluded,availability_state,processing_state,byte_size
-		FROM gallery_items WHERE gallery_id=? ORDER BY CASE WHEN media_kind='STATIC_IMAGE' AND image_category='PHOTO' THEN 0 WHEN media_kind='STATIC_IMAGE' THEN 1 WHEN media_kind='ANIMATED_IMAGE' THEN 2 ELSE 3 END,position,item_uuid`, galleryID)
+	items, err := s.db.QueryContext(ctx, `SELECT item.item_uuid,item.relative_path,item.media_kind,item.content_format,COALESCE(item.image_category,''),item.position,item.caption,item.excluded,item.availability_state,item.processing_state,item.byte_size,
+		COALESCE(video.probe_state,''),COALESCE(video.last_error_code,''),COALESCE(video.container,''),COALESCE(video.duration_seconds,0),COALESCE(video.display_width,0),COALESCE(video.display_height,0),COALESCE(video.video_codec,''),COALESCE(video.audio_codec,'')
+		FROM gallery_items item LEFT JOIN video_technical_metadata video ON video.item_uuid=item.item_uuid WHERE item.gallery_id=? ORDER BY CASE WHEN item.media_kind='STATIC_IMAGE' AND item.image_category='PHOTO' THEN 0 WHEN item.media_kind='STATIC_IMAGE' THEN 1 WHEN item.media_kind='ANIMATED_IMAGE' THEN 2 ELSE 3 END,item.position,item.item_uuid`, galleryID)
 	if err != nil {
 		return manage.GalleryDetail{}, err
 	}
 	for items.Next() {
 		var item manage.GalleryItem
 		var excluded int
-		if err := items.Scan(&item.UUID, &item.RelativePath, &item.MediaKind, &item.ContentFormat, &item.ImageCategory, &item.Position, &item.Caption, &excluded, &item.Availability, &item.ProcessingState, &item.ByteSize); err != nil {
+		if err := items.Scan(&item.UUID, &item.RelativePath, &item.MediaKind, &item.ContentFormat, &item.ImageCategory, &item.Position, &item.Caption, &excluded, &item.Availability, &item.ProcessingState, &item.ByteSize,
+			&item.VideoProbeState, &item.VideoErrorCode, &item.VideoContainer, &item.VideoDurationSeconds, &item.VideoWidth, &item.VideoHeight, &item.VideoCodec, &item.AudioCodec); err != nil {
 			return manage.GalleryDetail{}, err
 		}
 		item.Excluded = excluded == 1

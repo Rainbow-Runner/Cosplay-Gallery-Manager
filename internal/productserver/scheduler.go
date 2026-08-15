@@ -21,6 +21,7 @@ func (s *Server) runSchedulerLoop(ctx context.Context) {
 	s.runDailyBackup(ctx, time.Now())
 	s.runAutomaticScan(ctx, time.Now())
 	s.runCacheMaintenance(ctx, time.Now())
+	s.runVideoProbeBackfill(ctx, time.Now())
 	hourly := time.NewTicker(time.Hour)
 	cacheTicker := time.NewTicker(time.Minute)
 	defer hourly.Stop()
@@ -34,7 +35,24 @@ func (s *Server) runSchedulerLoop(ctx context.Context) {
 			s.runAutomaticScan(ctx, now)
 		case now := <-cacheTicker.C:
 			s.runCacheMaintenance(ctx, now)
+			s.runVideoProbeBackfill(ctx, now)
 		}
+	}
+}
+
+func (s *Server) runVideoProbeBackfill(ctx context.Context, now time.Time) {
+	if !s.VideoTools.FFprobe.Available {
+		return
+	}
+	count, err := s.Database.VideoMetadata().EnqueueBackfill(ctx, mediaprocessing.VideoProbeProfileHash(s.VideoTools.FFprobe.Version), 25, now)
+	if err != nil {
+		if ctx.Err() == nil {
+			slog.Error("CGM_VIDEO_PROBE_BACKFILL_FAILED")
+		}
+		return
+	}
+	if count > 0 {
+		slog.Info("CGM_VIDEO_PROBE_BACKFILL_QUEUED", "item_count", count)
 	}
 }
 

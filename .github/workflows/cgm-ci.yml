@@ -80,7 +80,7 @@ jobs:
             ./internal/processingworker ./internal/product ./internal/productapi \
             ./internal/productauth ./internal/productserver ./internal/sourcescan \
             ./cmd/cgm ./ui/web
-          go test -tags cgm_web_embed ./internal/productserver ./cmd/cgm ./ui/web
+          go test -tags "cgm_web_embed cgm_galleryepic" ./internal/productserver ./cmd/cgm ./ui/web
       - name: Install media gate dependencies
         run: |
           sudo apt-get update

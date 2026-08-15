@@ -50,6 +50,7 @@ describe("ManageCoreEntitiesPage validation", () => {
     fireEvent.focus(screen.getByLabelText("Search Primary Work"));
     fireEvent.click(await screen.findByRole("option", { name: /Fate/ }));
     await waitFor(() => expect(create).toBeEnabled());
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
   it("offers common platform keys while retaining a valid custom key", async () => {

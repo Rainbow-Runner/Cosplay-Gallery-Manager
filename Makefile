@@ -150,12 +150,12 @@ phasher: build-flags
 	go build $(PHASHER_OUTPUT) $(BUILD_FLAGS) ./cmd/phasher
 
 .PHONY: cgm
-cgm: GO_BUILD_TAGS += cgm_web_embed
+cgm: GO_BUILD_TAGS += cgm_web_embed cgm_galleryepic
 cgm: web-ui build-flags
 	$(CGM_GO) build $(CGM_OUTPUT) $(BUILD_FLAGS) ./cmd/cgm
 
 .PHONY: build-cgm
-build-cgm: verify-cgm-ui-boundary cgm
+build-cgm: verify-cgm-ui-boundary verify-cgm-metadata-provider-boundary cgm
 
 .PHONY: verify-cgm-release
 verify-cgm-release:
@@ -455,6 +455,13 @@ validate-web-ui:
 .PHONY: verify-cgm-ui-boundary
 verify-cgm-ui-boundary:
 	@! $(CGM_GO) list -deps ./cmd/cgm | grep -Fxq "github.com/stashapp/stash/ui"
+
+# The offline product composition must not import a site adapter. GalleryEpic
+# is added only by the explicit cgm_galleryepic composition tag.
+.PHONY: verify-cgm-metadata-provider-boundary
+verify-cgm-metadata-provider-boundary:
+	@! $(CGM_GO) list -deps ./cmd/cgm | grep -Fxq "github.com/stashapp/stash/internal/cosermetadata/galleryepic"
+	@$(CGM_GO) list -deps -tags cgm_galleryepic ./cmd/cgm | grep -Fxq "github.com/stashapp/stash/internal/cosermetadata/galleryepic"
 
 # these targets run the same steps as fmt-ui and validate-ui, but only on files that have changed
 fmt-ui-quick:

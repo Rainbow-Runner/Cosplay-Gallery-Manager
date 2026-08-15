@@ -16,10 +16,20 @@ const baseDetail = {
   biography: "",
   countryOrRegion: "CN",
   bannerURL: null,
-  socialAccounts: [{
-    uuid: "social-1", platformKey: "twitter", label: "", handle: "@alice",
-    url: "https://example.com/alice", status: "ACTIVE", position: "1024",
-  }],
+  socialAccounts: [
+    {
+      uuid: "social-1", platformKey: "twitter", label: "", handle: "@alice",
+      url: "https://example.com/alice", status: "ACTIVE", position: "1024",
+    },
+    {
+      uuid: "social-2", platformKey: "website", label: "Linktree", handle: "alice",
+      url: "https://linktr.ee/alice", status: "ACTIVE", position: "2048",
+    },
+    {
+      uuid: "social-3", platformKey: "custom_site", label: "Custom", handle: "alice",
+      url: "https://example.com/custom", status: "INACTIVE", position: "3072",
+    },
+  ],
   redirected: false,
 };
 
@@ -50,8 +60,20 @@ describe("CoserDetailPage", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Alice", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Manage Alice" })).toHaveAttribute("href", "/manage/cosers?uuid=coser-alice");
     expect(screen.getByRole("navigation", { name: "Breadcrumb" })).toHaveTextContent("HomeCosersAlice");
     expect(screen.getByRole("link", { name: "twitter: @alice" })).toHaveAttribute("href", "https://example.com/alice");
+    expect(screen.getByRole("link", { name: "twitter: @alice" }).querySelector("svg.social-platform-icon.is-twitter")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "twitter: @alice" })).not.toHaveTextContent("X");
+    expect(screen.getByRole("link", { name: "website: Linktree" }).querySelector("svg.social-platform-icon.is-linktree")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "custom_site: Custom" })).toHaveClass("is-inactive");
+    const socialRow = document.querySelector(".social-accounts");
+    expect(socialRow?.children).toHaveLength(7);
+    expect(Array.from(socialRow?.children || []).slice(0, 6).map((element) => element.querySelector("svg")?.classList[1])).toEqual([
+      "is-twitter", "is-facebook", "is-instagram", "is-weibo", "is-patreon", "is-linktree",
+    ]);
+    expect(socialRow?.querySelectorAll(".is-missing")).toHaveLength(4);
+    expect(screen.queryByRole("link", { name: "Facebook" })).not.toBeInTheDocument();
     expect(document.querySelector(".coser-banner--empty")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "1" })).toHaveAttribute("aria-current", "page");
 

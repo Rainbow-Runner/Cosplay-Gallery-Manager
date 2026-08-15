@@ -46,7 +46,7 @@ function detectLicense(directory) {
 }
 
 const goRows = run(go, [
-  "list", "-deps", "-tags", "cgm_web_embed",
+  "list", "-deps", "-tags", "cgm_web_embed,cgm_galleryepic",
   "-f", "{{if and .Module .Module.Version}}{{.Module.Path}}\t{{.Module.Version}}\t{{.Module.Dir}}{{end}}",
   "./cmd/cgm",
 ]).split("\n").filter(Boolean);

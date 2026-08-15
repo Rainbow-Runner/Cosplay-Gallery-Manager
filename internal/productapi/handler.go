@@ -18,6 +18,14 @@ type OperationsService interface {
 	CreateFullBackup(context.Context) (productdb.BackupRecord, error)
 	RestoreBackup(context.Context, string) (productdb.MaintenanceState, error)
 	CacheStorageStatus(context.Context) (CacheStorageStatus, error)
+	VideoDependencyStatus(context.Context) (VideoDependencyStatus, error)
+}
+
+type VideoDependencyStatus struct {
+	FFmpegAvailable                                 bool
+	FFmpegSource, FFmpegVersion, FFmpegErrorCode    string
+	FFprobeAvailable                                bool
+	FFprobeSource, FFprobeVersion, FFprobeErrorCode string
 }
 
 type CacheStorageStatus struct {

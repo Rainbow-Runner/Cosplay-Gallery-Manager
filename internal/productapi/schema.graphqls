@@ -14,6 +14,7 @@ enum GalleryState { DRAFT ACTIVE ARCHIVED }
 scalar Int64
 
 type EntitySummary { uuid: ID! name: String! }
+type PersonSummary { uuid: ID! name: String! avatarURL: String }
 
 type ResourceIdentity {
   itemUUID: ID!
@@ -28,6 +29,7 @@ type OnDemandResource {
   resource: ResourceIdentity
   errorCode: String!
 }
+type VideoPlaybackStatus { itemUUID: ID! mode: String! status: ProcessingState! contentRevision: Int64! resource: ResourceIdentity errorCode: String! }
 
 type GalleryCover {
   kind: String!
@@ -46,7 +48,7 @@ type BrowseGalleryCard {
   collectionType: CollectionType!
   contentRating: ContentRating!
   cover: GalleryCover!
-  credits: [EntitySummary!]!
+  credits: [PersonSummary!]!
   creditCount: Int!
   characters: [EntitySummary!]!
   characterCount: Int!
@@ -73,7 +75,7 @@ type GalleryPage {
 type HomeGalleryPage { scope: BrowseScope! page: GalleryPage! }
 
 type GalleryCreditDetail {
-  coser: EntitySummary!
+  coser: PersonSummary!
   characters: [EntitySummary!]!
   works: [EntitySummary!]!
 }
@@ -86,6 +88,7 @@ type GalleryDetail {
   photographerName: String!
   studioName: String!
   availableBytes: Int64!
+  mediaParentDirectories: [String!]!
   credits: [GalleryCreditDetail!]!
   tags: [EntitySummary!]!
   externalLinks: [ExternalLink!]!
@@ -221,7 +224,9 @@ type MediaDetail {
   displayResource: ResourceIdentity
   gallery: BrowseGalleryCard!
   metadataRevision: Int64!
+  videoTechnical: VideoTechnicalSummary
 }
+type VideoTechnicalSummary { probeState: String! errorCode: String! container: String! durationSeconds: Float! width: Int! height: Int! frameRate: Float! videoCodec: String! audioCodec: String! }
 
 type MediaPage {
   items: [RandomMediaItem!]!
@@ -244,6 +249,7 @@ type ManageGalleryPage { items: [ManageGalleryRow!]! summary: ManageIssueSummary
 type ManageGalleryItem {
   uuid: ID! relativePath: String! mediaKind: MediaKind! contentFormat: ContentFormat! imageCategory: ImageCategory
   position: String! caption: String! excluded: Boolean! availability: String! processingState: ProcessingState! byteSize: Int64!
+  videoProbeState: String! videoErrorCode: String! videoContainer: String! videoDurationSeconds: Float! videoWidth: Int! videoHeight: Int! videoCodec: String! audioCodec: String!
 }
 type ManageGalleryDetail {
   row: ManageGalleryRow! aliases: [String!]! description: String! shootDate: String! shootDatePrecision: ShootDatePrecision!
@@ -293,6 +299,16 @@ type ManageCacheStorage {
   fileCount: Int64!
   baseByteSize: Int64!
   enhancedByteSize: Int64!
+}
+type ManageVideoDependencyStatus {
+  ffmpegAvailable: Boolean!
+  ffmpegSource: String!
+  ffmpegVersion: String!
+  ffmpegErrorCode: String!
+  ffprobeAvailable: Boolean!
+  ffprobeSource: String!
+  ffprobeVersion: String!
+  ffprobeErrorCode: String!
 }
 input RuntimeSettingsInput {
   homeScope: BrowseScope! galleryCardScrubberEnabled: Boolean! galleryDetailMediaFilterEnabled: Boolean!
@@ -363,6 +379,7 @@ type Query {
   tagDetail(slug: String!, scope: BrowseScope! = ALL, page: Int! = 1): TagDetail!
   mediaDetail(itemUUID: ID!): MediaDetail!
   itemLightboxStatus(itemUUID: ID!): OnDemandResource!
+  itemVideoPlaybackStatus(itemUUID: ID!): VideoPlaybackStatus!
   favoriteGalleries(scope: BrowseScope! = LIST, page: Int! = 1): GalleryPage!
   galleryHistory(scope: BrowseScope! = LIST, page: Int! = 1): GalleryPage!
   favoriteMedia(scope: BrowseScope! = LIST, page: Int! = 1, ratingSort: Boolean! = false): MediaPage!
@@ -374,6 +391,7 @@ type Query {
   manageDiscovery(libraryID: Int64!): ManageDiscoverySnapshot!
   manageRuntimeSettings: ManageRuntimeSettings!
   manageCacheStorage: ManageCacheStorage!
+  manageVideoDependencyStatus: ManageVideoDependencyStatus!
   manageProcessingJobs(status: String! = "ALL", page: Int! = 1): ManageProcessingJobPage!
   manageBackups: [ManageBackupRecord!]!
   manageMaintenance: ManageMaintenanceState!
@@ -394,11 +412,13 @@ type Mutation {
   setItemRating(itemUUID: ID!, ratingHalfSteps: Int, expectedMetadataRevision: Int64!): PersonalStateResult!
   recordGalleryView(setID: ID!, itemUUID: ID): Boolean!
   requestItemLightbox(itemUUID: ID!): OnDemandResource!
+  requestItemVideoPlayback(itemUUID: ID!): VideoPlaybackStatus!
   updateGalleryMetadata(setID: ID!, expectedMetadataRevision: Int64!, input: UpdateGalleryMetadataInput!): ManageGalleryDetail!
   setGalleryState(setID: ID!, expectedMetadataRevision: Int64!, state: GalleryState!): ManageGalleryDetail!
   updateGalleryItem(setID: ID!, itemUUID: ID!, expectedMetadataRevision: Int64!, input: UpdateGalleryItemInput!): ManageGalleryDetail!
   setGalleryItemExcluded(setID: ID!, itemUUID: ID!, excluded: Boolean!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
   moveGalleryItem(setID: ID!, itemUUID: ID!, beforeItemUUID: ID, expectedMetadataRevision: Int64!): ManageGalleryDetail!
+  reorderGalleryItems(setID: ID!, itemUUIDs: [ID!]!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
   setGalleryCoverItem(setID: ID!, itemUUID: ID!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
   resetGalleryCover(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
   createMediaLibrary(input: CreateMediaLibraryInput!): ManageLibrary!
@@ -407,10 +427,11 @@ type Mutation {
   deleteRecognitionRule(id: Int64!): Boolean!
   discoverMediaLibrary(libraryID: Int64!): ManageDiscoverySnapshot!
   importGalleryCandidate(candidateID: Int64!): ManageGalleryDetail!
-  scanGallerySource(setID: ID!): ManageGalleryDetail!
+  scanGallerySource(setID: ID!, excludeNewRootMedia: Boolean! = true): ManageGalleryDetail!
   updateRuntimeSettings(expectedSettingsRevision: Int64!, input: RuntimeSettingsInput!): ManageRuntimeSettings!
   cancelProcessingJob(id: Int64!): ManageProcessingJobPage!
   retryProcessingJob(id: Int64!): ManageProcessingJobPage!
+  retryGalleryItemVideo(itemUUID: ID!): Boolean!
   createFullBackup: ManageBackupRecord!
   restoreBackup(backupID: ID!): ManageMaintenanceState!
   createCoreEntity(input: CoreEntityInput!): ManageCoreEntity!

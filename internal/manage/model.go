@@ -41,17 +41,25 @@ type GalleryPage struct {
 }
 
 type GalleryItem struct {
-	UUID            string
-	RelativePath    string
-	MediaKind       gallery.MediaKind
-	ContentFormat   gallery.ContentFormat
-	ImageCategory   gallery.ImageCategory
-	Position        int64
-	Caption         string
-	Excluded        bool
-	Availability    gallery.AvailabilityState
-	ProcessingState gallery.ProcessingState
-	ByteSize        int64
+	UUID                 string
+	RelativePath         string
+	MediaKind            gallery.MediaKind
+	ContentFormat        gallery.ContentFormat
+	ImageCategory        gallery.ImageCategory
+	Position             int64
+	Caption              string
+	Excluded             bool
+	Availability         gallery.AvailabilityState
+	ProcessingState      gallery.ProcessingState
+	ByteSize             int64
+	VideoProbeState      string
+	VideoErrorCode       string
+	VideoContainer       string
+	VideoDurationSeconds float64
+	VideoWidth           int
+	VideoHeight          int
+	VideoCodec           string
+	AudioCodec           string
 }
 
 type GalleryDetail struct {

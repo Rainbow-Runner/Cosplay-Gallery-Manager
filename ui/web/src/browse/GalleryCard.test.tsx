@@ -15,7 +15,7 @@ const card = {
   collectionType: "COSPLAY",
   contentRating: "NON_ADULT",
   cover: { kind: "GENERATED", revision: 1, managed: true, warning: false },
-  credits: [{ uuid: "coser-alice", name: "Alice" }, { uuid: "coser-bob", name: "Bob" }],
+  credits: [{ uuid: "coser-alice", name: "Alice", avatarURL: "/resource/coser/coser-alice/2/avatar-480" }, { uuid: "coser-bob", name: "Bob", avatarURL: null }],
   creditCount: 2,
   characters: [{ uuid: "character-saber", name: "Saber" }],
   characterCount: 1,
@@ -40,6 +40,7 @@ describe("GalleryCard Coser links", () => {
 
     expect(screen.getByRole("link", { name: "Alice" })).toHaveAttribute("href", "/coser/coser-alice");
     expect(screen.getByRole("link", { name: "Bob" })).toHaveAttribute("href", "/coser/coser-bob");
+    expect(screen.getByRole("link", { name: "Alice" }).querySelector("img")).toHaveAttribute("src", "/resource/coser/coser-alice/2/avatar-480");
   });
 
   it("does not render an empty Coser link for an Album without credits", () => {

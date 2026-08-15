@@ -22,6 +22,7 @@ import (
 
 func TestExternalMediaMatrix(t *testing.T) {
 	ffmpegPath := requireExternalTool(t, "CGM_TEST_FFMPEG")
+	ffprobePath := requireExternalFFprobe(t, ffmpegPath)
 	libRawPath := requireExternalTool(t, "CGM_TEST_LIBRAW")
 	root := t.TempDir()
 	sourceRoot := filepath.Join(root, "source")
@@ -39,6 +40,10 @@ func TestExternalMediaMatrix(t *testing.T) {
 	runExternal(t, ffmpegPath, "-hide_banner", "-loglevel", "error", "-y",
 		"-f", "lavfi", "-i", "testsrc2=size=320x180:rate=12", "-t", "1",
 		"-an", "-c:v", "mpeg4", "-q:v", "5", filepath.Join(sourceRoot, "clip.mp4"))
+	videoMetadata, err := (ProbeAdapter{Executable: ffprobePath, Version: "external-gate"}).Probe(context.Background(), filepath.Join(sourceRoot, "clip.mp4"))
+	if err != nil || videoMetadata.DurationSeconds <= 0 || videoMetadata.VideoStreamIndex < 0 {
+		t.Fatalf("real FFprobe result = %#v, %v", videoMetadata, err)
+	}
 	scan, err := sourcescan.ScanDirectory(context.Background(), sourceRoot)
 	if err != nil {
 		t.Fatal(err)
@@ -54,6 +59,51 @@ func TestExternalMediaMatrix(t *testing.T) {
 		observations["capture.dng"].ContentFormat != gallery.ContentFormatRAW {
 		t.Fatalf("real media classification = complete %v observations %#v issues %#v", scan.Complete, observations, scan.Issues)
 	}
+
+	t.Run("FFprobe technical matrix", func(t *testing.T) {
+		movPath := filepath.Join(outputRoot, "silent.mov")
+		runExternal(t, ffmpegPath, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=12", "-t", "1", "-an", "-c:v", "libx264", movPath)
+		mov, err := (ProbeAdapter{Executable: ffprobePath, Version: "external-gate"}).Probe(context.Background(), movPath)
+		if err != nil || mov.Container != "mp4" || mov.VideoCodec != "h264" || mov.AudioStreamIndex != nil {
+			t.Fatalf("MOV/silent probe = %#v, %v", mov, err)
+		}
+
+		webmPath := filepath.Join(outputRoot, "vp9.webm")
+		runExternal(t, ffmpegPath, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=12", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000", "-t", "1", "-c:v", "libvpx-vp9", "-deadline", "realtime", "-cpu-used", "8", "-c:a", "libopus", webmPath)
+		webm, err := (ProbeAdapter{Executable: ffprobePath, Version: "external-gate"}).Probe(context.Background(), webmPath)
+		if err != nil || webm.Container != "webm" || webm.VideoCodec != "vp9" || webm.AudioCodec != "opus" || PlaybackPlanFromMetadata(webm).Mode != PlaybackTranscode {
+			t.Fatalf("WebM probe = %#v, %v", webm, err)
+		}
+
+		dualPath := filepath.Join(outputRoot, "dual-audio.mkv")
+		runExternal(t, ffmpegPath, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=12", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000", "-f", "lavfi", "-i", "sine=frequency=880:sample_rate=48000", "-t", "1", "-map", "0:v:0", "-map", "1:a:0", "-map", "2:a:0", "-c:v", "libx264", "-c:a", "aac", "-disposition:a:0", "0", "-disposition:a:1", "default", dualPath)
+		dual, err := (ProbeAdapter{Executable: ffprobePath, Version: "external-gate"}).Probe(context.Background(), dualPath)
+		if err != nil || dual.AudioStreamIndex == nil || *dual.AudioStreamIndex != 2 {
+			t.Fatalf("dual-audio default selection = %#v, %v", dual, err)
+		}
+
+		rotationBase := filepath.Join(outputRoot, "rotation-base.mp4")
+		rotationPath := filepath.Join(outputRoot, "rotated.mp4")
+		runExternal(t, ffmpegPath, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=12", "-t", "1", "-an", "-c:v", "libx264", rotationBase)
+		runExternal(t, ffmpegPath, "-hide_banner", "-loglevel", "error", "-y", "-display_rotation", "90", "-i", rotationBase, "-c", "copy", rotationPath)
+		rotated, err := (ProbeAdapter{Executable: ffprobePath, Version: "external-gate"}).Probe(context.Background(), rotationPath)
+		if err != nil || rotated.Rotation == 0 || rotated.DisplayWidth != 180 || rotated.DisplayHeight != 320 || PlaybackPlanFromMetadata(rotated).Mode != PlaybackTranscode {
+			t.Fatalf("rotation probe = %#v, %v", rotated, err)
+		}
+
+		hdrPath := filepath.Join(outputRoot, "hdr-tagged.mkv")
+		runExternal(t, ffmpegPath, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=12", "-t", "1", "-an", "-vf", "format=yuv420p10le", "-c:v", "ffv1", "-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc", hdrPath)
+		hdr, err := (ProbeAdapter{Executable: ffprobePath, Version: "external-gate"}).Probe(context.Background(), hdrPath)
+		if err != nil || !hdr.HDR || PlaybackPlanFromMetadata(hdr).Mode != PlaybackTranscode {
+			t.Fatalf("HDR probe = %#v, %v", hdr, err)
+		}
+		hdrPlan := PlaybackPlanFromMetadata(hdr)
+		hdrOutput := filepath.Join(outputRoot, "hdr-sdr-proxy.mp4")
+		if _, err := (VideoPlaybackGenerator{Encoder: stashffmpeg.NewEncoder(ffmpegPath)}).Generate(context.Background(), GenerateRequest{MediaKind: gallery.MediaKindVideo,
+			ContentFormat: gallery.ContentFormatVideo, Variant: VariantVideoPlayback, SourcePath: hdrPath, DestinationPath: hdrOutput, VideoTechnical: &hdr, VideoPlan: &hdrPlan}); err != nil {
+			t.Fatal(err)
+		}
+	})
 
 	cases := []struct {
 		name        string
@@ -75,9 +125,9 @@ func TestExternalMediaMatrix(t *testing.T) {
 			generator: FFmpegPosterGenerator{Encoder: stashffmpeg.NewEncoder(ffmpegPath)},
 			request: GenerateRequest{
 				MediaKind: gallery.MediaKindVideo, ContentFormat: gallery.ContentFormatVideo,
-				Variant: VariantStaticPoster, SourcePath: filepath.Join(sourceRoot, "clip.mp4"),
+				Variant: VariantStaticPoster, SourcePath: filepath.Join(sourceRoot, "clip.mp4"), VideoTechnical: &videoMetadata,
 			},
-			wantMaximum: 4096,
+			wantMaximum: 960,
 		},
 		{
 			name:      "LibRaw DNG proxy",
@@ -115,6 +165,62 @@ func TestExternalMediaMatrix(t *testing.T) {
 			}
 		})
 	}
+
+	remuxSource := filepath.Join(sourceRoot, "remux-source.mkv")
+	runExternal(t, ffmpegPath, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=12", "-t", "1", "-an", "-c:v", "libx264", remuxSource)
+	remuxMetadata, err := (ProbeAdapter{Executable: ffprobePath, Version: "external-gate"}).Probe(context.Background(), remuxSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	remuxPlan := PlaybackPlanFromMetadata(remuxMetadata)
+	if remuxPlan.Mode != PlaybackRemux {
+		t.Fatalf("real remux plan = %#v from %#v", remuxPlan, remuxMetadata)
+	}
+	remuxOutput := filepath.Join(outputRoot, "video-remux.mp4")
+	remuxRequest := GenerateRequest{MediaKind: gallery.MediaKindVideo, ContentFormat: gallery.ContentFormatVideo, Variant: VariantVideoPlayback,
+		SourcePath: remuxSource, DestinationPath: remuxOutput, VideoTechnical: &remuxMetadata, VideoPlan: &remuxPlan}
+	if _, err := (VideoPlaybackGenerator{Encoder: stashffmpeg.NewEncoder(ffmpegPath)}).Generate(context.Background(), remuxRequest); err != nil {
+		t.Fatal(err)
+	}
+	remuxResult, err := (ProbeAdapter{Executable: ffprobePath, Version: "external-gate"}).Probe(context.Background(), remuxOutput)
+	if err != nil || remuxResult.Container != "mp4" || remuxResult.VideoCodec != "h264" {
+		t.Fatalf("real remux output = %#v, %v", remuxResult, err)
+	}
+
+	transcodePlan := PlaybackPlanFromMetadata(videoMetadata)
+	if transcodePlan.Mode != PlaybackTranscode {
+		t.Fatalf("real transcode plan = %#v", transcodePlan)
+	}
+	transcodeOutput := filepath.Join(outputRoot, "video-transcode.mp4")
+	transcodeRequest := GenerateRequest{MediaKind: gallery.MediaKindVideo, ContentFormat: gallery.ContentFormatVideo, Variant: VariantVideoPlayback,
+		SourcePath: filepath.Join(sourceRoot, "clip.mp4"), DestinationPath: transcodeOutput, VideoTechnical: &videoMetadata, VideoPlan: &transcodePlan}
+	if _, err := (VideoPlaybackGenerator{Encoder: stashffmpeg.NewEncoder(ffmpegPath)}).Generate(context.Background(), transcodeRequest); err != nil {
+		t.Fatal(err)
+	}
+	transcodeResult, err := (ProbeAdapter{Executable: ffprobePath, Version: "external-gate"}).Probe(context.Background(), transcodeOutput)
+	if err != nil || transcodeResult.Container != "mp4" || transcodeResult.VideoCodec != "h264" {
+		t.Fatalf("real transcode output = %#v, %v", transcodeResult, err)
+	}
+	if directPlan := PlaybackPlanFromMetadata(transcodeResult); directPlan.Mode != PlaybackDirect {
+		t.Fatalf("generated compatible MP4 was not direct-playable: %#v", directPlan)
+	}
+}
+
+func requireExternalFFprobe(t *testing.T, ffmpegPath string) string {
+	t.Helper()
+	if configured := os.Getenv("CGM_TEST_FFPROBE"); configured != "" {
+		path, err := exec.LookPath(configured)
+		if err != nil {
+			t.Fatalf("CGM_TEST_FFPROBE: %v", err)
+		}
+		return path
+	}
+	candidate := filepath.Join(filepath.Dir(ffmpegPath), "ffprobe")
+	if info, err := os.Stat(candidate); err == nil && info.Mode().IsRegular() && info.Mode()&0o111 != 0 {
+		return candidate
+	}
+	t.Skip("CGM_TEST_FFPROBE or an ffprobe sibling is required for the external video release gate")
+	return ""
 }
 
 func requireExternalTool(t *testing.T, environment string) string {

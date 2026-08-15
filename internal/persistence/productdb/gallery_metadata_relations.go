@@ -213,6 +213,15 @@ func (s *CoreEntityStore) AddSocialAccount(
 	}, nil
 }
 
+type SocialAccountInput struct {
+	PlatformKey string
+	Label       string
+	Handle      string
+	URL         string
+	Status      string
+	Visible     bool
+}
+
 func validateExternalHTTPURL(rawURL string) (string, error) {
 	parsed, err := url.Parse(strings.TrimSpace(rawURL))
 	if err != nil {

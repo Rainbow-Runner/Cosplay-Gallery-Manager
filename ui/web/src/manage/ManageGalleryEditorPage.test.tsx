@@ -34,8 +34,8 @@ const gallery = {
   ],
 };
 
-function renderPage(mocks: ReadonlyArray<MockedResponse>) {
-  return render(<MemoryRouter initialEntries={[`/manage/gallery/${setID}?tab=cast`]}>
+function renderPage(mocks: ReadonlyArray<MockedResponse>, tab = "cast") {
+  return render(<MemoryRouter initialEntries={[`/manage/gallery/${setID}?tab=${tab}`]}>
     <MockedProvider mocks={mocks}>
       <Routes><Route path="/manage/gallery/:setID" element={<ManageGalleryEditorPage />} /></Routes>
     </MockedProvider>
@@ -57,5 +57,16 @@ describe("ManageGalleryEditorPage relations", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add Character" }));
     expect(screen.getByRole("button", { name: "Save all relations" })).toBeDisabled();
     expect(screen.getByText(/Finish or remove every empty/)).toBeInTheDocument();
+  });
+
+  it("defaults manual scans to auto-excluding only newly discovered root media", async () => {
+    renderPage([{
+      request: { query: MANAGE_GALLERY, variables: { setID } },
+      result: { data: { manageGallery: gallery } },
+    }], "source");
+
+    const option = await screen.findByRole("checkbox", { name: /Auto-exclude newly discovered media in Gallery root/ });
+    expect(option).toBeChecked();
+    expect(screen.getByText(/Existing Restore\/Exclude choices are never overwritten/)).toBeInTheDocument();
   });
 });

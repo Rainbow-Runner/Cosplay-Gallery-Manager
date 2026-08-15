@@ -33,11 +33,19 @@ Linux example:
   "database_path": "/var/lib/cgm/product.sqlite",
   "cache_path": "/var/cache/cgm",
   "ffmpeg_path": "/usr/bin/ffmpeg",
+  "ffprobe_path": "/usr/bin/ffprobe",
   "libraw_path": "/usr/bin/dcraw",
   "worker_count": 2,
-  "log_level": "INFO"
+  "log_level": "INFO",
+  "metadata_scraping_enabled": false
 }
 ```
+
+`ffprobe_path` is optional when a matching executable is installed beside
+`ffmpeg_path`; CGM resolves that sibling first and reports both dependency
+versions in Manage → Settings. Missing video tools do not prevent image and
+RAW workflows from starting, but video probe/poster/proxy jobs report stable
+diagnostic codes until the dependencies are available.
 
 `listen` must contain an explicit host and port. `worker_count` must be from 1
 through 8. `log_level` accepts `DEBUG`, `INFO`, `WARN`, or `ERROR`; use
@@ -46,6 +54,12 @@ technical request IDs and endpoint categories and do not include query
 strings, GraphQL variables, media paths, or business metadata. A native
 first-time Setup reached through a literal loopback bind does not require a
 ticket.
+
+`metadata_scraping_enabled` defaults to `false`. When enabled, only an
+authenticated owner's explicit Coser metadata import action may contact a
+provider compiled into that build. Browse, source scans, startup, and scheduled
+jobs remain offline. Removing a provider adapter does not require a database
+migration and does not disable ordinary Coser editing.
 
 ## Docker Compose
 

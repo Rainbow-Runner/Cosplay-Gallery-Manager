@@ -3,6 +3,7 @@ package productdb
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/stashapp/stash/internal/product"
 )
 
 const sqliteDriver = "sqlite3"
@@ -77,7 +79,7 @@ func Open(ctx context.Context, path string) (*Database, error) {
 		return closeOnError(err)
 	}
 	if inspection.Kind == KindProduct {
-		if err := validateSchemaV1(ctx, connection); err != nil {
+		if err := validateSchemaVersion(ctx, connection, inspection.Identity.DatabaseSchemaVersion); err != nil {
 			return closeOnError(err)
 		}
 	}
@@ -88,7 +90,7 @@ func Open(ctx context.Context, path string) (*Database, error) {
 		if err != nil {
 			return closeOnError(fmt.Errorf("initialising database identity: %w", err))
 		}
-		if err := validateSchemaV1(ctx, connection); err != nil {
+		if err := validateSchemaV2(ctx, connection); err != nil {
 			return closeOnError(err)
 		}
 		if err := validateIntegrity(ctx, connection); err != nil {
@@ -96,6 +98,12 @@ func Open(ctx context.Context, path string) (*Database, error) {
 		}
 	} else {
 		identity = *inspection.Identity
+		if identity.DatabaseSchemaVersion < product.DatabaseSchemaVersion {
+			if err := migrateProductDatabase(ctx, connection, absolutePath, identity.DatabaseSchemaVersion); err != nil {
+				return closeOnError(err)
+			}
+			identity.DatabaseSchemaVersion = product.DatabaseSchemaVersion
+		}
 	}
 
 	if err := configureConnection(ctx, connection); err != nil {
@@ -131,11 +139,96 @@ func inspectFile(ctx context.Context, path string) (Inspection, error) {
 		return Inspection{}, err
 	}
 	if inspection.Kind == KindProduct {
-		if err := validateSchemaV1(ctx, connection); err != nil {
+		if err := validateSchemaVersion(ctx, connection, inspection.Identity.DatabaseSchemaVersion); err != nil {
 			return Inspection{}, err
 		}
 	}
 	return inspection, nil
+}
+
+func validateSchemaVersion(ctx context.Context, db *sql.DB, version uint) error {
+	switch version {
+	case 1:
+		return validateSchemaV1(ctx, db)
+	case 2:
+		return validateSchemaV2(ctx, db)
+	default:
+		return &SchemaVersionMismatchError{Found: version, Required: product.DatabaseSchemaVersion}
+	}
+}
+
+func migrateProductDatabase(ctx context.Context, connection *sql.DB, databasePath string, from uint) error {
+	if from != 1 || product.DatabaseSchemaVersion != 2 {
+		return &SchemaVersionMismatchError{Found: from, Required: product.DatabaseSchemaVersion}
+	}
+	backupPath := fmt.Sprintf("%s.pre-schema-v1-%d.bak", databasePath, time.Now().UTC().UnixNano())
+	if err := createMigrationSnapshot(ctx, connection, backupPath, from); err != nil {
+		return fmt.Errorf("creating pre-migration database snapshot: %w", err)
+	}
+	tx, err := connection.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if err := createMediaProcessingSchemaV2(ctx, tx); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE cgm_product_identity SET database_schema_version=2 WHERE singleton_id=1 AND database_schema_version=1`); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	if err := validateSchemaV2(ctx, connection); err != nil {
+		return fmt.Errorf("validating migrated schema: %w", err)
+	}
+	return validateIntegrity(ctx, connection)
+}
+
+func createMigrationSnapshot(ctx context.Context, source *sql.DB, targetPath string, expectedVersion uint) (returnErr error) {
+	target, err := os.OpenFile(targetPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	if err := target.Close(); err != nil {
+		_ = os.Remove(targetPath)
+		return err
+	}
+	complete := false
+	defer func() {
+		if !complete {
+			_ = os.Remove(targetPath)
+		}
+	}()
+	destination, err := sql.Open(sqliteDriver, sqliteDSN(targetPath, false))
+	if err != nil {
+		return err
+	}
+	destination.SetMaxOpenConns(1)
+	if err := runOnlineBackup(ctx, source, destination); err != nil {
+		_ = destination.Close()
+		return err
+	}
+	if err := destination.Close(); err != nil {
+		return err
+	}
+	check, err := sql.Open(sqliteDriver, sqliteDSN(targetPath, true))
+	if err != nil {
+		return err
+	}
+	defer check.Close()
+	if err := validateIntegrity(ctx, check); err != nil {
+		return err
+	}
+	identity, err := readIdentity(ctx, check)
+	if err != nil || identity.ProductID != product.ID || identity.DatabaseSchemaVersion != expectedVersion {
+		return errors.New("migration snapshot identity validation failed")
+	}
+	if err := validateSchemaVersion(ctx, check, expectedVersion); err != nil {
+		return err
+	}
+	complete = true
+	return nil
 }
 
 func regularFileExists(path string) (bool, error) {

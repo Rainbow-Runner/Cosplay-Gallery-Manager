@@ -15,6 +15,7 @@ export type IconName =
   | "info"
   | "lock"
   | "menu"
+  | "more-horizontal"
   | "palette"
   | "search"
   | "settings"
@@ -103,6 +104,7 @@ const paths: Record<IconName, ReactNode> = {
     </>
   ),
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  "more-horizontal": <><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></>,
   palette: (
     <>
       <path d="M12 3a9 9 0 1 0 0 18h1.4a1.8 1.8 0 0 0 1.2-3.1 1.8 1.8 0 0 1 1.2-3.1H18A3 3 0 0 0 21 12a9 9 0 0 0-9-9Z" />

@@ -29,3 +29,15 @@ func DefaultProfileHash() string {
 	value, _ := (Profile{ContractVersion: product.MediaProcessingProfileVersion, Generator: "cgm-default", GeneratorVersion: "1"}).Hash()
 	return value
 }
+
+func VideoProbeProfileHash(ffprobeVersion string) string {
+	value, _ := (Profile{ContractVersion: product.MediaProcessingProfileVersion, Generator: "cgm-video-probe", GeneratorVersion: "1", DependencyVersion: ffprobeVersion,
+		Configuration: map[string]any{"track_selection": "default-then-first-v1", "attached_picture": "ignored"}}).Hash()
+	return value
+}
+
+func VideoPosterProfileHash(ffmpegVersion string) string {
+	value, _ := (Profile{ContractVersion: product.MediaProcessingProfileVersion, Generator: "cgm-video-poster", GeneratorVersion: "2", DependencyVersion: ffmpegVersion,
+		Configuration: map[string]any{"position": 0.2, "maximum": 960, "format": "jpeg", "seek_fallback": "fast-accurate-zero"}}).Hash()
+	return value
+}

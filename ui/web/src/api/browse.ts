@@ -7,7 +7,7 @@ export const GALLERY_CARD_FIELDS = gql`
       kind revision managed warning
       resource { itemUUID contentRevision profileHash variant mimeType }
     }
-    credits { uuid name }
+    credits { uuid name avatarURL }
     creditCount
     characters { uuid name }
     characterCount
@@ -65,8 +65,8 @@ export const GALLERY_DETAIL = gql`
   query GalleryDetail($slug: String!) {
     galleryDetail(slug: $slug, scope: ALL) {
       card { ...GalleryCardFields }
-      description photographerName studioName availableBytes redirected
-      credits { coser { uuid name } characters { uuid name } works { uuid name } }
+      description photographerName studioName availableBytes mediaParentDirectories redirected
+      credits { coser { uuid name avatarURL } characters { uuid name } works { uuid name } }
       tags { uuid name }
       externalLinks { uuid type label url }
     }
@@ -99,6 +99,24 @@ export const REQUEST_ITEM_LIGHTBOX = gql`
   mutation RequestItemLightbox($itemUUID: ID!) {
     requestItemLightbox(itemUUID: $itemUUID) {
       status errorCode
+      resource { itemUUID contentRevision profileHash variant mimeType }
+    }
+  }
+`;
+
+export const ITEM_VIDEO_PLAYBACK_STATUS = gql`
+  query ItemVideoPlaybackStatus($itemUUID: ID!) {
+    itemVideoPlaybackStatus(itemUUID: $itemUUID) {
+      itemUUID mode status contentRevision errorCode
+      resource { itemUUID contentRevision profileHash variant mimeType }
+    }
+  }
+`;
+
+export const REQUEST_ITEM_VIDEO_PLAYBACK = gql`
+  mutation RequestItemVideoPlayback($itemUUID: ID!) {
+    requestItemVideoPlayback(itemUUID: $itemUUID) {
+      itemUUID mode status contentRevision errorCode
       resource { itemUUID contentRevision profileHash variant mimeType }
     }
   }
@@ -208,6 +226,7 @@ export const MEDIA_DETAIL = gql`
         cardResource { itemUUID contentRevision profileHash variant mimeType }
         largeResource { itemUUID contentRevision profileHash variant mimeType } }
       displayResource { itemUUID contentRevision profileHash variant mimeType }
+      videoTechnical { probeState errorCode container durationSeconds width height frameRate videoCodec audioCodec }
       metadataRevision
       gallery { ...GalleryCardFields }
     }
@@ -237,4 +256,11 @@ export const FAVORITE_MEDIA = gql`
 export const SET_GALLERY_FAVORITE = gql`mutation SetGalleryFavorite($setID: ID!, $favorite: Boolean!) { setGalleryFavorite(setID: $setID, favorite: $favorite) { metadataRevision } }`;
 export const SET_ITEM_FAVORITE = gql`mutation SetItemFavorite($itemUUID: ID!, $favorite: Boolean!) { setItemFavorite(itemUUID: $itemUUID, favorite: $favorite) { metadataRevision } }`;
 export const SET_ITEM_RATING = gql`mutation SetItemRating($itemUUID: ID!, $ratingHalfSteps: Int, $expectedMetadataRevision: Int64!) { setItemRating(itemUUID: $itemUUID, ratingHalfSteps: $ratingHalfSteps, expectedMetadataRevision: $expectedMetadataRevision) { metadataRevision } }`;
+export const SET_BROWSE_GALLERY_COVER_ITEM = gql`
+  mutation SetBrowseGalleryCoverItem($setID: ID!, $itemUUID: ID!, $expectedMetadataRevision: Int64!) {
+    setGalleryCoverItem(setID: $setID, itemUUID: $itemUUID, expectedMetadataRevision: $expectedMetadataRevision) {
+      row { metadataRevision }
+    }
+  }
+`;
 export const RECORD_GALLERY_VIEW = gql`mutation RecordGalleryView($setID: ID!, $itemUUID: ID) { recordGalleryView(setID: $setID, itemUUID: $itemUUID) }`;

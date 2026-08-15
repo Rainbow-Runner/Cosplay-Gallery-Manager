@@ -5,12 +5,13 @@ import "time"
 type JobKind string
 
 const (
-	JobLibraryScan       JobKind = "LIBRARY_SCAN"
-	JobGalleryProcessing JobKind = "GALLERY_PROCESSING"
-	JobItemDerivative    JobKind = "ITEM_DERIVATIVE"
-	JobManifest          JobKind = "MANIFEST"
-	JobCache             JobKind = "CACHE"
-	JobBackup            JobKind = "BACKUP"
+	JobLibraryScan           JobKind = "LIBRARY_SCAN"
+	JobGalleryProcessing     JobKind = "GALLERY_PROCESSING"
+	JobItemDerivative        JobKind = "ITEM_DERIVATIVE"
+	JobItemTechnicalMetadata JobKind = "ITEM_TECHNICAL_METADATA"
+	JobManifest              JobKind = "MANIFEST"
+	JobCache                 JobKind = "CACHE"
+	JobBackup                JobKind = "BACKUP"
 )
 
 // RequiredCacheTier is a product invariant: resources needed for a Gallery to
@@ -26,6 +27,48 @@ func RequiredCacheTier(variant string) (CacheTier, bool) {
 	default:
 		return "", false
 	}
+}
+
+type VideoProbeState string
+
+const (
+	VideoProbePending VideoProbeState = "PENDING"
+	VideoProbeReady   VideoProbeState = "READY"
+	VideoProbeError   VideoProbeState = "ERROR"
+)
+
+type VideoTechnicalMetadata struct {
+	ItemUUID         string
+	ContentRevision  int64
+	ProbeProfileHash string
+	ProbeState       VideoProbeState
+	LastErrorCode    string
+	Container        string
+	DurationSeconds  float64
+	StartTimeSeconds float64
+	TotalBitrate     int64
+	VideoBitrate     int64
+	VideoStreamIndex int
+	VideoCodec       string
+	VideoProfile     string
+	PixelFormat      string
+	CodedWidth       int
+	CodedHeight      int
+	DisplayWidth     int
+	DisplayHeight    int
+	FrameRate        float64
+	Rotation         int
+	ColorRange       string
+	ColorSpace       string
+	ColorPrimaries   string
+	ColorTransfer    string
+	HDR              bool
+	AudioStreamIndex *int
+	AudioCodec       string
+	AudioChannels    int
+	AudioSampleRate  int
+	FFprobeVersion   string
+	CompletedAtUTC   *time.Time
 }
 
 type JobStatus string

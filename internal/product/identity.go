@@ -22,7 +22,7 @@ const (
 
 	// DatabaseSchemaVersion versions the new, product-owned database schema.
 	// It does not correspond to any original Stash schema version.
-	DatabaseSchemaVersion uint = 1
+	DatabaseSchemaVersion uint = 2
 
 	// ManifestSchemaVersion is the major schema version shared by the Gallery
 	// and Coser v1 manifest families.
@@ -32,7 +32,7 @@ const (
 	// backwards-incompatible processing contract changes. Individual cache
 	// keys will also include generator, dependency, configuration, and content
 	// revisions.
-	MediaProcessingProfileVersion uint = 1
+	MediaProcessingProfileVersion uint = 2
 )
 
 // Versions reports the four independently versioned product surfaces.

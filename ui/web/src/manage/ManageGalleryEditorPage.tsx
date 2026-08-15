@@ -1,7 +1,8 @@
-import { useMutation, useQuery } from "@apollo/client/react";
+import { useApolloClient, useMutation, useQuery } from "@apollo/client/react";
 import { type FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ADD_GALLERY_EXTERNAL_LINK, MANAGE_GALLERY, MANAGE_GALLERY_MANIFEST, MOVE_GALLERY_ITEM, PULL_GALLERY_MANIFEST, PUSH_GALLERY_MANIFEST, REPLACE_GALLERY_RELATIONS, RESET_GALLERY_COVER, RESOLVE_GALLERY_MANIFEST, SCAN_GALLERY_SOURCE, SET_GALLERY_COVER_ITEM, SET_GALLERY_ITEM_EXCLUDED, SET_GALLERY_STATE, UPDATE_GALLERY_ITEM, UPDATE_GALLERY_METADATA } from "../api/manage";
+import { ADD_GALLERY_EXTERNAL_LINK, MANAGE_GALLERY, MANAGE_GALLERY_MANIFEST, PULL_GALLERY_MANIFEST, PUSH_GALLERY_MANIFEST, REORDER_GALLERY_ITEMS, REPLACE_GALLERY_RELATIONS, RESET_GALLERY_COVER, RESOLVE_GALLERY_MANIFEST, RETRY_GALLERY_ITEM_VIDEO, SCAN_GALLERY_SOURCE, SET_GALLERY_COVER_ITEM, SET_GALLERY_ITEM_EXCLUDED, SET_GALLERY_STATE, UPDATE_GALLERY_ITEM, UPDATE_GALLERY_METADATA } from "../api/manage";
+import { flattenGalleryMediaFolders, galleryMediaFileName, galleryMediaGroupKey, galleryMediaParentPath, groupGalleryMedia, naturalFileNameCompare, type GalleryMediaFolder } from "./galleryMediaFolders";
 import { ManageEntitySelector } from "./ManageEntitySelector";
 import { ManageGalleryDeletePanel } from "./ManageGalleryDeletePanel";
 import type { ManageGalleryCredit, ManageGalleryDetail, ManageGalleryFolderMatch, ManageGalleryItem, ManageGalleryManifestState, ManageGalleryTag } from "./types";
@@ -17,15 +18,17 @@ function isAbsoluteHTTPURL(value: string) {
   }
 }
 export function ManageGalleryEditorPage() {
+  const client = useApolloClient();
   const navigate = useNavigate();
   const { setID = "" } = useParams(); const [parameters, setParameters] = useSearchParams(); const tab = tabs.includes(parameters.get("tab") as typeof tabs[number]) ? parameters.get("tab") as typeof tabs[number] : "basic";
   const query = useQuery<{ manageGallery: ManageGalleryDetail }>(MANAGE_GALLERY, { variables: { setID }, fetchPolicy: "network-only" }); const [save] = useMutation(UPDATE_GALLERY_METADATA); const [setState] = useMutation(SET_GALLERY_STATE);
   const [updateItem] = useMutation<{ updateGalleryItem: ManageGalleryDetail }>(UPDATE_GALLERY_ITEM);
   const [setExcluded] = useMutation<{ setGalleryItemExcluded: ManageGalleryDetail }>(SET_GALLERY_ITEM_EXCLUDED);
-  const [moveItem] = useMutation<{ moveGalleryItem: ManageGalleryDetail }>(MOVE_GALLERY_ITEM);
+  const [reorderItems, reorderState] = useMutation<{ reorderGalleryItems: ManageGalleryDetail }>(REORDER_GALLERY_ITEMS);
   const [setCover] = useMutation<{ setGalleryCoverItem: ManageGalleryDetail }>(SET_GALLERY_COVER_ITEM);
   const [resetCover] = useMutation<{ resetGalleryCover: ManageGalleryDetail }>(RESET_GALLERY_COVER);
   const [scanSource, scanState] = useMutation<{ scanGallerySource: ManageGalleryDetail }>(SCAN_GALLERY_SOURCE);
+	const [retryVideo, retryVideoState] = useMutation<{ retryGalleryItemVideo: boolean }>(RETRY_GALLERY_ITEM_VIDEO);
   const [replaceRelations, relationState] = useMutation<{ replaceGalleryRelations: ManageGalleryDetail }>(REPLACE_GALLERY_RELATIONS);
   const [addExternalLink, externalLinkState] = useMutation<{ addGalleryExternalLink: ManageGalleryDetail }>(ADD_GALLERY_EXTERNAL_LINK);
   const manifestQuery = useQuery<{ manageGalleryManifest: ManageGalleryManifestState }>(MANAGE_GALLERY_MANIFEST, { variables: { setID }, skip: tab !== "manifest", fetchPolicy: "network-only" });
@@ -33,6 +36,7 @@ export function ManageGalleryEditorPage() {
   const [pullManifest, pullManifestState] = useMutation<{ pullGalleryManifest: ManageGalleryManifestState }>(PULL_GALLERY_MANIFEST);
   const [resolveManifest, resolveManifestState] = useMutation<{ resolveGalleryManifest: ManageGalleryManifestState }>(RESOLVE_GALLERY_MANIFEST);
   const [draft, setDraft] = useState<ManageGalleryDetail | null>(null); const [message, setMessage] = useState("");
+  const [excludeNewRootMedia, setExcludeNewRootMedia] = useState(true);
   const [linkDraft, setLinkDraft] = useState({ type: "SOURCE", label: "", url: "" });
   const [conflictChoices, setConflictChoices] = useState<Record<string, "DATABASE" | "FILE">>({});
   useEffect(() => { if (query.data) setDraft(query.data.manageGallery); }, [query.data]);
@@ -48,7 +52,8 @@ export function ManageGalleryEditorPage() {
   async function toggleExcluded(item: ManageGalleryItem) { setMessage(""); try { const result = await setExcluded({ variables: { setID, itemUUID: item.uuid, excluded: !item.excluded, expectedMetadataRevision: current.row.metadataRevision } }); if (result.data) setDraft(result.data.setGalleryItemExcluded); } catch (error) { setMessage(error instanceof Error ? error.message : "Exclusion update failed"); } }
   async function chooseCover(item: ManageGalleryItem) { setMessage(""); try { const result = await setCover({ variables: { setID, itemUUID: item.uuid, expectedMetadataRevision: current.row.metadataRevision } }); if (result.data) setDraft(result.data.setGalleryCoverItem); setMessage("Cover updated"); } catch (error) { setMessage(error instanceof Error ? error.message : "Cover update failed"); } }
   async function autoCover() { setMessage(""); try { const result = await resetCover({ variables: { setID, expectedMetadataRevision: current.row.metadataRevision } }); if (result.data) setDraft(result.data.resetGalleryCover); setMessage("Cover reset to automatic selection"); } catch (error) { setMessage(error instanceof Error ? error.message : "Cover reset failed"); } }
-  async function scan() { setMessage(""); try { const result = await scanSource({ variables: { setID } }); if (result.data) setDraft(result.data.scanGallerySource); setMessage("Source scan completed"); } catch (error) { setMessage(error instanceof Error ? error.message : "Source scan failed"); } }
+  async function scan() { setMessage(""); try { const result = await scanSource({ variables: { setID, excludeNewRootMedia } }); if (result.data) setDraft(result.data.scanGallerySource); setMessage("Source scan completed"); } catch (error) { setMessage(error instanceof Error ? error.message : "Source scan failed"); } }
+	async function retryVideoProcessing(item: ManageGalleryItem) { setMessage(""); try { await retryVideo({ variables:{ itemUUID:item.uuid } }); await query.refetch(); setMessage("Video processing queued"); } catch (error) { setMessage(error instanceof Error ? error.message : "Video retry failed"); } }
   function editCredit(index: number, patch: Partial<ManageGalleryCredit>) { setDraft({ ...current, credits: current.credits.map((credit, position) => position === index ? { ...credit, ...patch } : credit) }); }
   function editTag(index: number, patch: Partial<ManageGalleryTag>) { setDraft({ ...current, tags: current.tags.map((tag, position) => position === index ? { ...tag, ...patch } : tag) }); }
   const relationsValid = current.credits.every((credit) => credit.coserUUID && credit.cast.every((cast) => cast.characterUUID)) &&
@@ -134,8 +139,47 @@ export function ManageGalleryEditorPage() {
       setConflictChoices({}); await query.refetch(); await manifestQuery.refetch(); setMessage("Manifest conflicts resolved and pulled");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Manifest conflict resolution failed"); }
   }
-  function group(item: ManageGalleryItem) { return item.mediaKind === "STATIC_IMAGE" ? `STATIC_IMAGE:${item.imageCategory || "PHOTO"}` : item.mediaKind; }
-  async function move(item: ManageGalleryItem, direction: -1 | 1) { const peers = current.items.filter((value) => group(value) === group(item)); const index = peers.findIndex((value) => value.uuid === item.uuid); if (index < 0 || index + direction < 0 || index + direction >= peers.length) return; const before = direction < 0 ? peers[index - 1].uuid : peers[index + 2]?.uuid ?? null; setMessage(""); try { const result = await moveItem({ variables: { setID, itemUUID: item.uuid, beforeItemUUID: before, expectedMetadataRevision: current.row.metadataRevision } }); if (result.data) setDraft(result.data.moveGalleryItem); } catch (error) { setMessage(error instanceof Error ? error.message : "Item ordering failed"); } }
+  async function move(item: ManageGalleryItem, direction: -1 | 1) {
+    const mediaGroup = groupGalleryMedia(current.items).find((value) => value.key === galleryMediaGroupKey(item));
+    if (!mediaGroup) return;
+    const folderIndex = mediaGroup.folders.findIndex((folder) => folder.path === galleryMediaParentPath(item.relativePath));
+    const itemIndex = mediaGroup.folders[folderIndex]?.items.findIndex((value) => value.uuid === item.uuid) ?? -1;
+    const target = itemIndex + direction;
+    if (folderIndex < 0 || itemIndex < 0 || target < 0 || target >= mediaGroup.folders[folderIndex].items.length) return;
+    const folders = mediaGroup.folders.map((folder) => ({ ...folder, items: [...folder.items] }));
+    [folders[folderIndex].items[itemIndex], folders[folderIndex].items[target]] = [folders[folderIndex].items[target], folders[folderIndex].items[itemIndex]];
+    await applyFolderOrder(folders, "Item order saved");
+  }
+  async function applyFolderOrder(folders: GalleryMediaFolder[], successMessage: string) {
+    setMessage("");
+    try {
+      const result = await reorderItems({ variables: {
+        setID,
+        itemUUIDs: flattenGalleryMediaFolders(folders).map((item) => item.uuid),
+        expectedMetadataRevision: current.row.metadataRevision,
+      } });
+      if (result.data) setDraft(result.data.reorderGalleryItems);
+      client.cache.evict({ fieldName: "galleryMemberIndex" });
+      setMessage(successMessage);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Folder ordering failed"); }
+  }
+  async function moveFolder(folders: GalleryMediaFolder[], folderIndex: number, direction: -1 | 1) {
+    const target = folderIndex + direction;
+    if (folderIndex < 0 || target < 0 || target >= folders.length || folders[folderIndex].path === "" || folders[target].path === "") return;
+    const reordered = [...folders];
+    [reordered[folderIndex], reordered[target]] = [reordered[target], reordered[folderIndex]];
+    await applyFolderOrder(reordered, "Folder order saved");
+  }
+  async function naturalSortFolder(folders: GalleryMediaFolder[], folderIndex: number) {
+    const reordered = folders.map((folder, index) => index === folderIndex ? { ...folder, items: [...folder.items].sort(naturalFileNameCompare) } : folder);
+    await applyFolderOrder(reordered, "Folder sorted by filename");
+  }
+  const mediaGroups = groupGalleryMedia(current.items);
+  const duplicateFileNames = current.items.reduce<Record<string, number>>((counts, item) => {
+    const name = galleryMediaFileName(item.relativePath).toLowerCase();
+    counts[name] = (counts[name] || 0) + 1;
+    return counts;
+  }, {});
   return <main className="manage-page"><header className="manage-heading"><div><Link to="/manage">← Gallery</Link><h2>{draft.row.title}</h2><p>{draft.row.state} · revision {draft.row.metadataRevision}</p></div>
     <div className="manage-actions">{draft.row.state !== "ACTIVE" ? <button onClick={() => transition("ACTIVE")}>Activate</button> : <button onClick={() => transition("DRAFT")}>Draft</button>}<button onClick={() => transition("ARCHIVED")}>Archive</button></div></header>
     <nav className="editor-tabs">{tabs.map((value) => <button key={value} className={tab === value ? "is-active" : ""} onClick={() => setParameters({ tab: value })}>{value}</button>)}</nav>
@@ -166,8 +210,17 @@ export function ManageGalleryEditorPage() {
       {!relationsValid ? <p className="manage-error">Finish or remove every empty Coser, Character and Tag row before saving.</p> : null}
       <div className="manage-panel-actions"><button type="button" disabled={!relationsValid || relationState.loading} onClick={saveRelations}>{relationState.loading ? "Saving…" : "Save all relations"}</button></div>
     </section> : null}
-    {tab === "media" ? <section><div className="manage-inline-toolbar"><span>{draft.items.length} members</span><button type="button" onClick={autoCover}>Reset cover to auto</button></div><div className="manage-table-wrap"><table className="manage-table manage-media-table"><thead><tr><th>Order</th><th>Path / Caption</th><th>Type</th><th>Category</th><th>Availability</th><th>Processing</th><th>Actions</th></tr></thead><tbody>{draft.items.map((item) => <tr key={item.uuid} className={item.excluded ? "is-excluded" : ""}><td><button type="button" aria-label="Move up" onClick={() => move(item, -1)}>↑</button><button type="button" aria-label="Move down" onClick={() => move(item, 1)}>↓</button></td><td><strong>{item.relativePath}</strong><input aria-label={`Caption for ${item.relativePath}`} value={item.caption} maxLength={1000} placeholder="Caption" onChange={(event) => editItem(item.uuid, { caption: event.target.value })} /></td><td>{item.mediaKind}<small>{item.contentFormat}</small></td><td>{item.mediaKind === "STATIC_IMAGE" ? <select value={item.imageCategory || "PHOTO"} onChange={(event) => editItem(item.uuid, { imageCategory: event.target.value as "PHOTO" | "SELFIE" })}><option value="PHOTO">PHOTO</option><option value="SELFIE">SELFIE</option></select> : "—"}</td><td>{item.availability}</td><td>{item.processingState}</td><td><button type="button" onClick={() => saveItem(item)}>Save</button><button type="button" onClick={() => toggleExcluded(item)}>{item.excluded ? "Restore" : "Exclude"}</button>{item.mediaKind === "STATIC_IMAGE" ? <button type="button" onClick={() => chooseCover(item)}>Cover</button> : null}</td></tr>)}</tbody></table></div></section> : null}
-    {tab === "source" ? <section className="manage-panel"><h3>来源与扫描</h3><dl><dt>Path</dt><dd>{draft.row.sourcePath}</dd><dt>Availability</dt><dd>{draft.row.sourceAvailability}</dd><dt>Reconcile</dt><dd>{draft.row.reconcileState}</dd><dt>Scan revision</dt><dd>{draft.row.scanRevision}</dd></dl><div className="manage-panel-actions"><button type="button" disabled={scanState.loading} onClick={scan}>{scanState.loading ? "Scanning…" : "Scan source now"}</button><button type="button" onClick={() => navigator.clipboard?.writeText(draft.row.sourcePath)}>Copy path</button></div></section> : null}
+    {tab === "media" ? <section><div className="manage-inline-toolbar"><span>{draft.items.length} members · folder paths are relative to the Gallery root</span><button type="button" onClick={autoCover}>Reset cover to auto</button></div>
+      <div className="manage-media-groups">{mediaGroups.map((mediaGroup) => <section className="manage-media-group" key={mediaGroup.key}><header><h3>{mediaGroup.label}</h3><span>{flattenGalleryMediaFolders(mediaGroup.folders).length}</span></header>
+        {mediaGroup.folders.map((folder, folderIndex) => <section className="manage-media-folder" key={`${mediaGroup.key}:${folder.path || "root"}`}><header><div><strong>{folder.path || "Gallery root"}</strong><small>{folder.items.length} item{folder.items.length === 1 ? "" : "s"}</small></div><div>
+          {folder.path ? <><button type="button" aria-label={`Move folder ${folder.path} up`} disabled={reorderState.loading || folderIndex === (mediaGroup.folders[0]?.path === "" ? 1 : 0)} onClick={() => moveFolder(mediaGroup.folders, folderIndex, -1)}>↑ Folder</button><button type="button" aria-label={`Move folder ${folder.path} down`} disabled={reorderState.loading || folderIndex === mediaGroup.folders.length - 1} onClick={() => moveFolder(mediaGroup.folders, folderIndex, 1)}>↓ Folder</button></> : <span className="manage-media-root-note">Always first</span>}
+          <button type="button" disabled={reorderState.loading || folder.items.length < 2} onClick={() => naturalSortFolder(mediaGroup.folders, folderIndex)}>Natural sort filenames</button>
+        </div></header><div className="manage-table-wrap"><table className="manage-table manage-media-table"><thead><tr><th>Order</th><th>File / Caption</th><th>Type</th><th>Category</th><th>Availability</th><th>Processing</th><th>Actions</th></tr></thead><tbody>{folder.items.map((item, itemIndex) => {
+          const fileName = galleryMediaFileName(item.relativePath);
+          return <tr key={item.uuid} className={item.excluded ? "is-excluded" : ""}><td><button type="button" aria-label={`Move ${item.relativePath} up`} disabled={itemIndex === 0} onClick={() => move(item, -1)}>↑</button><button type="button" aria-label={`Move ${item.relativePath} down`} disabled={itemIndex === folder.items.length - 1} onClick={() => move(item, 1)}>↓</button></td><td><strong title={item.relativePath}>{fileName}</strong><small className="manage-media-parent-path">{folder.path || "Gallery root"}{duplicateFileNames[fileName.toLowerCase()] > 1 ? " · duplicate filename" : ""}</small><input aria-label={`Caption for ${item.relativePath}`} value={item.caption} maxLength={1000} placeholder="Caption" onChange={(event) => editItem(item.uuid, { caption: event.target.value })} /></td><td>{item.mediaKind}<small>{item.contentFormat}</small>{item.mediaKind === "VIDEO" && item.videoProbeState ? <small>{item.videoContainer || "unknown"} · {item.videoCodec || "unknown"}{item.audioCodec ? ` / ${item.audioCodec}` : ""} · {item.videoWidth}×{item.videoHeight}</small> : null}</td><td>{item.mediaKind === "STATIC_IMAGE" ? <select value={item.imageCategory || "PHOTO"} onChange={(event) => editItem(item.uuid, { imageCategory: event.target.value as "PHOTO" | "SELFIE" })}><option value="PHOTO">PHOTO</option><option value="SELFIE">SELFIE</option></select> : "—"}</td><td>{item.availability}</td><td>{item.mediaKind === "VIDEO" ? item.videoProbeState || item.processingState : item.processingState}{item.videoErrorCode ? <small>{item.videoErrorCode}</small> : null}</td><td><button type="button" onClick={() => saveItem(item)}>Save</button><button type="button" onClick={() => toggleExcluded(item)}>{item.excluded ? "Restore" : "Exclude"}</button>{item.mediaKind === "STATIC_IMAGE" ? <button type="button" onClick={() => chooseCover(item)}>Cover</button> : null}{item.mediaKind === "VIDEO" ? <button type="button" disabled={retryVideoState.loading} onClick={() => retryVideoProcessing(item)}>Retry video</button> : null}</td></tr>;
+        })}</tbody></table></div></section>)}
+      </section>)}</div></section> : null}
+    {tab === "source" ? <section className="manage-panel"><h3>来源与扫描</h3><dl><dt>Path</dt><dd>{draft.row.sourcePath}</dd><dt>Availability</dt><dd>{draft.row.sourceAvailability}</dd><dt>Reconcile</dt><dd>{draft.row.reconcileState}</dd><dt>Scan revision</dt><dd>{draft.row.scanRevision}</dd></dl><label className="manage-scan-option"><input type="checkbox" checked={excludeNewRootMedia} onChange={(event) => setExcludeNewRootMedia(event.target.checked)} /><span><strong>Auto-exclude newly discovered media in Gallery root</strong><small>Nested media stays included. Existing Restore/Exclude choices are never overwritten.</small></span></label><div className="manage-panel-actions"><button type="button" disabled={scanState.loading} onClick={scan}>{scanState.loading ? "Scanning…" : "Scan source now"}</button><button type="button" onClick={() => navigator.clipboard?.writeText(draft.row.sourcePath)}>Copy path</button></div></section> : null}
     {tab === "manifest" ? <section className="manage-panel manage-manifest"><h3>Manifest</h3><p>Manifest is optional. Scans only detect its state; database and file changes are synchronized only by these explicit actions.</p>
       {manifestQuery.loading ? <p>Checking Manifest…</p> : manifestQuery.error ? <p className="manage-error">Manifest inspection failed: {manifestQuery.error.message}</p> : manifestQuery.data ? <><dl><dt>Status</dt><dd><strong className={`manifest-status is-${manifestQuery.data.manageGalleryManifest.status.toLowerCase()}`}>{manifestQuery.data.manageGalleryManifest.status}</strong></dd><dt>Path</dt><dd>{manifestQuery.data.manageGalleryManifest.path || "No source path"}</dd><dt>Manifest revision</dt><dd>{manifestQuery.data.manageGalleryManifest.manifestRevision}</dd><dt>Database revision</dt><dd>{manifestQuery.data.manageGalleryManifest.metadataRevision}</dd></dl>
         {manifestQuery.data.manageGalleryManifest.conflicts.length ? <div className="manifest-conflicts"><h4>Conflicts require an explicit decision for every field</h4>{manifestQuery.data.manageGalleryManifest.conflicts.map((conflict) => <article key={conflict.path}><code>{conflict.path}</code><div><label>Database<pre>{conflict.databaseJSON}</pre></label><label>Manifest file<pre>{conflict.fileJSON}</pre></label></div><select aria-label={`Resolution for ${conflict.path}`} value={conflictChoices[conflict.path] || ""} onChange={(event) => setConflictChoices({ ...conflictChoices, [conflict.path]: event.target.value as "DATABASE" | "FILE" })}><option value="">Choose…</option><option value="DATABASE">Keep database</option><option value="FILE">Use Manifest file</option></select></article>)}<button type="button" disabled={resolveManifestState.loading} onClick={resolveManifestConflicts}>{resolveManifestState.loading ? "Resolving…" : "Resolve all and Pull"}</button></div> : null}

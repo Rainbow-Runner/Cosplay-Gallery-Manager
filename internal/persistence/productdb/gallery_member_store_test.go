@@ -147,6 +147,53 @@ func TestGalleryItemMoveUsesGapThenRebalancesOnlyCurrentGroup(t *testing.T) {
 	}
 }
 
+func TestGalleryItemGroupReorderIsAtomicCompleteAndKeepsOtherGroups(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 8, 11, 0, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	store := db.Galleries()
+	root := addPositionedItem(t, store, created.ID, source.ID, "root.jpg", gallery.MediaKindStaticImage, 1024, now)
+	chapterA := addPositionedItem(t, store, created.ID, source.ID, "disc-a/1.jpg", gallery.MediaKindStaticImage, 2048, now)
+	chapterB := addPositionedItem(t, store, created.ID, source.ID, "disc-b/1.jpg", gallery.MediaKindStaticImage, 3072, now)
+	video := addPositionedItem(t, store, created.ID, source.ID, "disc-a/clip.mp4", gallery.MediaKindVideo, 4096, now)
+
+	current, err := store.Find(ctx, created.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.ReorderItemsWithinGroup(ctx, []int64{root.ID, chapterB.ID, chapterA.ID}, current.MetadataRevision, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	items := loadGalleryItemsForTest(t, db, created.ID)
+	if items[0].ID != root.ID || items[1].ID != chapterB.ID || items[2].ID != chapterA.ID {
+		t.Fatalf("photo order = %#v", items[:3])
+	}
+	persistedVideo, err := store.FindItem(ctx, video.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if persistedVideo.Position != 4096 {
+		t.Fatalf("group reorder changed video position to %d", persistedVideo.Position)
+	}
+	after, err := store.Find(ctx, created.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.MetadataRevision != current.MetadataRevision+1 {
+		t.Fatalf("metadata revision = %d, want %d", after.MetadataRevision, current.MetadataRevision+1)
+	}
+	if err := store.ReorderItemsWithinGroup(ctx, []int64{root.ID, chapterB.ID}, after.MetadataRevision, now.Add(2*time.Minute)); !errors.Is(err, ErrInvalidGalleryItemOrder) {
+		t.Fatalf("incomplete reorder error = %v", err)
+	}
+	if err := store.ReorderItemsWithinGroup(ctx, []int64{root.ID, chapterB.ID, chapterB.ID}, after.MetadataRevision, now.Add(2*time.Minute)); !errors.Is(err, ErrInvalidGalleryItemOrder) {
+		t.Fatalf("duplicate reorder error = %v", err)
+	}
+	if err := store.ReorderItemsWithinGroup(ctx, []int64{root.ID, chapterB.ID, video.ID}, after.MetadataRevision, now.Add(2*time.Minute)); !errors.Is(err, ErrInvalidGalleryItemOrder) {
+		t.Fatalf("cross-group reorder error = %v", err)
+	}
+}
+
 func addPositionedItem(
 	t *testing.T,
 	store *GalleryStore,

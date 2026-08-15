@@ -4,7 +4,7 @@ export interface ManageGalleryRow {
   reconcileState: string; overLimit: boolean; itemCount: number; missingCount: number; pendingCount: number; errorCount: number; blockingIssues: number;
 }
 export interface ManageGalleryPage { items: ManageGalleryRow[]; summary: { draft: number; overLimit: number; unavailable: number; blocking: number; missingItem: number }; page: number; pageSize: number; totalItems: number; totalPages: number }
-export interface ManageGalleryItem { uuid: string; relativePath: string; mediaKind: string; contentFormat: string; imageCategory?: string | null; position: string; caption: string; excluded: boolean; availability: string; processingState: string; byteSize: number }
+export interface ManageGalleryItem { uuid: string; relativePath: string; mediaKind: string; contentFormat: string; imageCategory?: string | null; position: string; caption: string; excluded: boolean; availability: string; processingState: string; byteSize: number; videoProbeState: string; videoErrorCode: string; videoContainer: string; videoDurationSeconds: number; videoWidth: number; videoHeight: number; videoCodec: string; audioCodec: string }
 export interface ManageGalleryCast { characterUUID: string; characterName: string; workUUID: string; workName: string; position: string }
 export interface ManageGalleryCredit { coserUUID: string; coserName: string; position: string; cast: ManageGalleryCast[] }
 export interface ManageGalleryTag { uuid: string; name: string; position: string }
@@ -33,6 +33,17 @@ export interface ManageRuntimeSettings {
   enhancedCacheMaximumBytes: number; minimumFreeBytes: number; minimumFreePercent: number; automaticScanEnabled: boolean; automaticSchedulesSuspended: boolean;
   dailyBackupEnabled: boolean; dailyBackupRetention: number;
   archiveMaxEntries: number; archiveMaxEntryBytes: number; archiveMaxTotalBytes: number; archiveMaxCompressionRatio: number; archiveMaxImagePixels: number;
+}
+
+export interface ManageVideoDependencyStatus {
+  ffmpegAvailable: boolean;
+  ffmpegSource: string;
+  ffmpegVersion: string;
+  ffmpegErrorCode: string;
+  ffprobeAvailable: boolean;
+  ffprobeSource: string;
+  ffprobeVersion: string;
+  ffprobeErrorCode: string;
 }
 export interface ManageCacheStorage { path: string; byteSize: number; fileCount: number; baseByteSize: number; enhancedByteSize: number }
 export interface ManageProcessingJob { id: number; kind: string; galleryID?: number | null; itemUUID?: string | null; variant: string; status: string; priority: number; attemptCount: number; maxAttempts: number; lastErrorCode: string; structuralFailure: boolean; createdAt: string; updatedAt: string }

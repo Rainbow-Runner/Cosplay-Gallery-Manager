@@ -11,11 +11,15 @@ const (
 )
 
 type VideoTechnicalInfo struct {
-	Container  string
-	VideoCodec string
-	AudioCodec string
-	Rotation   int
-	HDR        bool
+	Container        string
+	VideoCodec       string
+	AudioCodec       string
+	Rotation         int
+	HDR              bool
+	VideoStreamIndex int
+	AudioStreamIndex *int
+	DisplayWidth     int
+	DisplayHeight    int
 }
 
 type VideoPlaybackPlan struct {
@@ -28,6 +32,11 @@ type VideoPlaybackPlan struct {
 	SelectVideoTrack int
 	SelectAudioTrack int
 	IncludeSubtitles bool
+	CopyVideo        bool
+	CopyAudio        bool
+	MaximumWidth     int
+	MaximumHeight    int
+	Rotation         int
 }
 
 // PlanVideoPlayback intentionally implements only the first-version baseline:
@@ -37,11 +46,18 @@ func PlanVideoPlayback(info VideoTechnicalInfo) VideoPlaybackPlan {
 	container := strings.ToLower(info.Container)
 	video := strings.ToLower(info.VideoCodec)
 	audio := strings.ToLower(info.AudioCodec)
+	audioIndex := -1
+	if info.AudioStreamIndex != nil {
+		audioIndex = *info.AudioStreamIndex
+	}
+	maximumWidth, maximumHeight := 1920, 1080
+	if info.DisplayHeight > info.DisplayWidth {
+		maximumWidth, maximumHeight = 1080, 1920
+	}
 	plan := VideoPlaybackPlan{Mode: PlaybackTranscode, Container: "mp4", VideoCodec: "h264", AudioCodec: "aac", ApplyRotation: info.Rotation%360 != 0,
-		ToneMapHDRToSDR: info.HDR, SelectVideoTrack: 0, SelectAudioTrack: 0, IncludeSubtitles: false}
-	compatibleMP4 := (container == "mp4" || container == "mov" || container == "m4v") && video == "h264" && (audio == "" || audio == "aac" || audio == "mp3")
-	compatibleWebM := container == "webm" && (video == "vp8" || video == "vp9") && (audio == "" || audio == "opus" || audio == "vorbis")
-	if (compatibleMP4 || compatibleWebM) && !plan.ApplyRotation && !plan.ToneMapHDRToSDR {
+		ToneMapHDRToSDR: info.HDR, SelectVideoTrack: info.VideoStreamIndex, SelectAudioTrack: audioIndex, IncludeSubtitles: false, MaximumWidth: maximumWidth, MaximumHeight: maximumHeight, Rotation: info.Rotation}
+	compatibleMP4 := container == "mp4" && video == "h264" && (audio == "" || audio == "aac" || audio == "mp3")
+	if compatibleMP4 && !plan.ApplyRotation && !plan.ToneMapHDRToSDR {
 		plan.Mode = PlaybackDirect
 		plan.Container = container
 		plan.VideoCodec = video
@@ -50,7 +66,19 @@ func PlanVideoPlayback(info VideoTechnicalInfo) VideoPlaybackPlan {
 	}
 	if video == "h264" && (audio == "" || audio == "aac") && !plan.ApplyRotation && !plan.ToneMapHDRToSDR {
 		plan.Mode = PlaybackRemux
+		plan.CopyVideo = true
+		plan.CopyAudio = audio == "aac"
 		return plan
 	}
+	if video == "h264" && !plan.ApplyRotation && !plan.ToneMapHDRToSDR {
+		plan.Mode = PlaybackRemux
+		plan.CopyVideo = true
+		plan.CopyAudio = false
+	}
 	return plan
+}
+
+func PlaybackPlanFromMetadata(metadata VideoTechnicalMetadata) VideoPlaybackPlan {
+	return PlanVideoPlayback(VideoTechnicalInfo{Container: metadata.Container, VideoCodec: metadata.VideoCodec, AudioCodec: metadata.AudioCodec, Rotation: metadata.Rotation, HDR: metadata.HDR,
+		VideoStreamIndex: metadata.VideoStreamIndex, AudioStreamIndex: metadata.AudioStreamIndex, DisplayWidth: metadata.DisplayWidth, DisplayHeight: metadata.DisplayHeight})
 }

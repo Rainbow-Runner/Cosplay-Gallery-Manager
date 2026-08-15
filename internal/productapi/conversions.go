@@ -35,7 +35,7 @@ func galleryCard(value browse.GalleryCard) *BrowseGalleryCard {
 		CollectionType: CollectionType(value.CollectionType), ContentRating: ContentRating(value.ContentRating),
 		Cover: &GalleryCover{Kind: string(value.Cover.Kind), Revision: value.Cover.Revision, Managed: value.Cover.Managed,
 			Warning: value.Cover.Warning, Resource: resourceIdentity(value.Cover.Resource)},
-		Credits: entitySummaries(value.Credits), CreditCount: value.CreditCount,
+		Credits: personSummaries(value.Credits), CreditCount: value.CreditCount,
 		Characters: entitySummaries(value.Characters), CharacterCount: value.CharacterCount,
 		Works: entitySummaries(value.Works), WorkCount: value.WorkCount,
 		ShootDate: value.ShootDate, AddedAtUtc: value.AddedAtUTC.UTC().Format("2006-01-02T15:04:05Z"),
@@ -63,6 +63,10 @@ func onDemandResource(value browse.OnDemandResource) *OnDemandResource {
 	return &OnDemandResource{Status: ProcessingState(value.Status), Resource: resourceIdentity(value.Resource), ErrorCode: value.ErrorCode}
 }
 
+func videoPlaybackStatusModel(value browse.VideoPlaybackStatus) *VideoPlaybackStatus {
+	return &VideoPlaybackStatus{ItemUUID: value.ItemUUID, Mode: value.Mode, Status: ProcessingState(value.Status), ContentRevision: value.ContentRevision, Resource: resourceIdentity(value.Resource), ErrorCode: value.ErrorCode}
+}
+
 func entitySummary(value browse.EntitySummary) *EntitySummary {
 	return &EntitySummary{UUID: value.UUID, Name: value.Name}
 }
@@ -75,11 +79,29 @@ func entitySummaries(values []browse.EntitySummary) []*EntitySummary {
 	return result
 }
 
+func personSummary(value browse.PersonSummary) *PersonSummary {
+	result := &PersonSummary{UUID: value.UUID, Name: value.Name}
+	if value.AvatarAvailable {
+		url := coserAssetResourceURL(value.UUID, value.AssetRevision, "avatar-480")
+		result.AvatarURL = &url
+	}
+	return result
+}
+
+func personSummaries(values []browse.PersonSummary) []*PersonSummary {
+	result := make([]*PersonSummary, 0, len(values))
+	for _, value := range values {
+		result = append(result, personSummary(value))
+	}
+	return result
+}
+
 func galleryDetail(value browse.GalleryDetail) *GalleryDetail {
 	result := &GalleryDetail{Card: galleryCard(value.Card), Description: value.Description, PhotographerName: value.PhotographerName,
-		StudioName: value.StudioName, AvailableBytes: value.AvailableBytes, Tags: entitySummaries(value.Tags), Redirected: value.Redirected}
+		StudioName: value.StudioName, AvailableBytes: value.AvailableBytes, MediaParentDirectories: value.MediaParentDirectories,
+		Tags: entitySummaries(value.Tags), Redirected: value.Redirected}
 	for _, credit := range value.Credits {
-		result.Credits = append(result.Credits, &GalleryCreditDetail{Coser: entitySummary(credit.Coser),
+		result.Credits = append(result.Credits, &GalleryCreditDetail{Coser: personSummary(credit.Coser),
 			Characters: entitySummaries(credit.Characters), Works: entitySummaries(credit.Works)})
 	}
 	for _, link := range value.ExternalLinks {
@@ -150,8 +172,7 @@ func randomMediaItem(value browse.RandomMediaItem) *RandomMediaItem {
 func entityPage(value browse.EntityPage) *EntityPage {
 	result := &EntityPage{Page: value.Page, PageSize: value.PageSize, TotalItems: value.TotalItems, TotalPages: value.TotalPages}
 	for _, item := range value.Items {
-		result.Items = append(result.Items, &EntityIndexItem{Kind: SearchEntityKind(item.Kind), UUID: item.UUID,
-			Slug: item.Slug, Name: item.Name, Aliases: item.Aliases})
+		result.Items = append(result.Items, entityIndexItem(item))
 	}
 	return result
 }
@@ -281,7 +302,9 @@ func manageGalleryDetail(value manage.GalleryDetail) *ManageGalleryDetail {
 		}
 		result.Items = append(result.Items, &ManageGalleryItem{UUID: item.UUID, RelativePath: item.RelativePath, MediaKind: MediaKind(item.MediaKind), ContentFormat: ContentFormat(item.ContentFormat),
 			ImageCategory: category, Position: strconv.FormatInt(item.Position, 10), Caption: item.Caption, Excluded: item.Excluded, Availability: string(item.Availability),
-			ProcessingState: ProcessingState(item.ProcessingState), ByteSize: item.ByteSize})
+			ProcessingState: ProcessingState(item.ProcessingState), ByteSize: item.ByteSize, VideoProbeState: item.VideoProbeState, VideoErrorCode: item.VideoErrorCode,
+			VideoContainer: item.VideoContainer, VideoDurationSeconds: item.VideoDurationSeconds, VideoWidth: item.VideoWidth, VideoHeight: item.VideoHeight,
+			VideoCodec: item.VideoCodec, AudioCodec: item.AudioCodec})
 	}
 	for _, credit := range value.Credits {
 		convertedCredit := &ManageGalleryCredit{CoserUUID: credit.CoserUUID, CoserName: credit.CoserName, Position: strconv.FormatInt(credit.Position, 10)}

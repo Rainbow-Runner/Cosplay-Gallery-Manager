@@ -15,6 +15,7 @@ var (
 	ErrGalleryItemNotFound       = errors.New("GalleryItem not found")
 	ErrGalleryItemNotForgettable = errors.New("GalleryItem must be excluded or missing before it can be forgotten")
 	ErrMoveAcrossMediaGroups     = errors.New("GalleryItem cannot be dragged across media groups")
+	ErrInvalidGalleryItemOrder   = errors.New("GalleryItem order must contain every item in exactly one media group once")
 )
 
 // FindItem returns one Gallery-scoped member. It does not expose a standalone
@@ -65,6 +66,11 @@ func (s *GalleryStore) SetItemExcluded(
 	`, boolInt(excluded), formatTime(normalisedTime(now)), itemID); err != nil {
 		return gallery.Item{}, fmt.Errorf("updating GalleryItem exclusion: %w", err)
 	}
+	if !excluded {
+		if err := enqueueScanProcessingJobs(ctx, tx, item.GalleryID, now); err != nil {
+			return gallery.Item{}, err
+		}
+	}
 	if err := touchGalleryMetadata(ctx, tx, item.GalleryID, expectedRevision, now); err != nil {
 		return gallery.Item{}, err
 	}
@@ -79,6 +85,96 @@ func (s *GalleryStore) SetItemExcluded(
 		return gallery.Item{}, err
 	}
 	return updated, nil
+}
+
+// ReorderItemsWithinGroup atomically applies a complete ordering for one media
+// group. Requiring the exact group set prevents stale clients from silently
+// dropping newly scanned Items or moving an Item across the fixed media groups.
+func (s *GalleryStore) ReorderItemsWithinGroup(
+	ctx context.Context,
+	orderedItemIDs []int64,
+	expectedRevision int64,
+	now time.Time,
+) error {
+	if len(orderedItemIDs) == 0 {
+		return ErrInvalidGalleryItemOrder
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	first, err := findItem(ctx, tx, orderedItemIDs[0])
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrGalleryItemNotFound
+	}
+	if err != nil {
+		return err
+	}
+	current, err := findGallery(ctx, tx, first.GalleryID)
+	if err != nil {
+		return err
+	}
+	if current.MetadataRevision != expectedRevision {
+		return ErrMetadataRevisionConflict
+	}
+	groupItems, err := loadItemsInGroup(ctx, tx, first.GalleryID, itemGroup(first))
+	if err != nil {
+		return err
+	}
+	if len(groupItems) != len(orderedItemIDs) {
+		return ErrInvalidGalleryItemOrder
+	}
+	allowed := make(map[int64]struct{}, len(groupItems))
+	for _, item := range groupItems {
+		allowed[item.ID] = struct{}{}
+	}
+	seen := make(map[int64]struct{}, len(orderedItemIDs))
+	for _, itemID := range orderedItemIDs {
+		if _, exists := allowed[itemID]; !exists {
+			return ErrInvalidGalleryItemOrder
+		}
+		if _, duplicate := seen[itemID]; duplicate {
+			return ErrInvalidGalleryItemOrder
+		}
+		seen[itemID] = struct{}{}
+	}
+	unchanged := true
+	for index := range groupItems {
+		if groupItems[index].ID != orderedItemIDs[index] {
+			unchanged = false
+			break
+		}
+	}
+	if unchanged {
+		return nil
+	}
+
+	var highWater int64
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(position), 0) FROM gallery_items WHERE gallery_id = ?`, first.GalleryID).Scan(&highWater); err != nil {
+		return err
+	}
+	if highWater > int64(^uint64(0)>>1)-int64(len(groupItems)+1)*1024 {
+		return errors.New("GalleryItem position space exhausted")
+	}
+	timestamp := formatTime(normalisedTime(now))
+	for index, item := range groupItems {
+		if _, err := tx.ExecContext(ctx, `UPDATE gallery_items SET position = ?, updated_at_utc = ? WHERE id = ?`,
+			highWater+int64(index+1)*1024, timestamp, item.ID); err != nil {
+			return err
+		}
+	}
+	for index, itemID := range orderedItemIDs {
+		if _, err := tx.ExecContext(ctx, `UPDATE gallery_items SET position = ?, updated_at_utc = ? WHERE id = ?`,
+			groupItems[index].Position, timestamp, itemID); err != nil {
+			return err
+		}
+	}
+	if err := touchGalleryMetadata(ctx, tx, first.GalleryID, expectedRevision, now); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // ForgetItem removes only the application's member record. It is deliberately

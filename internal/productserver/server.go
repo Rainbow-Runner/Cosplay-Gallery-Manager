@@ -17,6 +17,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/stashapp/stash/internal/cosermetadata"
 	"github.com/stashapp/stash/internal/mediaaccess"
 	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/mediaresource"
@@ -25,19 +26,22 @@ import (
 	"github.com/stashapp/stash/internal/productapi"
 	"github.com/stashapp/stash/internal/productauth"
 	"github.com/stashapp/stash/internal/productlog"
+	"github.com/stashapp/stash/internal/videoresource"
 	"github.com/stashapp/stash/pkg/ffmpeg"
 	productweb "github.com/stashapp/stash/ui/web"
 )
 
 type Config struct {
-	Listen       string `json:"listen"`
-	DatabasePath string `json:"database_path"`
-	CachePath    string `json:"cache_path"`
-	WebRoot      string `json:"web_root"`
-	FFmpegPath   string `json:"ffmpeg_path"`
-	LibRawPath   string `json:"libraw_path"`
-	WorkerCount  int    `json:"worker_count"`
-	LogLevel     string `json:"log_level"`
+	Listen                  string `json:"listen"`
+	DatabasePath            string `json:"database_path"`
+	CachePath               string `json:"cache_path"`
+	WebRoot                 string `json:"web_root"`
+	FFmpegPath              string `json:"ffmpeg_path"`
+	FFprobePath             string `json:"ffprobe_path"`
+	LibRawPath              string `json:"libraw_path"`
+	WorkerCount             int    `json:"worker_count"`
+	LogLevel                string `json:"log_level"`
+	MetadataScrapingEnabled bool   `json:"metadata_scraping_enabled"`
 }
 
 func DefaultConfig() Config {
@@ -84,10 +88,12 @@ func (c Config) Validate() error {
 }
 
 type Server struct {
-	Config   Config
-	Database *productdb.Database
-	Auth     *productauth.Service
-	Handler  http.Handler
+	Config        Config
+	Database      *productdb.Database
+	Auth          *productauth.Service
+	Handler       http.Handler
+	CoserMetadata *cosermetadata.Service
+	VideoTools    mediaprocessing.VideoToolchain
 
 	handlerSwitch *switchHandler
 	operationMu   sync.Mutex
@@ -100,6 +106,10 @@ type Server struct {
 }
 
 func Open(config Config) (*Server, error) {
+	return OpenWithMetadata(config)
+}
+
+func OpenWithMetadata(config Config, providers ...cosermetadata.Provider) (*Server, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
@@ -107,15 +117,32 @@ func Open(config Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	server := New(config, database, productauth.New(database))
+	server, err := NewWithMetadata(config, database, productauth.New(database), providers...)
+	if err != nil {
+		_ = database.Close()
+		return nil, err
+	}
 	return server, nil
 }
 
 func New(config Config, database *productdb.Database, auth *productauth.Service) *Server {
-	server := &Server{Config: config, Database: database, Auth: auth, handlerSwitch: &switchHandler{}}
+	server, err := NewWithMetadata(config, database, auth)
+	if err != nil {
+		panic(err)
+	}
+	return server
+}
+
+func NewWithMetadata(config Config, database *productdb.Database, auth *productauth.Service, providers ...cosermetadata.Provider) (*Server, error) {
+	registry, err := cosermetadata.NewRegistry(providers...)
+	if err != nil {
+		return nil, err
+	}
+	tools := mediaprocessing.ResolveVideoToolchain(context.Background(), config.FFmpegPath, config.FFprobePath)
+	server := &Server{Config: config, Database: database, Auth: auth, CoserMetadata: &cosermetadata.Service{Registry: registry}, VideoTools: tools, handlerSwitch: &switchHandler{}}
 	server.Handler = server.handlerSwitch
 	server.rebuildHandler()
-	return server
+	return server, nil
 }
 
 func (s *Server) rebuildHandler() {
@@ -142,6 +169,7 @@ func (s *Server) rebuildHandler() {
 	mux.Handle(coserAssetReviewPath, sameOrigin(s.coserAssetReviewHandler(database)))
 	mux.Handle(coserAssetUploadPrefix, sameOrigin(s.coserAssetUploadHandler(database)))
 	mux.Handle(coserAssetResourcePrefix, s.coserAssetResourceHandler(database))
+	mux.Handle(coserMetadataPrefix, sameOrigin(s.coserMetadataHandler(database)))
 	mux.Handle("/maintenance/status", s.maintenanceStatusHandler(database, auth))
 	mux.Handle("/maintenance/path-mappings", sameOrigin(s.maintenancePathMappingsHandler()))
 	mux.Handle("/maintenance/resume", sameOrigin(s.maintenanceResumeHandler()))
@@ -151,6 +179,10 @@ func (s *Server) rebuildHandler() {
 				Scope: productdb.ResourceScopeAll}, nil
 		}}
 	mux.Handle("/resource/", resourceHandler)
+	directVideoHandler := videoresource.Handler{Database: database, Access: func(request *http.Request) (productdb.ResourceAccess, error) {
+		return productdb.ResourceAccess{Authenticated: auth.AuthorizeRequest(request), Mode: productdb.ResourceBrowse, Scope: productdb.ResourceScopeAll}, nil
+	}}
+	mux.Handle(videoresource.RoutePrefix, directVideoHandler)
 	if s.Config.WebRoot != "" {
 		mux.Handle("/", spaHandler(s.Config.WebRoot))
 	} else if embeddedWeb, ok := productweb.FileSystem(); ok {
@@ -202,15 +234,22 @@ func (s *Server) startWorkers(ctx context.Context) error {
 	if s.Config.LibRawPath != "" {
 		generators = append(generators, mediaprocessing.LibRawGenerator{Executable: s.Config.LibRawPath})
 	}
-	if s.Config.FFmpegPath != "" {
-		generators = append(generators, mediaprocessing.FFmpegPosterGenerator{Encoder: ffmpeg.NewEncoder(s.Config.FFmpegPath)})
+	if s.VideoTools.FFmpeg.Available {
+		encoder := ffmpeg.NewEncoder(s.VideoTools.FFmpeg.Path)
+		generators = append(generators, mediaprocessing.FFmpegPosterGenerator{Encoder: encoder}, mediaprocessing.VideoPlaybackGenerator{Encoder: encoder})
 	}
 	slog.Info("CGM_WORKERS_STARTED",
 		"worker_count", s.Config.WorkerCount,
 		"libraw_enabled", s.Config.LibRawPath != "",
-		"ffmpeg_enabled", s.Config.FFmpegPath != "",
+		"ffmpeg_enabled", s.VideoTools.FFmpeg.Available,
+		"ffprobe_enabled", s.VideoTools.FFprobe.Available,
 	)
-	worker := processingworker.Worker{Database: s.Database, Materializer: mediaaccess.Materializer{TemporaryRoot: temporaryRoot}, Cache: mediaprocessing.CacheWriter{Root: s.Config.CachePath}, Generators: generators}
+	worker := processingworker.Worker{Database: s.Database, Materializer: mediaaccess.Materializer{TemporaryRoot: temporaryRoot}, Cache: mediaprocessing.CacheWriter{Root: s.Config.CachePath}, Generators: generators,
+		ProbeProfileHash: mediaprocessing.VideoProbeProfileHash(s.VideoTools.FFprobe.Version), PosterProfileHash: mediaprocessing.VideoPosterProfileHash(s.VideoTools.FFmpeg.Version),
+		ProbeUnavailableCode: s.VideoTools.FFprobe.ErrorCode, FFmpegUnavailableCode: s.VideoTools.FFmpeg.ErrorCode}
+	if s.VideoTools.FFprobe.Available {
+		worker.VideoProbe = mediaprocessing.ProbeAdapter{Executable: s.VideoTools.FFprobe.Path, Version: s.VideoTools.FFprobe.Version}
+	}
 	workerContext, cancel := context.WithCancel(ctx)
 	s.workerCancel = cancel
 	for index := 0; index < s.Config.WorkerCount; index++ {
@@ -264,9 +303,10 @@ func (h *switchHandler) ServeHTTP(response http.ResponseWriter, request *http.Re
 
 func runWorkerLoop(ctx context.Context, worker processingworker.Worker, owner string) {
 	for ctx.Err() == nil {
+		started := time.Now()
 		job, err := worker.RunOne(ctx, owner, 30*time.Second, time.Now())
 		if err == nil {
-			slog.Debug("CGM_MEDIA_JOB_COMPLETED", "job_id", job.ID, "item_uuid", job.ItemUUID, "variant", job.Variant)
+			logMediaJobResult(job, true, "", time.Since(started))
 			continue
 		}
 		if errors.Is(err, productdb.ErrJobNotClaimable) {
@@ -279,8 +319,44 @@ func runWorkerLoop(ctx context.Context, worker processingworker.Worker, owner st
 			continue
 		}
 		if ctx.Err() == nil {
-			slog.Error("CGM_MEDIA_JOB_FAILED", "job_id", job.ID, "item_uuid", job.ItemUUID, "variant", job.Variant)
+			logMediaJobResult(job, false, processingworker.ErrorCode(err), time.Since(started))
 		}
+	}
+}
+
+func logMediaJobResult(job mediaprocessing.Job, success bool, errorCode string, elapsed time.Duration) {
+	event := "CGM_MEDIA_JOB_COMPLETED"
+	if !success {
+		event = "CGM_MEDIA_JOB_FAILED"
+	}
+	if job.Kind == mediaprocessing.JobItemTechnicalMetadata {
+		event = "CGM_VIDEO_PROBE_COMPLETED"
+		if !success {
+			event = "CGM_VIDEO_PROBE_FAILED"
+		}
+	} else if job.Variant == mediaprocessing.VariantStaticPoster {
+		event = "CGM_VIDEO_POSTER_COMPLETED"
+		if !success {
+			event = "CGM_VIDEO_POSTER_FAILED"
+		}
+	} else if job.Variant == mediaprocessing.VariantVideoPlayback {
+		event = "CGM_VIDEO_PROXY_COMPLETED"
+		if !success {
+			event = "CGM_VIDEO_PROXY_FAILED"
+		}
+	}
+	item := job.ItemUUID
+	if len(item) > 8 {
+		item = item[:8]
+	}
+	attributes := []any{"job_id", job.ID, "item", item, "variant", job.Variant, "elapsed_ms", elapsed.Milliseconds()}
+	if errorCode != "" {
+		attributes = append(attributes, "error_code", errorCode)
+	}
+	if success {
+		slog.Info(event, attributes...)
+	} else {
+		slog.Error(event, attributes...)
 	}
 }
 

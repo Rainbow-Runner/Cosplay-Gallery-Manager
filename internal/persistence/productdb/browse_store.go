@@ -225,15 +225,15 @@ func (s *BrowseStore) galleryCardByID(ctx context.Context, scope browse.Scope, g
 }
 
 func (s *BrowseStore) populateCardCredits(ctx context.Context, galleryID int64, card *browse.GalleryCard) error {
-	rows, err := s.db.QueryContext(ctx, `SELECT coser.uuid,coser.name FROM gallery_credits credit
+	rows, err := s.db.QueryContext(ctx, `SELECT coser.uuid,coser.name,coser.avatar_path<>'',coser.metadata_revision FROM gallery_credits credit
 		JOIN cosers coser ON coser.uuid=credit.coser_uuid WHERE credit.gallery_id=? ORDER BY credit.position,credit.id`, galleryID)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var value browse.EntitySummary
-		if err := rows.Scan(&value.UUID, &value.Name); err != nil {
+		var value browse.PersonSummary
+		if err := rows.Scan(&value.UUID, &value.Name, &value.AvatarAvailable, &value.AssetRevision); err != nil {
 			return err
 		}
 		card.CreditCount++

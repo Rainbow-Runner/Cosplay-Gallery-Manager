@@ -54,5 +54,15 @@ func (s *BrowseStore) MediaDetail(ctx context.Context, itemUUID string) (browse.
 			return browse.MediaDetail{}, err
 		}
 	}
+	if result.Item.MediaKind == "VIDEO" {
+		metadata, findErr := (&VideoMetadataStore{db: s.db}).Find(ctx, itemUUID)
+		if findErr == nil {
+			result.VideoTechnical = &browse.VideoTechnicalSummary{ProbeState: string(metadata.ProbeState), ErrorCode: metadata.LastErrorCode, Container: metadata.Container,
+				DurationSeconds: metadata.DurationSeconds, Width: metadata.DisplayWidth, Height: metadata.DisplayHeight, FrameRate: metadata.FrameRate,
+				VideoCodec: metadata.VideoCodec, AudioCodec: metadata.AudioCodec}
+		} else if !errors.Is(findErr, sql.ErrNoRows) {
+			return browse.MediaDetail{}, findErr
+		}
+	}
 	return result, nil
 }

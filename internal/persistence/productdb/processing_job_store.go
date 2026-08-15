@@ -56,6 +56,9 @@ func (s *ProcessingJobStore) Enqueue(ctx context.Context, input EnqueueJobInput,
 	if input.Kind == mediaprocessing.JobItemDerivative && (input.ItemUUID == "" || input.Variant == "" || input.ContentRevision == nil || *input.ContentRevision <= 0 || input.ProfileHash == "") {
 		return mediaprocessing.Job{}, errors.New("Item derivative job requires Item, variant, content revision and profile")
 	}
+	if input.Kind == mediaprocessing.JobItemTechnicalMetadata && (input.ItemUUID == "" || input.ContentRevision == nil || *input.ContentRevision <= 0 || input.ProfileHash == "") {
+		return mediaprocessing.Job{}, errors.New("Item technical metadata job requires Item, content revision and profile")
+	}
 	payload, err := json.Marshal(input.Payload)
 	if err != nil {
 		return mediaprocessing.Job{}, err
@@ -295,11 +298,15 @@ func requireLeaseRow(result sql.Result, err error) error {
 func validJobKind(kind mediaprocessing.JobKind) bool {
 	switch kind {
 	case mediaprocessing.JobLibraryScan, mediaprocessing.JobGalleryProcessing, mediaprocessing.JobItemDerivative,
-		mediaprocessing.JobManifest, mediaprocessing.JobCache, mediaprocessing.JobBackup:
+		mediaprocessing.JobItemTechnicalMetadata, mediaprocessing.JobManifest, mediaprocessing.JobCache, mediaprocessing.JobBackup:
 		return true
 	default:
 		return false
 	}
+}
+
+func ItemTechnicalMetadataJobKey(itemUUID string, contentRevision int64, profileHash string) string {
+	return fmt.Sprintf("item:%s:video-probe:%d:%s", itemUUID, contentRevision, profileHash)
 }
 
 type rowScanner interface{ Scan(...any) error }

@@ -38,7 +38,7 @@ build_target() {
     --env CGO_ENABLED=1 --env GOOS="${target_os}" --env GOARCH="${target_arch}" --env CC="${target_cc}" \
     --env GOTOOLCHAIN=local --env GOCACHE=/tmp/go-cache --env GOMODCACHE=/go/pkg/mod \
     "${cgm_toolchain_image}" \
-    go build -trimpath -tags cgm_web_embed \
+    go build -trimpath -tags "cgm_web_embed cgm_galleryepic" \
     -o "/out/cgm-${target_os}-${target_arch}${suffix}" ./cmd/cgm
 }
 

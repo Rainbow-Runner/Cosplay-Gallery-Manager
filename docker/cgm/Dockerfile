@@ -16,7 +16,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 COPY --from=web /source/ui/web/build /source/ui/web/build
-RUN CGO_ENABLED=1 go build -trimpath -tags cgm_web_embed \
+RUN CGO_ENABLED=1 go build -trimpath -tags "cgm_web_embed cgm_galleryepic" \
     -ldflags="-X github.com/stashapp/stash/internal/build.version=${CGM_VERSION} -X github.com/stashapp/stash/internal/build.githash=${CGM_GIT_HASH}" \
     -o /out/cgm ./cmd/cgm
 

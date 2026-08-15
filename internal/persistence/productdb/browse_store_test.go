@@ -20,6 +20,9 @@ func TestBrowseGalleryCardScopeCountsRelationsAndOpaqueCover(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.ExecContext(ctx, `UPDATE cosers SET avatar_path='assets/avatar.webp',metadata_revision=2 WHERE uuid=?`, coser.UUID); err != nil {
+		t.Fatal(err)
+	}
 	work, err := db.CoreEntities().CreateWork(ctx, CreateNamedEntityInput{Name: "Work A"}, now)
 	if err != nil {
 		t.Fatal(err)
@@ -78,6 +81,9 @@ func TestBrowseGalleryCardScopeCountsRelationsAndOpaqueCover(t *testing.T) {
 	}
 	if card.CreditCount != 1 || card.CharacterCount != 1 || card.WorkCount != 1 || card.Credits[0].UUID != coser.UUID || card.Characters[0].UUID != character.UUID {
 		t.Fatalf("card summaries = %#v", card)
+	}
+	if !card.Credits[0].AvatarAvailable || card.Credits[0].AssetRevision != 2 {
+		t.Fatalf("card Coser avatar summary = %#v", card.Credits[0])
 	}
 	if !card.Favorite || card.RatingHalfSteps == nil || *card.RatingHalfSteps != 9 || card.ScrubberCount != 1 {
 		t.Fatalf("card personal/scrubber state = %#v", card)

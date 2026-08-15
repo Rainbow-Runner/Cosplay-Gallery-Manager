@@ -44,26 +44,51 @@ type UploadInput struct {
 	BannerFocalPoint *coreentity.FocalPoint
 }
 
+type PreparedAsset struct {
+	Kind             productdb.CoserAssetKind
+	RelativePath     string
+	AvatarCrop       *coreentity.AvatarCrop
+	BannerFocalPoint *coreentity.FocalPoint
+}
+
 func (s Service) Upload(ctx context.Context, input UploadInput) (coreentity.Coser, error) {
+	prepared, err := s.Prepare(ctx, input)
+	if err != nil {
+		return coreentity.Coser{}, err
+	}
+	now := time.Now()
+	if s.Now != nil {
+		now = s.Now()
+	}
+	return s.Database.CoreEntities().SetCoserManagedAsset(ctx, input.CoserUUID, input.ExpectedRevision, productdb.CoserManagedAssetInput{
+		Kind: prepared.Kind, RelativePath: prepared.RelativePath, AvatarCrop: prepared.AvatarCrop, BannerFocalPoint: prepared.BannerFocalPoint,
+	}, now)
+}
+
+// Prepare validates and publishes a managed image and all derivatives without
+// changing Coser metadata. Aggregate imports prepare every selected image first
+// and then publish all database references in one transaction. A later revision
+// conflict can leave only reviewable unreferenced managed files.
+func (s Service) Prepare(ctx context.Context, input UploadInput) (PreparedAsset, error) {
 	if s.Database == nil || input.Reader == nil || input.ExpectedRevision <= 0 {
-		return coreentity.Coser{}, errors.New("invalid Coser asset upload")
+		return PreparedAsset{}, errors.New("invalid Coser asset upload")
 	}
 	if _, err := portableid.Parse(input.CoserUUID); err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	}
 	if input.Kind != productdb.CoserAssetAvatar && input.Kind != productdb.CoserAssetBanner {
-		return coreentity.Coser{}, errors.New("unsupported Coser asset kind")
+		return PreparedAsset{}, errors.New("unsupported Coser asset kind")
 	}
 	if _, err := s.Database.CoreEntities().FindCoser(ctx, input.CoserUUID); err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	}
 	assets, err := ensureAssetsDirectory(s.Root, input.CoserUUID)
 	if err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	}
 	temporary, err := os.CreateTemp(assets, ".coser-upload-*.tmp")
 	if err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	}
 	temporaryPath := temporary.Name()
 	publishedOriginal := false
@@ -74,42 +99,42 @@ func (s Service) Upload(ctx context.Context, input UploadInput) (coreentity.Cose
 		}
 	}()
 	if err := temporary.Chmod(0o600); err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	}
 	written, err := io.Copy(temporary, io.LimitReader(input.Reader, MaxUploadBytes+1))
 	if err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	}
 	if written == 0 || written > MaxUploadBytes {
-		return coreentity.Coser{}, fmt.Errorf("Coser managed image must contain 1 to %d bytes", MaxUploadBytes)
+		return PreparedAsset{}, fmt.Errorf("Coser managed image must contain 1 to %d bytes", MaxUploadBytes)
 	}
 	if err := temporary.Sync(); err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	}
 	if _, err := temporary.Seek(0, io.SeekStart); err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	}
 	config, format, err := image.DecodeConfig(temporary)
 	if err != nil {
-		return coreentity.Coser{}, errors.New("Coser managed asset is not a supported image")
+		return PreparedAsset{}, errors.New("Coser managed asset is not a supported image")
 	}
 	extension, err := acceptedExtension(format)
 	if err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	}
 	if config.Width <= 0 || config.Height <= 0 || uint64(config.Width) > MaxImagePixels/uint64(config.Height) {
-		return coreentity.Coser{}, errors.New("Coser managed image exceeds 50 megapixels")
+		return PreparedAsset{}, errors.New("Coser managed image exceeds 50 megapixels")
 	}
 	if _, err := temporary.Seek(0, io.SeekStart); err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	}
 	if animated, err := isAnimated(temporary, format); err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	} else if animated {
-		return coreentity.Coser{}, errors.New("Coser managed image must be static")
+		return PreparedAsset{}, errors.New("Coser managed image must be static")
 	}
 	if err := temporary.Close(); err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	}
 
 	identifier := portableid.New()
@@ -117,19 +142,19 @@ func (s Service) Upload(ctx context.Context, input UploadInput) (coreentity.Cose
 	originalName := prefix + "-" + identifier + "." + extension
 	originalPath := filepath.Join(assets, originalName)
 	if err := os.Rename(temporaryPath, originalPath); err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	}
 	publishedOriginal = true
 	relativeOriginal := filepath.ToSlash(filepath.Join("assets", originalName))
 
 	decoded, err := imaging.Open(originalPath, imaging.AutoOrientation(true))
 	if err != nil {
-		return coreentity.Coser{}, errors.New("Coser managed asset could not be decoded")
+		return PreparedAsset{}, errors.New("Coser managed asset could not be decoded")
 	}
 	switch input.Kind {
 	case productdb.CoserAssetAvatar:
 		if err := writeJPEGAtomic(filepath.Join(assets, derivativeBase(originalName)+"-480.jpg"), avatarDerivative(decoded, input.AvatarCrop, 480)); err != nil {
-			return coreentity.Coser{}, err
+			return PreparedAsset{}, err
 		}
 	case productdb.CoserAssetBanner:
 		focal := input.BannerFocalPoint
@@ -138,20 +163,14 @@ func (s Service) Upload(ctx context.Context, input UploadInput) (coreentity.Cose
 		}
 		for _, width := range []int{960, 1600} {
 			if err := writeJPEGAtomic(filepath.Join(assets, fmt.Sprintf("%s-%d.jpg", derivativeBase(originalName), width)), bannerDerivative(decoded, focal, width)); err != nil {
-				return coreentity.Coser{}, err
+				return PreparedAsset{}, err
 			}
 		}
 	}
 	if err := syncDirectory(assets); err != nil {
-		return coreentity.Coser{}, err
+		return PreparedAsset{}, err
 	}
-	now := time.Now()
-	if s.Now != nil {
-		now = s.Now()
-	}
-	return s.Database.CoreEntities().SetCoserManagedAsset(ctx, input.CoserUUID, input.ExpectedRevision, productdb.CoserManagedAssetInput{
-		Kind: input.Kind, RelativePath: relativeOriginal, AvatarCrop: input.AvatarCrop, BannerFocalPoint: input.BannerFocalPoint,
-	}, now)
+	return PreparedAsset{Kind: input.Kind, RelativePath: relativeOriginal, AvatarCrop: input.AvatarCrop, BannerFocalPoint: input.BannerFocalPoint}, nil
 }
 
 func acceptedExtension(format string) (string, error) {

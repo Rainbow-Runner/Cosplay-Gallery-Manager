@@ -152,7 +152,6 @@ func createSchemaV1(ctx context.Context, tx *sql.Tx) error {
 	if err := createOperationsSchemaV1(ctx, tx); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -239,6 +238,22 @@ func validateSchemaV1(ctx context.Context, db *sql.DB) error {
 		}
 	}
 
+	return nil
+}
+
+func validateSchemaV2(ctx context.Context, db *sql.DB) error {
+	if err := validateSchemaV1(ctx, db); err != nil {
+		return err
+	}
+	for _, table := range requiredMediaProcessingSchemaV2Tables {
+		exists, err := schemaObjectExists(ctx, db, "table", table)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("%w: required table %q is missing", ErrInvalidProductSchema, table)
+		}
+	}
 	return nil
 }
 

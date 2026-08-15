@@ -16,7 +16,7 @@ type BrowseGalleryCard struct {
 	CollectionType     CollectionType     `json:"collectionType"`
 	ContentRating      ContentRating      `json:"contentRating"`
 	Cover              *GalleryCover      `json:"cover"`
-	Credits            []*EntitySummary   `json:"credits"`
+	Credits            []*PersonSummary   `json:"credits"`
 	CreditCount        int                `json:"creditCount"`
 	Characters         []*EntitySummary   `json:"characters"`
 	CharacterCount     int                `json:"characterCount"`
@@ -133,21 +133,22 @@ type GalleryCover struct {
 }
 
 type GalleryCreditDetail struct {
-	Coser      *EntitySummary   `json:"coser"`
+	Coser      *PersonSummary   `json:"coser"`
 	Characters []*EntitySummary `json:"characters"`
 	Works      []*EntitySummary `json:"works"`
 }
 
 type GalleryDetail struct {
-	Card             *BrowseGalleryCard     `json:"card"`
-	Description      string                 `json:"description"`
-	PhotographerName string                 `json:"photographerName"`
-	StudioName       string                 `json:"studioName"`
-	AvailableBytes   int64                  `json:"availableBytes"`
-	Credits          []*GalleryCreditDetail `json:"credits"`
-	Tags             []*EntitySummary       `json:"tags"`
-	ExternalLinks    []*ExternalLink        `json:"externalLinks"`
-	Redirected       bool                   `json:"redirected"`
+	Card                   *BrowseGalleryCard     `json:"card"`
+	Description            string                 `json:"description"`
+	PhotographerName       string                 `json:"photographerName"`
+	StudioName             string                 `json:"studioName"`
+	AvailableBytes         int64                  `json:"availableBytes"`
+	MediaParentDirectories []string               `json:"mediaParentDirectories"`
+	Credits                []*GalleryCreditDetail `json:"credits"`
+	Tags                   []*EntitySummary       `json:"tags"`
+	ExternalLinks          []*ExternalLink        `json:"externalLinks"`
+	Redirected             bool                   `json:"redirected"`
 }
 
 type GalleryExternalLinkInput struct {
@@ -411,17 +412,25 @@ type ManageGalleryFolderMatch struct {
 }
 
 type ManageGalleryItem struct {
-	UUID            string          `json:"uuid"`
-	RelativePath    string          `json:"relativePath"`
-	MediaKind       MediaKind       `json:"mediaKind"`
-	ContentFormat   ContentFormat   `json:"contentFormat"`
-	ImageCategory   *ImageCategory  `json:"imageCategory,omitempty"`
-	Position        string          `json:"position"`
-	Caption         string          `json:"caption"`
-	Excluded        bool            `json:"excluded"`
-	Availability    string          `json:"availability"`
-	ProcessingState ProcessingState `json:"processingState"`
-	ByteSize        int64           `json:"byteSize"`
+	UUID                 string          `json:"uuid"`
+	RelativePath         string          `json:"relativePath"`
+	MediaKind            MediaKind       `json:"mediaKind"`
+	ContentFormat        ContentFormat   `json:"contentFormat"`
+	ImageCategory        *ImageCategory  `json:"imageCategory,omitempty"`
+	Position             string          `json:"position"`
+	Caption              string          `json:"caption"`
+	Excluded             bool            `json:"excluded"`
+	Availability         string          `json:"availability"`
+	ProcessingState      ProcessingState `json:"processingState"`
+	ByteSize             int64           `json:"byteSize"`
+	VideoProbeState      string          `json:"videoProbeState"`
+	VideoErrorCode       string          `json:"videoErrorCode"`
+	VideoContainer       string          `json:"videoContainer"`
+	VideoDurationSeconds float64         `json:"videoDurationSeconds"`
+	VideoWidth           int             `json:"videoWidth"`
+	VideoHeight          int             `json:"videoHeight"`
+	VideoCodec           string          `json:"videoCodec"`
+	AudioCodec           string          `json:"audioCodec"`
 }
 
 type ManageGalleryManifestState struct {
@@ -587,6 +596,17 @@ type ManageUnassignedDiagnostic struct {
 	MediaCount int    `json:"mediaCount"`
 }
 
+type ManageVideoDependencyStatus struct {
+	FfmpegAvailable  bool   `json:"ffmpegAvailable"`
+	FfmpegSource     string `json:"ffmpegSource"`
+	FfmpegVersion    string `json:"ffmpegVersion"`
+	FfmpegErrorCode  string `json:"ffmpegErrorCode"`
+	FfprobeAvailable bool   `json:"ffprobeAvailable"`
+	FfprobeSource    string `json:"ffprobeSource"`
+	FfprobeVersion   string `json:"ffprobeVersion"`
+	FfprobeErrorCode string `json:"ffprobeErrorCode"`
+}
+
 type ManifestConflictChoiceInput struct {
 	Path   string `json:"path"`
 	Choice string `json:"choice"`
@@ -600,10 +620,11 @@ type MediaCounts struct {
 }
 
 type MediaDetail struct {
-	Item             *GalleryMember     `json:"item"`
-	DisplayResource  *ResourceIdentity  `json:"displayResource,omitempty"`
-	Gallery          *BrowseGalleryCard `json:"gallery"`
-	MetadataRevision int64              `json:"metadataRevision"`
+	Item             *GalleryMember         `json:"item"`
+	DisplayResource  *ResourceIdentity      `json:"displayResource,omitempty"`
+	Gallery          *BrowseGalleryCard     `json:"gallery"`
+	MetadataRevision int64                  `json:"metadataRevision"`
+	VideoTechnical   *VideoTechnicalSummary `json:"videoTechnical,omitempty"`
 }
 
 type MediaPage struct {
@@ -621,6 +642,12 @@ type OnDemandResource struct {
 	Status    ProcessingState   `json:"status"`
 	Resource  *ResourceIdentity `json:"resource,omitempty"`
 	ErrorCode string            `json:"errorCode"`
+}
+
+type PersonSummary struct {
+	UUID      string  `json:"uuid"`
+	Name      string  `json:"name"`
+	AvatarURL *string `json:"avatarURL,omitempty"`
 }
 
 type PersonalStateResult struct {
@@ -776,6 +803,27 @@ type UpdateRecognitionRuleInput struct {
 	Order           int    `json:"order"`
 	Pattern         string `json:"pattern"`
 	FixedDepth      int    `json:"fixedDepth"`
+}
+
+type VideoPlaybackStatus struct {
+	ItemUUID        string            `json:"itemUUID"`
+	Mode            string            `json:"mode"`
+	Status          ProcessingState   `json:"status"`
+	ContentRevision int64             `json:"contentRevision"`
+	Resource        *ResourceIdentity `json:"resource,omitempty"`
+	ErrorCode       string            `json:"errorCode"`
+}
+
+type VideoTechnicalSummary struct {
+	ProbeState      string  `json:"probeState"`
+	ErrorCode       string  `json:"errorCode"`
+	Container       string  `json:"container"`
+	DurationSeconds float64 `json:"durationSeconds"`
+	Width           int     `json:"width"`
+	Height          int     `json:"height"`
+	FrameRate       float64 `json:"frameRate"`
+	VideoCodec      string  `json:"videoCodec"`
+	AudioCodec      string  `json:"audioCodec"`
 }
 
 type WorkDetail struct {

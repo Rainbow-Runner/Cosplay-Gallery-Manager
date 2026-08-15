@@ -102,6 +102,13 @@ func (s *Server) CacheStorageStatus(ctx context.Context) (productapi.CacheStorag
 	return status, nil
 }
 
+func (s *Server) VideoDependencyStatus(context.Context) (productapi.VideoDependencyStatus, error) {
+	return productapi.VideoDependencyStatus{
+		FFmpegAvailable: s.VideoTools.FFmpeg.Available, FFmpegSource: s.VideoTools.FFmpeg.Source, FFmpegVersion: s.VideoTools.FFmpeg.Version, FFmpegErrorCode: s.VideoTools.FFmpeg.ErrorCode,
+		FFprobeAvailable: s.VideoTools.FFprobe.Available, FFprobeSource: s.VideoTools.FFprobe.Source, FFprobeVersion: s.VideoTools.FFprobe.Version, FFprobeErrorCode: s.VideoTools.FFprobe.ErrorCode,
+	}, nil
+}
+
 func (s *Server) CreateFullBackup(ctx context.Context) (productdb.BackupRecord, error) {
 	s.operationMu.Lock()
 	defer s.operationMu.Unlock()
@@ -518,7 +525,7 @@ func (s *Server) validateRuntimeEnvironment() error {
 			return err
 		}
 	}
-	for _, executable := range []string{s.Config.FFmpegPath, s.Config.LibRawPath} {
+	for _, executable := range []string{s.Config.FFmpegPath, s.Config.FFprobePath, s.Config.LibRawPath} {
 		if executable == "" {
 			continue
 		}

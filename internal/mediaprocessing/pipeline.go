@@ -25,6 +25,8 @@ type GenerateRequest struct {
 	ProfileHash     string
 	SourcePath      string
 	DestinationPath string
+	VideoTechnical  *VideoTechnicalMetadata
+	VideoPlan       *VideoPlaybackPlan
 }
 
 type GenerateResult struct {

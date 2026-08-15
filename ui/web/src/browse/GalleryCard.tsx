@@ -48,7 +48,7 @@ export function GalleryCard({ card, scrubberEnabled, favoriteControlVisible = tr
           <span className="gallery-card__cosers" title={presentation.cosers.map((coser) => coser.name).join(" · ")}>
             {presentation.cosers.map((coser) => (
               <Link className="gallery-card__coser-link" key={coser.uuid} to={`/${personRoute}/${encodeURIComponent(coser.uuid)}`} aria-label={coser.name}>
-                <Avatar name={coser.name} size="small" />
+                <Avatar name={coser.name} src={coser.avatarURL} size="small" />
                 <span>{coser.name}</span>
               </Link>
             ))}

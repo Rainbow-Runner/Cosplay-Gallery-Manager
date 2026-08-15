@@ -93,6 +93,10 @@ func (handler Handler) ServeHTTP(response http.ResponseWriter, request *http.Req
 	response.Header().Set("Content-Type", descriptor.MIMEType)
 	response.Header().Set("X-Content-Type-Options", "nosniff")
 	response.Header().Set("Content-Disposition", "inline")
+	if descriptor.Variant == mediaprocessing.VariantVideoPlayback {
+		response.Header().Set("Accept-Ranges", "bytes")
+		_ = http.NewResponseController(response).SetWriteDeadline(time.Time{})
+	}
 	if request.Header.Get("If-None-Match") == etag {
 		response.WriteHeader(http.StatusNotModified)
 		return

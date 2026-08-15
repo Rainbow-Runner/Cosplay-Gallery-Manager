@@ -2,10 +2,29 @@
 
 > 当前里程碑：1.5 本机业务迭代与可诊断性增强
 > 状态：进行中
-> 更新日期：2026-08-01
+> 更新日期：2026-08-15
+
+## 已规划、尚未实现
+
+- 后续（视频处理第三阶段）：已持久化[第三阶段条件式功能规划](VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)。第三阶段A规划按需Storyboard Sprite/WebVTT和可访问辅助时间轴；第三阶段B仅在第二阶段真实大视频冷启动指标证明必要并完成ADR后，才规划单清晰度渐进HLS、会话治理和完整bundle缓存。该阶段不属于当前第一版/1.5门禁，尚未实现或部署。
 
 ## 已完成
 
+- 1.5（视频第一阶段）：产品schema v1→v2迁移在写入前创建并校验SQLite Online Backup；新增FFmpeg/FFprobe成对诊断、产品自有技术元数据、确定性主轨探测、每分钟25项有界存量回填、人工重试，以及20%时间点/960px/不放大/旋转/HDR到SDR的BASE Poster链路。Manage Settings、Gallery媒体行与媒体详情只显示白名单技术状态和稳定错误码。
+- 1.5（视频第二阶段）：实现MP4/H.264/AAC保守DIRECT矩阵、认证且路径无关的原视频GET/HEAD/Range路由，以及按Lightbox/媒体详情实际需求才排队的Remux/H.264-AAC Fast Start MP4代理；代理固定为ENHANCED并受容量、磁盘余量、原子发布和LRU约束。前端准备态保持Poster，完成后切换原生播放器，成员切换会卸载上一视频；Gallery卡片和Scrubber不触发播放。
+- 1.5（视频安全与真实工具门禁）：原视频授权复核ACTIVE/Scope/Hidden/可用性/Exclude/Blocking Issue/current revision与DIRECT方案，逐级拒绝符号链接并保持同一文件描述符响应；日志只写稳定`CGM_VIDEO_*`技术事件。本机FFmpeg/FFprobe/dcraw合成媒体门禁已实际覆盖MP4、MOV、MKV、WebM、无音频、双音轨、旋转、HDR、Poster、Remux和Transcode；本轮未部署，正式数据库迁移及目标浏览器真实业务验收仍待执行。
+- 1.5（Manage设置输入框浅色收敛）：清除Settings页数字输入框残留的旧`#100e10`黑底/白字规则，数字输入和Home source下拉统一使用浅色设计Token，并补齐主色边框与键盘焦点环；浏览器回归锁定全部相关控件的白底深色计算样式和axe A/AA结果。
+- 1.5（Coser详情直达管理）：Coser详情头像改为指向`/manage/cosers?uuid=<coser UUID>`的认证后台深链接，点击后直接载入对应Coser资料编辑器，不依赖目标是否出现在后台当前分页；入口保留原头像视觉，新增中英文可访问名称、悬浮边框与键盘焦点反馈。Model详情不展示人物资料头像，因此不扩展该入口。
+- 1.5（Browse人物头像与社交视觉）：修复Coser/Model索引转换遗漏`avatarURL`以及Gallery卡片人物摘要没有头像资源身份的问题；两处均使用认证、不透明、带revision的`/resource/coser/.../avatar-480`，不暴露托管文件路径。Gallery卡片人物行对齐为32px头像、6px图文间距和14px/500名称；Coser详情按参考站固定显示X、Facebook、Instagram、微博、Patreon、Linktree六项精确实心SVG，缺失账号以灰色不可点击图标占位，自定义平台继续追加并保留通用回退。
+- 1.5（可拔除Coser网络资料Provider）：新增站点无关`cosermetadata`契约与短期预览、编译期可选GalleryEpic适配器、安全出站HTTP、按名称候选搜索以及头像/Banner/社交账号人工逐项导入。默认配置关闭，扫描/Browse/启动/计划任务不外联；无Provider核心构建不依赖GalleryEpic，完整功能构建只通过`cgm_galleryepic`标签组合站点模块。全部选中资产先校验暂存，再与SocialAccount在一个数据库事务中发布，Coser revision只递增一次并标记Manifest dirty。
+- 1.5（Gallery卡片参考站密度）：索引网格改为与GalleryEpic公开页一致的2/3/4/5列断点和16px统一间距，取消宽屏6列；媒体计数改为无底色的12px/16px、400字重白字；Gallery收藏按钮在精确鼠标设备仅悬浮/键盘聚焦时显示，触屏/粗指针保持常驻。3:4比例、零值过滤、P/S/G/V语义、分页和Gallery详情媒体网格均不变。
+- 1.5（Gallery详情标题响应式）：移除主标题`34ch`人为宽度上限；桌面标题使用标题列全部可用宽度，窄屏将操作区移到标题/统计区下方并右对齐，标题字号采用响应式范围，极长无空格标题可安全换行而不产生横向溢出。
+- 1.5（Browse滚动与Gallery定位）：桌面64px Logo/品牌栏随页面滚动离开视口，左侧分区导航保持固定；1024px以下继续保留粘性顶部栏和Drawer入口。Gallery“更多详情”支持点击外部/`Escape`关闭，显示非MISSING实际媒体的去重绝对父目录并直达对应Manage媒体页；这是经确认的认证单所有者有限路径例外，不返回文件名、相对路径、指纹或缓存路径。
+- 1.5（实体候选列表关闭）：通用`ManageEntitySelector`将弹层开关与Apollo查询缓存解耦；Character选择Primary Work以及Gallery关系、Tag父级、合并目标等场景在选择成功后立即关闭候选列表，再次聚焦仍可重新搜索。
+- 1.5（Lightbox操作提示）：Gallery列表三点按钮不显示悬浮提示；进入单媒体Lightbox后，右上角收藏、评分、封面、媒体详情和关闭五项操作显示与状态、语言及`aria-label`一致的提示。
+- 1.5（媒体菜单消隐）：Gallery单媒体三点菜单在打开期间支持点击外部或按`Escape`关闭；监听器按需注册/清理，菜单内部操作、媒体详情跳转和封面revision语义保持不变。
+- 1.5（Gallery详情高保真）：详情页移除独立封面Hero并采用紧凑标题/操作区、2/3/4/6列媒体网格和256px相关推荐栏；混合媒体按Photo/Selfie、GIF、Video依次连续展示，隐藏分类标题，同时保留各组每次24项的增量加载边界。
+- 1.5（单媒体操作）：Gallery媒体卡片与Lightbox已接入单媒体收藏、半星评分、静态图片设封面和媒体详情入口；Lightbox以`?item`作为深链状态，支持浏览器返回、筛选内导航、关闭后定位和`last_item_id`记录。
 - 1.5（Cosplay/Album双分区）：Browse主侧栏按GalleryEpic参考结构重组为Cosplay（Lists/Cosers/Parodies/Magic）与Album（Lists/Models）；新增`/albums`、`/models`、`/model/:slug`，Characters退出主导航但旧路由继续保留。
 - 1.5（派生人物视图）：不新增Model实体，继续由GalleryCast是否存在推导COSPLAY/ALBUM并统一使用Coser UUID；Cosers只列出有可见COSPLAY的人物，Models只列出有可见ALBUM的人物，同一人物可同时出现于两边，卡片按类型进入对应详情路由。
 - 1.5（分区查询口径）：Cosplay Lists固定`COSPLAY + NON_ADULT`，Magic固定`COSPLAY + ADULT`；Album Lists与Models按确认方案展示全部分级ALBUM。Browse GraphQL新增向后兼容的可选`collectionType`，旧调用不传时保持原行为。
@@ -26,10 +45,11 @@
 - 1.5（GalleryEpic UI-08）：视觉回归阈值由1%收紧为0.2%，桌面Browse和390px Gallery详情基线已更新；离线完整业务流程、axe A/AA、键盘和焦点恢复回归通过。
 - 1.5（Gallery卡片Coser入口）：卡片中每个Coser头像与名称均可通过鼠标或键盘进入对应详情页；复用UUID入口到规范slug的既有重定向，不扩展DTO或增加查询；同名不同UUID不会被错误合并。
 - 1.5（Coser详情高保真复核）：按指定GalleryEpic Coser页冻结4:1 Banner、128/80px方形头像叠层、紧凑名称/社交行、36px控件和移动两列几何；增加Breadcrumb与无Banner中性占位，保留Country、Profile、Biography、社交链接、Scope和Timeline原语义。
-- 1.5（Coser Gallery数字分页）：多页作品集使用居中的Chevron和最多5个连续数字页码，当前页浅边框圆角高亮；点击更新现有`scope/page`并读取本机GraphQL，不改变24项分页、DTO、数据库或已确认的6/5/4/3/2列约束。
+- 1.5（Coser Gallery数字分页）：多页作品集使用居中的Chevron和最多5个连续数字页码，当前页浅边框圆角高亮；点击更新现有`scope/page`并读取本机GraphQL，不改变24项分页、DTO或数据库，Gallery网格现统一采用后续确认的2/3/4/5列约束。
 - 1.5（开发日志）：启动配置新增`DEBUG/INFO/WARN/ERROR`日志级别；systemd journal可按稳定事件码、请求ID、端点类别、状态和耗时关联排查，默认不记录查询字符串、GraphQL变量、媒体路径或业务元数据。
 - 1.5（增量开发）：React开发服务器固定在loopback `3100`，通过同源代理复用`127.0.0.1:9999`后端、真实数据库和Session，可使用Vite HMR检查前端；后端继续采用单进程增量构建与用户服务重启，避免两个进程同时访问SQLite。
 - 1.5（扫描规则管理）：媒体库确定性扫描规则已补齐编辑和二次确认删除；可修改名称、类型、顺序、启用、自动建DRAFT、深度或RE2模板，类型切换会清空不适用字段。
+- 1.5（媒体目录排序与根目录扫描策略）：Manage媒体页按完整父目录分组，根目录在各媒体类型组固定置顶；文件夹只在PHOTO/SELFIE/动画/视频各自组内移动并保留内部顺序，可对具体文件夹显式执行文件名自然排序。人工扫描默认自动排除本次新发现的根目录媒体并提供本次开关，既有Exclude/Restore选择不被覆盖，Restore会立即补排基础派生任务。
 - 1.5（规则安全与审计）：规则更新/删除复用既有确定性校验并写入无路径管理审计；删除规则只解除最近发现候选的规则引用，不删除Candidate、DRAFT、GallerySource或媒体文件。
 - P00-01：建立[Stash复用与隔离边界](../architecture/STASH_REUSE_BOUNDARY.md)。
 - P00-02（部分）：新增`internal/product`，定义稳定product ID、工作名、默认路径名称及产品/数据库/Manifest/媒体处理四套独立版本。
@@ -60,7 +80,7 @@
 - P02-06：Manifest `set_id`只生成SOURCE_REBIND_CANDIDATE；来源改绑必须显式确认，两个可访问副本还需要重复来源二次确认。
 - P02-07：IgnoredGallerySource优先于规则并支持set_id；Item排除跨重扫保留；显式忘记只删数据库记录并永久Tombstone UUID。
 - P02-08：新增ZIP/CBZ只读安全校验，覆盖路径穿越、NFC/大小写冲突、链接、特殊Entry、加密Entry、嵌套归档、Entry/体积/压缩比/像素上限和归档媒体限制。
-- P02-09：首次成员按媒体组和自然相对路径分配全局Position；拖拽优先单项更新，间隔耗尽只迁移当前组；1,000上限只统计非排除成员。
+- P02-09：首次成员按媒体组和自然相对路径分配全局Position；Manage完整父目录/文件名自然排序以完整同组UUID序列原子提交并复用既有Position槽位；旧单项移动契约仍限制同组；1,000上限只统计非排除成员。
 - 真实来源闭环：DIRECTORY和ZIP/CBZ扫描只读取用户媒体；实际内容决定静态/动画/视频分类，扩展名错配形成阻断Issue；归档成员大小使用压缩后大小。
 - 阶段2设计记录：[来源发现、扫描与安全边界](../architecture/SOURCE_DISCOVERY_AND_SCAN.md)。
 - P03-01～P03-03：实现 Gallery 完整业务元数据、Album/Cosplay 推导、Credit/Cast 约束，以及 Coser/Work/Character/Tag 最小模型和 SocialAccount。
@@ -84,7 +104,7 @@
 - 阶段4～5设计记录：[媒体处理与Browse API](../architecture/MEDIA_PROCESSING_AND_BROWSE_API.md)。
 - P00/P05（运行入口）：实现本机五步 Setup 所需的后端状态、Argon2id 单所有者密码、可撤销 Session、可信模式基础契约、公开 `healthz/readyz` 与统一认证 GraphQL/媒体资源入口。
 - P04（本机工作器）：产品服务启动数据库租约队列工作器，按配置复用图片、LibRaw 与 FFmpeg Poster 生成器；异常任务保持可恢复、可取消和可重试。
-- P05（GraphQL）：新 schema 已按 Browse 与 Manage 用途分层；Browse DTO 不返回物理路径，Manage Mutation 使用 Gallery 或实体 `metadata_revision` 乐观锁。
+- P05（GraphQL）：新 schema 已按 Browse 与 Manage 用途分层；除认证单所有者`GalleryDetail.mediaParentDirectories`父目录摘要有限例外外，Browse DTO 不返回物理路径，Manage Mutation 使用 Gallery 或实体 `metadata_revision` 乐观锁。
 - P06（BrowseShell）：React 19 已实现 Home、List、Magic、Gallery、Coser、Work、Character、Tag、时间线、搜索、随机、收藏、历史和单媒体详情路由；Gallery详情使用完整轻量成员索引与每组手动展开24项。
 - P06（Gallery卡片）：实现横向位置映射 ordinal、离开恢复封面、精确指针设备启用及全局后台开关；PHOTO/SELFIE/RAW/GIF/VIDEO统一使用静态派生资源或Poster。
 - P07（ManageShell）：实现高密度Gallery问题索引、两阶段媒体库发现/导入、来源扫描、任务队列、运行时设置，以及Gallery五页签和Coser四页签编辑结构。
@@ -142,8 +162,8 @@
 - 运维集成测试验证每日快照到期租约/保留、自动扫描opt-in、完整恢复、Session撤销、任务取消、安全备份注册、异机路径映射门槛、人工恢复，以及数据库交换后故障的自动回滚。
 - 完整备份损坏矩阵验证POSIX/Windows路径穿越、重复/大小写/NFC碰撞、保留名、符号链接、未知Entry、畸形JSON、缺项、无效SQLite产品身份、压缩炸弹和截断ZIP均在替换前拒绝。
 - Operations GraphQL测试验证备份/恢复由Server服务执行且响应不泄漏数据库或存储根。
-- React 19 TypeScript `--noEmit`通过；Vitest当前21个文件、49项测试全部通过。
-- Vite生产构建通过，共转换669个模块；当前主JS minify后、gzip前约472KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。
+- React 19 TypeScript `--noEmit`通过；Vitest当前23个文件、58项测试全部通过。
+- Vite生产构建通过，共转换671个模块；当前主JS minify后、gzip前约474.33KiB，其余页面按路由生成懒加载块，原大于500KiB分包警告已消失。
 - `cgm_web_embed`标签下的产品UI嵌入和Server回归测试通过；`make build-cgm`生成约24MiB单文件验证产物，深层SPA路由、哈希资源immutable缓存和旧UI依赖隔离均已验证。
 - 实体生命周期回归验证了按关系类型返回删除阻断、合并冲突时禁用提交、明确确认词、GraphQL预览/提交、永久Alias/Tombstone和管理审计。
 - Gallery删除回归验证了归档前阻断、过期revision拒绝、密码与确认词双重门禁、Item/Link/Set UUID Tombstone、任务取消保留、IgnoredGallerySource建立，以及来源媒体和Manifest字节不变。
@@ -151,7 +171,7 @@
 - Coser未引用资源回归验证了现用组排除、已替换/已删除分组、未知文件与符号链接跳过、引用变化后过期审阅拒绝、密码/确认词/同源门禁、选择性清理、Manifest保留和无路径审计。
 - BLAKE3依赖固定为`github.com/zeebo/blake3 v0.2.4`并记录模块校验和。
 - 用户来源能力审计未发现删除调用；应用删除仅限失败备份、缓存、临时文件等明确生成数据。
-- Chromium离线Playwright主流程通过，Setup/Browse/Gallery/Coser/Operations axe扫描无WCAG A/AA违规，桌面与390px移动截图在0.2%像素差异门禁下回归通过；Coser详情新增独立桌面/移动基线。
+- Chromium离线Playwright主流程通过，Setup/Browse/Gallery/Coser/Operations axe扫描无WCAG A/AA违规，桌面与390px移动截图在0.2%像素差异门禁下回归通过；Gallery详情新增1440px桌面基线，并实际验证单媒体收藏、封面切换、Lightbox深链/返回与关闭后定位。
 - 真实媒体门禁通过：合成标准DNG由dcraw实际生成代理，动画GIF与FFmpeg生成MP4实际生成Poster，内容分类与扩展名无关。
 - 危险归档单元矩阵通过；完整备份损坏矩阵继续在替换前拒绝危险输入。
 - 固定`GOMAXPROCS=4`的百万Item性能门禁通过：最慢Gallery列表p95约493ms、时间线约477ms，均低于500ms；Tag未缓存约141ms、缓存约143ms，其他目标均通过。
@@ -161,6 +181,21 @@
 
 ## 本机实际业务应用测试部署（2026-07-27）
 
+- 2026-08-12 00:29 CST已增量部署Gallery详情标题响应式与Gallery卡片参考站密度构建，SHA-256为`9e9477e36d1572150a7fe0502d7981e3fcd0dcff533168254e34baf06a43bf35`；旧二进制备份于`/tmp/cgm-before-gallery-cards-20260812`，服务保持`enabled/active`且Health/Ready为204。
+- 当前入口引用`index-BN0Udqs0.js`与`index-qdWPUXcG.css`；`about.json`报告`gitHash=local`、`buildTime=20260812`和`exactSourceAvailable=false`。配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库inode仍为`19679716`；没有替换配置、数据库、媒体、Manifest或缓存。
+- 2026-08-09 20:28 CST已增量部署Browse桌面滚动与Gallery目录定位构建，SHA-256为`e3e595503e80082d15d0c6c49e225b47ce159aa5c34b47b239567f7360685041`；旧二进制备份于`/tmp/cgm-before-gallery-detail-locations-20260809`，服务保持`enabled/active`且Health/Ready为204。
+- 当前入口引用`index-9hJr0i02.js`与`index-hDZ83M8Y.css`；`about.json`报告`gitHash=local`、`buildTime=20260809`和`exactSourceAvailable=false`。配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库inode仍为`19679716`；没有替换配置、数据库、媒体、Manifest或缓存。
+- 2026-08-09 17:30 CST已增量部署Gallery完整父目录分组/排序与根目录新媒体默认排除构建，SHA-256为`007347be19cd1058d94bb554a0dcfd55df5fbcbd90493f613eb44f9ba65cc90b`；旧二进制备份于`/tmp/cgm-before-gallery-media-folders-20260809`，服务保持`enabled/active`且Health/Ready为204。
+- 当前入口引用`index-Br2kDKX5.js`与`index-dwLJ7y5E.css`；配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库inode仍为`19679716`。启动日志确认两个工作器正常启动，没有迁移、启动或任务错误。
+- 2026-08-08 16:27 CST已增量部署通用实体选择器选择后自动关闭修复，SHA-256为`6766a0c08c714af46face98239953d614cdaa12bdc5c97cdd78aa2848cc56817`；旧二进制备份于`/tmp/cgm-before-entity-selector-dismiss-20260808`，服务保持`enabled/active`且Health/Ready为204。
+- 当前入口引用`index-D45_orVP.js`与`index-B5AaBjOr.css`，实体选择器Chunk为`ManageEntitySelector-Be-gqGJ9.js`；配置SHA-256和产品数据库inode部署前后不变。
+- 2026-08-01 04:20 CST已增量部署纠正后的Lightbox右上角五项操作提示，SHA-256为`d482e86092d1831b00266b431ad52e3430902ad07c11c4af781e2f94a3cdfb1c`；被替换的误定位版本备份于`/tmp/cgm-before-lightbox-toolbar-tooltips-20260801`，服务保持`enabled/active`且Health/Ready为204。
+- 当前入口引用`index-BPUu1Roj.js`与`index-B5AaBjOr.css`；配置SHA-256和产品数据库inode部署前后不变。
+- 2026-08-01 04:13 CST曾短暂部署把提示误加到列表三点按钮的构建，SHA-256为`543c40f5995bf2d812d37ce23020514cad94bbe7e8796d8c3d8b65eeb1ccbdd5`；该行为已由04:20构建撤销，记录仅用于回退链追踪。
+- 2026-08-01 04:06 CST已增量部署单媒体菜单点击外部/Escape关闭修复，SHA-256为`30c9a63ec9c176043d8b92956e8a7283abcdf4cc77dd4344583ea9d61064ede7`；旧二进制备份于`/tmp/cgm-before-media-menu-dismiss-20260801`，服务保持`enabled/active`且Health/Ready为204。
+- 当前入口引用`index-BzI7BpIi.js`与`index-B5AaBjOr.css`；配置SHA-256和产品数据库inode部署前后不变。
+- 2026-08-01 03:57 CST已增量部署Gallery详情高保真与单媒体操作构建，SHA-256为`66b235a1f93babc839fd3245c9c8305ff578c1f6b9ba02b1b75128504e49901f`；旧二进制备份于`/tmp/cgm-before-gallery-detail-20260801`，服务保持`enabled/active`且Health/Ready为204。
+- 当前入口引用`index-BB00ESCj.js`与`index-B5AaBjOr.css`；配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库inode仍为`19679716`。
 - 2026-08-01 02:39 CST已增量部署Coser/Model人物名称14px/14px/500字型对齐修复，SHA-256为`5bbf3557bd3e56ed0eb3839797561f70336db2ebde4258e58ff457020d80ec55`；旧二进制备份于`/tmp/cgm-before-person-name-typography-20260801`，服务保持`enabled/active`且Health/Ready为204。
 - 当前入口引用`index-Dagulhjn.js`与`index-DUKMwGwd.css`；配置校验和与产品数据库inode部署前后不变。
 - 2026-08-01 02:26 CST已增量部署Coser/Model索引单行垂直对齐修复，SHA-256为`53bfdbc288f8e9aecd7f89167fab877234b3edc53e88f5c878e58ad4dfe3f041`；旧二进制备份于`/tmp/cgm-before-person-index-alignment-20260801`，服务保持`enabled/active`且Health/Ready为204。
@@ -178,7 +213,7 @@
 - 建立私有配置、数据库、缓存、Coser元数据和备份目录；用户级`cosplay-gallery-manager.service`已启用并运行，仅监听`127.0.0.1:9999`。
 - `/healthz`、`/readyz`为204，Setup/Legal为200，About显示精确源码提交；真实systemd重启后数据库inode和未完成Setup状态保持不变。
 - 按产品流程没有在部署时预置媒体库根、所有者密码或扫描任务；当前`setupComplete=false`，下一步由所有者在Setup完成后从Manage → Libraries配置真实绝对路径。
-- 本机dcraw可用；FFmpeg/FFprobe尚未安装，交互式sudo门禁阻止自动安装，当前原生配置明确留空`ffmpeg_path`。Video Poster/代理真实业务验收必须等待所有者安装官方`ffmpeg`包后执行，不能标记为通过。
+- 本机当前已可发现`/usr/bin/dcraw`、`/usr/bin/ffmpeg`和`/usr/bin/ffprobe`，源码合成视频门禁已通过；运行中的已部署服务仍是旧构建，本轮没有修改其配置、迁移正式数据库或重启服务。正式部署必须先核对/补齐`ffmpeg_path`与可选`ffprobe_path`、保存数据库维护快照，再执行真实业务媒体与目标浏览器验收。
 - 详细路径、首次初始化、服务操作和第一轮业务验收清单见[本机实际业务应用测试部署](LOCAL_BUSINESS_TEST_DEPLOYMENT_2026-07-27.md)。
 
 ## 尚未通过的门禁
@@ -193,8 +228,9 @@
 
 ## 下一批工作
 
-1. 在Linux arm64及arm64 Docker runner执行安装、媒体、升级和完整恢复验收，并发布各平台容器SBOM。
-2. 在Firefox、WebKit、Edge及真实移动浏览器执行目标宽度、键盘、读屏、200%缩放与低性能首屏矩阵。
-3. 在远端执行新增CI/夜间工作流并修复runner差异；随后冻结0.9接口与schema，从干净提交执行`verify-cgm-release`并生成签名发行物。
+1. 为视频schema v2安排本机维护窗口：先核验自动`pre-schema-v1`快照与独立完整备份，再部署新二进制、配置同套FFmpeg/FFprobe，并用真实业务视频完成DIRECT/Remux/Transcode、拖动、暂停、全屏、来源hash/mtime不变和恢复演练。
+2. 在Linux arm64及arm64 Docker runner执行安装、媒体、升级和完整恢复验收，并发布各平台容器SBOM。
+3. 在Firefox、WebKit、Edge及真实移动浏览器执行目标宽度、键盘、读屏、200%缩放与低性能首屏矩阵。
+4. 在远端执行新增CI/夜间工作流并修复runner差异；随后冻结0.9接口与schema，从干净提交执行`verify-cgm-release`并生成签名发行物。
 
 任何未执行的测试不得在状态记录或发布说明中标记为通过。

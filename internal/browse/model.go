@@ -1,5 +1,6 @@
-// Package browse contains the path-free, Gallery-level DTO contract used by
-// the new React application. It intentionally has no Scene/Image legacy model.
+// Package browse contains the Gallery-level DTO contract used by the new React
+// application. It is path-free except for the authenticated single-owner
+// Gallery detail directory summary explicitly exposed by GalleryDetail.
 package browse
 
 import (
@@ -37,6 +38,15 @@ type EntitySummary struct {
 	Name string
 }
 
+// PersonSummary augments the path-free entity identity with enough managed
+// asset state for the API layer to issue an authenticated avatar URL.
+type PersonSummary struct {
+	UUID            string
+	Name            string
+	AvatarAvailable bool
+	AssetRevision   int64
+}
+
 // ResourceIdentity is sufficient to build an authenticated resource URL but
 // cannot reveal a physical source or cache path.
 type ResourceIdentity struct {
@@ -69,7 +79,7 @@ type GalleryCard struct {
 	CollectionType     CollectionType
 	ContentRating      gallery.ContentRating
 	Cover              Cover
-	Credits            []EntitySummary
+	Credits            []PersonSummary
 	CreditCount        int
 	Characters         []EntitySummary
 	CharacterCount     int
@@ -207,7 +217,7 @@ type EntityPage struct {
 }
 
 type CreditDetail struct {
-	Coser      EntitySummary
+	Coser      PersonSummary
 	Characters []EntitySummary
 	Works      []EntitySummary
 }
@@ -220,15 +230,16 @@ type ExternalLink struct {
 }
 
 type GalleryDetail struct {
-	Card             GalleryCard
-	Description      string
-	PhotographerName string
-	StudioName       string
-	AvailableBytes   int64
-	Credits          []CreditDetail
-	Tags             []EntitySummary
-	ExternalLinks    []ExternalLink
-	Redirected       bool
+	Card                   GalleryCard
+	Description            string
+	PhotographerName       string
+	StudioName             string
+	AvailableBytes         int64
+	MediaParentDirectories []string
+	Credits                []CreditDetail
+	Tags                   []EntitySummary
+	ExternalLinks          []ExternalLink
+	Redirected             bool
 }
 
 type SocialAccount struct {
@@ -276,6 +287,19 @@ type MediaDetail struct {
 	DisplayResource  *ResourceIdentity
 	Gallery          GalleryCard
 	MetadataRevision int64
+	VideoTechnical   *VideoTechnicalSummary
+}
+
+type VideoTechnicalSummary struct {
+	ProbeState      string
+	ErrorCode       string
+	Container       string
+	DurationSeconds float64
+	Width           int
+	Height          int
+	FrameRate       float64
+	VideoCodec      string
+	AudioCodec      string
 }
 
 // OnDemandResource reports the lifecycle of an optional generated Browse
@@ -284,6 +308,15 @@ type OnDemandResource struct {
 	Status    gallery.ProcessingState
 	Resource  *ResourceIdentity
 	ErrorCode string
+}
+
+type VideoPlaybackStatus struct {
+	ItemUUID        string
+	Mode            string
+	Status          gallery.ProcessingState
+	ContentRevision int64
+	Resource        *ResourceIdentity
+	ErrorCode       string
 }
 
 type MediaPage struct {

@@ -24,13 +24,16 @@ func TestEntityIndexesUseConfirmedPageSizesScopeAndVisibleAssociations(t *testin
 	if _, err := db.Galleries().AddCredit(ctx, galleryRecord.ID, visible.UUID, 1024, galleryRecord.MetadataRevision, now); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.ExecContext(ctx, `UPDATE cosers SET avatar_path='assets/avatar.webp',metadata_revision=2 WHERE uuid=?`, visible.UUID); err != nil {
+		t.Fatal(err)
+	}
 	activateBrowseFixture(t, db, galleryRecord.ID, now)
 	page, err := db.Browse().EntityIndex(ctx, browse.SearchCoser, browse.ScopeList, 1, browse.EntitySortName)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if page.PageSize != 30 || page.TotalItems != 1 || len(page.Items) != 1 || page.Items[0].UUID != visible.UUID ||
-		len(page.Items[0].Aliases) != 1 || page.Items[0].Aliases[0] != "Alias" {
+		len(page.Items[0].Aliases) != 1 || page.Items[0].Aliases[0] != "Alias" || !page.Items[0].AvatarAvailable || page.Items[0].AssetRevision != 2 {
 		t.Fatalf("Coser entity page = %#v", page)
 	}
 	magic, err := db.Browse().EntityIndex(ctx, browse.SearchCoser, browse.ScopeMagic, 1, browse.EntitySortName)

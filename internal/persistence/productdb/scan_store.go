@@ -29,6 +29,13 @@ type ScanStore struct {
 	db *sql.DB
 }
 
+// ScanOptions controls user-facing reconciliation policy without changing
+// source discovery. ExcludeNewRootMedia applies only to newly created Items;
+// an Item matched by path or rebound by fingerprint keeps its durable choice.
+type ScanOptions struct {
+	ExcludeNewRootMedia bool
+}
+
 func (db *Database) Scans() *ScanStore {
 	return &ScanStore{db: db.DB}
 }
@@ -146,10 +153,16 @@ func (s *ScanStore) Abort(ctx context.Context, scanRunID int64, cancelled bool, 
 }
 
 func (s *ScanStore) Commit(ctx context.Context, scanRunID int64, now time.Time) error {
-	return s.commit(ctx, scanRunID, nil, now)
+	return s.commit(ctx, scanRunID, nil, ScanOptions{}, now)
 }
 
-func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []sourcescan.Issue, now time.Time) error {
+// CommitWithOptions is exposed for policy-focused integration tests. Normal
+// physical scans should use RunWithOptions so staging and commit stay atomic.
+func (s *ScanStore) CommitWithOptions(ctx context.Context, scanRunID int64, options ScanOptions, now time.Time) error {
+	return s.commit(ctx, scanRunID, nil, options, now)
+}
+
+func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []sourcescan.Issue, options ScanOptions, now time.Time) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -178,7 +191,7 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 	if err != nil {
 		return err
 	}
-	if effectiveScanMemberCount(observations, existing) > 1000 {
+	if effectiveScanMemberCount(observations, existing, options) > 1000 {
 		if err := markScanOverLimit(ctx, tx, scanRunID, sourceID, galleryID, now); err != nil {
 			return err
 		}
@@ -248,7 +261,8 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 
 		maxPosition += 1024
 		itemID, err := insertObservedItem(
-			ctx, tx, galleryID, sourceID, observation, maxPosition, scanRunID, now,
+			ctx, tx, galleryID, sourceID, observation, maxPosition,
+			options.ExcludeNewRootMedia && isRootRelativePath(observation.RelativePath), scanRunID, now,
 		)
 		if err != nil {
 			return err
@@ -301,8 +315,9 @@ func enqueueScanProcessingJobs(ctx context.Context, tx *sql.Tx, galleryID int64,
 	if state == gallery.StateArchived {
 		priority = 10
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT item_uuid,media_kind,content_format,content_revision FROM gallery_items
-		WHERE gallery_id=? AND excluded=0 AND availability_state='AVAILABLE' AND processing_state='PENDING'`, galleryID)
+	rows, err := tx.QueryContext(ctx, `SELECT item.item_uuid,item.media_kind,item.content_format,item.content_revision,source.source_type
+		FROM gallery_items item JOIN gallery_sources source ON source.id=item.source_id
+		WHERE item.gallery_id=? AND item.excluded=0 AND item.availability_state='AVAILABLE' AND item.processing_state='PENDING'`, galleryID)
 	if err != nil {
 		return err
 	}
@@ -311,11 +326,12 @@ func enqueueScanProcessingJobs(ctx context.Context, tx *sql.Tx, galleryID int64,
 		kind     gallery.MediaKind
 		format   gallery.ContentFormat
 		revision int64
+		source   gallery.SourceType
 	}
 	var items []pending
 	for rows.Next() {
 		var item pending
-		if err := rows.Scan(&item.uuid, &item.kind, &item.format, &item.revision); err != nil {
+		if err := rows.Scan(&item.uuid, &item.kind, &item.format, &item.revision, &item.source); err != nil {
 			rows.Close()
 			return err
 		}
@@ -327,13 +343,30 @@ func enqueueScanProcessingJobs(ctx context.Context, tx *sql.Tx, galleryID int64,
 	profileHash := mediaprocessing.DefaultProfileHash()
 	timestamp := formatTime(normalisedTime(now))
 	for _, item := range items {
+		if item.kind == gallery.MediaKindVideo {
+			if item.source != gallery.SourceTypeDirectory {
+				continue
+			}
+			key := ItemTechnicalMetadataJobKey(item.uuid, item.revision, profileHash)
+			if _, err := tx.ExecContext(ctx, `INSERT INTO video_technical_metadata(item_uuid,content_revision,probe_profile_hash,probe_state)
+				VALUES(?,?,?,'PENDING') ON CONFLICT(item_uuid) DO UPDATE SET content_revision=excluded.content_revision,probe_profile_hash=excluded.probe_profile_hash,
+				probe_state='PENDING',last_error_code='',completed_at_utc=NULL`, item.uuid, item.revision, profileHash); err != nil {
+				return err
+			}
+			if _, err := tx.ExecContext(ctx, `INSERT INTO processing_jobs (job_key,job_kind,gallery_id,item_uuid,variant,content_revision,profile_hash,payload_json,status,priority,max_attempts,not_before_utc,created_at_utc,updated_at_utc)
+				VALUES (?,'ITEM_TECHNICAL_METADATA',? ,?,'',?,?,'{}','PENDING',?,3,?,?,?) ON CONFLICT(job_key) DO UPDATE SET priority=MAX(priority,excluded.priority),updated_at_utc=excluded.updated_at_utc`,
+				key, galleryID, item.uuid, item.revision, profileHash, priority, timestamp, timestamp, timestamp); err != nil {
+				return err
+			}
+			continue
+		}
 		plans := []struct {
 			variant string
 			tier    mediaprocessing.CacheTier
 		}{
 			{mediaprocessing.VariantCard480, mediaprocessing.CacheBase},
 		}
-		if item.kind == gallery.MediaKindAnimatedImage || item.kind == gallery.MediaKindVideo {
+		if item.kind == gallery.MediaKindAnimatedImage {
 			plans = []struct {
 				variant string
 				tier    mediaprocessing.CacheTier
@@ -354,12 +387,24 @@ func enqueueScanProcessingJobs(ctx context.Context, tx *sql.Tx, galleryID int64,
 	return nil
 }
 
-// Run scans the bound physical source and submits one atomic source snapshot.
-// It never writes to or deletes from the media source.
+// Run scans with the product default: newly discovered media directly in the
+// Gallery root is retained as a durable excluded Item for explicit review.
 func (s *ScanStore) Run(
 	ctx context.Context,
 	sourceID int64,
 	archiveLimits archivecheck.Limits,
+	now time.Time,
+) error {
+	return s.RunWithOptions(ctx, sourceID, archiveLimits, ScanOptions{ExcludeNewRootMedia: true}, now)
+}
+
+// RunWithOptions scans the bound physical source and submits one atomic source
+// snapshot. It never writes to or deletes from the media source.
+func (s *ScanStore) RunWithOptions(
+	ctx context.Context,
+	sourceID int64,
+	archiveLimits archivecheck.Limits,
+	options ScanOptions,
 	now time.Time,
 ) error {
 	source, err := findSource(ctx, s.db, sourceID)
@@ -399,7 +444,7 @@ func (s *ScanStore) Run(
 			return err
 		}
 	}
-	if err := s.commit(ctx, runID, result.Issues, now); err != nil {
+	if err := s.commit(ctx, runID, result.Issues, options, now); err != nil {
 		return err
 	}
 	_, err = (&CoverStore{db: s.db, random: rand.Reader}).Initialize(ctx, source.GalleryID, now)
@@ -496,6 +541,9 @@ func updateObservedItem(
 		WHERE item_uuid=? AND content_revision<>?`, item.UUID, newRevision); err != nil {
 		return err
 	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM video_technical_metadata WHERE item_uuid=? AND content_revision<>?`, item.UUID, newRevision); err != nil {
+		return err
+	}
 	_, err = tx.ExecContext(ctx, `UPDATE processing_jobs SET status='CANCELLED',lease_owner=NULL,lease_expires_at_utc=NULL,
 		last_heartbeat_at_utc=NULL,updated_at_utc=? WHERE item_uuid=? AND content_revision<>?
 		AND status IN ('PENDING','RUNNING','RETRY_WAIT','PAUSED')`, formatTime(normalisedTime(now)), item.UUID, newRevision)
@@ -530,6 +578,7 @@ func insertObservedItem(
 	sourceID int64,
 	observation ScanObservation,
 	position int64,
+	excluded bool,
 	scanRunID int64,
 	now time.Time,
 ) (int64, error) {
@@ -542,12 +591,12 @@ func insertObservedItem(
 		INSERT INTO gallery_items (
 			item_uuid, gallery_id, source_id, relative_path, media_kind,
 			content_format, image_category, position, availability_state, processing_state,
-			byte_size, quick_fingerprint, full_fingerprint,
+			byte_size, quick_fingerprint, full_fingerprint, excluded,
 			last_seen_scan_run_id, created_at_utc, updated_at_utc
-		) VALUES (?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, 'AVAILABLE', ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, 'AVAILABLE', ?, ?, ?, ?, ?, ?, ?, ?)
 	`, itemUUID, galleryID, sourceID, observation.RelativePath, observation.MediaKind,
 		observation.ContentFormat, observation.ImageCategory, position, observation.ProcessingState,
-		observation.ByteSize, observation.QuickFingerprint, observation.FullFingerprint,
+		observation.ByteSize, observation.QuickFingerprint, observation.FullFingerprint, boolInt(excluded),
 		scanRunID, formatTime(timestamp), formatTime(timestamp))
 	if err != nil {
 		return 0, err
@@ -713,7 +762,7 @@ func validateScanObservation(observation ScanObservation) error {
 // hard Gallery limit. A successful rescan must never silently restore an
 // excluded item merely because the file remains present or moved within the
 // same source.
-func effectiveScanMemberCount(observations []ScanObservation, existing []gallery.Item) int {
+func effectiveScanMemberCount(observations []ScanObservation, existing []gallery.Item, options ScanOptions) int {
 	byPath := make(map[string]gallery.Item, len(existing))
 	observationPaths := make(map[string]struct{}, len(observations))
 	observationFingerprintCount := make(map[string]int)
@@ -748,9 +797,18 @@ func effectiveScanMemberCount(observations []ScanObservation, existing []gallery
 			len(candidates) == 1 && candidates[0].Excluded {
 			continue
 		}
+		if _, found := byPath[observation.RelativePath]; !found &&
+			!(observation.FullFingerprint != "" && observationFingerprintCount[observation.FullFingerprint] == 1 && len(candidates) == 1) &&
+			options.ExcludeNewRootMedia && isRootRelativePath(observation.RelativePath) {
+			continue
+		}
 		count++
 	}
 	return count
+}
+
+func isRootRelativePath(relativePath string) bool {
+	return !strings.Contains(relativePath, "/")
 }
 
 func effectiveScannedCategory(item gallery.Item, observation ScanObservation) gallery.ImageCategory {

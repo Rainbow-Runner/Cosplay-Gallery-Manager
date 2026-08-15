@@ -96,24 +96,119 @@ func TestSuccessfulScanAtomicallyEnqueuesPrimaryDerivativeJobs(t *testing.T) {
 	if err := db.Scans().Commit(ctx, runID, now); err != nil {
 		t.Fatal(err)
 	}
-	rows, err := db.QueryContext(ctx, `SELECT variant,status,profile_hash FROM processing_jobs WHERE gallery_id=? ORDER BY variant`, created.ID)
+	rows, err := db.QueryContext(ctx, `SELECT job_kind,variant,status,profile_hash FROM processing_jobs WHERE gallery_id=? ORDER BY job_kind,variant`, created.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer rows.Close()
-	var variants []string
+	var jobs []string
 	for rows.Next() {
-		var variant, status, profile string
-		if err := rows.Scan(&variant, &status, &profile); err != nil {
+		var kind, variant, status, profile string
+		if err := rows.Scan(&kind, &variant, &status, &profile); err != nil {
 			t.Fatal(err)
 		}
 		if status != string(mediaprocessing.JobPending) || profile != mediaprocessing.DefaultProfileHash() {
 			t.Fatalf("queued job = %s %s %s", variant, status, profile)
 		}
-		variants = append(variants, variant)
+		jobs = append(jobs, kind+":"+variant)
 	}
-	if len(variants) != 2 || variants[0] != mediaprocessing.VariantCard480 || variants[1] != mediaprocessing.VariantStaticPoster {
-		t.Fatalf("queued variants = %#v", variants)
+	if len(jobs) != 2 || jobs[0] != string(mediaprocessing.JobItemDerivative)+":"+mediaprocessing.VariantCard480 || jobs[1] != string(mediaprocessing.JobItemTechnicalMetadata)+":" {
+		t.Fatalf("queued jobs = %#v", jobs)
+	}
+}
+
+func TestScanOptionExcludesOnlyNewRootMediaAndPreservesDurableChoices(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 8, 10, 0, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	scans := db.Scans()
+
+	firstRun, err := scans.Begin(ctx, source.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := scanPhoto("cover.jpg", "root")
+	nested := scanPhoto("chapter-1/001.jpg", "nested")
+	root.ProcessingState, nested.ProcessingState = gallery.ProcessingPending, gallery.ProcessingPending
+	for _, observation := range []ScanObservation{root, nested} {
+		if err := scans.Stage(ctx, firstRun, observation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := scans.CommitWithOptions(ctx, firstRun, ScanOptions{ExcludeNewRootMedia: true}, now); err != nil {
+		t.Fatal(err)
+	}
+	items := loadGalleryItemsForTest(t, db, created.ID)
+	byPath := map[string]gallery.Item{}
+	for _, item := range items {
+		byPath[item.RelativePath] = item
+	}
+	if !byPath["cover.jpg"].Excluded || byPath["chapter-1/001.jpg"].Excluded {
+		t.Fatalf("root/nested exclusions = root:%t nested:%t", byPath["cover.jpg"].Excluded, byPath["chapter-1/001.jpg"].Excluded)
+	}
+	var queued int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_jobs WHERE gallery_id=?`, created.ID).Scan(&queued); err != nil {
+		t.Fatal(err)
+	}
+	if queued != 1 {
+		t.Fatalf("processing jobs = %d, want only nested Item", queued)
+	}
+
+	current, err := db.Galleries().Find(ctx, created.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Galleries().SetItemExcluded(ctx, byPath["cover.jpg"].ID, false, current.MetadataRevision, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_jobs WHERE gallery_id=?`, created.ID).Scan(&queued); err != nil {
+		t.Fatal(err)
+	}
+	if queued != 2 {
+		t.Fatalf("processing jobs after Restore = %d, want root Item queued immediately", queued)
+	}
+	secondRun, err := scans.Begin(ctx, source.ID, now.Add(2*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, observation := range []ScanObservation{root, nested, scanPhoto("loose.jpg", "loose")} {
+		if err := scans.Stage(ctx, secondRun, observation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := scans.CommitWithOptions(ctx, secondRun, ScanOptions{ExcludeNewRootMedia: true}, now.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	items = loadGalleryItemsForTest(t, db, created.ID)
+	byPath = map[string]gallery.Item{}
+	for _, item := range items {
+		byPath[item.RelativePath] = item
+	}
+	if byPath["cover.jpg"].Excluded {
+		t.Fatal("rescan overwrote the restored root Item")
+	}
+	if !byPath["loose.jpg"].Excluded {
+		t.Fatal("new root Item was not auto-excluded")
+	}
+
+	thirdRun, err := scans.Begin(ctx, source.ID, now.Add(3*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, observation := range []ScanObservation{root, nested, scanPhoto("loose.jpg", "loose"), scanPhoto("included.jpg", "included")} {
+		if err := scans.Stage(ctx, thirdRun, observation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := scans.CommitWithOptions(ctx, thirdRun, ScanOptions{ExcludeNewRootMedia: false}, now.Add(3*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	items = loadGalleryItemsForTest(t, db, created.ID)
+	for _, item := range items {
+		if item.RelativePath == "included.jpg" && item.Excluded {
+			t.Fatal("disabled root exclusion option still excluded a new root Item")
+		}
 	}
 }
 

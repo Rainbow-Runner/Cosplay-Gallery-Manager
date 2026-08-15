@@ -17,6 +17,7 @@ import (
 	"github.com/stashapp/stash/internal/discovery"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/manifest"
+	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/portableid"
 	"github.com/stashapp/stash/internal/settings"
@@ -79,6 +80,34 @@ func (r *mutationResolver) RequestItemLightbox(ctx context.Context, itemUUID str
 		return nil, publicError(err)
 	}
 	return onDemandResource(value), nil
+}
+
+// RequestItemVideoPlayback is the resolver for the requestItemVideoPlayback field.
+func (r *mutationResolver) RequestItemVideoPlayback(ctx context.Context, itemUUID string) (*VideoPlaybackStatus, error) {
+	if r.Operations == nil {
+		value, err := r.Database.Browse().RequestVideoPlayback(ctx, itemUUID, "", mediaprocessing.ErrorFFmpegUnavailable, time.Now())
+		if err != nil {
+			return nil, publicError(err)
+		}
+		logVideoPlaybackRequested(value)
+		return videoPlaybackStatusModel(value), nil
+	}
+	dependency, err := r.Operations.VideoDependencyStatus(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	ffmpegVersion := ""
+	ffmpegErrorCode := dependency.FFmpegErrorCode
+	if dependency.FFmpegAvailable {
+		ffmpegVersion = dependency.FFmpegVersion
+		ffmpegErrorCode = ""
+	}
+	value, err := r.Database.Browse().RequestVideoPlayback(ctx, itemUUID, ffmpegVersion, ffmpegErrorCode, time.Now())
+	if err != nil {
+		return nil, publicError(err)
+	}
+	logVideoPlaybackRequested(value)
+	return videoPlaybackStatusModel(value), nil
 }
 
 // UpdateGalleryMetadata is the resolver for the updateGalleryMetadata field.
@@ -169,6 +198,25 @@ func (r *mutationResolver) MoveGalleryItem(ctx context.Context, setID string, it
 	if _, err := r.Database.Galleries().MoveItemWithinGroup(ctx, itemID, beforeItemID, expectedMetadataRevision, time.Now()); err != nil {
 		return nil, manageError(err)
 	}
+	return r.loadManageGalleryDetail(ctx, setID)
+}
+
+// ReorderGalleryItems is the resolver for the reorderGalleryItems field.
+func (r *mutationResolver) ReorderGalleryItems(ctx context.Context, setID string, itemUUIDs []string, expectedMetadataRevision int64) (*ManageGalleryDetail, error) {
+	itemIDs := make([]int64, 0, len(itemUUIDs))
+	for _, itemUUID := range itemUUIDs {
+		itemID, err := r.Database.Manage().GalleryItemID(ctx, setID, itemUUID)
+		if err != nil {
+			r.auditManage(ctx, "GALLERY_ITEM_REORDER", "GALLERY", setID, "GALLERY_ITEM_REORDER_FAILED", err, map[string]any{"item_count": len(itemUUIDs)})
+			return nil, manageError(err)
+		}
+		itemIDs = append(itemIDs, itemID)
+	}
+	if err := r.Database.Galleries().ReorderItemsWithinGroup(ctx, itemIDs, expectedMetadataRevision, time.Now()); err != nil {
+		r.auditManage(ctx, "GALLERY_ITEM_REORDER", "GALLERY", setID, "GALLERY_ITEM_REORDER_FAILED", err, map[string]any{"item_count": len(itemUUIDs)})
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "GALLERY_ITEM_REORDER", "GALLERY", setID, "", nil, map[string]any{"item_count": len(itemUUIDs)})
 	return r.loadManageGalleryDetail(ctx, setID)
 }
 
@@ -269,7 +317,7 @@ func (r *mutationResolver) ImportGalleryCandidate(ctx context.Context, candidate
 }
 
 // ScanGallerySource is the resolver for the scanGallerySource field.
-func (r *mutationResolver) ScanGallerySource(ctx context.Context, setID string) (*ManageGalleryDetail, error) {
+func (r *mutationResolver) ScanGallerySource(ctx context.Context, setID string, excludeNewRootMedia bool) (*ManageGalleryDetail, error) {
 	sourceID, err := r.Database.Manage().GallerySourceID(ctx, setID)
 	if err != nil {
 		r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "GALLERY_SCAN_FAILED", err, nil)
@@ -281,11 +329,11 @@ func (r *mutationResolver) ScanGallerySource(ctx context.Context, setID string) 
 		return nil, manageError(err)
 	}
 	limits := archivecheck.Limits{MaxEntries: runtimeSettings.ArchiveMaxEntries, MaxEntryUncompressed: uint64(runtimeSettings.ArchiveMaxEntryBytes), MaxTotalUncompressed: uint64(runtimeSettings.ArchiveMaxTotalBytes), MaxCompressionRatio: runtimeSettings.ArchiveMaxCompressionRatio, MaxImagePixels: uint64(runtimeSettings.ArchiveMaxImagePixels)}
-	if err := r.Database.Scans().Run(ctx, sourceID, limits, time.Now()); err != nil {
-		r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "GALLERY_SCAN_FAILED", err, map[string]any{"source_id": sourceID})
+	if err := r.Database.Scans().RunWithOptions(ctx, sourceID, limits, productdb.ScanOptions{ExcludeNewRootMedia: excludeNewRootMedia}, time.Now()); err != nil {
+		r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "GALLERY_SCAN_FAILED", err, map[string]any{"source_id": sourceID, "exclude_new_root_media": excludeNewRootMedia})
 		return nil, manageError(err)
 	}
-	r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "", nil, map[string]any{"source_id": sourceID})
+	r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "", nil, map[string]any{"source_id": sourceID, "exclude_new_root_media": excludeNewRootMedia})
 	return r.loadManageGalleryDetail(ctx, setID)
 }
 
@@ -337,6 +385,26 @@ func (r *mutationResolver) RetryProcessingJob(ctx context.Context, id int64) (*M
 		return nil, manageError(err)
 	}
 	return manageProcessingJobPage(value), nil
+}
+
+// RetryGalleryItemVideo is the resolver for the retryGalleryItemVideo field.
+func (r *mutationResolver) RetryGalleryItemVideo(ctx context.Context, itemUUID string) (bool, error) {
+	profile := ""
+	if r.Operations != nil {
+		dependency, statusErr := r.Operations.VideoDependencyStatus(ctx)
+		if statusErr != nil {
+			return false, manageError(statusErr)
+		}
+		if dependency.FFprobeAvailable {
+			profile = mediaprocessing.VideoProbeProfileHash(dependency.FFprobeVersion)
+		}
+	}
+	err := r.Database.VideoMetadata().Retry(ctx, itemUUID, profile, time.Now())
+	r.auditManage(ctx, "VIDEO_PROCESSING_RETRY", "GALLERY_ITEM", itemUUID, "VIDEO_RETRY_FAILED", err, nil)
+	if err != nil {
+		return false, manageError(err)
+	}
+	return true, nil
 }
 
 // CreateFullBackup is the resolver for the createFullBackup field.
@@ -914,7 +982,13 @@ func (r *queryResolver) MediaDetail(ctx context.Context, itemUUID string) (*Medi
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return &MediaDetail{Item: galleryMemberModel(value.Item), DisplayResource: resourceIdentity(value.DisplayResource), Gallery: galleryCard(value.Gallery), MetadataRevision: value.MetadataRevision}, nil
+	result := &MediaDetail{Item: galleryMemberModel(value.Item), DisplayResource: resourceIdentity(value.DisplayResource), Gallery: galleryCard(value.Gallery), MetadataRevision: value.MetadataRevision}
+	if value.VideoTechnical != nil {
+		result.VideoTechnical = &VideoTechnicalSummary{ProbeState: value.VideoTechnical.ProbeState, ErrorCode: value.VideoTechnical.ErrorCode, Container: value.VideoTechnical.Container,
+			DurationSeconds: value.VideoTechnical.DurationSeconds, Width: value.VideoTechnical.Width, Height: value.VideoTechnical.Height, FrameRate: value.VideoTechnical.FrameRate,
+			VideoCodec: value.VideoTechnical.VideoCodec, AudioCodec: value.VideoTechnical.AudioCodec}
+	}
+	return result, nil
 }
 
 // ItemLightboxStatus is the resolver for the itemLightboxStatus field.
@@ -924,6 +998,32 @@ func (r *queryResolver) ItemLightboxStatus(ctx context.Context, itemUUID string)
 		return nil, publicError(err)
 	}
 	return onDemandResource(value), nil
+}
+
+// ItemVideoPlaybackStatus is the resolver for the itemVideoPlaybackStatus field.
+func (r *queryResolver) ItemVideoPlaybackStatus(ctx context.Context, itemUUID string) (*VideoPlaybackStatus, error) {
+	if r.Operations == nil {
+		value, err := r.Database.Browse().VideoPlaybackStatus(ctx, itemUUID, "", mediaprocessing.ErrorFFmpegUnavailable)
+		if err != nil {
+			return nil, publicError(err)
+		}
+		return videoPlaybackStatusModel(value), nil
+	}
+	dependency, err := r.Operations.VideoDependencyStatus(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	ffmpegVersion := ""
+	ffmpegErrorCode := dependency.FFmpegErrorCode
+	if dependency.FFmpegAvailable {
+		ffmpegVersion = dependency.FFmpegVersion
+		ffmpegErrorCode = ""
+	}
+	value, err := r.Database.Browse().VideoPlaybackStatus(ctx, itemUUID, ffmpegVersion, ffmpegErrorCode)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return videoPlaybackStatusModel(value), nil
 }
 
 // FavoriteGalleries is the resolver for the favoriteGalleries field.
@@ -1043,6 +1143,19 @@ func (r *queryResolver) ManageCacheStorage(ctx context.Context) (*ManageCacheSto
 	}
 	return &ManageCacheStorage{Path: status.Path, ByteSize: status.ByteSize, FileCount: status.FileCount,
 		BaseByteSize: status.BaseByteSize, EnhancedByteSize: status.EnhancedByteSize}, nil
+}
+
+// ManageVideoDependencyStatus is the resolver for the manageVideoDependencyStatus field.
+func (r *queryResolver) ManageVideoDependencyStatus(ctx context.Context) (*ManageVideoDependencyStatus, error) {
+	if r.Operations == nil {
+		return nil, manageError(errors.New("video dependency status is unavailable"))
+	}
+	status, err := r.Operations.VideoDependencyStatus(ctx)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	return &ManageVideoDependencyStatus{FfmpegAvailable: status.FFmpegAvailable, FfmpegSource: status.FFmpegSource, FfmpegVersion: status.FFmpegVersion, FfmpegErrorCode: status.FFmpegErrorCode,
+		FfprobeAvailable: status.FFprobeAvailable, FfprobeSource: status.FFprobeSource, FfprobeVersion: status.FFprobeVersion, FfprobeErrorCode: status.FFprobeErrorCode}, nil
 }
 
 // ManageProcessingJobs is the resolver for the manageProcessingJobs field.

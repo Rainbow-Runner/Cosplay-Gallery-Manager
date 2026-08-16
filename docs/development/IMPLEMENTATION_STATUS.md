@@ -185,6 +185,7 @@
 ## 本机实际业务应用测试部署（2026-07-27）
 
 - 2026-08-16 22:49 CST已从精确提交`4c0dadacee45b47850f3d3a4074f804838b16925`增量部署静态原图混合直读与完整时长动画预览构建，SHA-256为`c195f0e16b4c56628e241fa54ef4e113b2db1bbce2d1873830dc4abc373f68bf`；旧二进制备份于`/tmp/cgm-before-image-animation-20260816`。服务保持`active/running`、`NRestarts=0`，Health/Ready为204，About报告精确源码且`exactSourceAvailable=true`；配置和产品数据库inode不变，启动日志无迁移或处理错误。
+- 2026-08-17 00:03 CST已从精确提交`f22ca41d237def7d70e489522422dd4f7a3819a5`增量部署可配置动画播放窗口构建，SHA-256为`a66ab60a43cc5a9a572afca8b9767cf529f6e32b3bcfa0a6a36598bd8c252cfc`。部署前额外完整回滚包和自动schema v2快照均已解包/独立完整性校验；正式库无记录损失迁至schema v3并采用12项/800ms默认值。服务保持`active/running`、`NRestarts=0`，Health/Ready为204，About精确指向部署提交，启动日志无异常。
 - 2026-08-12 00:29 CST已增量部署Gallery详情标题响应式与Gallery卡片参考站密度构建，SHA-256为`9e9477e36d1572150a7fe0502d7981e3fcd0dcff533168254e34baf06a43bf35`；旧二进制备份于`/tmp/cgm-before-gallery-cards-20260812`，服务保持`enabled/active`且Health/Ready为204。
 - 该阶段入口引用`index-BN0Udqs0.js`与`index-qdWPUXcG.css`；`about.json`报告`gitHash=local`、`buildTime=20260812`和`exactSourceAvailable=false`。配置SHA-256仍为`1beb3770cf5f84098fad3d10b87965ed7421227f605aebdda0f7f6220c3c6dd7`，产品数据库inode仍为`19679716`；没有替换配置、数据库、媒体、Manifest或缓存。
 - 2026-08-09 20:28 CST已增量部署Browse桌面滚动与Gallery目录定位构建，SHA-256为`e3e595503e80082d15d0c6c49e225b47ce159aa5c34b47b239567f7360685041`；旧二进制备份于`/tmp/cgm-before-gallery-detail-locations-20260809`，服务保持`enabled/active`且Health/Ready为204。

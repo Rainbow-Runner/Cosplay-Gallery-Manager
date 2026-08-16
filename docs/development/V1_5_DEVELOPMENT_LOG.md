@@ -1437,3 +1437,12 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 数据库/API专项测试覆盖新库默认值、1～16和700～1000边界、数据库CHECK、乐观并发、v1→v3、v2→v3、迁移前快照身份及旧设置保留；相关Go包全部PASS。
 - 前端纯函数覆盖奇偶窗口、首尾夹紧、视口求交、reduced-motion、150ms确认和配置冷却；Manage Settings越界时禁用保存。Vitest 26个文件70项、TypeScript检查及677模块生产构建PASS；隔离Chromium完整业务生命周期、备份恢复与axe矩阵1项PASS，实际完成一条`ANIMATED_PREVIEW`任务，维护恢复阶段的预期503最终恢复就绪。
 - 本项包含schema迁移，正式增量部署前必须先提交清洁源码、创建并校验额外完整回滚包；启动迁移后还须验证自动`.pre-schema-v2-*`快照、主库schema v3、Health/Ready、About精确源码及服务日志。部署结果在完成维护窗口后补记。
+
+### 提交、备份与正式增量部署
+
+- 源码、测试和部署前记录提交为`f22ca41d237def7d70e489522422dd4f7a3819a5`（`Add configurable gallery animation playback windows`），提交后工作树清洁。正式产物使用`cgm_web_embed cgm_galleryepic`、Go 1.25.12和完整提交构建；`go version -m`确认`vcs.modified=false`，二进制SHA-256为`a66ab60a43cc5a9a572afca8b9767cf529f6e32b3bcfa0a6a36598bd8c252cfc`。
+- 2026-08-17 00:03 CST停止用户服务并确认MainPID为0，在真实备份根创建`/home/rainbowrunner/cos/bk/cgm-predeploy-20260816T160239Z-f22ca41.tar.gz`。归档包含一致SQLite schema v2快照、启动配置、Coser托管资源、替换前二进制和systemd用户服务定义；媒体来源、缓存、日志及既有备份未递归打包。
+- 回滚包权限为`0600`、SHA-256为`8b7e99b449da6a765b8f77b63fc7da0c08da3b9606a1c4c2163b4cc27c1d2493`。实际解包后数据库`integrity_check=ok`、产品身份/schema v2、55表/1920行；配置、旧二进制、服务定义及Coser资源与正式来源逐项一致。
+- 新二进制先写同目录临时文件并复核SHA-256一致后原子替换，旧二进制另保留于`/tmp/cgm-before-animation-window-20260817`。只启动一次服务即完成v2→v3迁移；配置SHA-256保持`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`，未修改媒体、Manifest或缓存。
+- 自动迁移快照`product.sqlite.pre-schema-v2-1786896235945493562.bak`权限`0600`、SHA-256为`8aff930f6ceca6999c7ac9b404ae47a30fdf1e3231e1608a4d535087a6be3afa`，独立校验`integrity_check=ok`、schema v2、55表/1920行。迁移后主库同样`integrity_check=ok`、schema v3、55表/1920行，默认动画上限12、锁定间隔800ms。
+- 正式服务保持`active/running`、`NRestarts=0`；Health/Ready均为204。About报告`version=1.5.0-dev`、完整`f22ca41...`、`buildTime=2026-08-17`和`exactSourceAvailable=true`；2个工作器以FFmpeg/FFprobe/LibRaw全部可用启动，本轮journal未检出WARN、ERROR、FAILED、panic或fatal。

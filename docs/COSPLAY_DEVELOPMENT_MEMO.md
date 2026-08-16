@@ -351,6 +351,8 @@ SocialAccount：
 
 - GIF/APNG/动态WebP/动态AVIF/动态JXL归ANIMATED_IMAGE，前端统一放GIF组但保留真实格式。
 - 每项生成长期静态Poster；Gallery详情网格的可见动画项按需生成ENHANCED动画WebP：保持原动画完整时长、最长边480px、最高15FPS并循环，不得以固定秒数截断。
+- Gallery详情动画播放安全上限默认12、允许在Manage Settings设为1～16。动画总数不超过上限时，所有进入视口的动画均可播放且不安装悬浮切换监听；超过上限时初始窗口取排序前N项，精确鼠标在动画项停留150ms后把窗口锁定到以该项为中心的连续N项，偶数N向右多取一项并在首尾夹紧。鼠标移开保持窗口；再次锁定须遵守默认800ms、可配置700～1000ms的切换间隔。
+- 播放窗口只授予资格，实际播放仍须项目进入视口；Lightbox打开或`prefers-reduced-motion: reduce`时全部恢复Poster。无悬浮能力的设备按当前可见动画中位项移动窗口，避免后段动画永久无法播放。
 - Gallery卡片混合媒体Scrubber始终只显示静态Poster，不使用上述动画预览。
 - 仅视口内播放，离开即停；同页默认最多4个，可配置1～8；reduced-motion只显示Poster。
 - Lightbox和单媒体详情对当前已识别的GIF/动态WebP经认证接口播放未经重编码的完整原动画；列表、Related、Scrubber等其他入口保持静态Poster。不提供进度、逐帧、速度或编辑。

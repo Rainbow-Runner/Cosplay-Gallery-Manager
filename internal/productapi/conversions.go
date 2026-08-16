@@ -370,6 +370,7 @@ func manageRuntimeSettings(value settings.Runtime) *ManageRuntimeSettings {
 	return &ManageRuntimeSettings{SettingsRevision: value.Revision, HomeScope: BrowseScope(value.HomeScope), GalleryCardScrubberEnabled: value.GalleryCardScrubberEnabled,
 		GalleryDetailMediaFilterEnabled: value.GalleryDetailMediaFilterEnabled, GalleryCardControlsVisible: value.GalleryCardControlsVisible,
 		MediaCardControlsVisible: value.MediaCardControlsVisible, DetailPersonalControlsVisible: value.DetailPersonalControlsVisible,
+		GalleryAnimatedPlaybackLimit: value.GalleryAnimatedPlaybackLimit, GalleryAnimatedLockIntervalMs: value.GalleryAnimatedLockIntervalMS,
 		RelatedLimit: value.RelatedLimit, TagParentWeight: value.TagParentWeight, TagMinimumScore: value.TagMinimumScore, TagMaximumDepth: value.TagMaximumDepth,
 		RandomLimit: value.RandomLimit, RandomStaticQuota: value.RandomStaticQuota, RandomGIFQuota: value.RandomGIFQuota, RandomVideoQuota: value.RandomVideoQuota,
 		RandomGalleryRepeatDecay: value.RandomGalleryRepeatDecay, EnhancedCacheMaximumBytes: value.EnhancedCacheMaximumBytes, MinimumFreeBytes: value.MinimumFreeBytes,

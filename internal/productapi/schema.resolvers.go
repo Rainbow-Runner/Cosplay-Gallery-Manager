@@ -355,7 +355,8 @@ func (r *mutationResolver) UpdateRuntimeSettings(ctx context.Context, expectedSe
 	value, err := r.Database.Settings().Update(ctx, expectedSettingsRevision, settings.Runtime{HomeScope: settings.HomeScope(input.HomeScope),
 		GalleryCardScrubberEnabled: input.GalleryCardScrubberEnabled, GalleryDetailMediaFilterEnabled: input.GalleryDetailMediaFilterEnabled,
 		GalleryCardControlsVisible: input.GalleryCardControlsVisible, MediaCardControlsVisible: input.MediaCardControlsVisible,
-		DetailPersonalControlsVisible: input.DetailPersonalControlsVisible, RelatedLimit: input.RelatedLimit, TagParentWeight: input.TagParentWeight,
+		DetailPersonalControlsVisible: input.DetailPersonalControlsVisible, GalleryAnimatedPlaybackLimit: input.GalleryAnimatedPlaybackLimit,
+		GalleryAnimatedLockIntervalMS: input.GalleryAnimatedLockIntervalMs, RelatedLimit: input.RelatedLimit, TagParentWeight: input.TagParentWeight,
 		TagMinimumScore: input.TagMinimumScore, TagMaximumDepth: input.TagMaximumDepth, RandomLimit: input.RandomLimit,
 		RandomStaticQuota: input.RandomStaticQuota, RandomGIFQuota: input.RandomGIFQuota, RandomVideoQuota: input.RandomVideoQuota,
 		RandomGalleryRepeatDecay: input.RandomGalleryRepeatDecay, EnhancedCacheMaximumBytes: input.EnhancedCacheMaximumBytes,
@@ -1302,12 +1303,14 @@ func (r *queryResolver) BrowseUISettings(ctx context.Context) (*BrowseUISettings
 		return nil, publicError(err)
 	}
 	return &BrowseUISettings{
-		SettingsRevision:           value.Revision,
-		GalleryScrubberEnabled:     value.GalleryCardScrubberEnabled,
-		DetailMediaFilterEnabled:   value.GalleryDetailMediaFilterEnabled,
-		CardFavoriteControlVisible: value.GalleryCardControlsVisible,
-		CardRatingSummaryVisible:   value.GalleryCardControlsVisible,
-		DetailRatingControlVisible: value.DetailPersonalControlsVisible,
+		SettingsRevision:              value.Revision,
+		GalleryScrubberEnabled:        value.GalleryCardScrubberEnabled,
+		DetailMediaFilterEnabled:      value.GalleryDetailMediaFilterEnabled,
+		GalleryAnimatedPlaybackLimit:  value.GalleryAnimatedPlaybackLimit,
+		GalleryAnimatedLockIntervalMs: value.GalleryAnimatedLockIntervalMS,
+		CardFavoriteControlVisible:    value.GalleryCardControlsVisible,
+		CardRatingSummaryVisible:      value.GalleryCardControlsVisible,
+		DetailRatingControlVisible:    value.DetailPersonalControlsVisible,
 	}, nil
 }
 

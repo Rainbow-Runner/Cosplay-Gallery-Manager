@@ -53,6 +53,8 @@ export const BROWSE_UI_SETTINGS = gql`
       settingsRevision
       galleryScrubberEnabled
       detailMediaFilterEnabled
+      galleryAnimatedPlaybackLimit
+      galleryAnimatedLockIntervalMS
       cardFavoriteControlVisible
       cardRatingSummaryVisible
       detailRatingControlVisible

@@ -60,6 +60,8 @@ export interface BrowseUISettings {
   settingsRevision: number;
   galleryScrubberEnabled: boolean;
   detailMediaFilterEnabled: boolean;
+  galleryAnimatedPlaybackLimit: number;
+  galleryAnimatedLockIntervalMS: number;
   cardFavoriteControlVisible: boolean;
   cardRatingSummaryVisible: boolean;
   detailRatingControlVisible: boolean;

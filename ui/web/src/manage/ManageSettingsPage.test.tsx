@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 
 import type { MockedResponse } from "@apollo/client/testing";
 import { MockedProvider } from "@apollo/client/testing/react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { MANAGE_RUNTIME_SETTINGS } from "../api/manage";
@@ -13,6 +13,7 @@ afterEach(cleanup);
 const runtimeSettings = {
   settingsRevision: 1, homeScope: "LIST", galleryCardScrubberEnabled: true, galleryDetailMediaFilterEnabled: true,
   galleryCardControlsVisible: true, mediaCardControlsVisible: true, detailPersonalControlsVisible: true,
+  galleryAnimatedPlaybackLimit: 12, galleryAnimatedLockIntervalMS: 800,
   relatedLimit: 12, tagParentWeight: 0.5, tagMinimumScore: 0.2, tagMaximumDepth: 3,
   randomLimit: 24, randomStaticQuota: 0.7, randomGIFQuota: 0.15, randomVideoQuota: 0.15, randomGalleryRepeatDecay: 0.5,
   enhancedCacheMaximumBytes: 53687091200, minimumFreeBytes: 10737418240, minimumFreePercent: 0.05,
@@ -38,7 +39,11 @@ describe("ManageSettingsPage cache status", () => {
 		expect(screen.getByText("3.56 MiB")).toBeInTheDocument();
 		expect(screen.getByText("145 MiB")).toBeInTheDocument();
 		expect(screen.getByLabelText("Reclaimable cache limit (GiB)")).toHaveValue(50);
+		expect(screen.getByLabelText("Animated playback limit")).toHaveValue(12);
+		expect(screen.getByLabelText("Animation lock interval (ms)")).toHaveValue(800);
     expect(screen.queryByDisplayValue("/var/cache/cgm")).not.toBeInTheDocument();
+		fireEvent.change(screen.getByLabelText("Animation lock interval (ms)"), { target: { value: "699" } });
+		expect(screen.getByRole("button", { name: "Save all runtime settings" })).toBeDisabled();
   });
 
   it("formats binary storage units without overstating precision", () => {

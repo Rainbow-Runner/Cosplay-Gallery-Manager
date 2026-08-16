@@ -83,7 +83,7 @@ func TestOpenMigratesSchemaV1AfterValidatedSnapshot(t *testing.T) {
 		t.Fatalf("migrating schema v1: %v", err)
 	}
 	defer db.Close()
-	if db.Identity().DatabaseSchemaVersion != 2 {
+	if db.Identity().DatabaseSchemaVersion != 3 {
 		t.Fatalf("schema version = %d", db.Identity().DatabaseSchemaVersion)
 	}
 	var tableCount int
@@ -114,6 +114,83 @@ func TestOpenMigratesSchemaV1AfterValidatedSnapshot(t *testing.T) {
 	}
 	if identity.DatabaseSchemaVersion != 1 {
 		t.Fatalf("snapshot schema version=%d", identity.DatabaseSchemaVersion)
+	}
+}
+
+func TestOpenMigratesSchemaV2SettingsAfterValidatedSnapshot(t *testing.T) {
+	ctx := context.Background()
+	directory := t.TempDir()
+	path := filepath.Join(directory, "library.sqlite")
+	connection, err := sql.Open(sqliteDriver, sqliteDSN(path, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := connection.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ExecContext(ctx, `CREATE TABLE cgm_product_identity(singleton_id INTEGER NOT NULL PRIMARY KEY CHECK(singleton_id=1),product_id TEXT NOT NULL,database_schema_version INTEGER NOT NULL,created_at_utc TEXT NOT NULL)`); err != nil {
+		t.Fatal(err)
+	}
+	if err := createSchemaV1(ctx, tx); err != nil {
+		t.Fatal(err)
+	}
+	if err := createMediaProcessingSchemaV2(ctx, tx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE runtime_settings SET home_scope='ALL' WHERE id=1`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO cgm_product_identity VALUES(1,?,2,'2026-08-16T00:00:00Z')`, product.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if err := connection.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := Open(ctx, path)
+	if err != nil {
+		t.Fatalf("migrating schema v2: %v", err)
+	}
+	defer db.Close()
+	settings, err := db.Settings().Find(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if db.Identity().DatabaseSchemaVersion != 3 || settings.HomeScope != "ALL" ||
+		settings.GalleryAnimatedPlaybackLimit != 12 || settings.GalleryAnimatedLockIntervalMS != 800 {
+		t.Fatalf("migrated identity/settings = %#v / %#v", db.Identity(), settings)
+	}
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var snapshot string
+	for _, entry := range entries {
+		if strings.Contains(entry.Name(), ".pre-schema-v2-") {
+			snapshot = filepath.Join(directory, entry.Name())
+		}
+	}
+	if snapshot == "" {
+		t.Fatal("schema v2 pre-migration snapshot was not created")
+	}
+	backup, err := sql.Open(sqliteDriver, sqliteDSN(snapshot, true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backup.Close()
+	identity, err := readIdentity(ctx, backup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if identity.DatabaseSchemaVersion != 2 {
+		t.Fatalf("snapshot schema version=%d", identity.DatabaseSchemaVersion)
+	}
+	if err := validateSettingsSchemaV3(ctx, backup); err == nil {
+		t.Fatal("schema v2 snapshot unexpectedly contains schema v3 settings")
 	}
 }
 

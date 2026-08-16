@@ -2,7 +2,7 @@
 
 > 当前里程碑：1.5 本机业务迭代与可诊断性增强
 > 状态：进行中
-> 更新日期：2026-08-15
+> 更新日期：2026-08-17
 
 ## 已规划、尚未实现
 
@@ -10,6 +10,7 @@
 
 ## 已完成
 
+- 1.5（Gallery动画播放窗口）：Gallery详情完整时长动画预览由固定视口前4项改为可配置连续窗口；安全上限默认12、范围1～16，超过上限时悬浮150ms锁定以目标为中心的N项，切换冷却默认800ms并可在Manage Settings设为700～1000ms，移开不重置。实际解码仍与视口求交，Lightbox/reduced-motion优先停播；触控设备按可见动画移动窗口。两项设置由产品schema v3持久化，v1/v2升级前均创建来源版本准确的在线快照。
 - 1.5（Gallery视频标识弱化）：Gallery详情媒体卡片右上角VIDEO/GIF类型文字取消75%黑色背景和内边距，改为透明背景、82%白字及轻量文字阴影；保留媒体类型语义和右上角操作菜单层级，不新增遮罩色块。
 - 1.5（视频第一阶段）：产品schema v1→v2迁移在写入前创建并校验SQLite Online Backup；新增FFmpeg/FFprobe成对诊断、产品自有技术元数据、确定性主轨探测、每分钟25项有界存量回填、人工重试，以及20%时间点/960px/不放大/旋转/HDR到SDR的BASE Poster链路。Manage Settings、Gallery媒体行与媒体详情只显示白名单技术状态和稳定错误码。
 - 1.5（视频第二阶段）：实现MP4/H.264/AAC保守DIRECT矩阵、认证且路径无关的原视频GET/HEAD/Range路由，以及按Lightbox/媒体详情实际需求才排队的Remux/H.264-AAC Fast Start MP4代理；代理固定为ENHANCED并受容量、磁盘余量、原子发布和LRU约束。前端准备态保持Poster，完成后切换原生播放器，成员切换会卸载上一视频；Gallery卡片和Scrubber不触发播放。
@@ -174,7 +175,7 @@
 - 用户来源能力审计未发现删除调用；应用删除仅限失败备份、缓存、临时文件等明确生成数据。
 - Chromium离线Playwright主流程通过，Setup/Browse/Gallery/Coser/Operations axe扫描无WCAG A/AA违规，桌面与390px移动截图在0.2%像素差异门禁下回归通过；Gallery详情新增1440px桌面基线，并实际验证单媒体收藏、封面切换、Lightbox深链/返回与关闭后定位。
 - 真实媒体门禁通过：合成标准DNG由dcraw实际生成代理，动画GIF与FFmpeg生成MP4实际生成Poster，内容分类与扩展名无关。
-- 2026-08-16新增静态原图混合直读与完整时长动画预览：合格JPEG/PNG/静态WebP经认证原图端点直读，其余静态图回落4096 ENHANCED代理；Gallery详情仅视口前4项按需播放480px/15FPS完整时长动画WebP，Lightbox/媒体详情播放精确GIF/动态WebP原字节。DIRECTORY及ZIP/CBZ、安全scope、reduced-motion和真实2秒FFmpeg时长均有回归。
+- 2026-08-16新增静态原图混合直读与完整时长动画预览：合格JPEG/PNG/静态WebP经认证原图端点直读，其余静态图回落4096 ENHANCED代理；Gallery详情按后台可配置播放窗口与视口交集按需播放480px/15FPS完整时长动画WebP，Lightbox/媒体详情播放精确GIF/动态WebP原字节。DIRECTORY及ZIP/CBZ、安全scope、reduced-motion和真实2秒FFmpeg时长均有回归。
 - 危险归档单元矩阵通过；完整备份损坏矩阵继续在替换前拒绝危险输入。
 - 固定`GOMAXPROCS=4`的百万Item性能门禁通过：最慢Gallery列表p95约493ms、时间线约477ms，均低于500ms；Tag未缓存约141ms、缓存约143ms，其他目标均通过。
 - 固定工具链CGO构建通过Linux amd64与Linux arm64；Linux amd64 Docker镜像实际构建、非root启动和`/healthz` 204通过。

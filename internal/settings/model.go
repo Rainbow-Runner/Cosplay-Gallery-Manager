@@ -18,6 +18,8 @@ type Runtime struct {
 	GalleryCardControlsVisible      bool
 	MediaCardControlsVisible        bool
 	DetailPersonalControlsVisible   bool
+	GalleryAnimatedPlaybackLimit    int
+	GalleryAnimatedLockIntervalMS   int
 	RelatedLimit                    int
 	TagParentWeight                 float64
 	TagMinimumScore                 float64

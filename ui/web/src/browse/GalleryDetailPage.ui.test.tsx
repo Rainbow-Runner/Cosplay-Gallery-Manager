@@ -60,7 +60,7 @@ function memberIndex(metadataRevision = 7): GalleryMemberIndex {
 function queryMocks(options: { refetchedCover?: string; initialEntry?: string } = {}): MockedResponse[] {
   const mocks: MockedResponse[] = [
     { request: { query: GALLERY_DETAIL, variables: { slug: "gallery-one" } }, result: { data: { galleryDetail: detail() } } },
-    { request: { query: BROWSE_UI_SETTINGS }, result: { data: { browseUISettings: { settingsRevision: 1, galleryScrubberEnabled: true, detailMediaFilterEnabled: false, cardFavoriteControlVisible: true, cardRatingSummaryVisible: true, detailRatingControlVisible: true } } } },
+    { request: { query: BROWSE_UI_SETTINGS }, result: { data: { browseUISettings: { settingsRevision: 1, galleryScrubberEnabled: true, detailMediaFilterEnabled: false, galleryAnimatedPlaybackLimit: 12, galleryAnimatedLockIntervalMS: 800, cardFavoriteControlVisible: true, cardRatingSummaryVisible: true, detailRatingControlVisible: true } } } },
     { request: { query: GALLERY_MEMBER_INDEX, variables: { setID: "gallery-1" } }, result: { data: { galleryMemberIndex: memberIndex() } } },
     { request: { query: RELATED_GALLERIES, variables: { setID: "gallery-1" } }, result: { data: { relatedGalleries: [] } } },
     { request: { query: RECORD_GALLERY_VIEW, variables: { setID: "gallery-1", itemUUID: null } }, result: { data: { recordGalleryView: true } } },

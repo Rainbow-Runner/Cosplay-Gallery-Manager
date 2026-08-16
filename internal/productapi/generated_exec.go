@@ -70,12 +70,14 @@ type ComplexityRoot struct {
 	}
 
 	BrowseUISettings struct {
-		CardFavoriteControlVisible func(childComplexity int) int
-		CardRatingSummaryVisible   func(childComplexity int) int
-		DetailMediaFilterEnabled   func(childComplexity int) int
-		DetailRatingControlVisible func(childComplexity int) int
-		GalleryScrubberEnabled     func(childComplexity int) int
-		SettingsRevision           func(childComplexity int) int
+		CardFavoriteControlVisible    func(childComplexity int) int
+		CardRatingSummaryVisible      func(childComplexity int) int
+		DetailMediaFilterEnabled      func(childComplexity int) int
+		DetailRatingControlVisible    func(childComplexity int) int
+		GalleryAnimatedLockIntervalMs func(childComplexity int) int
+		GalleryAnimatedPlaybackLimit  func(childComplexity int) int
+		GalleryScrubberEnabled        func(childComplexity int) int
+		SettingsRevision              func(childComplexity int) int
 	}
 
 	CharacterDetail struct {
@@ -550,6 +552,8 @@ type ComplexityRoot struct {
 		DailyBackupRetention            func(childComplexity int) int
 		DetailPersonalControlsVisible   func(childComplexity int) int
 		EnhancedCacheMaximumBytes       func(childComplexity int) int
+		GalleryAnimatedLockIntervalMs   func(childComplexity int) int
+		GalleryAnimatedPlaybackLimit    func(childComplexity int) int
 		GalleryCardControlsVisible      func(childComplexity int) int
 		GalleryCardScrubberEnabled      func(childComplexity int) int
 		GalleryDetailMediaFilterEnabled func(childComplexity int) int
@@ -1088,6 +1092,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.BrowseUISettings.DetailRatingControlVisible(childComplexity), true
+
+	case "BrowseUISettings.galleryAnimatedLockIntervalMS":
+		if e.complexity.BrowseUISettings.GalleryAnimatedLockIntervalMs == nil {
+			break
+		}
+
+		return e.complexity.BrowseUISettings.GalleryAnimatedLockIntervalMs(childComplexity), true
+
+	case "BrowseUISettings.galleryAnimatedPlaybackLimit":
+		if e.complexity.BrowseUISettings.GalleryAnimatedPlaybackLimit == nil {
+			break
+		}
+
+		return e.complexity.BrowseUISettings.GalleryAnimatedPlaybackLimit(childComplexity), true
 
 	case "BrowseUISettings.galleryScrubberEnabled":
 		if e.complexity.BrowseUISettings.GalleryScrubberEnabled == nil {
@@ -3370,6 +3388,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageRuntimeSettings.EnhancedCacheMaximumBytes(childComplexity), true
+
+	case "ManageRuntimeSettings.galleryAnimatedLockIntervalMS":
+		if e.complexity.ManageRuntimeSettings.GalleryAnimatedLockIntervalMs == nil {
+			break
+		}
+
+		return e.complexity.ManageRuntimeSettings.GalleryAnimatedLockIntervalMs(childComplexity), true
+
+	case "ManageRuntimeSettings.galleryAnimatedPlaybackLimit":
+		if e.complexity.ManageRuntimeSettings.GalleryAnimatedPlaybackLimit == nil {
+			break
+		}
+
+		return e.complexity.ManageRuntimeSettings.GalleryAnimatedPlaybackLimit(childComplexity), true
 
 	case "ManageRuntimeSettings.galleryCardControlsVisible":
 		if e.complexity.ManageRuntimeSettings.GalleryCardControlsVisible == nil {
@@ -10639,6 +10671,94 @@ func (ec *executionContext) fieldContext_BrowseUISettings_detailMediaFilterEnabl
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrowseUISettings_galleryAnimatedPlaybackLimit(ctx context.Context, field graphql.CollectedField, obj *BrowseUISettings) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrowseUISettings_galleryAnimatedPlaybackLimit(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryAnimatedPlaybackLimit, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrowseUISettings_galleryAnimatedPlaybackLimit(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrowseUISettings",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrowseUISettings_galleryAnimatedLockIntervalMS(ctx context.Context, field graphql.CollectedField, obj *BrowseUISettings) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrowseUISettings_galleryAnimatedLockIntervalMS(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryAnimatedLockIntervalMs, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrowseUISettings_galleryAnimatedLockIntervalMS(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrowseUISettings",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -25584,6 +25704,94 @@ func (ec *executionContext) fieldContext_ManageRuntimeSettings_detailPersonalCon
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageRuntimeSettings_galleryAnimatedPlaybackLimit(ctx context.Context, field graphql.CollectedField, obj *ManageRuntimeSettings) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageRuntimeSettings_galleryAnimatedPlaybackLimit(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryAnimatedPlaybackLimit, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageRuntimeSettings_galleryAnimatedPlaybackLimit(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageRuntimeSettings",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageRuntimeSettings_galleryAnimatedLockIntervalMS(ctx context.Context, field graphql.CollectedField, obj *ManageRuntimeSettings) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageRuntimeSettings_galleryAnimatedLockIntervalMS(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryAnimatedLockIntervalMs, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageRuntimeSettings_galleryAnimatedLockIntervalMS(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageRuntimeSettings",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageRuntimeSettings_relatedLimit(ctx context.Context, field graphql.CollectedField, obj *ManageRuntimeSettings) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageRuntimeSettings_relatedLimit(ctx, field)
 	if err != nil {
@@ -29806,6 +30014,10 @@ func (ec *executionContext) fieldContext_Mutation_updateRuntimeSettings(ctx cont
 				return ec.fieldContext_ManageRuntimeSettings_mediaCardControlsVisible(ctx, field)
 			case "detailPersonalControlsVisible":
 				return ec.fieldContext_ManageRuntimeSettings_detailPersonalControlsVisible(ctx, field)
+			case "galleryAnimatedPlaybackLimit":
+				return ec.fieldContext_ManageRuntimeSettings_galleryAnimatedPlaybackLimit(ctx, field)
+			case "galleryAnimatedLockIntervalMS":
+				return ec.fieldContext_ManageRuntimeSettings_galleryAnimatedLockIntervalMS(ctx, field)
 			case "relatedLimit":
 				return ec.fieldContext_ManageRuntimeSettings_relatedLimit(ctx, field)
 			case "tagParentWeight":
@@ -33421,6 +33633,10 @@ func (ec *executionContext) fieldContext_Query_manageRuntimeSettings(_ context.C
 				return ec.fieldContext_ManageRuntimeSettings_mediaCardControlsVisible(ctx, field)
 			case "detailPersonalControlsVisible":
 				return ec.fieldContext_ManageRuntimeSettings_detailPersonalControlsVisible(ctx, field)
+			case "galleryAnimatedPlaybackLimit":
+				return ec.fieldContext_ManageRuntimeSettings_galleryAnimatedPlaybackLimit(ctx, field)
+			case "galleryAnimatedLockIntervalMS":
+				return ec.fieldContext_ManageRuntimeSettings_galleryAnimatedLockIntervalMS(ctx, field)
 			case "relatedLimit":
 				return ec.fieldContext_ManageRuntimeSettings_relatedLimit(ctx, field)
 			case "tagParentWeight":
@@ -34361,6 +34577,10 @@ func (ec *executionContext) fieldContext_Query_browseUISettings(_ context.Contex
 				return ec.fieldContext_BrowseUISettings_galleryScrubberEnabled(ctx, field)
 			case "detailMediaFilterEnabled":
 				return ec.fieldContext_BrowseUISettings_detailMediaFilterEnabled(ctx, field)
+			case "galleryAnimatedPlaybackLimit":
+				return ec.fieldContext_BrowseUISettings_galleryAnimatedPlaybackLimit(ctx, field)
+			case "galleryAnimatedLockIntervalMS":
+				return ec.fieldContext_BrowseUISettings_galleryAnimatedLockIntervalMS(ctx, field)
 			case "cardFavoriteControlVisible":
 				return ec.fieldContext_BrowseUISettings_cardFavoriteControlVisible(ctx, field)
 			case "cardRatingSummaryVisible":
@@ -39531,7 +39751,7 @@ func (ec *executionContext) unmarshalInputRuntimeSettingsInput(ctx context.Conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"homeScope", "galleryCardScrubberEnabled", "galleryDetailMediaFilterEnabled", "galleryCardControlsVisible", "mediaCardControlsVisible", "detailPersonalControlsVisible", "relatedLimit", "tagParentWeight", "tagMinimumScore", "tagMaximumDepth", "randomLimit", "randomStaticQuota", "randomGIFQuota", "randomVideoQuota", "randomGalleryRepeatDecay", "enhancedCacheMaximumBytes", "minimumFreeBytes", "minimumFreePercent", "automaticScanEnabled", "automaticSchedulesSuspended", "dailyBackupEnabled", "dailyBackupRetention", "archiveMaxEntries", "archiveMaxEntryBytes", "archiveMaxTotalBytes", "archiveMaxCompressionRatio", "archiveMaxImagePixels"}
+	fieldsInOrder := [...]string{"homeScope", "galleryCardScrubberEnabled", "galleryDetailMediaFilterEnabled", "galleryCardControlsVisible", "mediaCardControlsVisible", "detailPersonalControlsVisible", "galleryAnimatedPlaybackLimit", "galleryAnimatedLockIntervalMS", "relatedLimit", "tagParentWeight", "tagMinimumScore", "tagMaximumDepth", "randomLimit", "randomStaticQuota", "randomGIFQuota", "randomVideoQuota", "randomGalleryRepeatDecay", "enhancedCacheMaximumBytes", "minimumFreeBytes", "minimumFreePercent", "automaticScanEnabled", "automaticSchedulesSuspended", "dailyBackupEnabled", "dailyBackupRetention", "archiveMaxEntries", "archiveMaxEntryBytes", "archiveMaxTotalBytes", "archiveMaxCompressionRatio", "archiveMaxImagePixels"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -39580,6 +39800,20 @@ func (ec *executionContext) unmarshalInputRuntimeSettingsInput(ctx context.Conte
 				return it, err
 			}
 			it.DetailPersonalControlsVisible = data
+		case "galleryAnimatedPlaybackLimit":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("galleryAnimatedPlaybackLimit"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GalleryAnimatedPlaybackLimit = data
+		case "galleryAnimatedLockIntervalMS":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("galleryAnimatedLockIntervalMS"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GalleryAnimatedLockIntervalMs = data
 		case "relatedLimit":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("relatedLimit"))
 			data, err := ec.unmarshalNInt2int(ctx, v)
@@ -40150,6 +40384,16 @@ func (ec *executionContext) _BrowseUISettings(ctx context.Context, sel ast.Selec
 			}
 		case "detailMediaFilterEnabled":
 			out.Values[i] = ec._BrowseUISettings_detailMediaFilterEnabled(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryAnimatedPlaybackLimit":
+			out.Values[i] = ec._BrowseUISettings_galleryAnimatedPlaybackLimit(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryAnimatedLockIntervalMS":
+			out.Values[i] = ec._BrowseUISettings_galleryAnimatedLockIntervalMS(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -43405,6 +43649,16 @@ func (ec *executionContext) _ManageRuntimeSettings(ctx context.Context, sel ast.
 			}
 		case "detailPersonalControlsVisible":
 			out.Values[i] = ec._ManageRuntimeSettings_detailPersonalControlsVisible(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryAnimatedPlaybackLimit":
+			out.Values[i] = ec._ManageRuntimeSettings_galleryAnimatedPlaybackLimit(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryAnimatedLockIntervalMS":
+			out.Values[i] = ec._ManageRuntimeSettings_galleryAnimatedLockIntervalMS(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

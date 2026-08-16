@@ -257,6 +257,13 @@ func validateSchemaV2(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
+func validateSchemaV3(ctx context.Context, db *sql.DB) error {
+	if err := validateSchemaV2(ctx, db); err != nil {
+		return err
+	}
+	return validateSettingsSchemaV3(ctx, db)
+}
+
 func schemaObjectExists(ctx context.Context, db *sql.DB, objectType string, name string) (bool, error) {
 	var count int
 	if err := db.QueryRowContext(ctx, `

@@ -25,6 +25,9 @@ import { useOnDemandAnimatedPreview } from "./useOnDemandAnimatedPreview";
 import { useOnDemandVideoPlayback } from "./useOnDemandVideoPlayback";
 
 const memberBatchSize = 24;
+const animationHoverConfirmationMS = 150;
+const defaultAnimatedPlaybackLimit = 12;
+const defaultAnimatedLockIntervalMS = 800;
 type MediaFilter = "ALL" | "PHOTO" | "SELFIE" | "GIF" | "VIDEO";
 
 export function visualMemberGroups(items: GalleryMember[], filter: MediaFilter) {
@@ -42,9 +45,22 @@ export function lightboxNavigationState(index: number, total: number) {
   return { canPrevious: index > 0, canNext: index >= 0 && index < total - 1 };
 }
 
-export function animatedPlaybackSelection(orderedUUIDs: string[], visibleUUIDs: Set<string>, reducedMotion: boolean) {
+export function animationPlaybackWindow(orderedUUIDs: string[], anchorUUID: string, limit: number) {
+	if (orderedUUIDs.length <= limit) return [...orderedUUIDs];
+	const anchorIndex = Math.max(0, orderedUUIDs.indexOf(anchorUUID));
+	const leftCount = Math.floor((limit - 1) / 2);
+	const start = Math.min(Math.max(0, anchorIndex - leftCount), orderedUUIDs.length - limit);
+	return orderedUUIDs.slice(start, start + limit);
+}
+
+export function animatedPlaybackSelection(playbackWindow: string[], visibleUUIDs: Set<string>, reducedMotion: boolean) {
   if (reducedMotion) return [];
-  return orderedUUIDs.filter((uuid) => visibleUUIDs.has(uuid)).slice(0, 4);
+  return playbackWindow.filter((uuid) => visibleUUIDs.has(uuid));
+}
+
+export function animationLockDelay(now: number, lastLockAt: number, lockIntervalMS: number) {
+	if (lastLockAt <= 0) return animationHoverConfirmationMS;
+	return Math.max(animationHoverConfirmationMS, lastLockAt + lockIntervalMS - now);
 }
 
 export function GalleryDetailPage() {
@@ -53,7 +69,7 @@ export function GalleryDetailPage() {
   const [parameters, setParameters] = useSearchParams();
   const intl = useIntl();
   const detailQuery = useQuery<{ galleryDetail: GalleryDetail }>(GALLERY_DETAIL, { variables: { slug } });
-  const settingsQuery = useQuery<{ browseUISettings: BrowseUISettings }>(BROWSE_UI_SETTINGS);
+  const settingsQuery = useQuery<{ browseUISettings: BrowseUISettings }>(BROWSE_UI_SETTINGS, { fetchPolicy: "cache-and-network" });
   const detail = detailQuery.data?.galleryDetail;
   const memberQuery = useQuery<{ galleryMemberIndex: GalleryMemberIndex }>(GALLERY_MEMBER_INDEX,
     detail ? { variables: { setID: detail.card.setID } } : skipToken);
@@ -76,11 +92,16 @@ export function GalleryDetailPage() {
   const [actionMessage, setActionMessage] = useState("");
   const [moreDetailsOpen, setMoreDetailsOpen] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(() => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  const [activeAnimatedUUIDs, setActiveAnimatedUUIDs] = useState<Set<string>>(() => new Set());
+  const [hoverCapable, setHoverCapable] = useState(() => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+  const [visibleAnimatedUUIDs, setVisibleAnimatedUUIDs] = useState<Set<string>>(() => new Set());
+  const [animatedPlaybackWindow, setAnimatedPlaybackWindow] = useState<string[]>([]);
   const openedHere = useRef(false);
   const previouslyOpenItem = useRef<string | null>(null);
   const tileElements = useRef(new Map<string, HTMLElement>());
   const moreDetailsRef = useRef<HTMLDetailsElement>(null);
+  const animationHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const animationHoverCandidate = useRef("");
+  const lastAnimationLockAt = useRef(0);
 
   useEffect(() => {
     if (!detail?.redirected || detail.card.slug === slug) return;
@@ -131,10 +152,21 @@ export function GalleryDetailPage() {
     query.addEventListener?.("change", update);
     return () => query.removeEventListener?.("change", update);
   }, []);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const update = () => setHoverCapable(query.matches);
+    update();
+    query.addEventListener?.("change", update);
+    return () => query.removeEventListener?.("change", update);
+  }, []);
 
   const members = memberQuery.data?.galleryMemberIndex.items ?? [];
   const groups = useMemo(() => visualMemberGroups(members, filter), [filter, members]);
   const navigationItems = useMemo(() => groups.flatMap((group) => group.items), [groups]);
+  const orderedAnimatedUUIDs = useMemo(() => navigationItems.filter((item) => item.mediaKind === "ANIMATED_IMAGE").map((item) => item.itemUUID), [navigationItems]);
+  const animatedPlaybackLimit = settingsQuery.data?.browseUISettings.galleryAnimatedPlaybackLimit ?? defaultAnimatedPlaybackLimit;
+  const animatedLockIntervalMS = settingsQuery.data?.browseUISettings.galleryAnimatedLockIntervalMS ?? defaultAnimatedLockIntervalMS;
   const requestedItemUUID = parameters.get("item");
   const lightboxIndex = requestedItemUUID ? navigationItems.findIndex((item) => item.itemUUID === requestedItemUUID) : -1;
   const lightboxItem = lightboxIndex >= 0 ? navigationItems[lightboxIndex] : null;
@@ -142,16 +174,26 @@ export function GalleryDetailPage() {
   const displayedAnimatedUUIDs = useMemo(() => groups.flatMap((group) => group.items.slice(0, visible[group.key]))
     .filter((item) => item.mediaKind === "ANIMATED_IMAGE").map((item) => item.itemUUID), [groups, visible]);
   const displayedAnimatedKey = displayedAnimatedUUIDs.join("|");
+  const orderedAnimatedKey = orderedAnimatedUUIDs.join("|");
+
+  useEffect(() => {
+    if (animationHoverTimer.current) clearTimeout(animationHoverTimer.current);
+    animationHoverTimer.current = null;
+    animationHoverCandidate.current = "";
+    lastAnimationLockAt.current = 0;
+    setAnimatedPlaybackWindow(orderedAnimatedUUIDs.slice(0, animatedPlaybackLimit));
+  // Stable joined identity avoids resetting a deliberate lock for unrelated renders.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animatedPlaybackLimit, orderedAnimatedKey]);
 
   useEffect(() => {
     if (reducedMotion || lightboxItem || typeof IntersectionObserver === "undefined") {
-      setActiveAnimatedUUIDs(new Set());
+      setVisibleAnimatedUUIDs(new Set());
       return;
     }
     const visibleItems = new Set<string>();
     const publish = () => {
-      const next = animatedPlaybackSelection(displayedAnimatedUUIDs, visibleItems, false);
-      setActiveAnimatedUUIDs((current) => current.size === next.length && next.every((uuid) => current.has(uuid)) ? current : new Set(next));
+      setVisibleAnimatedUUIDs((current) => current.size === visibleItems.size && [...visibleItems].every((uuid) => current.has(uuid)) ? current : new Set(visibleItems));
     };
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
@@ -170,6 +212,47 @@ export function GalleryDetailPage() {
   // unrelated object identity changes while keeping displayed order stable.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayedAnimatedKey, lightboxItem, reducedMotion]);
+
+  useEffect(() => {
+    if (hoverCapable || orderedAnimatedUUIDs.length <= animatedPlaybackLimit || visibleAnimatedUUIDs.size === 0) return;
+    const visibleInOrder = orderedAnimatedUUIDs.filter((uuid) => visibleAnimatedUUIDs.has(uuid));
+    if (!visibleInOrder.length) return;
+    const anchor = visibleInOrder[Math.floor((visibleInOrder.length - 1) / 2)];
+    const next = animationPlaybackWindow(orderedAnimatedUUIDs, anchor, animatedPlaybackLimit);
+    setAnimatedPlaybackWindow((current) => current.length === next.length && next.every((uuid, index) => current[index] === uuid) ? current : next);
+  }, [animatedPlaybackLimit, hoverCapable, orderedAnimatedUUIDs, visibleAnimatedUUIDs]);
+
+  useEffect(() => () => {
+    if (animationHoverTimer.current) clearTimeout(animationHoverTimer.current);
+  }, []);
+
+  const activeAnimatedUUIDs = useMemo(() => new Set(animatedPlaybackSelection(animatedPlaybackWindow, visibleAnimatedUUIDs, reducedMotion || Boolean(lightboxItem))),
+    [animatedPlaybackWindow, lightboxItem, reducedMotion, visibleAnimatedUUIDs]);
+  const animationHoverEnabled = hoverCapable && !reducedMotion && orderedAnimatedUUIDs.length > animatedPlaybackLimit;
+
+  function beginAnimationHover(itemUUID: string) {
+    if (!animationHoverEnabled) return;
+    if (animationHoverTimer.current) clearTimeout(animationHoverTimer.current);
+    animationHoverCandidate.current = itemUUID;
+    const now = Date.now();
+    animationHoverTimer.current = setTimeout(() => {
+      animationHoverTimer.current = null;
+      if (animationHoverCandidate.current !== itemUUID) return;
+      const next = animationPlaybackWindow(orderedAnimatedUUIDs, itemUUID, animatedPlaybackLimit);
+      setAnimatedPlaybackWindow((current) => {
+        if (current.length === next.length && next.every((uuid, index) => current[index] === uuid)) return current;
+        lastAnimationLockAt.current = Date.now();
+        return next;
+      });
+    }, animationLockDelay(now, lastAnimationLockAt.current, animatedLockIntervalMS));
+  }
+
+  function endAnimationHover(itemUUID: string) {
+    if (animationHoverCandidate.current !== itemUUID) return;
+    animationHoverCandidate.current = "";
+    if (animationHoverTimer.current) clearTimeout(animationHoverTimer.current);
+    animationHoverTimer.current = null;
+  }
 
   function revealItem(itemUUID: string) {
     const group = visualMemberGroups(members, filter).find((candidate) => candidate.items.some((item) => item.itemUUID === itemUUID));
@@ -352,6 +435,8 @@ export function GalleryDetailPage() {
                       busy={busyItemUUID === item.itemUUID}
                       setElement={(element) => { if (element) tileElements.current.set(item.itemUUID, element); else tileElements.current.delete(item.itemUUID); }}
                       onOpen={() => openItem(item.itemUUID)}
+                      onAnimationHoverStart={animationHoverEnabled && item.mediaKind === "ANIMATED_IMAGE" ? () => beginAnimationHover(item.itemUUID) : undefined}
+                      onAnimationHoverEnd={animationHoverEnabled && item.mediaKind === "ANIMATED_IMAGE" ? () => endAnimationHover(item.itemUUID) : undefined}
                       onFavorite={() => void toggleItemFavorite(item)}
                       onSetCover={() => void setItemAsCover(item)}
                     />
@@ -416,7 +501,7 @@ function RelatedGallery({ card }: { card: BrowseGalleryCard }) {
   );
 }
 
-function MediaTile({ item, animate, favorite, currentCover, personalControlsVisible, busy, setElement, onOpen, onFavorite, onSetCover }: {
+function MediaTile({ item, animate, favorite, currentCover, personalControlsVisible, busy, setElement, onOpen, onAnimationHoverStart, onAnimationHoverEnd, onFavorite, onSetCover }: {
   item: GalleryMember;
   animate: boolean;
   favorite: boolean;
@@ -425,6 +510,8 @@ function MediaTile({ item, animate, favorite, currentCover, personalControlsVisi
   busy: boolean;
   setElement: (element: HTMLElement | null) => void;
   onOpen: () => void;
+  onAnimationHoverStart?: () => void;
+  onAnimationHoverEnd?: () => void;
   onFavorite: () => void;
   onSetCover: () => void;
 }) {
@@ -453,7 +540,7 @@ function MediaTile({ item, animate, favorite, currentCover, personalControlsVisi
     };
   }, [menuOpen]);
   return (
-    <article className="media-tile" ref={setElement} data-item-uuid={item.itemUUID}>
+    <article className="media-tile" ref={setElement} data-item-uuid={item.itemUUID} onPointerEnter={onAnimationHoverStart} onPointerLeave={onAnimationHoverEnd}>
       <button className="media-tile__open" type="button" onClick={onOpen} aria-label={item.caption || item.imageCategory || item.mediaKind}>
         {resource ? <img key={`${item.itemUUID}-${resource.variant}`} src={itemResourceURL(resource) ?? undefined} alt="" loading="lazy" /> : <span className="media-tile__pending">{item.processingState}</span>}
         {item.mediaKind !== "STATIC_IMAGE" ? <span className="media-tile__kind">{item.mediaKind === "VIDEO" ? "VIDEO" : "GIF"}</span> : null}

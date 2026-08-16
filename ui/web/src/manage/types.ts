@@ -28,6 +28,7 @@ export interface ManageDiscoverySnapshot { id: number; libraryID: number; comple
 export interface ManageRuntimeSettings {
   settingsRevision: number; homeScope: "LIST" | "MAGIC" | "ALL"; galleryCardScrubberEnabled: boolean; galleryDetailMediaFilterEnabled: boolean;
   galleryCardControlsVisible: boolean; mediaCardControlsVisible: boolean; detailPersonalControlsVisible: boolean;
+  galleryAnimatedPlaybackLimit: number; galleryAnimatedLockIntervalMS: number;
   relatedLimit: number; tagParentWeight: number; tagMinimumScore: number; tagMaximumDepth: number;
   randomLimit: number; randomStaticQuota: number; randomGIFQuota: number; randomVideoQuota: number; randomGalleryRepeatDecay: number;
   enhancedCacheMaximumBytes: number; minimumFreeBytes: number; minimumFreePercent: number; automaticScanEnabled: boolean; automaticSchedulesSuspended: boolean;

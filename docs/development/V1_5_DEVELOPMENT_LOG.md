@@ -1421,3 +1421,19 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 2026-08-16 22:49 CST完成本机Linux amd64增量部署。替换前二进制备份为`/tmp/cgm-before-image-animation-20260816`，SHA-256为`2561c13c628f3fef8a244ac74e866fa62b059b05989e511fb3f4660314b813e2`；新产物原子安装到`/home/rainbowrunner/.local/bin/cgm`后只重启一次用户服务。
 - 服务保持`active/running`、`NRestarts=0`，Health/Ready均为204；`about.json`报告`version=1.5.0-dev`、完整提交、`buildTime=2026-08-16`和`exactSourceAvailable=true`，入口引用`index-anzNnO_M.js`与`index-Btj_g1dP.css`且均来自本轮嵌入构建。
 - 启动journal只记录正常停止、2个工作器以FFmpeg/FFprobe/LibRaw全部可用启动及健康请求，没有WARN、ERROR、panic、fatal或数据库迁移事件。配置SHA-256仍为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`、inode仍为`19681854`；产品数据库inode仍为`19679716`。本轮没有schema变更，也没有替换配置、数据库、媒体、Manifest或既有缓存。
+
+## 1.5-36 Gallery动画可配置播放窗口与锁定节流
+
+### 已确认策略与实现
+
+- Gallery详情动画安全上限默认12，可在Manage Settings设置1～16。动画总数小于等于N时不安装悬浮切换处理，所有进入视口的动画均有播放资格；超过N时初始窗口为排序前N项。
+- 精确鼠标在动画Tile持续悬浮150ms后锁定新窗口。窗口以目标项为中心连续取N项：奇数左右均分，偶数左`N/2-1`、右`N/2`，靠近首尾时夹紧为前N项或后N项。鼠标移开只取消尚未确认的候选，不改变已经锁定的窗口。
+- 两次有效锁定之间采用后台可配置节流：默认800ms，范围700～1000ms；冷却期内进入新目标时，只有目标持续停留到冷却结束才接受切换，避免相邻Tile造成高频动画资源替换。
+- 播放窗口与`IntersectionObserver`可见集合求交后才真正加载动画；打开Lightbox或系统要求`prefers-reduced-motion`时全部回退Poster。无悬浮能力设备以当前可见动画的中位项自动移动窗口，保证触屏滚动到后段仍能播放。
+- 新增产品数据库schema v3，在`runtime_settings`持久化`gallery_animated_playback_limit`和`gallery_animated_lock_interval_ms`。迁移器支持v1→v2→v3及正式环境v2→v3，写入前生成带真实来源版本名的SQLite Online Backup；新库直接建立到v3。
+
+### 自动验证与部署门禁
+
+- 数据库/API专项测试覆盖新库默认值、1～16和700～1000边界、数据库CHECK、乐观并发、v1→v3、v2→v3、迁移前快照身份及旧设置保留；相关Go包全部PASS。
+- 前端纯函数覆盖奇偶窗口、首尾夹紧、视口求交、reduced-motion、150ms确认和配置冷却；Manage Settings越界时禁用保存。Vitest 26个文件70项、TypeScript检查及677模块生产构建PASS；隔离Chromium完整业务生命周期、备份恢复与axe矩阵1项PASS，实际完成一条`ANIMATED_PREVIEW`任务，维护恢复阶段的预期503最终恢复就绪。
+- 本项包含schema迁移，正式增量部署前必须先提交清洁源码、创建并校验额外完整回滚包；启动迁移后还须验证自动`.pre-schema-v2-*`快照、主库schema v3、Health/Ready、About精确源码及服务日志。部署结果在完成维护窗口后补记。

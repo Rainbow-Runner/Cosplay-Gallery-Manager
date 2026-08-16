@@ -33,12 +33,14 @@ type BrowseGalleryCard struct {
 }
 
 type BrowseUISettings struct {
-	SettingsRevision           int64 `json:"settingsRevision"`
-	GalleryScrubberEnabled     bool  `json:"galleryScrubberEnabled"`
-	DetailMediaFilterEnabled   bool  `json:"detailMediaFilterEnabled"`
-	CardFavoriteControlVisible bool  `json:"cardFavoriteControlVisible"`
-	CardRatingSummaryVisible   bool  `json:"cardRatingSummaryVisible"`
-	DetailRatingControlVisible bool  `json:"detailRatingControlVisible"`
+	SettingsRevision              int64 `json:"settingsRevision"`
+	GalleryScrubberEnabled        bool  `json:"galleryScrubberEnabled"`
+	DetailMediaFilterEnabled      bool  `json:"detailMediaFilterEnabled"`
+	GalleryAnimatedPlaybackLimit  int   `json:"galleryAnimatedPlaybackLimit"`
+	GalleryAnimatedLockIntervalMs int   `json:"galleryAnimatedLockIntervalMS"`
+	CardFavoriteControlVisible    bool  `json:"cardFavoriteControlVisible"`
+	CardRatingSummaryVisible      bool  `json:"cardRatingSummaryVisible"`
+	DetailRatingControlVisible    bool  `json:"detailRatingControlVisible"`
 }
 
 type CharacterDetail struct {
@@ -552,6 +554,8 @@ type ManageRuntimeSettings struct {
 	GalleryCardControlsVisible      bool        `json:"galleryCardControlsVisible"`
 	MediaCardControlsVisible        bool        `json:"mediaCardControlsVisible"`
 	DetailPersonalControlsVisible   bool        `json:"detailPersonalControlsVisible"`
+	GalleryAnimatedPlaybackLimit    int         `json:"galleryAnimatedPlaybackLimit"`
+	GalleryAnimatedLockIntervalMs   int         `json:"galleryAnimatedLockIntervalMS"`
 	RelatedLimit                    int         `json:"relatedLimit"`
 	TagParentWeight                 float64     `json:"tagParentWeight"`
 	TagMinimumScore                 float64     `json:"tagMinimumScore"`
@@ -711,6 +715,8 @@ type RuntimeSettingsInput struct {
 	GalleryCardControlsVisible      bool        `json:"galleryCardControlsVisible"`
 	MediaCardControlsVisible        bool        `json:"mediaCardControlsVisible"`
 	DetailPersonalControlsVisible   bool        `json:"detailPersonalControlsVisible"`
+	GalleryAnimatedPlaybackLimit    int         `json:"galleryAnimatedPlaybackLimit"`
+	GalleryAnimatedLockIntervalMs   int         `json:"galleryAnimatedLockIntervalMS"`
 	RelatedLimit                    int         `json:"relatedLimit"`
 	TagParentWeight                 float64     `json:"tagParentWeight"`
 	TagMinimumScore                 float64     `json:"tagMinimumScore"`

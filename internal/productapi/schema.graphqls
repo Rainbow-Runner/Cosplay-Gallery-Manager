@@ -139,6 +139,8 @@ type BrowseUISettings {
   settingsRevision: Int64!
   galleryScrubberEnabled: Boolean!
   detailMediaFilterEnabled: Boolean!
+  galleryAnimatedPlaybackLimit: Int!
+  galleryAnimatedLockIntervalMS: Int!
   cardFavoriteControlVisible: Boolean!
   cardRatingSummaryVisible: Boolean!
   detailRatingControlVisible: Boolean!
@@ -287,6 +289,7 @@ input UpdateRecognitionRuleInput { id: Int64! name: String! kind: String! enable
 type ManageRuntimeSettings {
   settingsRevision: Int64! homeScope: BrowseScope! galleryCardScrubberEnabled: Boolean! galleryDetailMediaFilterEnabled: Boolean!
   galleryCardControlsVisible: Boolean! mediaCardControlsVisible: Boolean! detailPersonalControlsVisible: Boolean!
+  galleryAnimatedPlaybackLimit: Int! galleryAnimatedLockIntervalMS: Int!
   relatedLimit: Int! tagParentWeight: Float! tagMinimumScore: Float! tagMaximumDepth: Int!
   randomLimit: Int! randomStaticQuota: Float! randomGIFQuota: Float! randomVideoQuota: Float! randomGalleryRepeatDecay: Float!
   enhancedCacheMaximumBytes: Int64! minimumFreeBytes: Int64! minimumFreePercent: Float! automaticScanEnabled: Boolean! automaticSchedulesSuspended: Boolean!
@@ -313,6 +316,7 @@ type ManageVideoDependencyStatus {
 input RuntimeSettingsInput {
   homeScope: BrowseScope! galleryCardScrubberEnabled: Boolean! galleryDetailMediaFilterEnabled: Boolean!
   galleryCardControlsVisible: Boolean! mediaCardControlsVisible: Boolean! detailPersonalControlsVisible: Boolean!
+  galleryAnimatedPlaybackLimit: Int! galleryAnimatedLockIntervalMS: Int!
   relatedLimit: Int! tagParentWeight: Float! tagMinimumScore: Float! tagMaximumDepth: Int!
   randomLimit: Int! randomStaticQuota: Float! randomGIFQuota: Float! randomVideoQuota: Float! randomGalleryRepeatDecay: Float!
   enhancedCacheMaximumBytes: Int64! minimumFreeBytes: Int64! minimumFreePercent: Float! automaticScanEnabled: Boolean! automaticSchedulesSuspended: Boolean!

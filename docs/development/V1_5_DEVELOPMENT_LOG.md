@@ -1416,6 +1416,7 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 真实`/usr/bin/ffmpeg`生成测试验证20帧/2秒GIF输出仍为2秒完整ANMF序列、最长边不超过480并含动画WebP标记；参数测试锁定15FPS且不存在任何时长截断参数。
 - 产品相关Go包全部PASS；`go test ./internal/...`中本阶段涉及包全部PASS，但旧Stash `internal/api`、`internal/api/urlbuilders`、`internal/manager`仍因仓库未提供`ui/v2.5/build`嵌入目录而在setup阶段失败，此为既有旧UI门禁限制。
 - 前端26个Vitest文件、67项测试全部PASS，TypeScript检查与677模块Vite生产构建PASS。
+- 隔离的离线Chromium完整生命周期/备份恢复/axe矩阵1项PASS（30.1秒）；运行日志实际完成一条`ANIMATED_PREVIEW`任务，证明Gallery详情可视动画请求、FFmpeg派生、认证资源与现有业务流程共同工作。维护恢复窗口中的预期503由用例覆盖并最终恢复就绪，不属于正式服务日志。
 - 源码、测试与第一版记录提交为`4c0dadacee45b47850f3d3a4074f804838b16925`（`Add mixed original image and animated preview playback`）；提交后工作树清洁。带`cgm_web_embed cgm_galleryepic`的Server/cmd/UI回归PASS，精确构建的`go version -m`报告`vcs.modified=false`，二进制SHA-256为`c195f0e16b4c56628e241fa54ef4e113b2db1bbce2d1873830dc4abc373f68bf`。
 - 2026-08-16 22:49 CST完成本机Linux amd64增量部署。替换前二进制备份为`/tmp/cgm-before-image-animation-20260816`，SHA-256为`2561c13c628f3fef8a244ac74e866fa62b059b05989e511fb3f4660314b813e2`；新产物原子安装到`/home/rainbowrunner/.local/bin/cgm`后只重启一次用户服务。
 - 服务保持`active/running`、`NRestarts=0`，Health/Ready均为204；`about.json`报告`version=1.5.0-dev`、完整提交、`buildTime=2026-08-16`和`exactSourceAvailable=true`，入口引用`index-anzNnO_M.js`与`index-Btj_g1dP.css`且均来自本轮嵌入构建。

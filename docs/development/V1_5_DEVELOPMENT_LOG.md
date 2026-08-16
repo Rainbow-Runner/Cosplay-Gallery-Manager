@@ -1446,3 +1446,17 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 新二进制先写同目录临时文件并复核SHA-256一致后原子替换，旧二进制另保留于`/tmp/cgm-before-animation-window-20260817`。只启动一次服务即完成v2→v3迁移；配置SHA-256保持`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`，未修改媒体、Manifest或缓存。
 - 自动迁移快照`product.sqlite.pre-schema-v2-1786896235945493562.bak`权限`0600`、SHA-256为`8aff930f6ceca6999c7ac9b404ae47a30fdf1e3231e1608a4d535087a6be3afa`，独立校验`integrity_check=ok`、schema v2、55表/1920行。迁移后主库同样`integrity_check=ok`、schema v3、55表/1920行，默认动画上限12、锁定间隔800ms。
 - 正式服务保持`active/running`、`NRestarts=0`；Health/Ready均为204。About报告`version=1.5.0-dev`、完整`f22ca41...`、`buildTime=2026-08-17`和`exactSourceAvailable=true`；2个工作器以FFmpeg/FFprobe/LibRaw全部可用启动，本轮journal未检出WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-37 Coser详情跨COSPLAY与ALBUM作品筛选
+
+### 已确认边界与实现
+
+- 只修改`/coser/:slug`作品区域；`/model/:slug`继续固定查询ALBUM并保留现有简洁页面，Coser/Model索引、侧栏、Gallery人物链接、Timeline及其他Browse详情的LIST/MAGIC/ALL逻辑均不改变。
+- Coser详情原LIST/MAGIC/ALL控件替换为“全部作品 / COSPLAY / ALBUM”。默认“全部作品”向现有可选`collectionType`传null并返回该Coser的混合Gallery；COSPLAY传`collectionType=COSPLAY, scope=ALL`，明确等于LIST与MAGIC合集；ALBUM传`collectionType=ALBUM, scope=ALL`，维持全部分级Album口径。
+- 筛选状态使用`?type=ALL|COSPLAY|ALBUM&page=N`持久化；切换类型重置到第1页，分页保留当前类型。中英文标签和可访问分组名称已补齐，现有三段控件视觉与Timeline布局复用且不新增样式分叉。
+
+### 自动验证与部署状态
+
+- 产品数据库回归新增同一Coser同时拥有NON_ADULT COSPLAY、ADULT COSPLAY和ADULT ALBUM样本，锁定混合查询返回3项、COSPLAY合并LIST/MAGIC返回2项、ALBUM只返回1项。
+- Coser组件回归覆盖默认null混合查询、三种筛选、切换重置分页、URL持久化及Model无新控件；产品数据库专项、TypeScript检查和Vitest 26个文件70项全部PASS。677模块Vite生产构建及带`cgm_web_embed cgm_galleryepic`的Server/API/数据库/cmd组合回归PASS。
+- 本轮没有提交、安装构建或重启正式服务，没有修改数据库schema、配置、媒体、Manifest或缓存；本地实现等待后续明确的提交/部署指令。

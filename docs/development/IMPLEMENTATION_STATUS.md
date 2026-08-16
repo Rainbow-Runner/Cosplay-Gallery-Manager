@@ -10,6 +10,7 @@
 
 ## 已完成
 
+- 1.5（Coser详情跨作品类型）：仅Coser详情将原LIST/MAGIC/ALL控件替换为“全部作品/COSPLAY/ALBUM”；默认混合查询该人物全部类型，COSPLAY固定`scope=ALL`并合并LIST与MAGIC，ALBUM沿用全部分级口径。筛选与分页写入`type/page` URL；Model详情、Coser/Model索引及其他Browse分级逻辑不变。
 - 1.5（Gallery动画播放窗口）：Gallery详情完整时长动画预览由固定视口前4项改为可配置连续窗口；安全上限默认12、范围1～16，超过上限时悬浮150ms锁定以目标为中心的N项，切换冷却默认800ms并可在Manage Settings设为700～1000ms，移开不重置。实际解码仍与视口求交，Lightbox/reduced-motion优先停播；触控设备按可见动画移动窗口。两项设置由产品schema v3持久化，v1/v2升级前均创建来源版本准确的在线快照。
 - 1.5（Gallery视频标识弱化）：Gallery详情媒体卡片右上角VIDEO/GIF类型文字取消75%黑色背景和内边距，改为透明背景、82%白字及轻量文字阴影；保留媒体类型语义和右上角操作菜单层级，不新增遮罩色块。
 - 1.5（视频第一阶段）：产品schema v1→v2迁移在写入前创建并校验SQLite Online Backup；新增FFmpeg/FFprobe成对诊断、产品自有技术元数据、确定性主轨探测、每分钟25项有界存量回填、人工重试，以及20%时间点/960px/不放大/旋转/HDR到SDR的BASE Poster链路。Manage Settings、Gallery媒体行与媒体详情只显示白名单技术状态和稳定错误码。

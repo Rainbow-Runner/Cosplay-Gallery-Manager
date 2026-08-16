@@ -21,6 +21,20 @@ function useDetailRoute() {
   };
 }
 
+type PersonCollectionFilter = "ALL" | CollectionType;
+
+function usePersonDetailRoute(collectionFilterEnabled: boolean) {
+  const { slug = "" } = useParams(); const navigate = useNavigate(); const [parameters, setParameters] = useSearchParams();
+  const page = Math.max(1, Number(parameters.get("page")) || 1);
+  const requestedCollection = parameters.get("type")?.toUpperCase();
+  const collectionFilter: PersonCollectionFilter = collectionFilterEnabled && (requestedCollection === "COSPLAY" || requestedCollection === "ALBUM") ? requestedCollection : "ALL";
+  return {
+    slug, navigate, page, collectionFilter,
+    setCollectionFilter: (next: PersonCollectionFilter) => setParameters({ type: next, page: "1" }),
+    setPage: (next: number) => setParameters(collectionFilterEnabled ? { type: collectionFilter, page: String(next) } : { page: String(next) }),
+  };
+}
+
 export function CoserDetailPage() {
   return <PersonDetailPage collectionType="COSPLAY" routeKind="coser" indexPath="/cosers" indexTitleID="nav.cosers" profileVisible />;
 }
@@ -32,9 +46,10 @@ export function ModelDetailPage() {
 function PersonDetailPage({ collectionType, routeKind, indexPath, indexTitleID, profileVisible = false }: {
   collectionType: CollectionType; routeKind: "coser" | "model"; indexPath: string; indexTitleID: string; profileVisible?: boolean;
 }) {
-  const intl = useIntl(); const route = useDetailRoute();
-  const effectiveScope = collectionType === "ALBUM" ? "ALL" : route.scope;
-  const query = useQuery<{ coserDetail: CoserDetail }>(COSER_DETAIL, { variables: { slug: route.slug, scope: effectiveScope, page: route.page, collectionType } });
+  const intl = useIntl(); const route = usePersonDetailRoute(profileVisible);
+  const selectedCollection = profileVisible ? route.collectionFilter : collectionType;
+  const queryCollectionType = selectedCollection === "ALL" ? null : selectedCollection;
+  const query = useQuery<{ coserDetail: CoserDetail }>(COSER_DETAIL, { variables: { slug: route.slug, scope: "ALL", page: route.page, collectionType: queryCollectionType } });
   const detail = query.data?.coserDetail;
   useCanonicalDetail(detail, route.slug, routeKind, route.navigate);
   if (query.loading) return <Loading />; if (query.error || !detail) return <ErrorState />;
@@ -69,14 +84,25 @@ function PersonDetailPage({ collectionType, routeKind, indexPath, indexTitleID, 
       className="coser-gallery-results"
       hideHeading
       title={intl.formatMessage({ id: "coser.galleries" })}
-      scope={effectiveScope}
-      onScope={profileVisible ? route.setScope : undefined}
+      scope="ALL"
       onPage={route.setPage}
       page={detail.galleries}
+      toolbarControl={profileVisible ? <PersonCollectionSelector value={route.collectionFilter} onChange={route.setCollectionFilter} /> : undefined}
       toolbarAction={profileVisible ? <Link className="coser-timeline-link" to={`/coser/${detail.entity.slug}/timeline`}><span>{intl.formatMessage({ id: "coser.timeline" })}</span><Icon name="chevron-right" /></Link> : undefined}
       compactCards={profileVisible}
     />
   </main>;
+}
+
+function PersonCollectionSelector({ value, onChange }: { value: PersonCollectionFilter; onChange: (value: PersonCollectionFilter) => void }) {
+  const intl = useIntl();
+  const options: Array<{ value: PersonCollectionFilter; label: string }> = [
+    { value: "ALL", label: intl.formatMessage({ id: "coser.collectionAll" }) },
+    { value: "COSPLAY", label: "COSPLAY" },
+    { value: "ALBUM", label: "ALBUM" },
+  ];
+  return <div className="scope-selector" role="group" aria-label={intl.formatMessage({ id: "coser.collectionFilter" })}>{options.map((option) =>
+    <button key={option.value} type="button" className={option.value === value ? "is-active" : ""} onClick={() => onChange(option.value)}>{option.label}</button>)}</div>;
 }
 
 export function CoserTimelinePage() {
@@ -109,14 +135,14 @@ function GalleryEntityDetail() {
     <GalleryResults title={detail.entity.name} scope={route.scope} onScope={route.setScope} page={detail.galleries} /></main>;
 }
 
-function GalleryResults({ title, scope, onScope, onPage, page, className = "", hideHeading = false, toolbarAction, compactCards = false }: {
+function GalleryResults({ title, scope, onScope, onPage, page, className = "", hideHeading = false, toolbarControl, toolbarAction, compactCards = false }: {
   title: string; scope: Scope; onScope?: (scope: Scope) => void; onPage?: (page: number) => void; page: GalleryPage;
-  className?: string; hideHeading?: boolean; toolbarAction?: ReactNode; compactCards?: boolean;
+  className?: string; hideHeading?: boolean; toolbarControl?: ReactNode; toolbarAction?: ReactNode; compactCards?: boolean;
 }) {
   const intl = useIntl();
   return <section className={`entity-galleries ${className}`.trim()}>
     <header className={hideHeading ? "sr-only" : "section-heading"}><h2>{title}</h2><span>{page.totalItems}</span></header>
-    {onScope || toolbarAction ? <div className={toolbarAction ? "entity-gallery-controls" : "entity-gallery-scope"}>{onScope ? <ScopeSelector value={scope} onChange={onScope} /> : null}{toolbarAction}</div> : null}
+    {onScope || toolbarControl || toolbarAction ? <div className={toolbarAction ? "entity-gallery-controls" : "entity-gallery-scope"}>{toolbarControl ?? (onScope ? <ScopeSelector value={scope} onChange={onScope} /> : null)}{toolbarAction}</div> : null}
     <div className="gallery-grid">{page.items.map((card) => <GalleryCard key={card.setID} card={card} scrubberEnabled={false} peopleVisible={!compactCards} ratingSummaryVisible={!compactCards} />)}</div>
     {onPage && page.totalPages > 1 ? <Pagination page={page.page} totalPages={page.totalPages} previousLabel={intl.formatMessage({ id: "pagination.previous" })} nextLabel={intl.formatMessage({ id: "pagination.next" })} onPageChange={onPage} /> : null}
   </section>;

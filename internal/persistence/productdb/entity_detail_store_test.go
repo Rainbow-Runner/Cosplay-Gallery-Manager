@@ -44,25 +44,34 @@ func TestCoserDetailIsUnifiedAcrossScopesAndPreservesSocialOrder(t *testing.T) {
 	}
 	activateBrowseFixture(t, db, listGallery.ID, now)
 	magicGallery, _ := createBrowseGallery(t, db, "Magic", gallery.ContentRatingAdult, now.Add(time.Minute))
-	if _, err := db.Galleries().AddCredit(ctx, magicGallery.ID, coser.UUID, 1024, magicGallery.MetadataRevision, now); err != nil {
+	magicCreditID, err := db.Galleries().AddCredit(ctx, magicGallery.ID, coser.UUID, 1024, magicGallery.MetadataRevision, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Galleries().AddCast(ctx, magicGallery.ID, magicCreditID, character.UUID, 1024, magicGallery.MetadataRevision+1, now); err != nil {
 		t.Fatal(err)
 	}
 	activateBrowseFixture(t, db, magicGallery.ID, now.Add(time.Minute))
+	albumGallery, _ := createBrowseGallery(t, db, "Album", gallery.ContentRatingAdult, now.Add(2*time.Minute))
+	if _, err := db.Galleries().AddCredit(ctx, albumGallery.ID, coser.UUID, 1024, albumGallery.MetadataRevision, now); err != nil {
+		t.Fatal(err)
+	}
+	activateBrowseFixture(t, db, albumGallery.ID, now.Add(2*time.Minute))
 
 	detail, err := db.Browse().CoserDetail(ctx, coser.UUID, browse.ScopeAll, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !detail.Redirected || detail.Entity.Slug != coser.Slug || detail.Galleries.TotalItems != 2 ||
+	if !detail.Redirected || detail.Entity.Slug != coser.Slug || detail.Galleries.TotalItems != 3 ||
 		len(detail.SocialAccounts) != 2 || detail.SocialAccounts[0].UUID != first.UUID || detail.SocialAccounts[0].Status != "INACTIVE" {
 		t.Fatalf("Coser detail = %#v", detail)
 	}
 	cosplay, err := db.Browse().CoserDetailByCollection(ctx, coser.UUID, browse.ScopeAll, 1, browse.CollectionCosplay)
-	if err != nil || cosplay.Galleries.TotalItems != 1 || cosplay.Galleries.Items[0].SetID != listGallery.SetID {
+	if err != nil || cosplay.Galleries.TotalItems != 2 || cosplay.Galleries.Items[0].SetID != magicGallery.SetID || cosplay.Galleries.Items[1].SetID != listGallery.SetID {
 		t.Fatalf("Coser COSPLAY detail = %#v, %v", cosplay, err)
 	}
 	album, err := db.Browse().CoserDetailByCollection(ctx, coser.UUID, browse.ScopeAll, 1, browse.CollectionAlbum)
-	if err != nil || album.Galleries.TotalItems != 1 || album.Galleries.Items[0].SetID != magicGallery.SetID {
+	if err != nil || album.Galleries.TotalItems != 1 || album.Galleries.Items[0].SetID != albumGallery.SetID {
 		t.Fatalf("Coser ALBUM detail = %#v, %v", album, err)
 	}
 }

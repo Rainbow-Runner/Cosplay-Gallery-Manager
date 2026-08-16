@@ -1,4 +1,5 @@
 import { MockedProvider } from "@apollo/client/testing/react";
+import type { MockedResponse } from "@apollo/client/testing";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -40,13 +41,20 @@ function LocationProbe() {
 
 describe("CoserDetailPage", () => {
   it("uses the GalleryEpic-style identity composition and navigable numeric gallery pages", async () => {
-    const mocks = [1, 2].map((page) => ({
-      request: { query: COSER_DETAIL, variables: { slug: "alice", scope: "ALL", page, collectionType: "COSPLAY" } },
+    const mocks: MockedResponse[] = [1, 2].map((page) => ({
+      request: { query: COSER_DETAIL, variables: { slug: "alice", scope: "ALL", page, collectionType: null } },
       result: { data: { coserDetail: {
         ...baseDetail,
         galleries: { page, pageSize: 24, totalItems: 120, totalPages: 5, items: [] },
       } } },
     }));
+    for (const collectionType of ["COSPLAY", "ALBUM"] as const) mocks.push({
+      request: { query: COSER_DETAIL, variables: { slug: "alice", scope: "ALL", page: 1, collectionType } },
+      result: { data: { coserDetail: {
+        ...baseDetail,
+        galleries: { page: 1, pageSize: 24, totalItems: collectionType === "COSPLAY" ? 80 : 40, totalPages: collectionType === "COSPLAY" ? 4 : 2, items: [] },
+      } } },
+    });
 
     render(
       <IntlProvider locale="en-GB" messages={messages["en-GB"]}>
@@ -75,11 +83,21 @@ describe("CoserDetailPage", () => {
     expect(socialRow?.querySelectorAll(".is-missing")).toHaveLength(4);
     expect(screen.queryByRole("link", { name: "Facebook" })).not.toBeInTheDocument();
     expect(document.querySelector(".coser-banner--empty")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Work type" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ALL WORKS" })).toHaveClass("is-active");
     expect(screen.getByRole("button", { name: "1" })).toHaveAttribute("aria-current", "page");
 
     fireEvent.click(screen.getByRole("button", { name: "2" }));
-    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/coser/alice?scope=ALL&page=2"));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/coser/alice?type=ALL&page=2"));
     expect(await screen.findByRole("button", { name: "2" })).toHaveAttribute("aria-current", "page");
+
+    fireEvent.click(screen.getByRole("button", { name: "COSPLAY" }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/coser/alice?type=COSPLAY&page=1"));
+    expect(await screen.findByRole("button", { name: "COSPLAY" })).toHaveClass("is-active");
+
+    fireEvent.click(screen.getByRole("button", { name: "ALBUM" }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/coser/alice?type=ALBUM&page=1"));
+    expect(await screen.findByRole("button", { name: "ALBUM" })).toHaveClass("is-active");
   });
 
   it("renders the same person identity as a Model with only Album galleries", async () => {
@@ -104,6 +122,6 @@ describe("CoserDetailPage", () => {
     expect(await screen.findByRole("heading", { name: "Alice", level: 1 })).toHaveClass("sr-only");
     expect(screen.getByRole("navigation", { name: "Breadcrumb" })).toHaveTextContent("HomeModelsAlice");
     expect(document.querySelector(".coser-profile")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "ALL" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Work type" })).not.toBeInTheDocument();
   });
 });

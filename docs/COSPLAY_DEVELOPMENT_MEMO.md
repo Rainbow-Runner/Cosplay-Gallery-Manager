@@ -525,7 +525,7 @@ SocialAccount：
 
 - NON_ADULT进入LIST，ADULT进入MAGIC；成人卡片使用小型三角R-18徽标。
 - 内容范围贯穿搜索、推荐、时间线、随机、收藏和历史。
-- Coser/Work/Character/Tag统一详情默认ALL，可显式切All/List/Magic，不继承入口。
+- Work/Character/Tag统一详情默认ALL，可显式切All/List/Magic，不继承入口。Coser详情改用作品类型筛选，不再使用内容分级筛选。
 - LIST/MAGIC是浏览组织，不是权限边界；所有页面仍需唯一所有者认证。
 
 ## 18. BrowseShell 信息架构
@@ -598,7 +598,7 @@ SocialAccount：
 
 ### 18.8 Coser、Work、Character、Tag
 
-- Coser详情跨分区默认ALL，显示全部作品、个人介绍、Biography、社交账号、筛选和专属时间线按钮。
+- Coser详情默认显示该人物全部COSPLAY与ALBUM，保留个人介绍、Biography、社交账号和专属时间线按钮；作品筛选固定为“全部作品 / COSPLAY / ALBUM”。COSPLAY使用内容范围ALL，因此等于LIST与MAGIC合集；ALBUM继续展示全部内容分级。Model详情保持既有ALBUM专用列表，不增加该筛选。
 - Coser卡片使用1:1头像、6/5/4/3/2列，30项/页；Work/Character/Tag为无图片高密度文字索引，5/4/3/1列，60项/页。
 - Work详情只显示当前选择范围内至少关联可见Gallery的Character；不显示Gallery。
 - Character详情显示相关Gallery网格；Tag详情包含自身及全部后代Gallery。

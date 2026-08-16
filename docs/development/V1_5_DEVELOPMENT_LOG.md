@@ -1459,4 +1459,6 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 
 - 产品数据库回归新增同一Coser同时拥有NON_ADULT COSPLAY、ADULT COSPLAY和ADULT ALBUM样本，锁定混合查询返回3项、COSPLAY合并LIST/MAGIC返回2项、ALBUM只返回1项。
 - Coser组件回归覆盖默认null混合查询、三种筛选、切换重置分页、URL持久化及Model无新控件；产品数据库专项、TypeScript检查和Vitest 26个文件70项全部PASS。677模块Vite生产构建及带`cgm_web_embed cgm_galleryepic`的Server/API/数据库/cmd组合回归PASS。
-- 本轮没有提交、安装构建或重启正式服务，没有修改数据库schema、配置、媒体、Manifest或缓存；本地实现等待后续明确的提交/部署指令。
+- 功能、测试和部署前记录提交为`edf4bf30c8090e70cbe2624487d65d4648853a10`（`Show all gallery types on coser details`）；清洁提交以`cgm_web_embed cgm_galleryepic`和Go 1.25.12构建，`go version -m`确认`vcs.modified=false`，正式二进制SHA-256为`f34233ad63c524cb60564c7fe19ba03f628819d70343a58aaa90671d4edc7c8f`。
+- 2026-08-17 00:36 CST完成本机增量部署。替换前二进制保留于`/tmp/cgm-before-coser-types-20260817`；新产物同目录临时安装、SHA-256复核一致后原子替换，只重启一次用户服务。现有schema v3完整回滚包和自动schema v2迁移快照继续保留，本轮没有schema或配置变更。
+- 正式服务保持`active/running`、`NRestarts=0`，Health/Ready为204、首页为200；About报告完整`edf4bf3...`、`buildTime=2026-08-17`和`exactSourceAvailable=true`。入口使用新`index-DSKoTdcB.js`与既有`index-Btj_g1dP.css`；配置与数据库inode分别保持`19681854`和`19679716`，未替换数据库、媒体、Manifest或缓存，启动journal未发现异常。

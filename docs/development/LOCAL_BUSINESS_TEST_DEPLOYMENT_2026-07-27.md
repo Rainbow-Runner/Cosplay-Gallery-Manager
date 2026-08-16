@@ -2,6 +2,15 @@
 
 ## 1.5 增量开发状态
 
+### 2026-08-17 媒体分类规则与schema v4增量部署
+
+- 2026-08-17 01:24 CST将正式服务升级到提交`6e61b9a6b0864a9619c74cfbe14c9f87210b33f4`。清洁提交以Go 1.25.12、`cgm_web_embed cgm_galleryepic`构建，`go version -m`确认`vcs.modified=false`；正式二进制SHA-256为`5aa52944757232585f36effcb2f62b0f932e15be8f0b18c6f785c77bee83c7e0`，旧二进制保留于`/tmp/cgm-before-media-classification-20260817`。
+- 停机且MainPID为0后创建额外完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260816T172208Z-6e61b9a.tar.gz`，权限`0600`、SHA-256为`63cb688b8520c2159dcd76dbb95f7b76e285ef0b6fc66922d43271ae3ead6d3f`。归档已实际解包，schema v3数据库`integrity_check=ok`、55张表/1930行；旧二进制、启动配置、systemd定义和Coser元数据均与正式来源逐项一致。
+- 服务只启动一次即完成schema v3→v4迁移。自动迁移快照`product.sqlite.pre-schema-v3-1786901055992698276.bak`权限`0600`、SHA-256为`a7f2842136e05904490c042dd2ed7b5d994cf84d377ce39a2b9bc6e34eaa22a0`，独立验证仍为schema v3、`integrity_check=ok`、55张表/1930行且不含v4表。
+- 迁移后正式库保持inode `19679716`，`integrity_check=ok`、schema v4、57张表/1932行；新增两条可编辑的全局默认规则，其中目录Exact规则启用、文件名Glob规则关闭。正式库迁移前没有旧自拍建议，因此新建议表为空；没有产生或丢失业务建议。
+- 服务保持`enabled/active/running`、`NRestarts=0`，Health/Ready均为204，首页/Setup/Legal/Session为200；About精确报告完整提交和`exactSourceAvailable=true`，入口使用`index-CvDrpo1q.js`与`index-8_Nt1C6e.css`。启动确认两个工作器及FFmpeg/FFprobe/LibRaw可用，本轮journal无WARN、ERROR、FAILED、panic或fatal。
+- 配置SHA-256继续为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`。本轮未替换配置、媒体、Gallery/Coser Manifest或缓存；数据库变更仅为经备份验证的前向schema迁移和两条默认规则。
+
 ### 2026-08-15 Gallery视频标识透明化增量部署
 
 - 2026-08-15 21:46 CST将Gallery详情媒体卡片右上角VIDEO/GIF类型标识改为无背景、无内边距的轻量文字；82%白字与轻微文字阴影只保证不同Poster上的基本可读性，不形成新的遮罩或色块。媒体类型识别、文字内容、右上角操作菜单和Lightbox均未改变。

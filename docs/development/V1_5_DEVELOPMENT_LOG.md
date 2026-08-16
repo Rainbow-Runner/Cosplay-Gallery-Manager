@@ -1482,4 +1482,14 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 
 - 纯Go规则测试覆盖多语言目录、大小写折叠、文件Glob、stem/相对路径RE2以及无效RE2/Glob；SQLite测试覆盖新库默认值、v1/v2/v3→v4在线快照迁移、CRUD revision、静态媒体边界、拒绝稳定性、规则新revision重提、默认规则删除恢复和扫描接入。
 - GraphQL测试证明校验返回稳定`RULE_RE2_INVALID`且绕过前端直接Create仍无法写入；React测试锁定无效/过期RE2校验下Save禁用、当前表达式通过后才启用。产品身份/API/Server/SQLite/扫描器/Gallery/规则包Go回归全部PASS；TypeScript检查、Vitest 27个文件71项和678模块Vite生产构建全部PASS。隔离的离线Chromium完整业务生命周期/备份恢复/axe矩阵1项PASS，临时schema v4服务完成媒体库、发现、扫描、媒体处理、关系、激活与Manifest流程，未连接正式实例。
-- 本阶段包含正式数据库schema v3→v4迁移，本轮按用户要求只完成本地开发，不执行增量部署。未来部署前必须先提交清洁源码，创建并完整校验额外回滚包；迁移后复核自动`.pre-schema-v3-*`快照、`integrity_check`、默认规则、正式服务Health/Ready/About及journal。
+- 本阶段包含正式数据库schema v3→v4迁移；部署前必须先提交清洁源码，创建并完整校验额外回滚包；迁移后复核自动`.pre-schema-v3-*`快照、`integrity_check`、默认规则、正式服务Health/Ready/About及journal。以下部署记录确认该门禁已经完整执行。
+
+### 提交、备份与正式增量部署
+
+- 功能、测试和部署前记录提交为`6e61b9a6b0864a9619c74cfbe14c9f87210b33f4`（`Add configurable media classification rules`），提交后工作树清洁。正式产物使用Go 1.25.12、`cgm_web_embed cgm_galleryepic`及完整提交构建；`go version -m`确认`vcs.modified=false`，GalleryEpic Provider的Search/FetchProfile/OpenAsset均存在，二进制SHA-256为`5aa52944757232585f36effcb2f62b0f932e15be8f0b18c6f785c77bee83c7e0`。
+- 2026-08-17 01:22 CST停止用户服务并确认MainPID为0，在真实备份根创建`/home/rainbowrunner/cos/bk/cgm-predeploy-20260816T172208Z-6e61b9a.tar.gz`。回滚包权限`0600`、SHA-256为`63cb688b8520c2159dcd76dbb95f7b76e285ef0b6fc66922d43271ae3ead6d3f`，包含SQLite一致schema v3快照、启动配置、Coser托管元数据、替换前二进制和systemd用户服务定义，不包含媒体来源、缓存、日志或既有备份。
+- 回滚包已实际解包；数据库`integrity_check=ok`、产品身份/schema v3、55张表/1930行，解包后的旧二进制、配置、服务定义和全部Coser元数据与正式来源逐项一致。旧二进制另保留于`/tmp/cgm-before-media-classification-20260817`，SHA-256为`f34233ad63c524cb60564c7fe19ba03f628819d70343a58aaa90671d4edc7c8f`。
+- 候选产物先写入正式目录临时文件并逐字节比对后原子替换；服务只启动一次，于2026-08-17 01:24:15 CST完成schema v3→v4迁移。自动快照`product.sqlite.pre-schema-v3-1786901055992698276.bak`权限`0600`、SHA-256为`a7f2842136e05904490c042dd2ed7b5d994cf84d377ce39a2b9bc6e34eaa22a0`，独立验证`integrity_check=ok`、schema v3、55张表/1930行且不含v4表。
+- 迁移后主库保持原inode `19679716`，`integrity_check=ok`、schema v4、57张表/1932行。两条`system_default=1`规则已创建：`Default selfie folders`启用，`Optional selfie filenames`关闭；正式库原有`SELFIE_CATEGORY`建议为0，因此新建议表为空，迁移未丢失或重复生成建议。
+- 正式服务保持`enabled/active/running`、`NRestarts=0`；Health/Ready为204，首页、Setup、Legal和Session端点为200。About报告`version=1.5.0-dev`、完整提交、`buildTime=2026-08-17`和`exactSourceAvailable=true`；入口使用`index-CvDrpo1q.js`与`index-8_Nt1C6e.css`。两个工作器以FFmpeg/FFprobe/LibRaw全部可用启动，本轮journal未检出WARN、ERROR、FAILED、panic、fatal或迁移错误。
+- 配置SHA-256保持`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`且未替换。除产品数据库前向迁移和两条默认规则外，本轮没有修改媒体、Gallery/Coser Manifest、缓存或业务配置。

@@ -279,6 +279,15 @@ input GalleryExternalLinkInput { type: String! label: String! url: String! posit
 input ManifestConflictChoiceInput { path: String! choice: String! }
 type ManageRecognitionRule { id: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }
 type ManageLibrary { id: Int64! name: String! rootPath: String! enabled: Boolean! readOnly: Boolean! captureTimezone: String! rules: [ManageRecognitionRule!]! }
+type ManageMediaClassificationRule { id: Int64! libraryID: Int64 name: String! enabled: Boolean! order: Int! subject: String! operator: String! pattern: String! caseSensitive: Boolean! resultCategory: ImageCategory! revision: Int! systemDefault: Boolean! }
+input MediaClassificationRuleInput { libraryID: Int64 name: String! enabled: Boolean! order: Int! subject: String! operator: String! pattern: String! caseSensitive: Boolean! resultCategory: ImageCategory! }
+input UpdateMediaClassificationRuleInput { id: Int64! libraryID: Int64 name: String! enabled: Boolean! order: Int! subject: String! operator: String! pattern: String! caseSensitive: Boolean! resultCategory: ImageCategory! }
+type ManageRuleValidation { valid: Boolean! errorCode: String! message: String! }
+type ManageMediaClassificationMatch { matched: Boolean! ruleID: Int64! ruleName: String! resultCategory: ImageCategory subject: String! matchedValue: String! }
+type ManageMediaClassificationPreviewSample { gallerySetID: ID! galleryTitle: String! itemUUID: ID! relativePath: String! currentCategory: ImageCategory! proposedCategory: ImageCategory! matchedValue: String! }
+type ManageMediaClassificationPreview { totalMatches: Int! samples: [ManageMediaClassificationPreviewSample!]! }
+type ManageMediaClassificationEvaluation { evaluated: Int! matched: Int! pending: Int! superseded: Int! }
+type ManageMediaClassificationSuggestion { id: Int64! galleryID: Int64! galleryRevision: Int64! gallerySetID: ID! galleryTitle: String! itemUUID: ID! relativePath: String! ruleID: Int64! ruleRevision: Int! ruleName: String! proposedCategory: ImageCategory! matchedSubject: String! matchedValue: String! status: String! }
 type ManageSuggestion { field: String! value: String! }
 type ManageCandidate { id: Int64! rootPath: String! sourceType: String! method: String! manifestSetID: ID status: String! autoCreateDraft: Boolean! hasConflict: Boolean! overLimit: Boolean! mediaCount: Int! suggestions: [ManageSuggestion!]! }
 type ManageUnassignedDiagnostic { parentPath: String! mediaCount: Int! }
@@ -393,6 +402,8 @@ type Query {
   manageGalleryManifest(setID: ID!): ManageGalleryManifestState!
   manageCoserManifest(coserUUID: ID!): ManageCoserManifestState!
   manageLibraries: [ManageLibrary!]!
+  manageMediaClassificationRules(libraryID: Int64): [ManageMediaClassificationRule!]!
+  manageMediaClassificationSuggestions(libraryID: Int64, status: String! = "PENDING"): [ManageMediaClassificationSuggestion!]!
   manageDiscovery(libraryID: Int64!): ManageDiscoverySnapshot!
   manageRuntimeSettings: ManageRuntimeSettings!
   manageCacheStorage: ManageCacheStorage!
@@ -431,6 +442,15 @@ type Mutation {
   createRecognitionRule(input: CreateRecognitionRuleInput!): ManageRecognitionRule!
   updateRecognitionRule(input: UpdateRecognitionRuleInput!): ManageRecognitionRule!
   deleteRecognitionRule(id: Int64!): Boolean!
+  validateMediaClassificationRule(input: MediaClassificationRuleInput!): ManageRuleValidation!
+  createMediaClassificationRule(input: MediaClassificationRuleInput!): ManageMediaClassificationRule!
+  updateMediaClassificationRule(input: UpdateMediaClassificationRuleInput!): ManageMediaClassificationRule!
+  deleteMediaClassificationRule(id: Int64!): Boolean!
+  restoreDefaultMediaClassificationRules: [ManageMediaClassificationRule!]!
+  testMediaClassificationRule(input: MediaClassificationRuleInput!, relativePath: String!): ManageMediaClassificationMatch!
+  previewMediaClassificationRule(input: MediaClassificationRuleInput!, libraryID: Int64): ManageMediaClassificationPreview!
+  evaluateMediaClassificationRules(libraryID: Int64): ManageMediaClassificationEvaluation!
+  resolveMediaClassificationSuggestion(id: Int64!, accept: Boolean!, expectedGalleryRevision: Int64!): ManageMediaClassificationSuggestion!
   discoverMediaLibrary(libraryID: Int64!): ManageDiscoverySnapshot!
   importGalleryCandidate(candidateID: Int64!): ManageGalleryDetail!
   scanGallerySource(setID: ID!, excludeNewRootMedia: Boolean! = true): ManageGalleryDetail!

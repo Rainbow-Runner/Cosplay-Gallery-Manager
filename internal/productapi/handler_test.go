@@ -259,6 +259,35 @@ func TestRecognitionRuleUpdateAndDeleteGraphQL(t *testing.T) {
 	}
 }
 
+func TestMediaClassificationRE2ValidationCannotBeBypassed(t *testing.T) {
+	database := openTestDatabase(t)
+	handler := NewHandler(database, func(*http.Request) bool { return true })
+	call := func(query string) []byte {
+		t.Helper()
+		request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(fmt.Sprintf(`{"query":%q}`, query)))
+		request.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+		}
+		return response.Body.Bytes()
+	}
+	input := `libraryID:null,name:"Bad regex",enabled:true,order:100,subject:"FILE_NAME",operator:"RE2",pattern:"([",caseSensitive:false,resultCategory:SELFIE`
+	validated := call(`mutation { validateMediaClassificationRule(input:{` + input + `}) { valid errorCode message } }`)
+	if !bytes.Contains(validated, []byte(`"valid":false`)) || !bytes.Contains(validated, []byte(`RULE_RE2_INVALID`)) {
+		t.Fatalf("validation result=%s", validated)
+	}
+	created := call(`mutation { createMediaClassificationRule(input:{` + input + `}) { id } }`)
+	if !bytes.Contains(created, []byte(`RULE_RE2_INVALID`)) {
+		t.Fatalf("direct create did not reject invalid regex: %s", created)
+	}
+	var count int
+	if err := database.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM media_classification_rules WHERE name='Bad regex'`).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("invalid persisted count=%d err=%v", count, err)
+	}
+}
+
 func TestCharacterCreateWithoutWorkReturnsValidationErrorAndAudit(t *testing.T) {
 	database := openTestDatabase(t)
 	handler := NewHandler(database, func(*http.Request) bool { return true })

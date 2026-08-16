@@ -83,7 +83,7 @@ func TestOpenMigratesSchemaV1AfterValidatedSnapshot(t *testing.T) {
 		t.Fatalf("migrating schema v1: %v", err)
 	}
 	defer db.Close()
-	if db.Identity().DatabaseSchemaVersion != 3 {
+	if db.Identity().DatabaseSchemaVersion != product.DatabaseSchemaVersion {
 		t.Fatalf("schema version = %d", db.Identity().DatabaseSchemaVersion)
 	}
 	var tableCount int
@@ -160,7 +160,7 @@ func TestOpenMigratesSchemaV2SettingsAfterValidatedSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if db.Identity().DatabaseSchemaVersion != 3 || settings.HomeScope != "ALL" ||
+	if db.Identity().DatabaseSchemaVersion != product.DatabaseSchemaVersion || settings.HomeScope != "ALL" ||
 		settings.GalleryAnimatedPlaybackLimit != 12 || settings.GalleryAnimatedLockIntervalMS != 800 {
 		t.Fatalf("migrated identity/settings = %#v / %#v", db.Identity(), settings)
 	}
@@ -191,6 +191,95 @@ func TestOpenMigratesSchemaV2SettingsAfterValidatedSnapshot(t *testing.T) {
 	}
 	if err := validateSettingsSchemaV3(ctx, backup); err == nil {
 		t.Fatal("schema v2 snapshot unexpectedly contains schema v3 settings")
+	}
+}
+
+func TestOpenMigratesSchemaV3MediaClassificationAfterValidatedSnapshot(t *testing.T) {
+	ctx := context.Background()
+	directory := t.TempDir()
+	path := filepath.Join(directory, "library.sqlite")
+	connection, err := sql.Open(sqliteDriver, sqliteDSN(path, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := connection.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ExecContext(ctx, `CREATE TABLE cgm_product_identity(singleton_id INTEGER NOT NULL PRIMARY KEY CHECK(singleton_id=1),product_id TEXT NOT NULL,database_schema_version INTEGER NOT NULL,created_at_utc TEXT NOT NULL)`); err != nil {
+		t.Fatal(err)
+	}
+	if err := createSchemaV1(ctx, tx); err != nil {
+		t.Fatal(err)
+	}
+	if err := createMediaProcessingSchemaV2(ctx, tx); err != nil {
+		t.Fatal(err)
+	}
+	if err := createSettingsSchemaV3(ctx, tx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO portable_uuid_registry(uuid,entity_kind,created_at_utc) VALUES
+			('11111111-1111-4111-8111-111111111111','GALLERY','2026-08-17T00:00:00Z'),
+			('22222222-2222-4222-8222-222222222222','GALLERY_ITEM','2026-08-17T00:00:00Z');
+		INSERT INTO galleries(id,set_id,slug,state,title,created_at_utc,updated_at_utc) VALUES
+			(1,'11111111-1111-4111-8111-111111111111','migration-gallery','DRAFT','Migration','2026-08-17T00:00:00Z','2026-08-17T00:00:00Z');
+		INSERT INTO gallery_sources(id,gallery_id,source_type,source_path,availability_state,reconcile_state,created_at_utc,updated_at_utc) VALUES
+			(1,1,'DIRECTORY',?,'AVAILABLE','IN_SYNC','2026-08-17T00:00:00Z','2026-08-17T00:00:00Z');
+		INSERT INTO gallery_items(id,item_uuid,gallery_id,source_id,relative_path,media_kind,content_format,image_category,position,availability_state,processing_state,created_at_utc,updated_at_utc) VALUES
+			(1,'22222222-2222-4222-8222-222222222222',1,1,'selfie/a.jpg','STATIC_IMAGE','IMAGE','PHOTO',1024,'AVAILABLE','READY','2026-08-17T00:00:00Z','2026-08-17T00:00:00Z');
+		INSERT INTO gallery_item_suggestions(gallery_id,item_uuid,suggestion_kind,value,source_kind,status,created_at_utc,resolved_at_utc) VALUES
+			(1,'22222222-2222-4222-8222-222222222222','SELFIE_CATEGORY','SELFIE','DIRECTORY_SEMANTIC','REJECTED','2026-08-17T00:00:00Z','2026-08-17T00:01:00Z')
+	`, filepath.Join(directory, "media")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO cgm_product_identity VALUES(1,?,3,'2026-08-17T00:00:00Z')`, product.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if err := connection.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := Open(ctx, path)
+	if err != nil {
+		t.Fatalf("migrating schema v3: %v", err)
+	}
+	defer db.Close()
+	var defaults int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM media_classification_rules WHERE system_default=1`).Scan(&defaults); err != nil || defaults != 2 {
+		t.Fatalf("default rules=%d err=%v", defaults, err)
+	}
+	var migratedStatus string
+	if err := db.QueryRowContext(ctx, `SELECT status FROM media_classification_suggestions WHERE item_uuid='22222222-2222-4222-8222-222222222222'`).Scan(&migratedStatus); err != nil || migratedStatus != "REJECTED" {
+		t.Fatalf("migrated legacy status=%q err=%v", migratedStatus, err)
+	}
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var snapshot string
+	for _, entry := range entries {
+		if strings.Contains(entry.Name(), ".pre-schema-v3-") {
+			snapshot = filepath.Join(directory, entry.Name())
+		}
+	}
+	if snapshot == "" {
+		t.Fatal("schema v3 pre-migration snapshot was not created")
+	}
+	backup, err := sql.Open(sqliteDriver, sqliteDSN(snapshot, true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backup.Close()
+	identity, err := readIdentity(ctx, backup)
+	if err != nil || identity.DatabaseSchemaVersion != 3 {
+		t.Fatalf("snapshot identity=%#v err=%v", identity, err)
+	}
+	if err := validateMediaClassificationSchemaV4(ctx, backup); err == nil {
+		t.Fatal("schema v3 snapshot unexpectedly contains schema v4 rules")
 	}
 }
 

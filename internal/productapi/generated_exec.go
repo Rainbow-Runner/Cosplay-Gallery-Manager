@@ -505,6 +505,69 @@ type ComplexityRoot struct {
 		Path         func(childComplexity int) int
 	}
 
+	ManageMediaClassificationEvaluation struct {
+		Evaluated  func(childComplexity int) int
+		Matched    func(childComplexity int) int
+		Pending    func(childComplexity int) int
+		Superseded func(childComplexity int) int
+	}
+
+	ManageMediaClassificationMatch struct {
+		Matched        func(childComplexity int) int
+		MatchedValue   func(childComplexity int) int
+		ResultCategory func(childComplexity int) int
+		RuleID         func(childComplexity int) int
+		RuleName       func(childComplexity int) int
+		Subject        func(childComplexity int) int
+	}
+
+	ManageMediaClassificationPreview struct {
+		Samples      func(childComplexity int) int
+		TotalMatches func(childComplexity int) int
+	}
+
+	ManageMediaClassificationPreviewSample struct {
+		CurrentCategory  func(childComplexity int) int
+		GallerySetID     func(childComplexity int) int
+		GalleryTitle     func(childComplexity int) int
+		ItemUUID         func(childComplexity int) int
+		MatchedValue     func(childComplexity int) int
+		ProposedCategory func(childComplexity int) int
+		RelativePath     func(childComplexity int) int
+	}
+
+	ManageMediaClassificationRule struct {
+		CaseSensitive  func(childComplexity int) int
+		Enabled        func(childComplexity int) int
+		ID             func(childComplexity int) int
+		LibraryID      func(childComplexity int) int
+		Name           func(childComplexity int) int
+		Operator       func(childComplexity int) int
+		Order          func(childComplexity int) int
+		Pattern        func(childComplexity int) int
+		ResultCategory func(childComplexity int) int
+		Revision       func(childComplexity int) int
+		Subject        func(childComplexity int) int
+		SystemDefault  func(childComplexity int) int
+	}
+
+	ManageMediaClassificationSuggestion struct {
+		GalleryID        func(childComplexity int) int
+		GalleryRevision  func(childComplexity int) int
+		GallerySetID     func(childComplexity int) int
+		GalleryTitle     func(childComplexity int) int
+		ID               func(childComplexity int) int
+		ItemUUID         func(childComplexity int) int
+		MatchedSubject   func(childComplexity int) int
+		MatchedValue     func(childComplexity int) int
+		ProposedCategory func(childComplexity int) int
+		RelativePath     func(childComplexity int) int
+		RuleID           func(childComplexity int) int
+		RuleName         func(childComplexity int) int
+		RuleRevision     func(childComplexity int) int
+		Status           func(childComplexity int) int
+	}
+
 	ManageProcessingJob struct {
 		AttemptCount      func(childComplexity int) int
 		CreatedAt         func(childComplexity int) int
@@ -538,6 +601,12 @@ type ComplexityRoot struct {
 		Name            func(childComplexity int) int
 		Order           func(childComplexity int) int
 		Pattern         func(childComplexity int) int
+	}
+
+	ManageRuleValidation struct {
+		ErrorCode func(childComplexity int) int
+		Message   func(childComplexity int) int
+		Valid     func(childComplexity int) int
 	}
 
 	ManageRuntimeSettings struct {
@@ -629,50 +698,59 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddCoserSocialAccount      func(childComplexity int, coserUUID string, expectedMetadataRevision int64, input SocialAccountInput) int
-		AddGalleryExternalLink     func(childComplexity int, setID string, expectedMetadataRevision int64, input GalleryExternalLinkInput) int
-		CancelProcessingJob        func(childComplexity int, id int64) int
-		CreateCoreEntity           func(childComplexity int, input CoreEntityInput) int
-		CreateFullBackup           func(childComplexity int) int
-		CreateMediaLibrary         func(childComplexity int, input CreateMediaLibraryInput) int
-		CreateRecognitionRule      func(childComplexity int, input CreateRecognitionRuleInput) int
-		DeleteCoreEntity           func(childComplexity int, kind SearchEntityKind, uuid string, expectedMetadataRevision int64) int
-		DeleteGallery              func(childComplexity int, setID string, expectedMetadataRevision int64, password string, confirmation string) int
-		DeleteRecognitionRule      func(childComplexity int, id int64) int
-		DiscoverMediaLibrary       func(childComplexity int, libraryID int64) int
-		ImportGalleryCandidate     func(childComplexity int, candidateID int64) int
-		MergeCoreEntities          func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string, expectedSourceRevision int64, expectedTargetRevision int64) int
-		MoveGalleryItem            func(childComplexity int, setID string, itemUUID string, beforeItemUUID *string, expectedMetadataRevision int64) int
-		PullCoserManifest          func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
-		PullGalleryManifest        func(childComplexity int, setID string, expectedMetadataRevision int64) int
-		PushCoserManifest          func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
-		PushGalleryManifest        func(childComplexity int, setID string, expectedMetadataRevision int64) int
-		RecordGalleryView          func(childComplexity int, setID string, itemUUID *string) int
-		ReorderGalleryItems        func(childComplexity int, setID string, itemUUIDs []string, expectedMetadataRevision int64) int
-		ReplaceGalleryRelations    func(childComplexity int, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) int
-		ReplaceTagParents          func(childComplexity int, childUUID string, expectedChildRevision int64, parents []*ReplaceTagParentInput, expectedParents []*ExpectedTagRevisionInput) int
-		RequestItemAnimatedPreview func(childComplexity int, itemUUID string) int
-		RequestItemLightbox        func(childComplexity int, itemUUID string) int
-		RequestItemVideoPlayback   func(childComplexity int, itemUUID string) int
-		ResetGalleryCover          func(childComplexity int, setID string, expectedMetadataRevision int64) int
-		ResolveCoserManifest       func(childComplexity int, coserUUID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
-		ResolveGalleryManifest     func(childComplexity int, setID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
-		RestoreBackup              func(childComplexity int, backupID string) int
-		RetryGalleryItemVideo      func(childComplexity int, itemUUID string) int
-		RetryProcessingJob         func(childComplexity int, id int64) int
-		ScanGallerySource          func(childComplexity int, setID string, excludeNewRootMedia bool) int
-		SetGalleryCoverItem        func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64) int
-		SetGalleryFavorite         func(childComplexity int, setID string, favorite bool) int
-		SetGalleryItemExcluded     func(childComplexity int, setID string, itemUUID string, excluded bool, expectedMetadataRevision int64) int
-		SetGalleryRating           func(childComplexity int, setID string, ratingHalfSteps *int, expectedMetadataRevision int64) int
-		SetGalleryState            func(childComplexity int, setID string, expectedMetadataRevision int64, state GalleryState) int
-		SetItemFavorite            func(childComplexity int, itemUUID string, favorite bool) int
-		SetItemRating              func(childComplexity int, itemUUID string, ratingHalfSteps *int, expectedMetadataRevision int64) int
-		UpdateCoreEntity           func(childComplexity int, uuid string, expectedMetadataRevision int64, input CoreEntityInput) int
-		UpdateGalleryItem          func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64, input UpdateGalleryItemInput) int
-		UpdateGalleryMetadata      func(childComplexity int, setID string, expectedMetadataRevision int64, input UpdateGalleryMetadataInput) int
-		UpdateRecognitionRule      func(childComplexity int, input UpdateRecognitionRuleInput) int
-		UpdateRuntimeSettings      func(childComplexity int, expectedSettingsRevision int64, input RuntimeSettingsInput) int
+		AddCoserSocialAccount                  func(childComplexity int, coserUUID string, expectedMetadataRevision int64, input SocialAccountInput) int
+		AddGalleryExternalLink                 func(childComplexity int, setID string, expectedMetadataRevision int64, input GalleryExternalLinkInput) int
+		CancelProcessingJob                    func(childComplexity int, id int64) int
+		CreateCoreEntity                       func(childComplexity int, input CoreEntityInput) int
+		CreateFullBackup                       func(childComplexity int) int
+		CreateMediaClassificationRule          func(childComplexity int, input MediaClassificationRuleInput) int
+		CreateMediaLibrary                     func(childComplexity int, input CreateMediaLibraryInput) int
+		CreateRecognitionRule                  func(childComplexity int, input CreateRecognitionRuleInput) int
+		DeleteCoreEntity                       func(childComplexity int, kind SearchEntityKind, uuid string, expectedMetadataRevision int64) int
+		DeleteGallery                          func(childComplexity int, setID string, expectedMetadataRevision int64, password string, confirmation string) int
+		DeleteMediaClassificationRule          func(childComplexity int, id int64) int
+		DeleteRecognitionRule                  func(childComplexity int, id int64) int
+		DiscoverMediaLibrary                   func(childComplexity int, libraryID int64) int
+		EvaluateMediaClassificationRules       func(childComplexity int, libraryID *int64) int
+		ImportGalleryCandidate                 func(childComplexity int, candidateID int64) int
+		MergeCoreEntities                      func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string, expectedSourceRevision int64, expectedTargetRevision int64) int
+		MoveGalleryItem                        func(childComplexity int, setID string, itemUUID string, beforeItemUUID *string, expectedMetadataRevision int64) int
+		PreviewMediaClassificationRule         func(childComplexity int, input MediaClassificationRuleInput, libraryID *int64) int
+		PullCoserManifest                      func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
+		PullGalleryManifest                    func(childComplexity int, setID string, expectedMetadataRevision int64) int
+		PushCoserManifest                      func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
+		PushGalleryManifest                    func(childComplexity int, setID string, expectedMetadataRevision int64) int
+		RecordGalleryView                      func(childComplexity int, setID string, itemUUID *string) int
+		ReorderGalleryItems                    func(childComplexity int, setID string, itemUUIDs []string, expectedMetadataRevision int64) int
+		ReplaceGalleryRelations                func(childComplexity int, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) int
+		ReplaceTagParents                      func(childComplexity int, childUUID string, expectedChildRevision int64, parents []*ReplaceTagParentInput, expectedParents []*ExpectedTagRevisionInput) int
+		RequestItemAnimatedPreview             func(childComplexity int, itemUUID string) int
+		RequestItemLightbox                    func(childComplexity int, itemUUID string) int
+		RequestItemVideoPlayback               func(childComplexity int, itemUUID string) int
+		ResetGalleryCover                      func(childComplexity int, setID string, expectedMetadataRevision int64) int
+		ResolveCoserManifest                   func(childComplexity int, coserUUID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
+		ResolveGalleryManifest                 func(childComplexity int, setID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
+		ResolveMediaClassificationSuggestion   func(childComplexity int, id int64, accept bool, expectedGalleryRevision int64) int
+		RestoreBackup                          func(childComplexity int, backupID string) int
+		RestoreDefaultMediaClassificationRules func(childComplexity int) int
+		RetryGalleryItemVideo                  func(childComplexity int, itemUUID string) int
+		RetryProcessingJob                     func(childComplexity int, id int64) int
+		ScanGallerySource                      func(childComplexity int, setID string, excludeNewRootMedia bool) int
+		SetGalleryCoverItem                    func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64) int
+		SetGalleryFavorite                     func(childComplexity int, setID string, favorite bool) int
+		SetGalleryItemExcluded                 func(childComplexity int, setID string, itemUUID string, excluded bool, expectedMetadataRevision int64) int
+		SetGalleryRating                       func(childComplexity int, setID string, ratingHalfSteps *int, expectedMetadataRevision int64) int
+		SetGalleryState                        func(childComplexity int, setID string, expectedMetadataRevision int64, state GalleryState) int
+		SetItemFavorite                        func(childComplexity int, itemUUID string, favorite bool) int
+		SetItemRating                          func(childComplexity int, itemUUID string, ratingHalfSteps *int, expectedMetadataRevision int64) int
+		TestMediaClassificationRule            func(childComplexity int, input MediaClassificationRuleInput, relativePath string) int
+		UpdateCoreEntity                       func(childComplexity int, uuid string, expectedMetadataRevision int64, input CoreEntityInput) int
+		UpdateGalleryItem                      func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64, input UpdateGalleryItemInput) int
+		UpdateGalleryMetadata                  func(childComplexity int, setID string, expectedMetadataRevision int64, input UpdateGalleryMetadataInput) int
+		UpdateMediaClassificationRule          func(childComplexity int, input UpdateMediaClassificationRuleInput) int
+		UpdateRecognitionRule                  func(childComplexity int, input UpdateRecognitionRuleInput) int
+		UpdateRuntimeSettings                  func(childComplexity int, expectedSettingsRevision int64, input RuntimeSettingsInput) int
+		ValidateMediaClassificationRule        func(childComplexity int, input MediaClassificationRuleInput) int
 	}
 
 	OnDemandResource struct {
@@ -692,46 +770,48 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		BrowseGalleries             func(childComplexity int, scope BrowseScope, page int, sort GallerySort, collectionType *CollectionType) int
-		BrowseUISettings            func(childComplexity int) int
-		CharacterDetail             func(childComplexity int, slug string, scope BrowseScope, page int) int
-		CoserDetail                 func(childComplexity int, slug string, scope BrowseScope, page int, collectionType *CollectionType) int
-		EntityIndex                 func(childComplexity int, kind SearchEntityKind, scope BrowseScope, page int, sort EntitySort, collectionType *CollectionType, query string) int
-		FavoriteGalleries           func(childComplexity int, scope BrowseScope, page int) int
-		FavoriteMedia               func(childComplexity int, scope BrowseScope, page int, ratingSort bool) int
-		GalleryDetail               func(childComplexity int, slug string, scope BrowseScope) int
-		GalleryHistory              func(childComplexity int, scope BrowseScope, page int) int
-		GalleryMemberIndex          func(childComplexity int, setID string) int
-		HomeGalleries               func(childComplexity int, page int) int
-		ItemAnimatedPreviewStatus   func(childComplexity int, itemUUID string) int
-		ItemLightboxStatus          func(childComplexity int, itemUUID string) int
-		ItemVideoPlaybackStatus     func(childComplexity int, itemUUID string) int
-		ManageAudit                 func(childComplexity int, page int) int
-		ManageBackups               func(childComplexity int) int
-		ManageCacheStorage          func(childComplexity int) int
-		ManageCoreEntities          func(childComplexity int, kind SearchEntityKind, page int) int
-		ManageCoreEntity            func(childComplexity int, kind SearchEntityKind, uuid string) int
-		ManageCoreEntityOptions     func(childComplexity int, kind SearchEntityKind, query string, limit int) int
-		ManageCoserManifest         func(childComplexity int, coserUUID string) int
-		ManageDiscovery             func(childComplexity int, libraryID int64) int
-		ManageGalleries             func(childComplexity int, page int) int
-		ManageGallery               func(childComplexity int, setID string) int
-		ManageGalleryManifest       func(childComplexity int, setID string) int
-		ManageLibraries             func(childComplexity int) int
-		ManageMaintenance           func(childComplexity int) int
-		ManageProcessingJobs        func(childComplexity int, status string, page int) int
-		ManageRuntimeSettings       func(childComplexity int) int
-		ManageVideoDependencyStatus func(childComplexity int) int
-		MediaDetail                 func(childComplexity int, itemUUID string) int
-		PreviewCoreEntityDelete     func(childComplexity int, kind SearchEntityKind, uuid string) int
-		PreviewCoreEntityMerge      func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string) int
-		PreviewGalleryDelete        func(childComplexity int, setID string) int
-		RandomMedia                 func(childComplexity int, scope BrowseScope, filter RandomMediaFilter) int
-		RelatedGalleries            func(childComplexity int, setID string, scope BrowseScope) int
-		SearchPreview               func(childComplexity int, query string, scope BrowseScope) int
-		TagDetail                   func(childComplexity int, slug string, scope BrowseScope, page int) int
-		TimelineGalleries           func(childComplexity int, scope BrowseScope, page int, coserUUID *string) int
-		WorkDetail                  func(childComplexity int, slug string, scope BrowseScope) int
+		BrowseGalleries                      func(childComplexity int, scope BrowseScope, page int, sort GallerySort, collectionType *CollectionType) int
+		BrowseUISettings                     func(childComplexity int) int
+		CharacterDetail                      func(childComplexity int, slug string, scope BrowseScope, page int) int
+		CoserDetail                          func(childComplexity int, slug string, scope BrowseScope, page int, collectionType *CollectionType) int
+		EntityIndex                          func(childComplexity int, kind SearchEntityKind, scope BrowseScope, page int, sort EntitySort, collectionType *CollectionType, query string) int
+		FavoriteGalleries                    func(childComplexity int, scope BrowseScope, page int) int
+		FavoriteMedia                        func(childComplexity int, scope BrowseScope, page int, ratingSort bool) int
+		GalleryDetail                        func(childComplexity int, slug string, scope BrowseScope) int
+		GalleryHistory                       func(childComplexity int, scope BrowseScope, page int) int
+		GalleryMemberIndex                   func(childComplexity int, setID string) int
+		HomeGalleries                        func(childComplexity int, page int) int
+		ItemAnimatedPreviewStatus            func(childComplexity int, itemUUID string) int
+		ItemLightboxStatus                   func(childComplexity int, itemUUID string) int
+		ItemVideoPlaybackStatus              func(childComplexity int, itemUUID string) int
+		ManageAudit                          func(childComplexity int, page int) int
+		ManageBackups                        func(childComplexity int) int
+		ManageCacheStorage                   func(childComplexity int) int
+		ManageCoreEntities                   func(childComplexity int, kind SearchEntityKind, page int) int
+		ManageCoreEntity                     func(childComplexity int, kind SearchEntityKind, uuid string) int
+		ManageCoreEntityOptions              func(childComplexity int, kind SearchEntityKind, query string, limit int) int
+		ManageCoserManifest                  func(childComplexity int, coserUUID string) int
+		ManageDiscovery                      func(childComplexity int, libraryID int64) int
+		ManageGalleries                      func(childComplexity int, page int) int
+		ManageGallery                        func(childComplexity int, setID string) int
+		ManageGalleryManifest                func(childComplexity int, setID string) int
+		ManageLibraries                      func(childComplexity int) int
+		ManageMaintenance                    func(childComplexity int) int
+		ManageMediaClassificationRules       func(childComplexity int, libraryID *int64) int
+		ManageMediaClassificationSuggestions func(childComplexity int, libraryID *int64, status string) int
+		ManageProcessingJobs                 func(childComplexity int, status string, page int) int
+		ManageRuntimeSettings                func(childComplexity int) int
+		ManageVideoDependencyStatus          func(childComplexity int) int
+		MediaDetail                          func(childComplexity int, itemUUID string) int
+		PreviewCoreEntityDelete              func(childComplexity int, kind SearchEntityKind, uuid string) int
+		PreviewCoreEntityMerge               func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string) int
+		PreviewGalleryDelete                 func(childComplexity int, setID string) int
+		RandomMedia                          func(childComplexity int, scope BrowseScope, filter RandomMediaFilter) int
+		RelatedGalleries                     func(childComplexity int, setID string, scope BrowseScope) int
+		SearchPreview                        func(childComplexity int, query string, scope BrowseScope) int
+		TagDetail                            func(childComplexity int, slug string, scope BrowseScope, page int) int
+		TimelineGalleries                    func(childComplexity int, scope BrowseScope, page int, coserUUID *string) int
+		WorkDetail                           func(childComplexity int, slug string, scope BrowseScope) int
 	}
 
 	RandomMediaItem struct {
@@ -838,6 +918,15 @@ type MutationResolver interface {
 	CreateRecognitionRule(ctx context.Context, input CreateRecognitionRuleInput) (*ManageRecognitionRule, error)
 	UpdateRecognitionRule(ctx context.Context, input UpdateRecognitionRuleInput) (*ManageRecognitionRule, error)
 	DeleteRecognitionRule(ctx context.Context, id int64) (bool, error)
+	ValidateMediaClassificationRule(ctx context.Context, input MediaClassificationRuleInput) (*ManageRuleValidation, error)
+	CreateMediaClassificationRule(ctx context.Context, input MediaClassificationRuleInput) (*ManageMediaClassificationRule, error)
+	UpdateMediaClassificationRule(ctx context.Context, input UpdateMediaClassificationRuleInput) (*ManageMediaClassificationRule, error)
+	DeleteMediaClassificationRule(ctx context.Context, id int64) (bool, error)
+	RestoreDefaultMediaClassificationRules(ctx context.Context) ([]*ManageMediaClassificationRule, error)
+	TestMediaClassificationRule(ctx context.Context, input MediaClassificationRuleInput, relativePath string) (*ManageMediaClassificationMatch, error)
+	PreviewMediaClassificationRule(ctx context.Context, input MediaClassificationRuleInput, libraryID *int64) (*ManageMediaClassificationPreview, error)
+	EvaluateMediaClassificationRules(ctx context.Context, libraryID *int64) (*ManageMediaClassificationEvaluation, error)
+	ResolveMediaClassificationSuggestion(ctx context.Context, id int64, accept bool, expectedGalleryRevision int64) (*ManageMediaClassificationSuggestion, error)
 	DiscoverMediaLibrary(ctx context.Context, libraryID int64) (*ManageDiscoverySnapshot, error)
 	ImportGalleryCandidate(ctx context.Context, candidateID int64) (*ManageGalleryDetail, error)
 	ScanGallerySource(ctx context.Context, setID string, excludeNewRootMedia bool) (*ManageGalleryDetail, error)
@@ -889,6 +978,8 @@ type QueryResolver interface {
 	ManageGalleryManifest(ctx context.Context, setID string) (*ManageGalleryManifestState, error)
 	ManageCoserManifest(ctx context.Context, coserUUID string) (*ManageCoserManifestState, error)
 	ManageLibraries(ctx context.Context) ([]*ManageLibrary, error)
+	ManageMediaClassificationRules(ctx context.Context, libraryID *int64) ([]*ManageMediaClassificationRule, error)
+	ManageMediaClassificationSuggestions(ctx context.Context, libraryID *int64, status string) ([]*ManageMediaClassificationSuggestion, error)
 	ManageDiscovery(ctx context.Context, libraryID int64) (*ManageDiscoverySnapshot, error)
 	ManageRuntimeSettings(ctx context.Context) (*ManageRuntimeSettings, error)
 	ManageCacheStorage(ctx context.Context) (*ManageCacheStorage, error)
@@ -3130,6 +3221,321 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageManifestConflict.Path(childComplexity), true
 
+	case "ManageMediaClassificationEvaluation.evaluated":
+		if e.complexity.ManageMediaClassificationEvaluation.Evaluated == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationEvaluation.Evaluated(childComplexity), true
+
+	case "ManageMediaClassificationEvaluation.matched":
+		if e.complexity.ManageMediaClassificationEvaluation.Matched == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationEvaluation.Matched(childComplexity), true
+
+	case "ManageMediaClassificationEvaluation.pending":
+		if e.complexity.ManageMediaClassificationEvaluation.Pending == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationEvaluation.Pending(childComplexity), true
+
+	case "ManageMediaClassificationEvaluation.superseded":
+		if e.complexity.ManageMediaClassificationEvaluation.Superseded == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationEvaluation.Superseded(childComplexity), true
+
+	case "ManageMediaClassificationMatch.matched":
+		if e.complexity.ManageMediaClassificationMatch.Matched == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationMatch.Matched(childComplexity), true
+
+	case "ManageMediaClassificationMatch.matchedValue":
+		if e.complexity.ManageMediaClassificationMatch.MatchedValue == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationMatch.MatchedValue(childComplexity), true
+
+	case "ManageMediaClassificationMatch.resultCategory":
+		if e.complexity.ManageMediaClassificationMatch.ResultCategory == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationMatch.ResultCategory(childComplexity), true
+
+	case "ManageMediaClassificationMatch.ruleID":
+		if e.complexity.ManageMediaClassificationMatch.RuleID == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationMatch.RuleID(childComplexity), true
+
+	case "ManageMediaClassificationMatch.ruleName":
+		if e.complexity.ManageMediaClassificationMatch.RuleName == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationMatch.RuleName(childComplexity), true
+
+	case "ManageMediaClassificationMatch.subject":
+		if e.complexity.ManageMediaClassificationMatch.Subject == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationMatch.Subject(childComplexity), true
+
+	case "ManageMediaClassificationPreview.samples":
+		if e.complexity.ManageMediaClassificationPreview.Samples == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationPreview.Samples(childComplexity), true
+
+	case "ManageMediaClassificationPreview.totalMatches":
+		if e.complexity.ManageMediaClassificationPreview.TotalMatches == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationPreview.TotalMatches(childComplexity), true
+
+	case "ManageMediaClassificationPreviewSample.currentCategory":
+		if e.complexity.ManageMediaClassificationPreviewSample.CurrentCategory == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationPreviewSample.CurrentCategory(childComplexity), true
+
+	case "ManageMediaClassificationPreviewSample.gallerySetID":
+		if e.complexity.ManageMediaClassificationPreviewSample.GallerySetID == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationPreviewSample.GallerySetID(childComplexity), true
+
+	case "ManageMediaClassificationPreviewSample.galleryTitle":
+		if e.complexity.ManageMediaClassificationPreviewSample.GalleryTitle == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationPreviewSample.GalleryTitle(childComplexity), true
+
+	case "ManageMediaClassificationPreviewSample.itemUUID":
+		if e.complexity.ManageMediaClassificationPreviewSample.ItemUUID == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationPreviewSample.ItemUUID(childComplexity), true
+
+	case "ManageMediaClassificationPreviewSample.matchedValue":
+		if e.complexity.ManageMediaClassificationPreviewSample.MatchedValue == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationPreviewSample.MatchedValue(childComplexity), true
+
+	case "ManageMediaClassificationPreviewSample.proposedCategory":
+		if e.complexity.ManageMediaClassificationPreviewSample.ProposedCategory == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationPreviewSample.ProposedCategory(childComplexity), true
+
+	case "ManageMediaClassificationPreviewSample.relativePath":
+		if e.complexity.ManageMediaClassificationPreviewSample.RelativePath == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationPreviewSample.RelativePath(childComplexity), true
+
+	case "ManageMediaClassificationRule.caseSensitive":
+		if e.complexity.ManageMediaClassificationRule.CaseSensitive == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationRule.CaseSensitive(childComplexity), true
+
+	case "ManageMediaClassificationRule.enabled":
+		if e.complexity.ManageMediaClassificationRule.Enabled == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationRule.Enabled(childComplexity), true
+
+	case "ManageMediaClassificationRule.id":
+		if e.complexity.ManageMediaClassificationRule.ID == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationRule.ID(childComplexity), true
+
+	case "ManageMediaClassificationRule.libraryID":
+		if e.complexity.ManageMediaClassificationRule.LibraryID == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationRule.LibraryID(childComplexity), true
+
+	case "ManageMediaClassificationRule.name":
+		if e.complexity.ManageMediaClassificationRule.Name == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationRule.Name(childComplexity), true
+
+	case "ManageMediaClassificationRule.operator":
+		if e.complexity.ManageMediaClassificationRule.Operator == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationRule.Operator(childComplexity), true
+
+	case "ManageMediaClassificationRule.order":
+		if e.complexity.ManageMediaClassificationRule.Order == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationRule.Order(childComplexity), true
+
+	case "ManageMediaClassificationRule.pattern":
+		if e.complexity.ManageMediaClassificationRule.Pattern == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationRule.Pattern(childComplexity), true
+
+	case "ManageMediaClassificationRule.resultCategory":
+		if e.complexity.ManageMediaClassificationRule.ResultCategory == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationRule.ResultCategory(childComplexity), true
+
+	case "ManageMediaClassificationRule.revision":
+		if e.complexity.ManageMediaClassificationRule.Revision == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationRule.Revision(childComplexity), true
+
+	case "ManageMediaClassificationRule.subject":
+		if e.complexity.ManageMediaClassificationRule.Subject == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationRule.Subject(childComplexity), true
+
+	case "ManageMediaClassificationRule.systemDefault":
+		if e.complexity.ManageMediaClassificationRule.SystemDefault == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationRule.SystemDefault(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.galleryID":
+		if e.complexity.ManageMediaClassificationSuggestion.GalleryID == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.GalleryID(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.galleryRevision":
+		if e.complexity.ManageMediaClassificationSuggestion.GalleryRevision == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.GalleryRevision(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.gallerySetID":
+		if e.complexity.ManageMediaClassificationSuggestion.GallerySetID == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.GallerySetID(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.galleryTitle":
+		if e.complexity.ManageMediaClassificationSuggestion.GalleryTitle == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.GalleryTitle(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.id":
+		if e.complexity.ManageMediaClassificationSuggestion.ID == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.ID(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.itemUUID":
+		if e.complexity.ManageMediaClassificationSuggestion.ItemUUID == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.ItemUUID(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.matchedSubject":
+		if e.complexity.ManageMediaClassificationSuggestion.MatchedSubject == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.MatchedSubject(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.matchedValue":
+		if e.complexity.ManageMediaClassificationSuggestion.MatchedValue == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.MatchedValue(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.proposedCategory":
+		if e.complexity.ManageMediaClassificationSuggestion.ProposedCategory == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.ProposedCategory(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.relativePath":
+		if e.complexity.ManageMediaClassificationSuggestion.RelativePath == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.RelativePath(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.ruleID":
+		if e.complexity.ManageMediaClassificationSuggestion.RuleID == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.RuleID(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.ruleName":
+		if e.complexity.ManageMediaClassificationSuggestion.RuleName == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.RuleName(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.ruleRevision":
+		if e.complexity.ManageMediaClassificationSuggestion.RuleRevision == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.RuleRevision(childComplexity), true
+
+	case "ManageMediaClassificationSuggestion.status":
+		if e.complexity.ManageMediaClassificationSuggestion.Status == nil {
+			break
+		}
+
+		return e.complexity.ManageMediaClassificationSuggestion.Status(childComplexity), true
+
 	case "ManageProcessingJob.attemptCount":
 		if e.complexity.ManageProcessingJob.AttemptCount == nil {
 			break
@@ -3311,6 +3717,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageRecognitionRule.Pattern(childComplexity), true
+
+	case "ManageRuleValidation.errorCode":
+		if e.complexity.ManageRuleValidation.ErrorCode == nil {
+			break
+		}
+
+		return e.complexity.ManageRuleValidation.ErrorCode(childComplexity), true
+
+	case "ManageRuleValidation.message":
+		if e.complexity.ManageRuleValidation.Message == nil {
+			break
+		}
+
+		return e.complexity.ManageRuleValidation.Message(childComplexity), true
+
+	case "ManageRuleValidation.valid":
+		if e.complexity.ManageRuleValidation.Valid == nil {
+			break
+		}
+
+		return e.complexity.ManageRuleValidation.Valid(childComplexity), true
 
 	case "ManageRuntimeSettings.archiveMaxCompressionRatio":
 		if e.complexity.ManageRuntimeSettings.ArchiveMaxCompressionRatio == nil {
@@ -3815,6 +4242,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.CreateFullBackup(childComplexity), true
 
+	case "Mutation.createMediaClassificationRule":
+		if e.complexity.Mutation.CreateMediaClassificationRule == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createMediaClassificationRule_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateMediaClassificationRule(childComplexity, args["input"].(MediaClassificationRuleInput)), true
+
 	case "Mutation.createMediaLibrary":
 		if e.complexity.Mutation.CreateMediaLibrary == nil {
 			break
@@ -3863,6 +4302,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.DeleteGallery(childComplexity, args["setID"].(string), args["expectedMetadataRevision"].(int64), args["password"].(string), args["confirmation"].(string)), true
 
+	case "Mutation.deleteMediaClassificationRule":
+		if e.complexity.Mutation.DeleteMediaClassificationRule == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteMediaClassificationRule_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteMediaClassificationRule(childComplexity, args["id"].(int64)), true
+
 	case "Mutation.deleteRecognitionRule":
 		if e.complexity.Mutation.DeleteRecognitionRule == nil {
 			break
@@ -3886,6 +4337,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.DiscoverMediaLibrary(childComplexity, args["libraryID"].(int64)), true
+
+	case "Mutation.evaluateMediaClassificationRules":
+		if e.complexity.Mutation.EvaluateMediaClassificationRules == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_evaluateMediaClassificationRules_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.EvaluateMediaClassificationRules(childComplexity, args["libraryID"].(*int64)), true
 
 	case "Mutation.importGalleryCandidate":
 		if e.complexity.Mutation.ImportGalleryCandidate == nil {
@@ -3922,6 +4385,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.MoveGalleryItem(childComplexity, args["setID"].(string), args["itemUUID"].(string), args["beforeItemUUID"].(*string), args["expectedMetadataRevision"].(int64)), true
+
+	case "Mutation.previewMediaClassificationRule":
+		if e.complexity.Mutation.PreviewMediaClassificationRule == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_previewMediaClassificationRule_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.PreviewMediaClassificationRule(childComplexity, args["input"].(MediaClassificationRuleInput), args["libraryID"].(*int64)), true
 
 	case "Mutation.pullCoserManifest":
 		if e.complexity.Mutation.PullCoserManifest == nil {
@@ -4091,6 +4566,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.ResolveGalleryManifest(childComplexity, args["setID"].(string), args["expectedMetadataRevision"].(int64), args["choices"].([]*ManifestConflictChoiceInput)), true
 
+	case "Mutation.resolveMediaClassificationSuggestion":
+		if e.complexity.Mutation.ResolveMediaClassificationSuggestion == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_resolveMediaClassificationSuggestion_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ResolveMediaClassificationSuggestion(childComplexity, args["id"].(int64), args["accept"].(bool), args["expectedGalleryRevision"].(int64)), true
+
 	case "Mutation.restoreBackup":
 		if e.complexity.Mutation.RestoreBackup == nil {
 			break
@@ -4102,6 +4589,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RestoreBackup(childComplexity, args["backupID"].(string)), true
+
+	case "Mutation.restoreDefaultMediaClassificationRules":
+		if e.complexity.Mutation.RestoreDefaultMediaClassificationRules == nil {
+			break
+		}
+
+		return e.complexity.Mutation.RestoreDefaultMediaClassificationRules(childComplexity), true
 
 	case "Mutation.retryGalleryItemVideo":
 		if e.complexity.Mutation.RetryGalleryItemVideo == nil {
@@ -4223,6 +4717,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.SetItemRating(childComplexity, args["itemUUID"].(string), args["ratingHalfSteps"].(*int), args["expectedMetadataRevision"].(int64)), true
 
+	case "Mutation.testMediaClassificationRule":
+		if e.complexity.Mutation.TestMediaClassificationRule == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_testMediaClassificationRule_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.TestMediaClassificationRule(childComplexity, args["input"].(MediaClassificationRuleInput), args["relativePath"].(string)), true
+
 	case "Mutation.updateCoreEntity":
 		if e.complexity.Mutation.UpdateCoreEntity == nil {
 			break
@@ -4259,6 +4765,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.UpdateGalleryMetadata(childComplexity, args["setID"].(string), args["expectedMetadataRevision"].(int64), args["input"].(UpdateGalleryMetadataInput)), true
 
+	case "Mutation.updateMediaClassificationRule":
+		if e.complexity.Mutation.UpdateMediaClassificationRule == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateMediaClassificationRule_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateMediaClassificationRule(childComplexity, args["input"].(UpdateMediaClassificationRuleInput)), true
+
 	case "Mutation.updateRecognitionRule":
 		if e.complexity.Mutation.UpdateRecognitionRule == nil {
 			break
@@ -4282,6 +4800,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.UpdateRuntimeSettings(childComplexity, args["expectedSettingsRevision"].(int64), args["input"].(RuntimeSettingsInput)), true
+
+	case "Mutation.validateMediaClassificationRule":
+		if e.complexity.Mutation.ValidateMediaClassificationRule == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_validateMediaClassificationRule_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ValidateMediaClassificationRule(childComplexity, args["input"].(MediaClassificationRuleInput)), true
 
 	case "OnDemandResource.errorCode":
 		if e.complexity.OnDemandResource.ErrorCode == nil {
@@ -4630,6 +5160,30 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.ManageMaintenance(childComplexity), true
+
+	case "Query.manageMediaClassificationRules":
+		if e.complexity.Query.ManageMediaClassificationRules == nil {
+			break
+		}
+
+		args, err := ec.field_Query_manageMediaClassificationRules_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ManageMediaClassificationRules(childComplexity, args["libraryID"].(*int64)), true
+
+	case "Query.manageMediaClassificationSuggestions":
+		if e.complexity.Query.ManageMediaClassificationSuggestions == nil {
+			break
+		}
+
+		args, err := ec.field_Query_manageMediaClassificationSuggestions_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ManageMediaClassificationSuggestions(childComplexity, args["libraryID"].(*int64), args["status"].(string)), true
 
 	case "Query.manageProcessingJobs":
 		if e.complexity.Query.ManageProcessingJobs == nil {
@@ -5176,6 +5730,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputExpectedTagRevisionInput,
 		ec.unmarshalInputGalleryExternalLinkInput,
 		ec.unmarshalInputManifestConflictChoiceInput,
+		ec.unmarshalInputMediaClassificationRuleInput,
 		ec.unmarshalInputReplaceGalleryCastInput,
 		ec.unmarshalInputReplaceGalleryCreditInput,
 		ec.unmarshalInputReplaceGalleryRelationsInput,
@@ -5185,6 +5740,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputSocialAccountInput,
 		ec.unmarshalInputUpdateGalleryItemInput,
 		ec.unmarshalInputUpdateGalleryMetadataInput,
+		ec.unmarshalInputUpdateMediaClassificationRuleInput,
 		ec.unmarshalInputUpdateRecognitionRuleInput,
 	)
 	first := true
@@ -5506,6 +6062,34 @@ func (ec *executionContext) field_Mutation_createCoreEntity_argsInput(
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Mutation_createMediaClassificationRule_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_createMediaClassificationRule_argsInput(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_createMediaClassificationRule_argsInput(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (MediaClassificationRuleInput, error) {
+	if _, ok := rawArgs["input"]; !ok {
+		var zeroVal MediaClassificationRuleInput
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+	if tmp, ok := rawArgs["input"]; ok {
+		return ec.unmarshalNMediaClassificationRuleInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐMediaClassificationRuleInput(ctx, tmp)
+	}
+
+	var zeroVal MediaClassificationRuleInput
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Mutation_createMediaLibrary_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -5733,6 +6317,34 @@ func (ec *executionContext) field_Mutation_deleteGallery_argsConfirmation(
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Mutation_deleteMediaClassificationRule_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_deleteMediaClassificationRule_argsID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_deleteMediaClassificationRule_argsID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int64, error) {
+	if _, ok := rawArgs["id"]; !ok {
+		var zeroVal int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+	if tmp, ok := rawArgs["id"]; ok {
+		return ec.unmarshalNInt642int64(ctx, tmp)
+	}
+
+	var zeroVal int64
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Mutation_deleteRecognitionRule_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -5786,6 +6398,34 @@ func (ec *executionContext) field_Mutation_discoverMediaLibrary_argsLibraryID(
 	}
 
 	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_evaluateMediaClassificationRules_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_evaluateMediaClassificationRules_argsLibraryID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["libraryID"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_evaluateMediaClassificationRules_argsLibraryID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*int64, error) {
+	if _, ok := rawArgs["libraryID"]; !ok {
+		var zeroVal *int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("libraryID"))
+	if tmp, ok := rawArgs["libraryID"]; ok {
+		return ec.unmarshalOInt642ᚖint64(ctx, tmp)
+	}
+
+	var zeroVal *int64
 	return zeroVal, nil
 }
 
@@ -6031,6 +6671,57 @@ func (ec *executionContext) field_Mutation_moveGalleryItem_argsExpectedMetadataR
 	}
 
 	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_previewMediaClassificationRule_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_previewMediaClassificationRule_argsInput(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	arg1, err := ec.field_Mutation_previewMediaClassificationRule_argsLibraryID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["libraryID"] = arg1
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_previewMediaClassificationRule_argsInput(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (MediaClassificationRuleInput, error) {
+	if _, ok := rawArgs["input"]; !ok {
+		var zeroVal MediaClassificationRuleInput
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+	if tmp, ok := rawArgs["input"]; ok {
+		return ec.unmarshalNMediaClassificationRuleInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐMediaClassificationRuleInput(ctx, tmp)
+	}
+
+	var zeroVal MediaClassificationRuleInput
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_previewMediaClassificationRule_argsLibraryID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*int64, error) {
+	if _, ok := rawArgs["libraryID"]; !ok {
+		var zeroVal *int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("libraryID"))
+	if tmp, ok := rawArgs["libraryID"]; ok {
+		return ec.unmarshalOInt642ᚖint64(ctx, tmp)
+	}
+
+	var zeroVal *int64
 	return zeroVal, nil
 }
 
@@ -6817,6 +7508,80 @@ func (ec *executionContext) field_Mutation_resolveGalleryManifest_argsChoices(
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Mutation_resolveMediaClassificationSuggestion_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_resolveMediaClassificationSuggestion_argsID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := ec.field_Mutation_resolveMediaClassificationSuggestion_argsAccept(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["accept"] = arg1
+	arg2, err := ec.field_Mutation_resolveMediaClassificationSuggestion_argsExpectedGalleryRevision(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["expectedGalleryRevision"] = arg2
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_resolveMediaClassificationSuggestion_argsID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int64, error) {
+	if _, ok := rawArgs["id"]; !ok {
+		var zeroVal int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+	if tmp, ok := rawArgs["id"]; ok {
+		return ec.unmarshalNInt642int64(ctx, tmp)
+	}
+
+	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_resolveMediaClassificationSuggestion_argsAccept(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (bool, error) {
+	if _, ok := rawArgs["accept"]; !ok {
+		var zeroVal bool
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("accept"))
+	if tmp, ok := rawArgs["accept"]; ok {
+		return ec.unmarshalNBoolean2bool(ctx, tmp)
+	}
+
+	var zeroVal bool
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_resolveMediaClassificationSuggestion_argsExpectedGalleryRevision(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int64, error) {
+	if _, ok := rawArgs["expectedGalleryRevision"]; !ok {
+		var zeroVal int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedGalleryRevision"))
+	if tmp, ok := rawArgs["expectedGalleryRevision"]; ok {
+		return ec.unmarshalNInt642int64(ctx, tmp)
+	}
+
+	var zeroVal int64
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Mutation_restoreBackup_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -7447,6 +8212,57 @@ func (ec *executionContext) field_Mutation_setItemRating_argsExpectedMetadataRev
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Mutation_testMediaClassificationRule_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_testMediaClassificationRule_argsInput(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	arg1, err := ec.field_Mutation_testMediaClassificationRule_argsRelativePath(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["relativePath"] = arg1
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_testMediaClassificationRule_argsInput(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (MediaClassificationRuleInput, error) {
+	if _, ok := rawArgs["input"]; !ok {
+		var zeroVal MediaClassificationRuleInput
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+	if tmp, ok := rawArgs["input"]; ok {
+		return ec.unmarshalNMediaClassificationRuleInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐMediaClassificationRuleInput(ctx, tmp)
+	}
+
+	var zeroVal MediaClassificationRuleInput
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_testMediaClassificationRule_argsRelativePath(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["relativePath"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("relativePath"))
+	if tmp, ok := rawArgs["relativePath"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Mutation_updateCoreEntity_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -7692,6 +8508,34 @@ func (ec *executionContext) field_Mutation_updateGalleryMetadata_argsInput(
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Mutation_updateMediaClassificationRule_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_updateMediaClassificationRule_argsInput(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_updateMediaClassificationRule_argsInput(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (UpdateMediaClassificationRuleInput, error) {
+	if _, ok := rawArgs["input"]; !ok {
+		var zeroVal UpdateMediaClassificationRuleInput
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+	if tmp, ok := rawArgs["input"]; ok {
+		return ec.unmarshalNUpdateMediaClassificationRuleInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐUpdateMediaClassificationRuleInput(ctx, tmp)
+	}
+
+	var zeroVal UpdateMediaClassificationRuleInput
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Mutation_updateRecognitionRule_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -7768,6 +8612,34 @@ func (ec *executionContext) field_Mutation_updateRuntimeSettings_argsInput(
 	}
 
 	var zeroVal RuntimeSettingsInput
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_validateMediaClassificationRule_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_validateMediaClassificationRule_argsInput(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_validateMediaClassificationRule_argsInput(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (MediaClassificationRuleInput, error) {
+	if _, ok := rawArgs["input"]; !ok {
+		var zeroVal MediaClassificationRuleInput
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+	if tmp, ok := rawArgs["input"]; ok {
+		return ec.unmarshalNMediaClassificationRuleInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐMediaClassificationRuleInput(ctx, tmp)
+	}
+
+	var zeroVal MediaClassificationRuleInput
 	return zeroVal, nil
 }
 
@@ -8915,6 +9787,85 @@ func (ec *executionContext) field_Query_manageGallery_argsSetID(
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("setID"))
 	if tmp, ok := rawArgs["setID"]; ok {
 		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_manageMediaClassificationRules_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_manageMediaClassificationRules_argsLibraryID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["libraryID"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Query_manageMediaClassificationRules_argsLibraryID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*int64, error) {
+	if _, ok := rawArgs["libraryID"]; !ok {
+		var zeroVal *int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("libraryID"))
+	if tmp, ok := rawArgs["libraryID"]; ok {
+		return ec.unmarshalOInt642ᚖint64(ctx, tmp)
+	}
+
+	var zeroVal *int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_manageMediaClassificationSuggestions_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_manageMediaClassificationSuggestions_argsLibraryID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["libraryID"] = arg0
+	arg1, err := ec.field_Query_manageMediaClassificationSuggestions_argsStatus(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["status"] = arg1
+	return args, nil
+}
+func (ec *executionContext) field_Query_manageMediaClassificationSuggestions_argsLibraryID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*int64, error) {
+	if _, ok := rawArgs["libraryID"]; !ok {
+		var zeroVal *int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("libraryID"))
+	if tmp, ok := rawArgs["libraryID"]; ok {
+		return ec.unmarshalOInt642ᚖint64(ctx, tmp)
+	}
+
+	var zeroVal *int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_manageMediaClassificationSuggestions_argsStatus(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["status"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+	if tmp, ok := rawArgs["status"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
 	}
 
 	var zeroVal string
@@ -24230,6 +25181,1996 @@ func (ec *executionContext) fieldContext_ManageManifestConflict_fileJSON(_ conte
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageMediaClassificationEvaluation_evaluated(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationEvaluation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationEvaluation_evaluated(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Evaluated, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationEvaluation_evaluated(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationEvaluation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationEvaluation_matched(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationEvaluation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationEvaluation_matched(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Matched, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationEvaluation_matched(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationEvaluation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationEvaluation_pending(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationEvaluation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationEvaluation_pending(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Pending, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationEvaluation_pending(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationEvaluation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationEvaluation_superseded(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationEvaluation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationEvaluation_superseded(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Superseded, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationEvaluation_superseded(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationEvaluation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationMatch_matched(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationMatch) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationMatch_matched(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Matched, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationMatch_matched(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationMatch",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationMatch_ruleID(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationMatch) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationMatch_ruleID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RuleID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationMatch_ruleID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationMatch",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationMatch_ruleName(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationMatch) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationMatch_ruleName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RuleName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationMatch_ruleName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationMatch",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationMatch_resultCategory(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationMatch) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationMatch_resultCategory(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ResultCategory, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*ImageCategory)
+	fc.Result = res
+	return ec.marshalOImageCategory2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐImageCategory(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationMatch_resultCategory(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationMatch",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ImageCategory does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationMatch_subject(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationMatch) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationMatch_subject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Subject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationMatch_subject(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationMatch",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationMatch_matchedValue(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationMatch) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationMatch_matchedValue(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MatchedValue, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationMatch_matchedValue(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationMatch",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationPreview_totalMatches(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationPreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationPreview_totalMatches(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TotalMatches, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationPreview_totalMatches(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationPreview_samples(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationPreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationPreview_samples(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Samples, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageMediaClassificationPreviewSample)
+	fc.Result = res
+	return ec.marshalNManageMediaClassificationPreviewSample2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationPreviewSampleᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationPreview_samples(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "gallerySetID":
+				return ec.fieldContext_ManageMediaClassificationPreviewSample_gallerySetID(ctx, field)
+			case "galleryTitle":
+				return ec.fieldContext_ManageMediaClassificationPreviewSample_galleryTitle(ctx, field)
+			case "itemUUID":
+				return ec.fieldContext_ManageMediaClassificationPreviewSample_itemUUID(ctx, field)
+			case "relativePath":
+				return ec.fieldContext_ManageMediaClassificationPreviewSample_relativePath(ctx, field)
+			case "currentCategory":
+				return ec.fieldContext_ManageMediaClassificationPreviewSample_currentCategory(ctx, field)
+			case "proposedCategory":
+				return ec.fieldContext_ManageMediaClassificationPreviewSample_proposedCategory(ctx, field)
+			case "matchedValue":
+				return ec.fieldContext_ManageMediaClassificationPreviewSample_matchedValue(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageMediaClassificationPreviewSample", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationPreviewSample_gallerySetID(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationPreviewSample) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationPreviewSample_gallerySetID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GallerySetID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationPreviewSample_gallerySetID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationPreviewSample",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationPreviewSample_galleryTitle(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationPreviewSample) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationPreviewSample_galleryTitle(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryTitle, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationPreviewSample_galleryTitle(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationPreviewSample",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationPreviewSample_itemUUID(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationPreviewSample) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationPreviewSample_itemUUID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ItemUUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationPreviewSample_itemUUID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationPreviewSample",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationPreviewSample_relativePath(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationPreviewSample) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationPreviewSample_relativePath(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RelativePath, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationPreviewSample_relativePath(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationPreviewSample",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationPreviewSample_currentCategory(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationPreviewSample) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationPreviewSample_currentCategory(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CurrentCategory, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(ImageCategory)
+	fc.Result = res
+	return ec.marshalNImageCategory2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐImageCategory(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationPreviewSample_currentCategory(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationPreviewSample",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ImageCategory does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationPreviewSample_proposedCategory(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationPreviewSample) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationPreviewSample_proposedCategory(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ProposedCategory, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(ImageCategory)
+	fc.Result = res
+	return ec.marshalNImageCategory2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐImageCategory(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationPreviewSample_proposedCategory(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationPreviewSample",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ImageCategory does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationPreviewSample_matchedValue(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationPreviewSample) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationPreviewSample_matchedValue(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MatchedValue, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationPreviewSample_matchedValue(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationPreviewSample",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationRule_id(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationRule_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationRule_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationRule_libraryID(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationRule_libraryID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LibraryID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int64)
+	fc.Result = res
+	return ec.marshalOInt642ᚖint64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationRule_libraryID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationRule_name(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationRule_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationRule_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationRule_enabled(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationRule_enabled(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Enabled, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationRule_enabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationRule_order(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationRule_order(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Order, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationRule_order(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationRule_subject(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationRule_subject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Subject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationRule_subject(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationRule_operator(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationRule_operator(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Operator, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationRule_operator(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationRule_pattern(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationRule_pattern(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Pattern, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationRule_pattern(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationRule_caseSensitive(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationRule_caseSensitive(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CaseSensitive, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationRule_caseSensitive(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationRule_resultCategory(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationRule_resultCategory(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ResultCategory, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(ImageCategory)
+	fc.Result = res
+	return ec.marshalNImageCategory2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐImageCategory(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationRule_resultCategory(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ImageCategory does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationRule_revision(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationRule_revision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Revision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationRule_revision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationRule_systemDefault(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationRule_systemDefault(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SystemDefault, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationRule_systemDefault(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_id(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_galleryID(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_galleryID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_galleryID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_galleryRevision(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_galleryRevision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryRevision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_galleryRevision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_gallerySetID(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_gallerySetID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GallerySetID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_gallerySetID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_galleryTitle(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_galleryTitle(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryTitle, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_galleryTitle(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_itemUUID(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_itemUUID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ItemUUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_itemUUID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_relativePath(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_relativePath(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RelativePath, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_relativePath(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_ruleID(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_ruleID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RuleID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_ruleID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_ruleRevision(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_ruleRevision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RuleRevision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_ruleRevision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_ruleName(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_ruleName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RuleName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_ruleName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_proposedCategory(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_proposedCategory(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ProposedCategory, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(ImageCategory)
+	fc.Result = res
+	return ec.marshalNImageCategory2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐImageCategory(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_proposedCategory(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ImageCategory does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_matchedSubject(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_matchedSubject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MatchedSubject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_matchedSubject(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_matchedValue(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_matchedValue(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MatchedValue, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_matchedValue(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion_status(ctx context.Context, field graphql.CollectedField, obj *ManageMediaClassificationSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageMediaClassificationSuggestion_status(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Status, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageMediaClassificationSuggestion_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageMediaClassificationSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageProcessingJob_id(ctx context.Context, field graphql.CollectedField, obj *ManageProcessingJob) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageProcessingJob_id(ctx, field)
 	if err != nil {
@@ -25391,6 +28332,138 @@ func (ec *executionContext) fieldContext_ManageRecognitionRule_fixedDepth(_ cont
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageRuleValidation_valid(ctx context.Context, field graphql.CollectedField, obj *ManageRuleValidation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageRuleValidation_valid(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Valid, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageRuleValidation_valid(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageRuleValidation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageRuleValidation_errorCode(ctx context.Context, field graphql.CollectedField, obj *ManageRuleValidation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageRuleValidation_errorCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ErrorCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageRuleValidation_errorCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageRuleValidation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageRuleValidation_message(ctx context.Context, field graphql.CollectedField, obj *ManageRuleValidation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageRuleValidation_message(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Message, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageRuleValidation_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageRuleValidation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -29732,6 +32805,636 @@ func (ec *executionContext) fieldContext_Mutation_deleteRecognitionRule(ctx cont
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_validateMediaClassificationRule(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_validateMediaClassificationRule(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().ValidateMediaClassificationRule(rctx, fc.Args["input"].(MediaClassificationRuleInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageRuleValidation)
+	fc.Result = res
+	return ec.marshalNManageRuleValidation2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageRuleValidation(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_validateMediaClassificationRule(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "valid":
+				return ec.fieldContext_ManageRuleValidation_valid(ctx, field)
+			case "errorCode":
+				return ec.fieldContext_ManageRuleValidation_errorCode(ctx, field)
+			case "message":
+				return ec.fieldContext_ManageRuleValidation_message(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageRuleValidation", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_validateMediaClassificationRule_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createMediaClassificationRule(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_createMediaClassificationRule(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateMediaClassificationRule(rctx, fc.Args["input"].(MediaClassificationRuleInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageMediaClassificationRule)
+	fc.Result = res
+	return ec.marshalNManageMediaClassificationRule2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationRule(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createMediaClassificationRule(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ManageMediaClassificationRule_id(ctx, field)
+			case "libraryID":
+				return ec.fieldContext_ManageMediaClassificationRule_libraryID(ctx, field)
+			case "name":
+				return ec.fieldContext_ManageMediaClassificationRule_name(ctx, field)
+			case "enabled":
+				return ec.fieldContext_ManageMediaClassificationRule_enabled(ctx, field)
+			case "order":
+				return ec.fieldContext_ManageMediaClassificationRule_order(ctx, field)
+			case "subject":
+				return ec.fieldContext_ManageMediaClassificationRule_subject(ctx, field)
+			case "operator":
+				return ec.fieldContext_ManageMediaClassificationRule_operator(ctx, field)
+			case "pattern":
+				return ec.fieldContext_ManageMediaClassificationRule_pattern(ctx, field)
+			case "caseSensitive":
+				return ec.fieldContext_ManageMediaClassificationRule_caseSensitive(ctx, field)
+			case "resultCategory":
+				return ec.fieldContext_ManageMediaClassificationRule_resultCategory(ctx, field)
+			case "revision":
+				return ec.fieldContext_ManageMediaClassificationRule_revision(ctx, field)
+			case "systemDefault":
+				return ec.fieldContext_ManageMediaClassificationRule_systemDefault(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageMediaClassificationRule", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createMediaClassificationRule_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateMediaClassificationRule(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateMediaClassificationRule(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateMediaClassificationRule(rctx, fc.Args["input"].(UpdateMediaClassificationRuleInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageMediaClassificationRule)
+	fc.Result = res
+	return ec.marshalNManageMediaClassificationRule2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationRule(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateMediaClassificationRule(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ManageMediaClassificationRule_id(ctx, field)
+			case "libraryID":
+				return ec.fieldContext_ManageMediaClassificationRule_libraryID(ctx, field)
+			case "name":
+				return ec.fieldContext_ManageMediaClassificationRule_name(ctx, field)
+			case "enabled":
+				return ec.fieldContext_ManageMediaClassificationRule_enabled(ctx, field)
+			case "order":
+				return ec.fieldContext_ManageMediaClassificationRule_order(ctx, field)
+			case "subject":
+				return ec.fieldContext_ManageMediaClassificationRule_subject(ctx, field)
+			case "operator":
+				return ec.fieldContext_ManageMediaClassificationRule_operator(ctx, field)
+			case "pattern":
+				return ec.fieldContext_ManageMediaClassificationRule_pattern(ctx, field)
+			case "caseSensitive":
+				return ec.fieldContext_ManageMediaClassificationRule_caseSensitive(ctx, field)
+			case "resultCategory":
+				return ec.fieldContext_ManageMediaClassificationRule_resultCategory(ctx, field)
+			case "revision":
+				return ec.fieldContext_ManageMediaClassificationRule_revision(ctx, field)
+			case "systemDefault":
+				return ec.fieldContext_ManageMediaClassificationRule_systemDefault(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageMediaClassificationRule", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateMediaClassificationRule_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteMediaClassificationRule(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteMediaClassificationRule(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteMediaClassificationRule(rctx, fc.Args["id"].(int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteMediaClassificationRule(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteMediaClassificationRule_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_restoreDefaultMediaClassificationRules(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_restoreDefaultMediaClassificationRules(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().RestoreDefaultMediaClassificationRules(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageMediaClassificationRule)
+	fc.Result = res
+	return ec.marshalNManageMediaClassificationRule2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationRuleᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_restoreDefaultMediaClassificationRules(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ManageMediaClassificationRule_id(ctx, field)
+			case "libraryID":
+				return ec.fieldContext_ManageMediaClassificationRule_libraryID(ctx, field)
+			case "name":
+				return ec.fieldContext_ManageMediaClassificationRule_name(ctx, field)
+			case "enabled":
+				return ec.fieldContext_ManageMediaClassificationRule_enabled(ctx, field)
+			case "order":
+				return ec.fieldContext_ManageMediaClassificationRule_order(ctx, field)
+			case "subject":
+				return ec.fieldContext_ManageMediaClassificationRule_subject(ctx, field)
+			case "operator":
+				return ec.fieldContext_ManageMediaClassificationRule_operator(ctx, field)
+			case "pattern":
+				return ec.fieldContext_ManageMediaClassificationRule_pattern(ctx, field)
+			case "caseSensitive":
+				return ec.fieldContext_ManageMediaClassificationRule_caseSensitive(ctx, field)
+			case "resultCategory":
+				return ec.fieldContext_ManageMediaClassificationRule_resultCategory(ctx, field)
+			case "revision":
+				return ec.fieldContext_ManageMediaClassificationRule_revision(ctx, field)
+			case "systemDefault":
+				return ec.fieldContext_ManageMediaClassificationRule_systemDefault(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageMediaClassificationRule", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_testMediaClassificationRule(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_testMediaClassificationRule(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().TestMediaClassificationRule(rctx, fc.Args["input"].(MediaClassificationRuleInput), fc.Args["relativePath"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageMediaClassificationMatch)
+	fc.Result = res
+	return ec.marshalNManageMediaClassificationMatch2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationMatch(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_testMediaClassificationRule(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "matched":
+				return ec.fieldContext_ManageMediaClassificationMatch_matched(ctx, field)
+			case "ruleID":
+				return ec.fieldContext_ManageMediaClassificationMatch_ruleID(ctx, field)
+			case "ruleName":
+				return ec.fieldContext_ManageMediaClassificationMatch_ruleName(ctx, field)
+			case "resultCategory":
+				return ec.fieldContext_ManageMediaClassificationMatch_resultCategory(ctx, field)
+			case "subject":
+				return ec.fieldContext_ManageMediaClassificationMatch_subject(ctx, field)
+			case "matchedValue":
+				return ec.fieldContext_ManageMediaClassificationMatch_matchedValue(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageMediaClassificationMatch", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_testMediaClassificationRule_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_previewMediaClassificationRule(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_previewMediaClassificationRule(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().PreviewMediaClassificationRule(rctx, fc.Args["input"].(MediaClassificationRuleInput), fc.Args["libraryID"].(*int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageMediaClassificationPreview)
+	fc.Result = res
+	return ec.marshalNManageMediaClassificationPreview2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationPreview(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_previewMediaClassificationRule(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "totalMatches":
+				return ec.fieldContext_ManageMediaClassificationPreview_totalMatches(ctx, field)
+			case "samples":
+				return ec.fieldContext_ManageMediaClassificationPreview_samples(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageMediaClassificationPreview", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_previewMediaClassificationRule_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_evaluateMediaClassificationRules(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_evaluateMediaClassificationRules(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().EvaluateMediaClassificationRules(rctx, fc.Args["libraryID"].(*int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageMediaClassificationEvaluation)
+	fc.Result = res
+	return ec.marshalNManageMediaClassificationEvaluation2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationEvaluation(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_evaluateMediaClassificationRules(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "evaluated":
+				return ec.fieldContext_ManageMediaClassificationEvaluation_evaluated(ctx, field)
+			case "matched":
+				return ec.fieldContext_ManageMediaClassificationEvaluation_matched(ctx, field)
+			case "pending":
+				return ec.fieldContext_ManageMediaClassificationEvaluation_pending(ctx, field)
+			case "superseded":
+				return ec.fieldContext_ManageMediaClassificationEvaluation_superseded(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageMediaClassificationEvaluation", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_evaluateMediaClassificationRules_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_resolveMediaClassificationSuggestion(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_resolveMediaClassificationSuggestion(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().ResolveMediaClassificationSuggestion(rctx, fc.Args["id"].(int64), fc.Args["accept"].(bool), fc.Args["expectedGalleryRevision"].(int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageMediaClassificationSuggestion)
+	fc.Result = res
+	return ec.marshalNManageMediaClassificationSuggestion2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationSuggestion(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_resolveMediaClassificationSuggestion(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_id(ctx, field)
+			case "galleryID":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_galleryID(ctx, field)
+			case "galleryRevision":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_galleryRevision(ctx, field)
+			case "gallerySetID":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_gallerySetID(ctx, field)
+			case "galleryTitle":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_galleryTitle(ctx, field)
+			case "itemUUID":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_itemUUID(ctx, field)
+			case "relativePath":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_relativePath(ctx, field)
+			case "ruleID":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_ruleID(ctx, field)
+			case "ruleRevision":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_ruleRevision(ctx, field)
+			case "ruleName":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_ruleName(ctx, field)
+			case "proposedCategory":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_proposedCategory(ctx, field)
+			case "matchedSubject":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_matchedSubject(ctx, field)
+			case "matchedValue":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_matchedValue(ctx, field)
+			case "status":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_status(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageMediaClassificationSuggestion", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_resolveMediaClassificationSuggestion_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_discoverMediaLibrary(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_discoverMediaLibrary(ctx, field)
 	if err != nil {
@@ -33509,6 +37212,172 @@ func (ec *executionContext) fieldContext_Query_manageLibraries(_ context.Context
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageLibrary", field.Name)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_manageMediaClassificationRules(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_manageMediaClassificationRules(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ManageMediaClassificationRules(rctx, fc.Args["libraryID"].(*int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageMediaClassificationRule)
+	fc.Result = res
+	return ec.marshalNManageMediaClassificationRule2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationRuleᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_manageMediaClassificationRules(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ManageMediaClassificationRule_id(ctx, field)
+			case "libraryID":
+				return ec.fieldContext_ManageMediaClassificationRule_libraryID(ctx, field)
+			case "name":
+				return ec.fieldContext_ManageMediaClassificationRule_name(ctx, field)
+			case "enabled":
+				return ec.fieldContext_ManageMediaClassificationRule_enabled(ctx, field)
+			case "order":
+				return ec.fieldContext_ManageMediaClassificationRule_order(ctx, field)
+			case "subject":
+				return ec.fieldContext_ManageMediaClassificationRule_subject(ctx, field)
+			case "operator":
+				return ec.fieldContext_ManageMediaClassificationRule_operator(ctx, field)
+			case "pattern":
+				return ec.fieldContext_ManageMediaClassificationRule_pattern(ctx, field)
+			case "caseSensitive":
+				return ec.fieldContext_ManageMediaClassificationRule_caseSensitive(ctx, field)
+			case "resultCategory":
+				return ec.fieldContext_ManageMediaClassificationRule_resultCategory(ctx, field)
+			case "revision":
+				return ec.fieldContext_ManageMediaClassificationRule_revision(ctx, field)
+			case "systemDefault":
+				return ec.fieldContext_ManageMediaClassificationRule_systemDefault(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageMediaClassificationRule", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_manageMediaClassificationRules_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_manageMediaClassificationSuggestions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_manageMediaClassificationSuggestions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ManageMediaClassificationSuggestions(rctx, fc.Args["libraryID"].(*int64), fc.Args["status"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageMediaClassificationSuggestion)
+	fc.Result = res
+	return ec.marshalNManageMediaClassificationSuggestion2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationSuggestionᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_manageMediaClassificationSuggestions(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_id(ctx, field)
+			case "galleryID":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_galleryID(ctx, field)
+			case "galleryRevision":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_galleryRevision(ctx, field)
+			case "gallerySetID":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_gallerySetID(ctx, field)
+			case "galleryTitle":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_galleryTitle(ctx, field)
+			case "itemUUID":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_itemUUID(ctx, field)
+			case "relativePath":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_relativePath(ctx, field)
+			case "ruleID":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_ruleID(ctx, field)
+			case "ruleRevision":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_ruleRevision(ctx, field)
+			case "ruleName":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_ruleName(ctx, field)
+			case "proposedCategory":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_proposedCategory(ctx, field)
+			case "matchedSubject":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_matchedSubject(ctx, field)
+			case "matchedValue":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_matchedValue(ctx, field)
+			case "status":
+				return ec.fieldContext_ManageMediaClassificationSuggestion_status(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageMediaClassificationSuggestion", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_manageMediaClassificationSuggestions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -39567,6 +43436,89 @@ func (ec *executionContext) unmarshalInputManifestConflictChoiceInput(ctx contex
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputMediaClassificationRuleInput(ctx context.Context, obj any) (MediaClassificationRuleInput, error) {
+	var it MediaClassificationRuleInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"libraryID", "name", "enabled", "order", "subject", "operator", "pattern", "caseSensitive", "resultCategory"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "libraryID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("libraryID"))
+			data, err := ec.unmarshalOInt642ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LibraryID = data
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "enabled":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Enabled = data
+		case "order":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("order"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Order = data
+		case "subject":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("subject"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Subject = data
+		case "operator":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("operator"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Operator = data
+		case "pattern":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pattern"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Pattern = data
+		case "caseSensitive":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("caseSensitive"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CaseSensitive = data
+		case "resultCategory":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resultCategory"))
+			data, err := ec.unmarshalNImageCategory2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐImageCategory(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResultCategory = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputReplaceGalleryCastInput(ctx context.Context, obj any) (ReplaceGalleryCastInput, error) {
 	var it ReplaceGalleryCastInput
 	asMap := map[string]any{}
@@ -40140,6 +44092,96 @@ func (ec *executionContext) unmarshalInputUpdateGalleryMetadataInput(ctx context
 				return it, err
 			}
 			it.StudioName = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateMediaClassificationRuleInput(ctx context.Context, obj any) (UpdateMediaClassificationRuleInput, error) {
+	var it UpdateMediaClassificationRuleInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "libraryID", "name", "enabled", "order", "subject", "operator", "pattern", "caseSensitive", "resultCategory"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalNInt642int64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "libraryID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("libraryID"))
+			data, err := ec.unmarshalOInt642ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LibraryID = data
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "enabled":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Enabled = data
+		case "order":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("order"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Order = data
+		case "subject":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("subject"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Subject = data
+		case "operator":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("operator"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Operator = data
+		case "pattern":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pattern"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Pattern = data
+		case "caseSensitive":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("caseSensitive"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CaseSensitive = data
+		case "resultCategory":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resultCategory"))
+			data, err := ec.unmarshalNImageCategory2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐImageCategory(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResultCategory = data
 		}
 	}
 
@@ -43380,6 +47422,429 @@ func (ec *executionContext) _ManageManifestConflict(ctx context.Context, sel ast
 	return out
 }
 
+var manageMediaClassificationEvaluationImplementors = []string{"ManageMediaClassificationEvaluation"}
+
+func (ec *executionContext) _ManageMediaClassificationEvaluation(ctx context.Context, sel ast.SelectionSet, obj *ManageMediaClassificationEvaluation) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageMediaClassificationEvaluationImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageMediaClassificationEvaluation")
+		case "evaluated":
+			out.Values[i] = ec._ManageMediaClassificationEvaluation_evaluated(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "matched":
+			out.Values[i] = ec._ManageMediaClassificationEvaluation_matched(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pending":
+			out.Values[i] = ec._ManageMediaClassificationEvaluation_pending(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "superseded":
+			out.Values[i] = ec._ManageMediaClassificationEvaluation_superseded(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageMediaClassificationMatchImplementors = []string{"ManageMediaClassificationMatch"}
+
+func (ec *executionContext) _ManageMediaClassificationMatch(ctx context.Context, sel ast.SelectionSet, obj *ManageMediaClassificationMatch) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageMediaClassificationMatchImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageMediaClassificationMatch")
+		case "matched":
+			out.Values[i] = ec._ManageMediaClassificationMatch_matched(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ruleID":
+			out.Values[i] = ec._ManageMediaClassificationMatch_ruleID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ruleName":
+			out.Values[i] = ec._ManageMediaClassificationMatch_ruleName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resultCategory":
+			out.Values[i] = ec._ManageMediaClassificationMatch_resultCategory(ctx, field, obj)
+		case "subject":
+			out.Values[i] = ec._ManageMediaClassificationMatch_subject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "matchedValue":
+			out.Values[i] = ec._ManageMediaClassificationMatch_matchedValue(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageMediaClassificationPreviewImplementors = []string{"ManageMediaClassificationPreview"}
+
+func (ec *executionContext) _ManageMediaClassificationPreview(ctx context.Context, sel ast.SelectionSet, obj *ManageMediaClassificationPreview) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageMediaClassificationPreviewImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageMediaClassificationPreview")
+		case "totalMatches":
+			out.Values[i] = ec._ManageMediaClassificationPreview_totalMatches(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "samples":
+			out.Values[i] = ec._ManageMediaClassificationPreview_samples(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageMediaClassificationPreviewSampleImplementors = []string{"ManageMediaClassificationPreviewSample"}
+
+func (ec *executionContext) _ManageMediaClassificationPreviewSample(ctx context.Context, sel ast.SelectionSet, obj *ManageMediaClassificationPreviewSample) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageMediaClassificationPreviewSampleImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageMediaClassificationPreviewSample")
+		case "gallerySetID":
+			out.Values[i] = ec._ManageMediaClassificationPreviewSample_gallerySetID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryTitle":
+			out.Values[i] = ec._ManageMediaClassificationPreviewSample_galleryTitle(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "itemUUID":
+			out.Values[i] = ec._ManageMediaClassificationPreviewSample_itemUUID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "relativePath":
+			out.Values[i] = ec._ManageMediaClassificationPreviewSample_relativePath(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "currentCategory":
+			out.Values[i] = ec._ManageMediaClassificationPreviewSample_currentCategory(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "proposedCategory":
+			out.Values[i] = ec._ManageMediaClassificationPreviewSample_proposedCategory(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "matchedValue":
+			out.Values[i] = ec._ManageMediaClassificationPreviewSample_matchedValue(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageMediaClassificationRuleImplementors = []string{"ManageMediaClassificationRule"}
+
+func (ec *executionContext) _ManageMediaClassificationRule(ctx context.Context, sel ast.SelectionSet, obj *ManageMediaClassificationRule) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageMediaClassificationRuleImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageMediaClassificationRule")
+		case "id":
+			out.Values[i] = ec._ManageMediaClassificationRule_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "libraryID":
+			out.Values[i] = ec._ManageMediaClassificationRule_libraryID(ctx, field, obj)
+		case "name":
+			out.Values[i] = ec._ManageMediaClassificationRule_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "enabled":
+			out.Values[i] = ec._ManageMediaClassificationRule_enabled(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "order":
+			out.Values[i] = ec._ManageMediaClassificationRule_order(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "subject":
+			out.Values[i] = ec._ManageMediaClassificationRule_subject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "operator":
+			out.Values[i] = ec._ManageMediaClassificationRule_operator(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pattern":
+			out.Values[i] = ec._ManageMediaClassificationRule_pattern(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "caseSensitive":
+			out.Values[i] = ec._ManageMediaClassificationRule_caseSensitive(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resultCategory":
+			out.Values[i] = ec._ManageMediaClassificationRule_resultCategory(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "revision":
+			out.Values[i] = ec._ManageMediaClassificationRule_revision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "systemDefault":
+			out.Values[i] = ec._ManageMediaClassificationRule_systemDefault(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageMediaClassificationSuggestionImplementors = []string{"ManageMediaClassificationSuggestion"}
+
+func (ec *executionContext) _ManageMediaClassificationSuggestion(ctx context.Context, sel ast.SelectionSet, obj *ManageMediaClassificationSuggestion) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageMediaClassificationSuggestionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageMediaClassificationSuggestion")
+		case "id":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryID":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_galleryID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryRevision":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_galleryRevision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gallerySetID":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_gallerySetID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryTitle":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_galleryTitle(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "itemUUID":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_itemUUID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "relativePath":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_relativePath(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ruleID":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_ruleID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ruleRevision":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_ruleRevision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ruleName":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_ruleName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "proposedCategory":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_proposedCategory(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "matchedSubject":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_matchedSubject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "matchedValue":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_matchedValue(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._ManageMediaClassificationSuggestion_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var manageProcessingJobImplementors = []string{"ManageProcessingJob"}
 
 func (ec *executionContext) _ManageProcessingJob(ctx context.Context, sel ast.SelectionSet, obj *ManageProcessingJob) graphql.Marshaler {
@@ -43580,6 +48045,55 @@ func (ec *executionContext) _ManageRecognitionRule(ctx context.Context, sel ast.
 			}
 		case "fixedDepth":
 			out.Values[i] = ec._ManageRecognitionRule_fixedDepth(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageRuleValidationImplementors = []string{"ManageRuleValidation"}
+
+func (ec *executionContext) _ManageRuleValidation(ctx context.Context, sel ast.SelectionSet, obj *ManageRuleValidation) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageRuleValidationImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageRuleValidation")
+		case "valid":
+			out.Values[i] = ec._ManageRuleValidation_valid(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "errorCode":
+			out.Values[i] = ec._ManageRuleValidation_errorCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "message":
+			out.Values[i] = ec._ManageRuleValidation_message(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -44347,6 +48861,69 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "deleteRecognitionRule":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_deleteRecognitionRule(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "validateMediaClassificationRule":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_validateMediaClassificationRule(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createMediaClassificationRule":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createMediaClassificationRule(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateMediaClassificationRule":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateMediaClassificationRule(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteMediaClassificationRule":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteMediaClassificationRule(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "restoreDefaultMediaClassificationRules":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_restoreDefaultMediaClassificationRules(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "testMediaClassificationRule":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_testMediaClassificationRule(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "previewMediaClassificationRule":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_previewMediaClassificationRule(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "evaluateMediaClassificationRules":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_evaluateMediaClassificationRules(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resolveMediaClassificationSuggestion":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_resolveMediaClassificationSuggestion(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -45230,6 +49807,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_manageLibraries(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "manageMediaClassificationRules":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_manageMediaClassificationRules(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "manageMediaClassificationSuggestions":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_manageMediaClassificationSuggestions(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -47198,6 +51819,16 @@ func (ec *executionContext) marshalNID2ᚕstringᚄ(ctx context.Context, sel ast
 	return ret
 }
 
+func (ec *executionContext) unmarshalNImageCategory2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐImageCategory(ctx context.Context, v any) (ImageCategory, error) {
+	var res ImageCategory
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNImageCategory2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐImageCategory(ctx context.Context, sel ast.SelectionSet, v ImageCategory) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v any) (int, error) {
 	res, err := graphql.UnmarshalInt(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -48328,6 +52959,218 @@ func (ec *executionContext) marshalNManageManifestConflict2ᚖgithubᚗcomᚋsta
 	return ec._ManageManifestConflict(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNManageMediaClassificationEvaluation2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationEvaluation(ctx context.Context, sel ast.SelectionSet, v ManageMediaClassificationEvaluation) graphql.Marshaler {
+	return ec._ManageMediaClassificationEvaluation(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManageMediaClassificationEvaluation2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationEvaluation(ctx context.Context, sel ast.SelectionSet, v *ManageMediaClassificationEvaluation) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageMediaClassificationEvaluation(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageMediaClassificationMatch2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationMatch(ctx context.Context, sel ast.SelectionSet, v ManageMediaClassificationMatch) graphql.Marshaler {
+	return ec._ManageMediaClassificationMatch(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManageMediaClassificationMatch2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationMatch(ctx context.Context, sel ast.SelectionSet, v *ManageMediaClassificationMatch) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageMediaClassificationMatch(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageMediaClassificationPreview2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationPreview(ctx context.Context, sel ast.SelectionSet, v ManageMediaClassificationPreview) graphql.Marshaler {
+	return ec._ManageMediaClassificationPreview(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManageMediaClassificationPreview2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationPreview(ctx context.Context, sel ast.SelectionSet, v *ManageMediaClassificationPreview) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageMediaClassificationPreview(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageMediaClassificationPreviewSample2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationPreviewSampleᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageMediaClassificationPreviewSample) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageMediaClassificationPreviewSample2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationPreviewSample(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageMediaClassificationPreviewSample2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationPreviewSample(ctx context.Context, sel ast.SelectionSet, v *ManageMediaClassificationPreviewSample) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageMediaClassificationPreviewSample(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageMediaClassificationRule2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationRule(ctx context.Context, sel ast.SelectionSet, v ManageMediaClassificationRule) graphql.Marshaler {
+	return ec._ManageMediaClassificationRule(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManageMediaClassificationRule2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationRuleᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageMediaClassificationRule) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageMediaClassificationRule2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationRule(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageMediaClassificationRule2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationRule(ctx context.Context, sel ast.SelectionSet, v *ManageMediaClassificationRule) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageMediaClassificationRule(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageMediaClassificationSuggestion2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationSuggestion(ctx context.Context, sel ast.SelectionSet, v ManageMediaClassificationSuggestion) graphql.Marshaler {
+	return ec._ManageMediaClassificationSuggestion(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManageMediaClassificationSuggestion2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationSuggestionᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageMediaClassificationSuggestion) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageMediaClassificationSuggestion2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationSuggestion(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageMediaClassificationSuggestion2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMediaClassificationSuggestion(ctx context.Context, sel ast.SelectionSet, v *ManageMediaClassificationSuggestion) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageMediaClassificationSuggestion(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNManageProcessingJob2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageProcessingJobᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageProcessingJob) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -48452,6 +53295,20 @@ func (ec *executionContext) marshalNManageRecognitionRule2ᚖgithubᚗcomᚋstas
 		return graphql.Null
 	}
 	return ec._ManageRecognitionRule(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageRuleValidation2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageRuleValidation(ctx context.Context, sel ast.SelectionSet, v ManageRuleValidation) graphql.Marshaler {
+	return ec._ManageRuleValidation(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManageRuleValidation2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageRuleValidation(ctx context.Context, sel ast.SelectionSet, v *ManageRuleValidation) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageRuleValidation(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNManageRuntimeSettings2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageRuntimeSettings(ctx context.Context, sel ast.SelectionSet, v ManageRuntimeSettings) graphql.Marshaler {
@@ -48662,6 +53519,11 @@ func (ec *executionContext) unmarshalNManifestConflictChoiceInput2ᚕᚖgithub�
 func (ec *executionContext) unmarshalNManifestConflictChoiceInput2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManifestConflictChoiceInput(ctx context.Context, v any) (*ManifestConflictChoiceInput, error) {
 	res, err := ec.unmarshalInputManifestConflictChoiceInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNMediaClassificationRuleInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐMediaClassificationRuleInput(ctx context.Context, v any) (MediaClassificationRuleInput, error) {
+	res, err := ec.unmarshalInputMediaClassificationRuleInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNMediaCounts2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐMediaCounts(ctx context.Context, sel ast.SelectionSet, v *MediaCounts) graphql.Marshaler {
@@ -49182,6 +54044,11 @@ func (ec *executionContext) unmarshalNUpdateGalleryItemInput2githubᚗcomᚋstas
 
 func (ec *executionContext) unmarshalNUpdateGalleryMetadataInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐUpdateGalleryMetadataInput(ctx context.Context, v any) (UpdateGalleryMetadataInput, error) {
 	res, err := ec.unmarshalInputUpdateGalleryMetadataInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNUpdateMediaClassificationRuleInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐUpdateMediaClassificationRuleInput(ctx context.Context, v any) (UpdateMediaClassificationRuleInput, error) {
+	res, err := ec.unmarshalInputUpdateMediaClassificationRuleInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 

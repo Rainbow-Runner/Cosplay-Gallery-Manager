@@ -94,6 +94,18 @@ export const UPDATE_RECOGNITION_RULE = gql`
 export const DELETE_RECOGNITION_RULE = gql`
   mutation DeleteRecognitionRule($id: Int64!) { deleteRecognitionRule(id: $id) }
 `;
+const MEDIA_CLASSIFICATION_RULE_FIELDS = gql`fragment MediaClassificationRuleFields on ManageMediaClassificationRule { id libraryID name enabled order subject operator pattern caseSensitive resultCategory revision systemDefault }`;
+export const MANAGE_MEDIA_CLASSIFICATION_RULES = gql`${MEDIA_CLASSIFICATION_RULE_FIELDS} query ManageMediaClassificationRules($libraryID: Int64) { manageMediaClassificationRules(libraryID: $libraryID) { ...MediaClassificationRuleFields } }`;
+export const MANAGE_MEDIA_CLASSIFICATION_SUGGESTIONS = gql`query ManageMediaClassificationSuggestions($libraryID: Int64, $status: String!) { manageMediaClassificationSuggestions(libraryID: $libraryID, status: $status) { id galleryID galleryRevision gallerySetID galleryTitle itemUUID relativePath ruleID ruleRevision ruleName proposedCategory matchedSubject matchedValue status } }`;
+export const VALIDATE_MEDIA_CLASSIFICATION_RULE = gql`mutation ValidateMediaClassificationRule($input: MediaClassificationRuleInput!) { validateMediaClassificationRule(input: $input) { valid errorCode message } }`;
+export const CREATE_MEDIA_CLASSIFICATION_RULE = gql`${MEDIA_CLASSIFICATION_RULE_FIELDS} mutation CreateMediaClassificationRule($input: MediaClassificationRuleInput!) { createMediaClassificationRule(input: $input) { ...MediaClassificationRuleFields } }`;
+export const UPDATE_MEDIA_CLASSIFICATION_RULE = gql`${MEDIA_CLASSIFICATION_RULE_FIELDS} mutation UpdateMediaClassificationRule($input: UpdateMediaClassificationRuleInput!) { updateMediaClassificationRule(input: $input) { ...MediaClassificationRuleFields } }`;
+export const DELETE_MEDIA_CLASSIFICATION_RULE = gql`mutation DeleteMediaClassificationRule($id: Int64!) { deleteMediaClassificationRule(id: $id) }`;
+export const RESTORE_DEFAULT_MEDIA_CLASSIFICATION_RULES = gql`${MEDIA_CLASSIFICATION_RULE_FIELDS} mutation RestoreDefaultMediaClassificationRules { restoreDefaultMediaClassificationRules { ...MediaClassificationRuleFields } }`;
+export const TEST_MEDIA_CLASSIFICATION_RULE = gql`mutation TestMediaClassificationRule($input: MediaClassificationRuleInput!, $relativePath: String!) { testMediaClassificationRule(input: $input, relativePath: $relativePath) { matched ruleID ruleName resultCategory subject matchedValue } }`;
+export const PREVIEW_MEDIA_CLASSIFICATION_RULE = gql`mutation PreviewMediaClassificationRule($input: MediaClassificationRuleInput!, $libraryID: Int64) { previewMediaClassificationRule(input: $input, libraryID: $libraryID) { totalMatches samples { gallerySetID galleryTitle itemUUID relativePath currentCategory proposedCategory matchedValue } } }`;
+export const EVALUATE_MEDIA_CLASSIFICATION_RULES = gql`mutation EvaluateMediaClassificationRules($libraryID: Int64) { evaluateMediaClassificationRules(libraryID: $libraryID) { evaluated matched pending superseded } }`;
+export const RESOLVE_MEDIA_CLASSIFICATION_SUGGESTION = gql`mutation ResolveMediaClassificationSuggestion($id: Int64!, $accept: Boolean!, $expectedGalleryRevision: Int64!) { resolveMediaClassificationSuggestion(id: $id, accept: $accept, expectedGalleryRevision: $expectedGalleryRevision) { id galleryID galleryRevision status ruleID ruleRevision } }`;
 export const DISCOVER_MEDIA_LIBRARY = gql`
   mutation DiscoverMediaLibrary($libraryID: Int64!) { discoverMediaLibrary(libraryID: $libraryID) { id libraryID completedAt candidates { id rootPath sourceType method manifestSetID status autoCreateDraft hasConflict overLimit mediaCount suggestions { field value } } unassigned { parentPath mediaCount } } }
 `;

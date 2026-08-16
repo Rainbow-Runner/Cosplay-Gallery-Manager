@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
+	"github.com/stashapp/stash/internal/mediaclassification"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/portableid"
 	"github.com/stashapp/stash/internal/productlog"
@@ -125,4 +127,15 @@ func portableCoreKind(kind SearchEntityKind) (portableid.Kind, error) {
 	default:
 		return "", errors.New("unsupported core entity kind")
 	}
+}
+
+func mediaClassificationRuleInput(input MediaClassificationRuleInput) productdb.MediaClassificationRule {
+	return productdb.MediaClassificationRule{LibraryID: input.LibraryID, Name: input.Name, Enabled: input.Enabled, Order: input.Order, Subject: mediaclassification.Subject(input.Subject), Operator: mediaclassification.Operator(input.Operator), Pattern: input.Pattern, CaseSensitive: input.CaseSensitive, Category: mediaclassification.Category(input.ResultCategory), Revision: 1}
+}
+
+func optionalInt64Target(value *int64) string {
+	if value == nil {
+		return "GLOBAL"
+	}
+	return fmt.Sprintf("%d", *value)
 }

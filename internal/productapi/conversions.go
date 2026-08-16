@@ -10,6 +10,7 @@ import (
 	"github.com/stashapp/stash/internal/discovery"
 	"github.com/stashapp/stash/internal/library"
 	"github.com/stashapp/stash/internal/manage"
+	"github.com/stashapp/stash/internal/mediaclassification"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/settings"
 )
@@ -239,6 +240,10 @@ func mediaPage(value browse.MediaPage) *MediaPage {
 }
 
 func manageError(err error) error {
+	var invalidRule *mediaclassification.ValidationError
+	if errors.As(err, &invalidRule) {
+		return errors.New(invalidRule.Code + ": " + invalidRule.Message)
+	}
 	var activation *productdb.ActivationError
 	if errors.As(err, &activation) {
 		codes := make([]string, 0, len(activation.Blockers))
@@ -343,6 +348,31 @@ func manageLibrary(value library.Library, rules []discovery.Rule) *ManageLibrary
 
 func manageRecognitionRule(value discovery.Rule) *ManageRecognitionRule {
 	return &ManageRecognitionRule{ID: value.ID, Name: value.Name, Kind: string(value.Kind), Enabled: value.Enabled, AutoCreateDraft: value.AutoCreateDraft, Order: value.Order, Pattern: value.Pattern, FixedDepth: value.FixedDepth}
+}
+
+func manageMediaClassificationRule(value productdb.MediaClassificationRule) *ManageMediaClassificationRule {
+	return &ManageMediaClassificationRule{ID: value.ID, LibraryID: value.LibraryID, Name: value.Name, Enabled: value.Enabled, Order: value.Order, Subject: string(value.Subject), Operator: string(value.Operator), Pattern: value.Pattern, CaseSensitive: value.CaseSensitive, ResultCategory: ImageCategory(value.Category), Revision: value.Revision, SystemDefault: value.SystemDefault}
+}
+
+func manageMediaClassificationMatch(value productdb.MediaClassificationMatch) *ManageMediaClassificationMatch {
+	result := &ManageMediaClassificationMatch{Matched: value.Matched, RuleID: value.RuleID, RuleName: value.RuleName, Subject: value.Subject, MatchedValue: value.MatchedValue}
+	if value.Matched {
+		category := ImageCategory(value.Category)
+		result.ResultCategory = &category
+	}
+	return result
+}
+
+func manageMediaClassificationPreview(value productdb.MediaClassificationPreview) *ManageMediaClassificationPreview {
+	result := &ManageMediaClassificationPreview{TotalMatches: value.TotalMatches}
+	for _, sample := range value.Samples {
+		result.Samples = append(result.Samples, &ManageMediaClassificationPreviewSample{GallerySetID: sample.GallerySetID, GalleryTitle: sample.GalleryTitle, ItemUUID: sample.ItemUUID, RelativePath: sample.RelativePath, CurrentCategory: ImageCategory(sample.CurrentCategory), ProposedCategory: ImageCategory(sample.ProposedCategory), MatchedValue: sample.MatchedValue})
+	}
+	return result
+}
+
+func manageMediaClassificationSuggestion(value productdb.MediaClassificationSuggestion) *ManageMediaClassificationSuggestion {
+	return &ManageMediaClassificationSuggestion{ID: value.ID, GalleryID: value.GalleryID, GalleryRevision: value.GalleryRevision, GallerySetID: value.GallerySetID, GalleryTitle: value.GalleryTitle, ItemUUID: value.ItemUUID, RelativePath: value.RelativePath, RuleID: value.RuleID, RuleRevision: value.RuleRevision, RuleName: value.RuleName, ProposedCategory: ImageCategory(value.ProposedCategory), MatchedSubject: value.MatchedSubject, MatchedValue: value.MatchedValue, Status: value.Status}
 }
 
 func manageDiscoverySnapshot(value productdb.DiscoverySnapshot) *ManageDiscoverySnapshot {

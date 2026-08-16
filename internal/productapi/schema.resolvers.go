@@ -17,6 +17,7 @@ import (
 	"github.com/stashapp/stash/internal/discovery"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/manifest"
+	"github.com/stashapp/stash/internal/mediaclassification"
 	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/portableid"
@@ -305,6 +306,101 @@ func (r *mutationResolver) DeleteRecognitionRule(ctx context.Context, id int64) 
 	}
 	r.auditManage(ctx, "RECOGNITION_RULE_DELETE", "RULE", strconv.FormatInt(id, 10), "", nil, nil)
 	return true, nil
+}
+
+// ValidateMediaClassificationRule is the resolver for the validateMediaClassificationRule field.
+func (r *mutationResolver) ValidateMediaClassificationRule(ctx context.Context, input MediaClassificationRuleInput) (*ManageRuleValidation, error) {
+	err := mediaclassification.Validate(mediaClassificationRuleInput(input))
+	code, message := mediaclassification.ValidationDetails(err)
+	return &ManageRuleValidation{Valid: err == nil, ErrorCode: code, Message: message}, nil
+}
+
+// CreateMediaClassificationRule is the resolver for the createMediaClassificationRule field.
+func (r *mutationResolver) CreateMediaClassificationRule(ctx context.Context, input MediaClassificationRuleInput) (*ManageMediaClassificationRule, error) {
+	value, err := r.Database.MediaClassificationRules().Create(ctx, mediaClassificationRuleInput(input), time.Now())
+	if err != nil {
+		r.auditManage(ctx, "MEDIA_CLASSIFICATION_RULE_CREATE", "RULE", "", "MEDIA_CLASSIFICATION_RULE_CREATE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "MEDIA_CLASSIFICATION_RULE_CREATE", "RULE", strconv.FormatInt(value.ID, 10), "", nil, map[string]any{"operator": value.Operator, "subject": value.Subject, "enabled": value.Enabled})
+	return manageMediaClassificationRule(value), nil
+}
+
+// UpdateMediaClassificationRule is the resolver for the updateMediaClassificationRule field.
+func (r *mutationResolver) UpdateMediaClassificationRule(ctx context.Context, input UpdateMediaClassificationRuleInput) (*ManageMediaClassificationRule, error) {
+	value, err := r.Database.MediaClassificationRules().Update(ctx, productdb.MediaClassificationRule{ID: input.ID, LibraryID: input.LibraryID, Name: input.Name, Enabled: input.Enabled, Order: input.Order, Subject: mediaclassification.Subject(input.Subject), Operator: mediaclassification.Operator(input.Operator), Pattern: input.Pattern, CaseSensitive: input.CaseSensitive, Category: mediaclassification.Category(input.ResultCategory)}, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "MEDIA_CLASSIFICATION_RULE_UPDATE", "RULE", strconv.FormatInt(input.ID, 10), "MEDIA_CLASSIFICATION_RULE_UPDATE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "MEDIA_CLASSIFICATION_RULE_UPDATE", "RULE", strconv.FormatInt(input.ID, 10), "", nil, map[string]any{"revision": value.Revision, "operator": value.Operator, "enabled": value.Enabled})
+	return manageMediaClassificationRule(value), nil
+}
+
+// DeleteMediaClassificationRule is the resolver for the deleteMediaClassificationRule field.
+func (r *mutationResolver) DeleteMediaClassificationRule(ctx context.Context, id int64) (bool, error) {
+	err := r.Database.MediaClassificationRules().Delete(ctx, id, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "MEDIA_CLASSIFICATION_RULE_DELETE", "RULE", strconv.FormatInt(id, 10), "MEDIA_CLASSIFICATION_RULE_DELETE_FAILED", err, nil)
+		return false, manageError(err)
+	}
+	r.auditManage(ctx, "MEDIA_CLASSIFICATION_RULE_DELETE", "RULE", strconv.FormatInt(id, 10), "", nil, nil)
+	return true, nil
+}
+
+// RestoreDefaultMediaClassificationRules is the resolver for the restoreDefaultMediaClassificationRules field.
+func (r *mutationResolver) RestoreDefaultMediaClassificationRules(ctx context.Context) ([]*ManageMediaClassificationRule, error) {
+	values, err := r.Database.MediaClassificationRules().RestoreDefaults(ctx, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "MEDIA_CLASSIFICATION_DEFAULTS_RESTORE", "RULE", "DEFAULTS", "MEDIA_CLASSIFICATION_DEFAULTS_RESTORE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	result := make([]*ManageMediaClassificationRule, 0, len(values))
+	for _, value := range values {
+		result = append(result, manageMediaClassificationRule(value))
+	}
+	r.auditManage(ctx, "MEDIA_CLASSIFICATION_DEFAULTS_RESTORE", "RULE", "DEFAULTS", "", nil, map[string]any{"rule_count": len(result)})
+	return result, nil
+}
+
+// TestMediaClassificationRule is the resolver for the testMediaClassificationRule field.
+func (r *mutationResolver) TestMediaClassificationRule(ctx context.Context, input MediaClassificationRuleInput, relativePath string) (*ManageMediaClassificationMatch, error) {
+	value, err := productdb.TestMediaClassificationRule(mediaClassificationRuleInput(input), relativePath)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	return manageMediaClassificationMatch(value), nil
+}
+
+// PreviewMediaClassificationRule is the resolver for the previewMediaClassificationRule field.
+func (r *mutationResolver) PreviewMediaClassificationRule(ctx context.Context, input MediaClassificationRuleInput, libraryID *int64) (*ManageMediaClassificationPreview, error) {
+	value, err := r.Database.MediaClassificationRules().Preview(ctx, mediaClassificationRuleInput(input), libraryID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	return manageMediaClassificationPreview(value), nil
+}
+
+// EvaluateMediaClassificationRules is the resolver for the evaluateMediaClassificationRules field.
+func (r *mutationResolver) EvaluateMediaClassificationRules(ctx context.Context, libraryID *int64) (*ManageMediaClassificationEvaluation, error) {
+	value, err := r.Database.MediaClassificationRules().EvaluateExisting(ctx, libraryID, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "MEDIA_CLASSIFICATION_EVALUATE", "LIBRARY", optionalInt64Target(libraryID), "MEDIA_CLASSIFICATION_EVALUATE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "MEDIA_CLASSIFICATION_EVALUATE", "LIBRARY", optionalInt64Target(libraryID), "", nil, map[string]any{"evaluated": value.Evaluated, "matched": value.Matched, "pending": value.Pending, "superseded": value.Superseded})
+	return &ManageMediaClassificationEvaluation{Evaluated: value.Evaluated, Matched: value.Matched, Pending: value.Pending, Superseded: value.Superseded}, nil
+}
+
+// ResolveMediaClassificationSuggestion is the resolver for the resolveMediaClassificationSuggestion field.
+func (r *mutationResolver) ResolveMediaClassificationSuggestion(ctx context.Context, id int64, accept bool, expectedGalleryRevision int64) (*ManageMediaClassificationSuggestion, error) {
+	value, err := r.Database.MediaClassificationRules().ResolveSuggestion(ctx, id, accept, expectedGalleryRevision, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "MEDIA_CLASSIFICATION_SUGGESTION_RESOLVE", "SUGGESTION", strconv.FormatInt(id, 10), "MEDIA_CLASSIFICATION_SUGGESTION_RESOLVE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "MEDIA_CLASSIFICATION_SUGGESTION_RESOLVE", "SUGGESTION", strconv.FormatInt(id, 10), "", nil, map[string]any{"accepted": accept, "rule_id": value.RuleID, "rule_revision": value.RuleRevision})
+	return manageMediaClassificationSuggestion(value), nil
 }
 
 // DiscoverMediaLibrary is the resolver for the discoverMediaLibrary field.
@@ -1137,6 +1233,32 @@ func (r *queryResolver) ManageLibraries(ctx context.Context) ([]*ManageLibrary, 
 			return nil, manageError(err)
 		}
 		result = append(result, manageLibrary(value, rules))
+	}
+	return result, nil
+}
+
+// ManageMediaClassificationRules is the resolver for the manageMediaClassificationRules field.
+func (r *queryResolver) ManageMediaClassificationRules(ctx context.Context, libraryID *int64) ([]*ManageMediaClassificationRule, error) {
+	values, err := r.Database.MediaClassificationRules().List(ctx, libraryID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	result := make([]*ManageMediaClassificationRule, 0, len(values))
+	for _, value := range values {
+		result = append(result, manageMediaClassificationRule(value))
+	}
+	return result, nil
+}
+
+// ManageMediaClassificationSuggestions is the resolver for the manageMediaClassificationSuggestions field.
+func (r *queryResolver) ManageMediaClassificationSuggestions(ctx context.Context, libraryID *int64, status string) ([]*ManageMediaClassificationSuggestion, error) {
+	values, err := r.Database.MediaClassificationRules().Suggestions(ctx, libraryID, status)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	result := make([]*ManageMediaClassificationSuggestion, 0, len(values))
+	for _, value := range values {
+		result = append(result, manageMediaClassificationSuggestion(value))
 	}
 	return result, nil
 }

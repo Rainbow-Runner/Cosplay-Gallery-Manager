@@ -632,7 +632,7 @@ a { color: inherit; text-decoration: none; }
 .library-list summary, .rule-section summary, .unassigned summary { padding: .9rem 0 0; color: #d6cbc4; font-size: .68rem; cursor: pointer; }
 .library-list form, .rule-form { display: grid; gap: .75rem; margin-top: 1rem; }
 .library-list label, .rule-form label { display: grid; gap: .35rem; color: var(--ink-muted); font-size: .6rem; }
-.library-list input, .rule-form input, .rule-form select { min-height: 2.35rem; padding: .5rem .6rem; border: 1px solid var(--line); background: #100e10; color: #fff; }
+.library-list input, .rule-form input, .rule-form select, .rule-form textarea { min-height: 2.35rem; padding: .5rem .6rem; border: 1px solid var(--line); background: #100e10; color: #fff; }
 .library-list label.check, .rule-form label.check { display: flex; align-items: center; gap: .5rem; }
 .library-list label.check input, .rule-form label.check input { min-height: 0; }
 .library-list form button, .rule-form button, .candidate-card button, .rule-section header button { padding: .55rem .7rem; border: 1px solid var(--accent); background: transparent; color: #fff; font-size: .62rem; cursor: pointer; }
@@ -650,6 +650,20 @@ a { color: inherit; text-decoration: none; }
 .rule-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .rule-form .wide { grid-column: 1 / -1; }
 .rule-form-actions { grid-column: 1 / -1; }
+.rule-validation, .rule-test { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.rule-validation span { color: var(--ink-muted); font-size: .62rem; }
+.rule-validation span.is-valid { color: #2f9e55; }
+.rule-validation span.is-invalid { color: #c34646; }
+.rule-test input { flex: 1 1 16rem; }
+.rule-preview { max-height: 16rem; overflow: auto; padding: .7rem; border: 1px solid var(--line); background: var(--cgm-surface-subtle); }
+.rule-preview p { margin: .35rem 0; overflow-wrap: anywhere; font-size: .62rem; }
+.classification-review { margin-top: 1rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+.classification-review > header, .classification-review article { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.classification-review h4, .classification-review p { margin: 0; }
+.classification-review p, .classification-review article span, .classification-review article small { color: var(--ink-muted); font-size: .62rem; }
+.classification-review article { padding: .7rem 0; border-top: 1px solid var(--line); }
+.classification-review article > div:first-child { display: grid; min-width: 0; gap: .2rem; }
+.classification-review article span, .classification-review article small { overflow-wrap: anywhere; }
 .candidate-section { padding: 1.2rem; }
 .candidate-section > header span { color: var(--ink-muted); font-size: .58rem; }
 .candidate-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; margin-top: .8rem; padding: .9rem; border: 1px solid var(--line); background: #121013; }

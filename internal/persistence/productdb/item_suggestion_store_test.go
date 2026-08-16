@@ -8,7 +8,7 @@ import (
 	"github.com/stashapp/stash/internal/gallery"
 )
 
-func TestScanCreatesNonBlockingSelfieAndRAWCompanionSuggestions(t *testing.T) {
+func TestScanCreatesConfigurableStaticImageAndRAWCompanionSuggestions(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)
 	now := time.Date(2026, 7, 23, 13, 0, 0, 0, time.UTC)
@@ -31,7 +31,7 @@ func TestScanCreatesNonBlockingSelfieAndRAWCompanionSuggestions(t *testing.T) {
 	}
 	var selfieCount, companionCount int
 	if err := db.QueryRowContext(ctx, `SELECT
-		(SELECT COUNT(*) FROM gallery_item_suggestions WHERE gallery_id=? AND suggestion_kind='SELFIE_CATEGORY' AND status='PENDING'),
+		(SELECT COUNT(*) FROM media_classification_suggestions WHERE gallery_id=? AND proposed_category='SELFIE' AND status='PENDING'),
 		(SELECT COUNT(*) FROM gallery_item_suggestions WHERE gallery_id=? AND suggestion_kind='RAW_COMPANION' AND status='PENDING')`, created.ID, created.ID).Scan(&selfieCount, &companionCount); err != nil {
 		t.Fatal(err)
 	}
@@ -39,10 +39,10 @@ func TestScanCreatesNonBlockingSelfieAndRAWCompanionSuggestions(t *testing.T) {
 		t.Fatalf("suggestion counts = selfie %d companion %d", selfieCount, companionCount)
 	}
 	var suggestionID int64
-	if err := db.QueryRowContext(ctx, `SELECT id FROM gallery_item_suggestions WHERE gallery_id=? AND suggestion_kind='SELFIE_CATEGORY'`, created.ID).Scan(&suggestionID); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT id FROM media_classification_suggestions WHERE gallery_id=? AND proposed_category='SELFIE'`, created.ID).Scan(&suggestionID); err != nil {
 		t.Fatal(err)
 	}
-	resolved, err := db.ItemSuggestions().Resolve(ctx, suggestionID, false, created.MetadataRevision, now)
+	resolved, err := db.MediaClassificationRules().ResolveSuggestion(ctx, suggestionID, false, created.MetadataRevision, now)
 	if err != nil || resolved.Status != "REJECTED" {
 		t.Fatalf("rejected suggestion = %#v, %v", resolved, err)
 	}
@@ -59,7 +59,7 @@ func TestScanCreatesNonBlockingSelfieAndRAWCompanionSuggestions(t *testing.T) {
 	if err := db.Scans().Commit(ctx, second, now.Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.QueryRowContext(ctx, `SELECT status FROM gallery_item_suggestions WHERE id=?`, suggestionID).Scan(&resolved.Status); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT status FROM media_classification_suggestions WHERE id=?`, suggestionID).Scan(&resolved.Status); err != nil {
 		t.Fatal(err)
 	}
 	if resolved.Status != "REJECTED" {

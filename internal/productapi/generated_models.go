@@ -511,6 +511,69 @@ type ManageManifestConflict struct {
 	FileJSON     string `json:"fileJSON"`
 }
 
+type ManageMediaClassificationEvaluation struct {
+	Evaluated  int `json:"evaluated"`
+	Matched    int `json:"matched"`
+	Pending    int `json:"pending"`
+	Superseded int `json:"superseded"`
+}
+
+type ManageMediaClassificationMatch struct {
+	Matched        bool           `json:"matched"`
+	RuleID         int64          `json:"ruleID"`
+	RuleName       string         `json:"ruleName"`
+	ResultCategory *ImageCategory `json:"resultCategory,omitempty"`
+	Subject        string         `json:"subject"`
+	MatchedValue   string         `json:"matchedValue"`
+}
+
+type ManageMediaClassificationPreview struct {
+	TotalMatches int                                       `json:"totalMatches"`
+	Samples      []*ManageMediaClassificationPreviewSample `json:"samples"`
+}
+
+type ManageMediaClassificationPreviewSample struct {
+	GallerySetID     string        `json:"gallerySetID"`
+	GalleryTitle     string        `json:"galleryTitle"`
+	ItemUUID         string        `json:"itemUUID"`
+	RelativePath     string        `json:"relativePath"`
+	CurrentCategory  ImageCategory `json:"currentCategory"`
+	ProposedCategory ImageCategory `json:"proposedCategory"`
+	MatchedValue     string        `json:"matchedValue"`
+}
+
+type ManageMediaClassificationRule struct {
+	ID             int64         `json:"id"`
+	LibraryID      *int64        `json:"libraryID,omitempty"`
+	Name           string        `json:"name"`
+	Enabled        bool          `json:"enabled"`
+	Order          int           `json:"order"`
+	Subject        string        `json:"subject"`
+	Operator       string        `json:"operator"`
+	Pattern        string        `json:"pattern"`
+	CaseSensitive  bool          `json:"caseSensitive"`
+	ResultCategory ImageCategory `json:"resultCategory"`
+	Revision       int           `json:"revision"`
+	SystemDefault  bool          `json:"systemDefault"`
+}
+
+type ManageMediaClassificationSuggestion struct {
+	ID               int64         `json:"id"`
+	GalleryID        int64         `json:"galleryID"`
+	GalleryRevision  int64         `json:"galleryRevision"`
+	GallerySetID     string        `json:"gallerySetID"`
+	GalleryTitle     string        `json:"galleryTitle"`
+	ItemUUID         string        `json:"itemUUID"`
+	RelativePath     string        `json:"relativePath"`
+	RuleID           int64         `json:"ruleID"`
+	RuleRevision     int           `json:"ruleRevision"`
+	RuleName         string        `json:"ruleName"`
+	ProposedCategory ImageCategory `json:"proposedCategory"`
+	MatchedSubject   string        `json:"matchedSubject"`
+	MatchedValue     string        `json:"matchedValue"`
+	Status           string        `json:"status"`
+}
+
 type ManageProcessingJob struct {
 	ID                int64   `json:"id"`
 	Kind              string  `json:"kind"`
@@ -544,6 +607,12 @@ type ManageRecognitionRule struct {
 	Order           int    `json:"order"`
 	Pattern         string `json:"pattern"`
 	FixedDepth      int    `json:"fixedDepth"`
+}
+
+type ManageRuleValidation struct {
+	Valid     bool   `json:"valid"`
+	ErrorCode string `json:"errorCode"`
+	Message   string `json:"message"`
 }
 
 type ManageRuntimeSettings struct {
@@ -614,6 +683,18 @@ type ManageVideoDependencyStatus struct {
 type ManifestConflictChoiceInput struct {
 	Path   string `json:"path"`
 	Choice string `json:"choice"`
+}
+
+type MediaClassificationRuleInput struct {
+	LibraryID      *int64        `json:"libraryID,omitempty"`
+	Name           string        `json:"name"`
+	Enabled        bool          `json:"enabled"`
+	Order          int           `json:"order"`
+	Subject        string        `json:"subject"`
+	Operator       string        `json:"operator"`
+	Pattern        string        `json:"pattern"`
+	CaseSensitive  bool          `json:"caseSensitive"`
+	ResultCategory ImageCategory `json:"resultCategory"`
 }
 
 type MediaCounts struct {
@@ -798,6 +879,19 @@ type UpdateGalleryMetadataInput struct {
 	ContentRating      ContentRating      `json:"contentRating"`
 	PhotographerName   string             `json:"photographerName"`
 	StudioName         string             `json:"studioName"`
+}
+
+type UpdateMediaClassificationRuleInput struct {
+	ID             int64         `json:"id"`
+	LibraryID      *int64        `json:"libraryID,omitempty"`
+	Name           string        `json:"name"`
+	Enabled        bool          `json:"enabled"`
+	Order          int           `json:"order"`
+	Subject        string        `json:"subject"`
+	Operator       string        `json:"operator"`
+	Pattern        string        `json:"pattern"`
+	CaseSensitive  bool          `json:"caseSensitive"`
+	ResultCategory ImageCategory `json:"resultCategory"`
 }
 
 type UpdateRecognitionRuleInput struct {

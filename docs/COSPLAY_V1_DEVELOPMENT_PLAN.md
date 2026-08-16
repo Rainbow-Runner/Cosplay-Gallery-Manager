@@ -372,7 +372,7 @@ flowchart LR
 #### P03-08 Item 元数据
 
 - 静态图片默认 PHOTO；SELFIE 只能由人工或 Manifest 确认。
-- 自拍语义目录只产生非阻断建议，并保留接受或拒绝结果。
+- 可管理的媒体分类规则支持父目录、文件名、文件stem与完整相对路径的Exact/Glob/RE2匹配；只对静态图片产生非阻断PHOTO/SELFIE建议，并按规则revision保留接受或拒绝结果。无效RE2/Glob必须在后端保存前拒绝。
 - Item 只具有 Gallery 上下文中的 media kind、分类、Caption、Position、排除、评分和收藏。
 - Caption 为受长度限制的短纯文本，不扩展成单媒体完整业务元数据。
 

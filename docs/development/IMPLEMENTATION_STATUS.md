@@ -10,6 +10,8 @@
 
 ## 已完成
 
+- 1.5（可管理媒体分类规则，本地完成、尚未部署）：新增独立于Gallery根发现的全局/媒体库规则，支持父目录、文件名、文件stem、完整相对路径与Exact/Glob/Go RE2；order相同时媒体库规则优先，首个命中停止且PHOTO可显式排除。只评估STATIC_IMAGE并只生成待审核建议，扫描或保存规则不自动覆盖人工/Manifest分类。
+- 1.5（分类校验与审核，本地完成、尚未部署）：产品schema v4持久化规则revision及PENDING/ACCEPTED/REJECTED/SUPERSEDED建议，迁移保留旧目录语义建议并播种可编辑/删除/恢复的默认规则。RE2由后端保存层强制编译，前端必须验证当前表达式后才能保存；后台提供单路径测试、最多200项数据库预览、显式存量评估及逐项/批量接受拒绝。正式部署前必须按schema迁移门禁先提交、创建额外完整回滚包并校验自动v3快照。
 - 1.5（Coser详情跨作品类型）：仅Coser详情将原LIST/MAGIC/ALL控件替换为“全部作品/COSPLAY/ALBUM”；默认混合查询该人物全部类型，COSPLAY固定`scope=ALL`并合并LIST与MAGIC，ALBUM沿用全部分级口径。筛选与分页写入`type/page` URL；Model详情、Coser/Model索引及其他Browse分级逻辑不变。
 - 1.5（Gallery动画播放窗口）：Gallery详情完整时长动画预览由固定视口前4项改为可配置连续窗口；安全上限默认12、范围1～16，超过上限时悬浮150ms锁定以目标为中心的N项，切换冷却默认800ms并可在Manage Settings设为700～1000ms，移开不重置。实际解码仍与视口求交，Lightbox/reduced-motion优先停播；触控设备按可见动画移动窗口。两项设置由产品schema v3持久化，v1/v2升级前均创建来源版本准确的在线快照。
 - 1.5（Gallery视频标识弱化）：Gallery详情媒体卡片右上角VIDEO/GIF类型文字取消75%黑色背景和内边距，改为透明背景、82%白字及轻量文字阴影；保留媒体类型语义和右上角操作菜单层级，不新增遮罩色块。

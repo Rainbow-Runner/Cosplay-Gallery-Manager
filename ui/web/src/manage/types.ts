@@ -23,6 +23,9 @@ export interface ManageGalleryDeletePreview {
 }
 export interface ManageRecognitionRule { id: number; name: string; kind: "MARKER" | "PATH_TEMPLATE" | "FIXED_DEPTH"; enabled: boolean; autoCreateDraft: boolean; order: number; pattern: string; fixedDepth: number }
 export interface ManageLibrary { id: number; name: string; rootPath: string; enabled: boolean; readOnly: boolean; captureTimezone: string; rules: ManageRecognitionRule[] }
+export interface ManageMediaClassificationRule { id: number; libraryID?: number | null; name: string; enabled: boolean; order: number; subject: "PARENT_FOLDER" | "FILE_NAME" | "FILE_STEM" | "RELATIVE_PATH"; operator: "EXACT" | "GLOB" | "RE2"; pattern: string; caseSensitive: boolean; resultCategory: "PHOTO" | "SELFIE"; revision: number; systemDefault: boolean }
+export interface ManageMediaClassificationSuggestion { id: number; galleryID: number; galleryRevision: number; gallerySetID: string; galleryTitle: string; itemUUID: string; relativePath: string; ruleID: number; ruleRevision: number; ruleName: string; proposedCategory: "PHOTO" | "SELFIE"; matchedSubject: string; matchedValue: string; status: string }
+export interface ManageMediaClassificationPreview { totalMatches: number; samples: { gallerySetID: string; galleryTitle: string; itemUUID: string; relativePath: string; currentCategory: "PHOTO" | "SELFIE"; proposedCategory: "PHOTO" | "SELFIE"; matchedValue: string }[] }
 export interface ManageCandidate { id: number; rootPath: string; sourceType: string; method: string; manifestSetID?: string | null; status: string; autoCreateDraft: boolean; hasConflict: boolean; overLimit: boolean; mediaCount: number; suggestions: { field: string; value: string }[] }
 export interface ManageDiscoverySnapshot { id: number; libraryID: number; completedAt: string; candidates: ManageCandidate[]; unassigned: { parentPath: string; mediaCount: number }[] }
 export interface ManageRuntimeSettings {

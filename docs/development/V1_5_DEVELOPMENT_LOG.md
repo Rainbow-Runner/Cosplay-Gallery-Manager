@@ -1462,3 +1462,24 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 功能、测试和部署前记录提交为`edf4bf30c8090e70cbe2624487d65d4648853a10`（`Show all gallery types on coser details`）；清洁提交以`cgm_web_embed cgm_galleryepic`和Go 1.25.12构建，`go version -m`确认`vcs.modified=false`，正式二进制SHA-256为`f34233ad63c524cb60564c7fe19ba03f628819d70343a58aaa90671d4edc7c8f`。
 - 2026-08-17 00:36 CST完成本机增量部署。替换前二进制保留于`/tmp/cgm-before-coser-types-20260817`；新产物同目录临时安装、SHA-256复核一致后原子替换，只重启一次用户服务。现有schema v3完整回滚包和自动schema v2迁移快照继续保留，本轮没有schema或配置变更。
 - 正式服务保持`active/running`、`NRestarts=0`，Health/Ready为204、首页为200；About报告完整`edf4bf3...`、`buildTime=2026-08-17`和`exactSourceAvailable=true`。入口使用新`index-DSKoTdcB.js`与既有`index-Btj_g1dP.css`；配置与数据库inode分别保持`19681854`和`19679716`，未替换数据库、媒体、Manifest或缓存，启动journal未发现异常。
+
+## 1.5-38 可管理媒体分类规则与RE2校验
+
+### 已确认边界与数据模型
+
+- 新增独立“媒体分类规则”，不复用Gallery根发现的MARKER/PATH_TEMPLATE/FIXED_DEPTH。规则可为全局或单一媒体库，匹配父目录段、文件名、文件stem或完整相对路径，支持Exact、Glob和Go RE2，路径统一NFC与`/`且默认不区分大小写。
+- 有效规则按较小order、同order媒体库专属优先、ID依次执行并在首个命中后停止；PHOTO结果可明确阻断后续SELFIE规则。只有AVAILABLE的STATIC_IMAGE参与，动画与视频不再经过旧自拍语义判断。
+- 产品数据库升级为schema v4，新增规则表与独立建议表。规则编辑递增revision；同一Item/规则/revision的接受或拒绝保持稳定，规则更新或赢家变化会把旧PENDING标记SUPERSEDED。保存规则和扫描只产生建议，只有人工接受才修改分类及Gallery revision/Manifest dirty状态。
+- schema v4一次性播种启用的多语言自拍目录Exact规则及关闭的文件名Glob规则；两者均可编辑、禁用或删除，并通过显式“Restore defaults”恢复。v3迁移会把旧`DIRECTORY_SEMANTIC`自拍建议连同接受/拒绝状态复制进revision 1，避免升级后重复提示。
+
+### 校验、管理界面与安全边界
+
+- 后端纯规则包对名称、枚举、4000字节/100行限制、Glob语法和RE2执行编译校验；Create/Update持久化入口无条件重复校验，因此直接GraphQL调用不能绕过。Go `regexp`提供RE2线性时间边界，不调用外部命令、不遍历来源目录。
+- Manage → Libraries & import新增Media classification区块：规则CRUD/作用域/优先级/匹配对象/操作符/大小写/结果编辑，单相对路径测试，最多200条现有数据库媒体预览，显式存量评估，以及显示Gallery、相对路径、规则revision和命中值的逐项/批量审核。
+- RE2界面使用当前完整输入的指纹作为校验凭证；表达式、作用域、匹配对象、大小写或其他输入一旦变化即废止旧结果，当前表达式未获得后端valid响应时Save保持禁用。服务端仍作为最终安全门禁；审计只记录规则/建议ID、操作符和数量，不记录路径或模式正文。
+
+### 自动验证与部署状态
+
+- 纯Go规则测试覆盖多语言目录、大小写折叠、文件Glob、stem/相对路径RE2以及无效RE2/Glob；SQLite测试覆盖新库默认值、v1/v2/v3→v4在线快照迁移、CRUD revision、静态媒体边界、拒绝稳定性、规则新revision重提、默认规则删除恢复和扫描接入。
+- GraphQL测试证明校验返回稳定`RULE_RE2_INVALID`且绕过前端直接Create仍无法写入；React测试锁定无效/过期RE2校验下Save禁用、当前表达式通过后才启用。产品身份/API/Server/SQLite/扫描器/Gallery/规则包Go回归全部PASS；TypeScript检查、Vitest 27个文件71项和678模块Vite生产构建全部PASS。隔离的离线Chromium完整业务生命周期/备份恢复/axe矩阵1项PASS，临时schema v4服务完成媒体库、发现、扫描、媒体处理、关系、激活与Manifest流程，未连接正式实例。
+- 本阶段包含正式数据库schema v3→v4迁移，本轮按用户要求只完成本地开发，不执行增量部署。未来部署前必须先提交清洁源码，创建并完整校验额外回滚包；迁移后复核自动`.pre-schema-v3-*`快照、`integrity_check`、默认规则、正式服务Health/Ready/About及journal。

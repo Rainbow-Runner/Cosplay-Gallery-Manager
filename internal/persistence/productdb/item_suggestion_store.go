@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/stashapp/stash/internal/gallery"
 	"golang.org/x/text/unicode/norm"
@@ -133,14 +132,6 @@ func syncScanItemSuggestions(ctx context.Context, tx *sql.Tx, galleryID, sourceI
 		return err
 	}
 	timestamp := formatTime(normalisedTime(now))
-	for _, value := range items {
-		if hasSelfieDirectorySemantics(value.path) {
-			if _, err := tx.ExecContext(ctx, `INSERT INTO gallery_item_suggestions (gallery_id,item_uuid,suggestion_kind,value,source_kind,status,created_at_utc)
-				VALUES (?,?,'SELFIE_CATEGORY','SELFIE','DIRECTORY_SEMANTIC','PENDING',?) ON CONFLICT(item_uuid,suggestion_kind,value) DO NOTHING`, galleryID, value.uuid, timestamp); err != nil {
-				return err
-			}
-		}
-	}
 	byBase := map[string][]item{}
 	for _, value := range items {
 		base := strings.TrimSuffix(norm.NFC.String(value.path), filepath.Ext(value.path))
@@ -159,19 +150,7 @@ func syncScanItemSuggestions(ctx context.Context, tx *sql.Tx, galleryID, sourceI
 			}
 		}
 	}
-	return nil
-}
-
-func hasSelfieDirectorySemantics(relative string) bool {
-	directory := strings.ToLower(filepath.ToSlash(filepath.Dir(norm.NFC.String(relative))))
-	fields := strings.FieldsFunc(directory, func(r rune) bool { return r == '/' || r == '_' || r == '-' || r == '.' || unicode.IsSpace(r) })
-	for _, field := range fields {
-		switch field {
-		case "selfie", "selfies", "自拍", "自撮り", "셀카":
-			return true
-		}
-	}
-	return false
+	return evaluateMediaClassificationForSource(ctx, tx, sourceID, now)
 }
 
 func findItemSuggestion(ctx context.Context, queryer galleryQueryer, id int64) (ItemSuggestion, error) {

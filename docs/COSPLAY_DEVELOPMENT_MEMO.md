@@ -342,17 +342,18 @@ SocialAccount：
 ### 11.4 静态图片
 
 - 卡片/网格派生480/960/1600响应尺寸；Lightbox和媒体详情默认4096长边代理。
-- 浏览器兼容格式可经认证资源接口按需查看原图；RAW只显示代理。
+- 浏览器兼容的JPEG、PNG和静态WebP在来源文件不超过20MiB、宽高均不超过4096时，经认证不透明资源接口直接查看原图；超过任一阈值、RAW或其他格式回落到按需4096代理。
+- 原图直读支持DIRECTORY和ZIP/CBZ Entry；必须继续校验ACTIVE/Browse可见性、content revision、实际文件签名和非符号链接边界，不向GraphQL或URL暴露物理路径。
 - 正确应用方向、转换sRGB、保留Alpha、不放大。
 - 默认最大解码像素200MP；第一版无裁剪写回、滤镜或图片编辑。
 
 ### 11.5 动画
 
 - GIF/APNG/动态WebP/动态AVIF/动态JXL归ANIMATED_IMAGE，前端统一放GIF组但保留真实格式。
-- 每项生成长期静态Poster；允许动画的单媒体卡片使用增强缓存预览：最长6秒、最大960px、15FPS、循环。
+- 每项生成长期静态Poster；Gallery详情网格的可见动画项按需生成ENHANCED动画WebP：保持原动画完整时长、最长边480px、最高15FPS并循环，不得以固定秒数截断。
 - Gallery卡片混合媒体Scrubber始终只显示静态Poster，不使用上述动画预览。
 - 仅视口内播放，离开即停；同页默认最多4个，可配置1～8；reduced-motion只显示Poster。
-- 详情尽量显示原动画；不提供进度、逐帧、速度或编辑。
+- Lightbox和单媒体详情对当前已识别的GIF/动态WebP经认证接口播放未经重编码的完整原动画；列表、Related、Scrubber等其他入口保持静态Poster。不提供进度、逐帧、速度或编辑。
 
 ### 11.6 Video
 

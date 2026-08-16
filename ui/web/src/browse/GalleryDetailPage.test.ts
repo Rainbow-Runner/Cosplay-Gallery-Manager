@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { lightboxNavigationState, visualMemberGroups } from "./GalleryDetailPage";
+import { animatedPlaybackSelection, lightboxNavigationState, visualMemberGroups } from "./GalleryDetailPage";
 import type { GalleryMember } from "./types";
 
 function member(itemUUID: string, mediaKind: GalleryMember["mediaKind"], imageCategory?: GalleryMember["imageCategory"]): GalleryMember {
@@ -28,5 +28,13 @@ describe("lightboxNavigationState", () => {
     expect(lightboxNavigationState(0, 3)).toEqual({ canPrevious: false, canNext: true });
     expect(lightboxNavigationState(1, 3)).toEqual({ canPrevious: true, canNext: true });
     expect(lightboxNavigationState(2, 3)).toEqual({ canPrevious: true, canNext: false });
+  });
+});
+
+describe("animatedPlaybackSelection", () => {
+  it("keeps gallery order and caps simultaneous animation at four", () => {
+    const ordered = ["one", "two", "three", "four", "five", "six"];
+    expect(animatedPlaybackSelection(ordered, new Set(["six", "five", "four", "three", "two"]), false)).toEqual(["two", "three", "four", "five"]);
+    expect(animatedPlaybackSelection(ordered, new Set(ordered), true)).toEqual([]);
   });
 });

@@ -625,49 +625,50 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddCoserSocialAccount    func(childComplexity int, coserUUID string, expectedMetadataRevision int64, input SocialAccountInput) int
-		AddGalleryExternalLink   func(childComplexity int, setID string, expectedMetadataRevision int64, input GalleryExternalLinkInput) int
-		CancelProcessingJob      func(childComplexity int, id int64) int
-		CreateCoreEntity         func(childComplexity int, input CoreEntityInput) int
-		CreateFullBackup         func(childComplexity int) int
-		CreateMediaLibrary       func(childComplexity int, input CreateMediaLibraryInput) int
-		CreateRecognitionRule    func(childComplexity int, input CreateRecognitionRuleInput) int
-		DeleteCoreEntity         func(childComplexity int, kind SearchEntityKind, uuid string, expectedMetadataRevision int64) int
-		DeleteGallery            func(childComplexity int, setID string, expectedMetadataRevision int64, password string, confirmation string) int
-		DeleteRecognitionRule    func(childComplexity int, id int64) int
-		DiscoverMediaLibrary     func(childComplexity int, libraryID int64) int
-		ImportGalleryCandidate   func(childComplexity int, candidateID int64) int
-		MergeCoreEntities        func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string, expectedSourceRevision int64, expectedTargetRevision int64) int
-		MoveGalleryItem          func(childComplexity int, setID string, itemUUID string, beforeItemUUID *string, expectedMetadataRevision int64) int
-		PullCoserManifest        func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
-		PullGalleryManifest      func(childComplexity int, setID string, expectedMetadataRevision int64) int
-		PushCoserManifest        func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
-		PushGalleryManifest      func(childComplexity int, setID string, expectedMetadataRevision int64) int
-		RecordGalleryView        func(childComplexity int, setID string, itemUUID *string) int
-		ReorderGalleryItems      func(childComplexity int, setID string, itemUUIDs []string, expectedMetadataRevision int64) int
-		ReplaceGalleryRelations  func(childComplexity int, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) int
-		ReplaceTagParents        func(childComplexity int, childUUID string, expectedChildRevision int64, parents []*ReplaceTagParentInput, expectedParents []*ExpectedTagRevisionInput) int
-		RequestItemLightbox      func(childComplexity int, itemUUID string) int
-		RequestItemVideoPlayback func(childComplexity int, itemUUID string) int
-		ResetGalleryCover        func(childComplexity int, setID string, expectedMetadataRevision int64) int
-		ResolveCoserManifest     func(childComplexity int, coserUUID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
-		ResolveGalleryManifest   func(childComplexity int, setID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
-		RestoreBackup            func(childComplexity int, backupID string) int
-		RetryGalleryItemVideo    func(childComplexity int, itemUUID string) int
-		RetryProcessingJob       func(childComplexity int, id int64) int
-		ScanGallerySource        func(childComplexity int, setID string, excludeNewRootMedia bool) int
-		SetGalleryCoverItem      func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64) int
-		SetGalleryFavorite       func(childComplexity int, setID string, favorite bool) int
-		SetGalleryItemExcluded   func(childComplexity int, setID string, itemUUID string, excluded bool, expectedMetadataRevision int64) int
-		SetGalleryRating         func(childComplexity int, setID string, ratingHalfSteps *int, expectedMetadataRevision int64) int
-		SetGalleryState          func(childComplexity int, setID string, expectedMetadataRevision int64, state GalleryState) int
-		SetItemFavorite          func(childComplexity int, itemUUID string, favorite bool) int
-		SetItemRating            func(childComplexity int, itemUUID string, ratingHalfSteps *int, expectedMetadataRevision int64) int
-		UpdateCoreEntity         func(childComplexity int, uuid string, expectedMetadataRevision int64, input CoreEntityInput) int
-		UpdateGalleryItem        func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64, input UpdateGalleryItemInput) int
-		UpdateGalleryMetadata    func(childComplexity int, setID string, expectedMetadataRevision int64, input UpdateGalleryMetadataInput) int
-		UpdateRecognitionRule    func(childComplexity int, input UpdateRecognitionRuleInput) int
-		UpdateRuntimeSettings    func(childComplexity int, expectedSettingsRevision int64, input RuntimeSettingsInput) int
+		AddCoserSocialAccount      func(childComplexity int, coserUUID string, expectedMetadataRevision int64, input SocialAccountInput) int
+		AddGalleryExternalLink     func(childComplexity int, setID string, expectedMetadataRevision int64, input GalleryExternalLinkInput) int
+		CancelProcessingJob        func(childComplexity int, id int64) int
+		CreateCoreEntity           func(childComplexity int, input CoreEntityInput) int
+		CreateFullBackup           func(childComplexity int) int
+		CreateMediaLibrary         func(childComplexity int, input CreateMediaLibraryInput) int
+		CreateRecognitionRule      func(childComplexity int, input CreateRecognitionRuleInput) int
+		DeleteCoreEntity           func(childComplexity int, kind SearchEntityKind, uuid string, expectedMetadataRevision int64) int
+		DeleteGallery              func(childComplexity int, setID string, expectedMetadataRevision int64, password string, confirmation string) int
+		DeleteRecognitionRule      func(childComplexity int, id int64) int
+		DiscoverMediaLibrary       func(childComplexity int, libraryID int64) int
+		ImportGalleryCandidate     func(childComplexity int, candidateID int64) int
+		MergeCoreEntities          func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string, expectedSourceRevision int64, expectedTargetRevision int64) int
+		MoveGalleryItem            func(childComplexity int, setID string, itemUUID string, beforeItemUUID *string, expectedMetadataRevision int64) int
+		PullCoserManifest          func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
+		PullGalleryManifest        func(childComplexity int, setID string, expectedMetadataRevision int64) int
+		PushCoserManifest          func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
+		PushGalleryManifest        func(childComplexity int, setID string, expectedMetadataRevision int64) int
+		RecordGalleryView          func(childComplexity int, setID string, itemUUID *string) int
+		ReorderGalleryItems        func(childComplexity int, setID string, itemUUIDs []string, expectedMetadataRevision int64) int
+		ReplaceGalleryRelations    func(childComplexity int, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) int
+		ReplaceTagParents          func(childComplexity int, childUUID string, expectedChildRevision int64, parents []*ReplaceTagParentInput, expectedParents []*ExpectedTagRevisionInput) int
+		RequestItemAnimatedPreview func(childComplexity int, itemUUID string) int
+		RequestItemLightbox        func(childComplexity int, itemUUID string) int
+		RequestItemVideoPlayback   func(childComplexity int, itemUUID string) int
+		ResetGalleryCover          func(childComplexity int, setID string, expectedMetadataRevision int64) int
+		ResolveCoserManifest       func(childComplexity int, coserUUID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
+		ResolveGalleryManifest     func(childComplexity int, setID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
+		RestoreBackup              func(childComplexity int, backupID string) int
+		RetryGalleryItemVideo      func(childComplexity int, itemUUID string) int
+		RetryProcessingJob         func(childComplexity int, id int64) int
+		ScanGallerySource          func(childComplexity int, setID string, excludeNewRootMedia bool) int
+		SetGalleryCoverItem        func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64) int
+		SetGalleryFavorite         func(childComplexity int, setID string, favorite bool) int
+		SetGalleryItemExcluded     func(childComplexity int, setID string, itemUUID string, excluded bool, expectedMetadataRevision int64) int
+		SetGalleryRating           func(childComplexity int, setID string, ratingHalfSteps *int, expectedMetadataRevision int64) int
+		SetGalleryState            func(childComplexity int, setID string, expectedMetadataRevision int64, state GalleryState) int
+		SetItemFavorite            func(childComplexity int, itemUUID string, favorite bool) int
+		SetItemRating              func(childComplexity int, itemUUID string, ratingHalfSteps *int, expectedMetadataRevision int64) int
+		UpdateCoreEntity           func(childComplexity int, uuid string, expectedMetadataRevision int64, input CoreEntityInput) int
+		UpdateGalleryItem          func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64, input UpdateGalleryItemInput) int
+		UpdateGalleryMetadata      func(childComplexity int, setID string, expectedMetadataRevision int64, input UpdateGalleryMetadataInput) int
+		UpdateRecognitionRule      func(childComplexity int, input UpdateRecognitionRuleInput) int
+		UpdateRuntimeSettings      func(childComplexity int, expectedSettingsRevision int64, input RuntimeSettingsInput) int
 	}
 
 	OnDemandResource struct {
@@ -698,6 +699,7 @@ type ComplexityRoot struct {
 		GalleryHistory              func(childComplexity int, scope BrowseScope, page int) int
 		GalleryMemberIndex          func(childComplexity int, setID string) int
 		HomeGalleries               func(childComplexity int, page int) int
+		ItemAnimatedPreviewStatus   func(childComplexity int, itemUUID string) int
 		ItemLightboxStatus          func(childComplexity int, itemUUID string) int
 		ItemVideoPlaybackStatus     func(childComplexity int, itemUUID string) int
 		ManageAudit                 func(childComplexity int, page int) int
@@ -818,6 +820,7 @@ type MutationResolver interface {
 	SetItemRating(ctx context.Context, itemUUID string, ratingHalfSteps *int, expectedMetadataRevision int64) (*PersonalStateResult, error)
 	RecordGalleryView(ctx context.Context, setID string, itemUUID *string) (bool, error)
 	RequestItemLightbox(ctx context.Context, itemUUID string) (*OnDemandResource, error)
+	RequestItemAnimatedPreview(ctx context.Context, itemUUID string) (*OnDemandResource, error)
 	RequestItemVideoPlayback(ctx context.Context, itemUUID string) (*VideoPlaybackStatus, error)
 	UpdateGalleryMetadata(ctx context.Context, setID string, expectedMetadataRevision int64, input UpdateGalleryMetadataInput) (*ManageGalleryDetail, error)
 	SetGalleryState(ctx context.Context, setID string, expectedMetadataRevision int64, state GalleryState) (*ManageGalleryDetail, error)
@@ -872,6 +875,7 @@ type QueryResolver interface {
 	TagDetail(ctx context.Context, slug string, scope BrowseScope, page int) (*TagDetail, error)
 	MediaDetail(ctx context.Context, itemUUID string) (*MediaDetail, error)
 	ItemLightboxStatus(ctx context.Context, itemUUID string) (*OnDemandResource, error)
+	ItemAnimatedPreviewStatus(ctx context.Context, itemUUID string) (*OnDemandResource, error)
 	ItemVideoPlaybackStatus(ctx context.Context, itemUUID string) (*VideoPlaybackStatus, error)
 	FavoriteGalleries(ctx context.Context, scope BrowseScope, page int) (*GalleryPage, error)
 	GalleryHistory(ctx context.Context, scope BrowseScope, page int) (*GalleryPage, error)
@@ -3983,6 +3987,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.ReplaceTagParents(childComplexity, args["childUUID"].(string), args["expectedChildRevision"].(int64), args["parents"].([]*ReplaceTagParentInput), args["expectedParents"].([]*ExpectedTagRevisionInput)), true
 
+	case "Mutation.requestItemAnimatedPreview":
+		if e.complexity.Mutation.RequestItemAnimatedPreview == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_requestItemAnimatedPreview_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RequestItemAnimatedPreview(childComplexity, args["itemUUID"].(string)), true
+
 	case "Mutation.requestItemLightbox":
 		if e.complexity.Mutation.RequestItemLightbox == nil {
 			break
@@ -4410,6 +4426,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.HomeGalleries(childComplexity, args["page"].(int)), true
+
+	case "Query.itemAnimatedPreviewStatus":
+		if e.complexity.Query.ItemAnimatedPreviewStatus == nil {
+			break
+		}
+
+		args, err := ec.field_Query_itemAnimatedPreviewStatus_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ItemAnimatedPreviewStatus(childComplexity, args["itemUUID"].(string)), true
 
 	case "Query.itemLightboxStatus":
 		if e.complexity.Query.ItemLightboxStatus == nil {
@@ -6474,6 +6502,34 @@ func (ec *executionContext) field_Mutation_replaceTagParents_argsExpectedParents
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Mutation_requestItemAnimatedPreview_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_requestItemAnimatedPreview_argsItemUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["itemUUID"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_requestItemAnimatedPreview_argsItemUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["itemUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("itemUUID"))
+	if tmp, ok := rawArgs["itemUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Mutation_requestItemLightbox_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -8402,6 +8458,34 @@ func (ec *executionContext) field_Query_homeGalleries_argsPage(
 	}
 
 	var zeroVal int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_itemAnimatedPreviewStatus_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_itemAnimatedPreviewStatus_argsItemUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["itemUUID"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Query_itemAnimatedPreviewStatus_argsItemUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["itemUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("itemUUID"))
+	if tmp, ok := rawArgs["itemUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
 	return zeroVal, nil
 }
 
@@ -28388,6 +28472,69 @@ func (ec *executionContext) fieldContext_Mutation_requestItemLightbox(ctx contex
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_requestItemAnimatedPreview(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_requestItemAnimatedPreview(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().RequestItemAnimatedPreview(rctx, fc.Args["itemUUID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*OnDemandResource)
+	fc.Result = res
+	return ec.marshalNOnDemandResource2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐOnDemandResource(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_requestItemAnimatedPreview(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "status":
+				return ec.fieldContext_OnDemandResource_status(ctx, field)
+			case "resource":
+				return ec.fieldContext_OnDemandResource_resource(ctx, field)
+			case "errorCode":
+				return ec.fieldContext_OnDemandResource_errorCode(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type OnDemandResource", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_requestItemAnimatedPreview_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_requestItemVideoPlayback(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_requestItemVideoPlayback(ctx, field)
 	if err != nil {
@@ -32471,6 +32618,69 @@ func (ec *executionContext) fieldContext_Query_itemLightboxStatus(ctx context.Co
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_itemLightboxStatus_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_itemAnimatedPreviewStatus(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_itemAnimatedPreviewStatus(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ItemAnimatedPreviewStatus(rctx, fc.Args["itemUUID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*OnDemandResource)
+	fc.Result = res
+	return ec.marshalNOnDemandResource2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐOnDemandResource(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_itemAnimatedPreviewStatus(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "status":
+				return ec.fieldContext_OnDemandResource_status(ctx, field)
+			case "resource":
+				return ec.fieldContext_OnDemandResource_resource(ctx, field)
+			case "errorCode":
+				return ec.fieldContext_OnDemandResource_errorCode(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type OnDemandResource", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_itemAnimatedPreviewStatus_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -43789,6 +43999,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "requestItemAnimatedPreview":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_requestItemAnimatedPreview(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "requestItemVideoPlayback":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_requestItemVideoPlayback(ctx, field)
@@ -44539,6 +44756,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_itemLightboxStatus(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "itemAnimatedPreviewStatus":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_itemAnimatedPreviewStatus(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

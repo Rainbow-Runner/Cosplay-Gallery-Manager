@@ -20,6 +20,20 @@ type Resolver struct {
 	OwnerPassword OwnerPasswordVerifier
 }
 
+func (r *Resolver) ffmpegStatus(ctx context.Context) (string, string, error) {
+	if r.Operations == nil {
+		return "", "FFMPEG_UNAVAILABLE", nil
+	}
+	dependency, err := r.Operations.VideoDependencyStatus(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	if dependency.FFmpegAvailable {
+		return dependency.FFmpegVersion, "", nil
+	}
+	return "", dependency.FFmpegErrorCode, nil
+}
+
 func (r *Resolver) auditManage(ctx context.Context, eventCode, targetKind, targetID, failureCode string, operationErr error, summary map[string]any) {
 	outcome, errorCode := "SUCCESS", ""
 	if operationErr != nil {

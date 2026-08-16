@@ -1387,3 +1387,32 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 样式修复提交为`4b3c1ec982544da46dd48791d5ad17057b09d930`；`cgm_web_embed cgm_galleryepic`正式构建报告`vcs.modified=false`，SHA-256为`2561c13c628f3fef8a244ac74e866fa62b059b05989e511fb3f4660314b813e2`。
 - 2026-08-15 21:46 CST完成本机增量部署。旧二进制保存在`/tmp/cgm-before-video-label-20260815-2145`，SHA-256为`e9dc5dc4fe3f1143cdecad8a6a2c86934015a4b63310423bd28d43b96959200c`；此前额外完整回滚包及schema v1迁移快照继续保留。
 - 服务保持`enabled/active`、`NRestarts=0`，Health/Ready为204、首页为200；`about.json`报告完整提交和`exactSourceAvailable=true`。实际CSS资源`index-Btj_g1dP.css`确认使用`padding:0;background:transparent`，启动后journal未发现错误或警告。本轮未修改数据库、配置、媒体、Manifest或缓存。
+
+## 1.5-35 静态原图混合直读与完整时长动画预览
+
+### 已确认策略
+
+- 静态Lightbox/媒体详情采用DIRECT/PROXY混合策略：JPEG、PNG、静态WebP仅在来源不超过20MiB且宽高均不超过4096时直读原图，其他图片继续使用按需`LIGHTBOX_4096`；RAW不进入原图端点。
+- Gallery详情网格的GIF/动态WebP按需生成最长边480、最高15FPS、循环的动画WebP，但播放时长必须与原动画完整时长相同，不采用此前备忘录中的6秒截断。
+- 只有视口内按Gallery顺序选出的前4个动画项占用播放槽；离开视口、Lightbox打开或`prefers-reduced-motion: reduce`时切回长期BASE Poster。Gallery卡片、Scrubber、Related和其他索引不自动播放。
+- 点击动画进入Lightbox或单媒体详情时，通过认证不透明URL播放未经重编码的完整GIF/动态WebP原字节；支持DIRECTORY和ZIP/CBZ，不新增物理路径DTO或数据库schema。
+
+### 后端实现与安全边界
+
+- 新增`/resource/image/<itemUUID>/<contentRevision>/original` GET/HEAD端点。数据库再次校验认证、ACTIVE、分级scope、未隐藏/排除/超限、来源/Item可用、无阻断Issue和revision；服务端读取实际签名与尺寸后决定是否允许，未知/伪装格式统一404。
+- DIRECTORY继续使用非符号链接、同一文件身份复核后的已打开描述符；ZIP/CBZ使用现有`Materializer`限制和私有`cache/tmp`临时文件，响应结束清理。响应使用`private, no-cache`、ETag、`nosniff`和`inline`，GraphQL不返回来源路径。
+- 新增幂等`ANIMATED_PREVIEW` GraphQL状态/请求，任务键包含Item、revision和FFmpeg版本化Profile；派生固定为ENHANCED、`.webp`和300优先级。FFmpeg命令只包含`fps=15`与480缩放，不含`-t`、`-to`或帧数截断。
+- 修正工作器技术元数据Profile重排队使用调用方基准时间，消除测试/恢复时由墙钟时间造成的任务暂不可领取问题；不改变正式视频业务契约。
+
+### 前端实现
+
+- `useImageDisplay`先以同源认证HEAD让服务端判定DIRECT资格；合格即使用原图URL，不合格静态图透明回落到现有4096任务/轮询，探测和生成期间保留Card/Poster。
+- `IntersectionObserver`只观察Gallery详情当前已渲染的动画Tile，按后端展示顺序最多激活4项；动画任务完成后替换Poster，失去播放槽即移除动画资源并恢复Poster。
+- Lightbox与媒体详情统一使用混合图片显示Hook；GIF/动态WebP不再停留在静态Poster。Video的DIRECT/Remux/Transcode链路没有改变。
+
+### 验证与部署状态
+
+- 原图Handler测试覆盖合格静态HEAD、完整GIF精确字节、4097px静态回退和ZIP/CBZ动画Entry；动画任务测试覆盖FFmpeg不可用、ENHANCED稳定任务键与并发幂等。
+- 真实`/usr/bin/ffmpeg`生成测试验证20帧/2秒GIF输出仍为2秒完整ANMF序列、最长边不超过480并含动画WebP标记；参数测试锁定15FPS且不存在任何时长截断参数。
+- 产品相关Go包全部PASS；`go test ./internal/...`中本阶段涉及包全部PASS，但旧Stash `internal/api`、`internal/api/urlbuilders`、`internal/manager`仍因仓库未提供`ui/v2.5/build`嵌入目录而在setup阶段失败，此为既有旧UI门禁限制。
+- 前端26个Vitest文件、67项测试全部PASS，TypeScript检查与677模块Vite生产构建PASS。部署记录待本阶段清洁提交并完成增量替换后补充。

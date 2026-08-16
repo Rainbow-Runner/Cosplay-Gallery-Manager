@@ -104,6 +104,24 @@ export const REQUEST_ITEM_LIGHTBOX = gql`
   }
 `;
 
+export const ITEM_ANIMATED_PREVIEW_STATUS = gql`
+  query ItemAnimatedPreviewStatus($itemUUID: ID!) {
+    itemAnimatedPreviewStatus(itemUUID: $itemUUID) {
+      status errorCode
+      resource { itemUUID contentRevision profileHash variant mimeType }
+    }
+  }
+`;
+
+export const REQUEST_ITEM_ANIMATED_PREVIEW = gql`
+  mutation RequestItemAnimatedPreview($itemUUID: ID!) {
+    requestItemAnimatedPreview(itemUUID: $itemUUID) {
+      status errorCode
+      resource { itemUUID contentRevision profileHash variant mimeType }
+    }
+  }
+`;
+
 export const ITEM_VIDEO_PLAYBACK_STATUS = gql`
   query ItemVideoPlaybackStatus($itemUUID: ID!) {
     itemVideoPlaybackStatus(itemUUID: $itemUUID) {

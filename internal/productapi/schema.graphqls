@@ -379,6 +379,7 @@ type Query {
   tagDetail(slug: String!, scope: BrowseScope! = ALL, page: Int! = 1): TagDetail!
   mediaDetail(itemUUID: ID!): MediaDetail!
   itemLightboxStatus(itemUUID: ID!): OnDemandResource!
+  itemAnimatedPreviewStatus(itemUUID: ID!): OnDemandResource!
   itemVideoPlaybackStatus(itemUUID: ID!): VideoPlaybackStatus!
   favoriteGalleries(scope: BrowseScope! = LIST, page: Int! = 1): GalleryPage!
   galleryHistory(scope: BrowseScope! = LIST, page: Int! = 1): GalleryPage!
@@ -412,6 +413,7 @@ type Mutation {
   setItemRating(itemUUID: ID!, ratingHalfSteps: Int, expectedMetadataRevision: Int64!): PersonalStateResult!
   recordGalleryView(setID: ID!, itemUUID: ID): Boolean!
   requestItemLightbox(itemUUID: ID!): OnDemandResource!
+  requestItemAnimatedPreview(itemUUID: ID!): OnDemandResource!
   requestItemVideoPlayback(itemUUID: ID!): VideoPlaybackStatus!
   updateGalleryMetadata(setID: ID!, expectedMetadataRevision: Int64!, input: UpdateGalleryMetadataInput!): ManageGalleryDetail!
   setGalleryState(setID: ID!, expectedMetadataRevision: Int64!, state: GalleryState!): ManageGalleryDetail!

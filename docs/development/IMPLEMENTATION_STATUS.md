@@ -174,6 +174,7 @@
 - 用户来源能力审计未发现删除调用；应用删除仅限失败备份、缓存、临时文件等明确生成数据。
 - Chromium离线Playwright主流程通过，Setup/Browse/Gallery/Coser/Operations axe扫描无WCAG A/AA违规，桌面与390px移动截图在0.2%像素差异门禁下回归通过；Gallery详情新增1440px桌面基线，并实际验证单媒体收藏、封面切换、Lightbox深链/返回与关闭后定位。
 - 真实媒体门禁通过：合成标准DNG由dcraw实际生成代理，动画GIF与FFmpeg生成MP4实际生成Poster，内容分类与扩展名无关。
+- 2026-08-16新增静态原图混合直读与完整时长动画预览：合格JPEG/PNG/静态WebP经认证原图端点直读，其余静态图回落4096 ENHANCED代理；Gallery详情仅视口前4项按需播放480px/15FPS完整时长动画WebP，Lightbox/媒体详情播放精确GIF/动态WebP原字节。DIRECTORY及ZIP/CBZ、安全scope、reduced-motion和真实2秒FFmpeg时长均有回归。
 - 危险归档单元矩阵通过；完整备份损坏矩阵继续在替换前拒绝危险输入。
 - 固定`GOMAXPROCS=4`的百万Item性能门禁通过：最慢Gallery列表p95约493ms、时间线约477ms，均低于500ms；Tag未缓存约141ms、缓存约143ms，其他目标均通过。
 - 固定工具链CGO构建通过Linux amd64与Linux arm64；Linux amd64 Docker镜像实际构建、非root启动和`/healthz` 204通过。

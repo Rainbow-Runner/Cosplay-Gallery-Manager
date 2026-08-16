@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/stashapp/stash/internal/cosermetadata"
+	"github.com/stashapp/stash/internal/imageresource"
 	"github.com/stashapp/stash/internal/mediaaccess"
 	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/mediaresource"
@@ -134,6 +135,9 @@ func New(config Config, database *productdb.Database, auth *productauth.Service)
 }
 
 func NewWithMetadata(config Config, database *productdb.Database, auth *productauth.Service, providers ...cosermetadata.Provider) (*Server, error) {
+	if err := os.MkdirAll(filepath.Join(config.CachePath, "tmp"), 0o700); err != nil {
+		return nil, err
+	}
 	registry, err := cosermetadata.NewRegistry(providers...)
 	if err != nil {
 		return nil, err
@@ -179,6 +183,10 @@ func (s *Server) rebuildHandler() {
 				Scope: productdb.ResourceScopeAll}, nil
 		}}
 	mux.Handle("/resource/", resourceHandler)
+	directImageHandler := imageresource.Handler{Database: database, Materializer: mediaaccess.Materializer{TemporaryRoot: filepath.Join(s.Config.CachePath, "tmp")}, Access: func(request *http.Request) (productdb.ResourceAccess, error) {
+		return productdb.ResourceAccess{Authenticated: auth.AuthorizeRequest(request), Mode: productdb.ResourceBrowse, Scope: productdb.ResourceScopeAll}, nil
+	}}
+	mux.Handle(imageresource.RoutePrefix, directImageHandler)
 	directVideoHandler := videoresource.Handler{Database: database, Access: func(request *http.Request) (productdb.ResourceAccess, error) {
 		return productdb.ResourceAccess{Authenticated: auth.AuthorizeRequest(request), Mode: productdb.ResourceBrowse, Scope: productdb.ResourceScopeAll}, nil
 	}}
@@ -236,7 +244,7 @@ func (s *Server) startWorkers(ctx context.Context) error {
 	}
 	if s.VideoTools.FFmpeg.Available {
 		encoder := ffmpeg.NewEncoder(s.VideoTools.FFmpeg.Path)
-		generators = append(generators, mediaprocessing.FFmpegPosterGenerator{Encoder: encoder}, mediaprocessing.VideoPlaybackGenerator{Encoder: encoder})
+		generators = append(generators, mediaprocessing.FFmpegPosterGenerator{Encoder: encoder}, mediaprocessing.AnimatedPreviewGenerator{Encoder: encoder}, mediaprocessing.VideoPlaybackGenerator{Encoder: encoder})
 	}
 	slog.Info("CGM_WORKERS_STARTED",
 		"worker_count", s.Config.WorkerCount,

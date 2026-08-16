@@ -67,7 +67,7 @@ func (worker Worker) RunOne(ctx context.Context, owner string, lease time.Durati
 	}()
 	var processErr error
 	if job.Kind == mediaprocessing.JobItemTechnicalMetadata {
-		processErr = worker.processVideoProbe(processingContext, job)
+		processErr = worker.processVideoProbe(processingContext, job, now)
 	} else {
 		processErr = worker.processDerivative(processingContext, job)
 	}
@@ -91,7 +91,7 @@ func (worker Worker) RunOne(ctx context.Context, owner string, lease time.Durati
 	return job, nil
 }
 
-func (worker Worker) processVideoProbe(ctx context.Context, job mediaprocessing.Job) error {
+func (worker Worker) processVideoProbe(ctx context.Context, job mediaprocessing.Job, now time.Time) error {
 	item, err := worker.Database.FindProcessingItem(ctx, job.ItemUUID)
 	if err != nil {
 		return err
@@ -106,7 +106,7 @@ func (worker Worker) processVideoProbe(ctx context.Context, job mediaprocessing.
 		revision := item.ContentRevision
 		_, err := worker.Database.ProcessingJobs().Enqueue(ctx, productdb.EnqueueJobInput{Key: productdb.ItemTechnicalMetadataJobKey(item.ItemUUID, revision, worker.ProbeProfileHash),
 			Kind: mediaprocessing.JobItemTechnicalMetadata, GalleryID: &item.GalleryID, ItemUUID: item.ItemUUID, ContentRevision: &revision,
-			ProfileHash: worker.ProbeProfileHash, Payload: map[string]any{}, Priority: job.Priority}, time.Now())
+			ProfileHash: worker.ProbeProfileHash, Payload: map[string]any{}, Priority: job.Priority}, now)
 		return err
 	}
 	if worker.VideoProbe == nil {
@@ -273,6 +273,9 @@ func (worker Worker) requireVideoProxyCapacity(ctx context.Context) error {
 func outputExtension(variant string) string {
 	if variant == mediaprocessing.VariantVideoPlayback {
 		return "mp4"
+	}
+	if variant == mediaprocessing.VariantAnimatedPreview {
+		return "webp"
 	}
 	return "jpg"
 }

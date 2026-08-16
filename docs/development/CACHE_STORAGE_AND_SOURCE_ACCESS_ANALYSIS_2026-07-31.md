@@ -113,3 +113,11 @@ Manage → Settings的`Generated cache`区域显示：
 遍历不跟随符号链接，按请求Context支持取消。页面没有位置输入、迁移、手工清理或重建按钮，也
 不会修改`cgm.json`。容量上限写入既有带revision运行时设置；后台每分钟执行ENHANCED LRU，
 永不删除BASE或来源媒体。该统计只在打开Settings并发出查询时执行，不轮询缓存目录。
+
+## 5. 2026-08-16 混合原图与动画预览策略更新
+
+- 上文“日常浏览只访问缓存”仍适用于首页、Gallery卡片、Coser作品、Related、Scrubber和静态Gallery网格；这些入口继续只使用BASE Poster/Card。
+- 用户显式打开Lightbox或单媒体详情时，前端先向认证不透明原图端点发出HEAD。JPEG、PNG、静态WebP同时满足不超过20MiB且宽高不超过4096时直接读取来源原图；不满足时继续使用`LIGHTBOX_4096` ENHANCED代理。RAW始终使用代理。
+- GIF/动态WebP的Lightbox和单媒体详情读取未经重编码的完整原动画。DIRECTORY使用已打开且复核身份的文件描述符；ZIP/CBZ Entry经受限临时物化后服务精确字节，请求结束即删除临时文件。
+- Gallery详情网格只有进入视口且处于前4项播放槽的动画才请求`ANIMATED_PREVIEW`。该ENHANCED WebP最长边480、最高15FPS、循环但保持完整原始时长；离开视口切回BASE Poster，`prefers-reduced-motion`下完全不请求动画预览。
+- 因此显式查看合格原图或原动画会访问来源媒体；普通列表/网格浏览仍不会。已有`LIGHTBOX_4096`不会主动删除，后续由既有ENHANCED LRU自然回收。

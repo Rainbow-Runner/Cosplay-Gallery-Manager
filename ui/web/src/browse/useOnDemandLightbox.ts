@@ -12,8 +12,8 @@ export interface OnDemandLightboxState {
 
 // Opening a static image is the explicit demand signal. The card remains
 // visible immediately while this focused query follows the background job.
-export function useOnDemandLightbox(item?: GalleryMember | null): OnDemandLightboxState {
-  const eligible = item?.mediaKind === "STATIC_IMAGE";
+export function useOnDemandLightbox(item?: GalleryMember | null, enabled = true): OnDemandLightboxState {
+	const eligible = enabled && item?.mediaKind === "STATIC_IMAGE";
   const existing = item?.largeResource;
   const itemUUID = item?.itemUUID ?? "";
   const [settled, setSettled] = useState(Boolean(existing));

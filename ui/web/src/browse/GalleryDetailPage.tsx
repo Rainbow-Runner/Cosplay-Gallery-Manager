@@ -20,7 +20,8 @@ import { formatGalleryMediaCount } from "./galleryMediaCount";
 import { galleryCardPresentation } from "./galleryCardPresentation";
 import { itemResourceURL } from "./resourceUrl";
 import type { BrowseGalleryCard, BrowseUISettings, GalleryDetail, GalleryMember, GalleryMemberIndex } from "./types";
-import { useOnDemandLightbox } from "./useOnDemandLightbox";
+import { useImageDisplay } from "./useImageDisplay";
+import { useOnDemandAnimatedPreview } from "./useOnDemandAnimatedPreview";
 import { useOnDemandVideoPlayback } from "./useOnDemandVideoPlayback";
 
 const memberBatchSize = 24;
@@ -39,6 +40,11 @@ export function visualMemberGroups(items: GalleryMember[], filter: MediaFilter) 
 
 export function lightboxNavigationState(index: number, total: number) {
   return { canPrevious: index > 0, canNext: index >= 0 && index < total - 1 };
+}
+
+export function animatedPlaybackSelection(orderedUUIDs: string[], visibleUUIDs: Set<string>, reducedMotion: boolean) {
+  if (reducedMotion) return [];
+  return orderedUUIDs.filter((uuid) => visibleUUIDs.has(uuid)).slice(0, 4);
 }
 
 export function GalleryDetailPage() {
@@ -69,6 +75,8 @@ export function GalleryDetailPage() {
   const [busyItemUUID, setBusyItemUUID] = useState("");
   const [actionMessage, setActionMessage] = useState("");
   const [moreDetailsOpen, setMoreDetailsOpen] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(() => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const [activeAnimatedUUIDs, setActiveAnimatedUUIDs] = useState<Set<string>>(() => new Set());
   const openedHere = useRef(false);
   const previouslyOpenItem = useRef<string | null>(null);
   const tileElements = useRef(new Map<string, HTMLElement>());
@@ -115,6 +123,15 @@ export function GalleryDetailPage() {
     };
   }, [moreDetailsOpen]);
 
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(query.matches);
+    update();
+    query.addEventListener?.("change", update);
+    return () => query.removeEventListener?.("change", update);
+  }, []);
+
   const members = memberQuery.data?.galleryMemberIndex.items ?? [];
   const groups = useMemo(() => visualMemberGroups(members, filter), [filter, members]);
   const navigationItems = useMemo(() => groups.flatMap((group) => group.items), [groups]);
@@ -122,6 +139,37 @@ export function GalleryDetailPage() {
   const lightboxIndex = requestedItemUUID ? navigationItems.findIndex((item) => item.itemUUID === requestedItemUUID) : -1;
   const lightboxItem = lightboxIndex >= 0 ? navigationItems[lightboxIndex] : null;
   const lightboxNavigation = lightboxNavigationState(lightboxIndex, navigationItems.length);
+  const displayedAnimatedUUIDs = useMemo(() => groups.flatMap((group) => group.items.slice(0, visible[group.key]))
+    .filter((item) => item.mediaKind === "ANIMATED_IMAGE").map((item) => item.itemUUID), [groups, visible]);
+  const displayedAnimatedKey = displayedAnimatedUUIDs.join("|");
+
+  useEffect(() => {
+    if (reducedMotion || lightboxItem || typeof IntersectionObserver === "undefined") {
+      setActiveAnimatedUUIDs(new Set());
+      return;
+    }
+    const visibleItems = new Set<string>();
+    const publish = () => {
+      const next = animatedPlaybackSelection(displayedAnimatedUUIDs, visibleItems, false);
+      setActiveAnimatedUUIDs((current) => current.size === next.length && next.every((uuid) => current.has(uuid)) ? current : new Set(next));
+    };
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        const uuid = (entry.target as HTMLElement).dataset.itemUuid;
+        if (!uuid) continue;
+        if (entry.isIntersecting) visibleItems.add(uuid); else visibleItems.delete(uuid);
+      }
+      publish();
+    }, { threshold: 0.15 });
+    for (const uuid of displayedAnimatedUUIDs) {
+      const element = tileElements.current.get(uuid);
+      if (element) observer.observe(element);
+    }
+    return () => observer.disconnect();
+  // The joined identity is intentional: it avoids rebuilding the observer for
+  // unrelated object identity changes while keeping displayed order stable.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayedAnimatedKey, lightboxItem, reducedMotion]);
 
   function revealItem(itemUUID: string) {
     const group = visualMemberGroups(members, filter).find((candidate) => candidate.items.some((item) => item.itemUUID === itemUUID));
@@ -297,6 +345,7 @@ export function GalleryDetailPage() {
                     <MediaTile
                       key={item.itemUUID}
                       item={item}
+                      animate={activeAnimatedUUIDs.has(item.itemUUID)}
                       favorite={favoriteOverrides[item.itemUUID] ?? item.favorite}
                       currentCover={coverItemUUID === item.itemUUID}
                       personalControlsVisible={personalControlsVisible}
@@ -367,8 +416,9 @@ function RelatedGallery({ card }: { card: BrowseGalleryCard }) {
   );
 }
 
-function MediaTile({ item, favorite, currentCover, personalControlsVisible, busy, setElement, onOpen, onFavorite, onSetCover }: {
+function MediaTile({ item, animate, favorite, currentCover, personalControlsVisible, busy, setElement, onOpen, onFavorite, onSetCover }: {
   item: GalleryMember;
+  animate: boolean;
   favorite: boolean;
   currentCover: boolean;
   personalControlsVisible: boolean;
@@ -379,7 +429,8 @@ function MediaTile({ item, favorite, currentCover, personalControlsVisible, busy
   onSetCover: () => void;
 }) {
   const intl = useIntl();
-  const resource = item.cardResource;
+  const animatedPreview = useOnDemandAnimatedPreview(item, animate);
+  const resource = animate && animatedPreview.resource ? animatedPreview.resource : item.cardResource;
   const menuRef = useRef<HTMLDetailsElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => {
@@ -404,7 +455,7 @@ function MediaTile({ item, favorite, currentCover, personalControlsVisible, busy
   return (
     <article className="media-tile" ref={setElement} data-item-uuid={item.itemUUID}>
       <button className="media-tile__open" type="button" onClick={onOpen} aria-label={item.caption || item.imageCategory || item.mediaKind}>
-        {resource ? <img src={itemResourceURL(resource) ?? undefined} alt="" loading="lazy" /> : <span className="media-tile__pending">{item.processingState}</span>}
+        {resource ? <img key={`${item.itemUUID}-${resource.variant}`} src={itemResourceURL(resource) ?? undefined} alt="" loading="lazy" /> : <span className="media-tile__pending">{item.processingState}</span>}
         {item.mediaKind !== "STATIC_IMAGE" ? <span className="media-tile__kind">{item.mediaKind === "VIDEO" ? "VIDEO" : "GIF"}</span> : null}
         {item.caption ? <span className="media-tile__caption">{item.caption}</span> : null}
       </button>
@@ -438,10 +489,9 @@ function Lightbox({ item, favorite, rating, currentCover, personalControlsVisibl
   onSetCover: () => void;
 }) {
   const intl = useIntl();
-  const onDemand = useOnDemandLightbox(item);
+  const imageDisplay = useImageDisplay(item);
   const videoPlayback = useOnDemandVideoPlayback(item);
-  const resource = onDemand.resource ?? item.largeResource ?? item.cardResource;
-  const resourceURL = item.mediaKind === "VIDEO" ? videoPlayback.url : itemResourceURL(resource);
+  const resourceURL = item.mediaKind === "VIDEO" ? videoPlayback.url : imageDisplay.url;
   const closeRef = useRef<HTMLButtonElement>(null);
   const favoriteLabel = intl.formatMessage({ id: favorite ? "gallery.itemUnfavorite" : "gallery.itemFavorite" });
   const ratingLabel = intl.formatMessage({ id: "gallery.rating" });
@@ -476,8 +526,8 @@ function Lightbox({ item, favorite, rating, currentCover, personalControlsVisibl
               : <span>{item.processingState}</span>}
         {item.mediaKind === "VIDEO" && videoPlayback.preparing ? <span className="lightbox__status">Preparing compatible video…</span> : null}
         {item.mediaKind === "VIDEO" && videoPlayback.failed ? <span className="lightbox__status" role="alert">Video is temporarily unavailable{videoPlayback.errorCode ? ` (${videoPlayback.errorCode})` : ""}. <button type="button" onClick={videoPlayback.retry}>Retry</button></span> : null}
-        {item.mediaKind !== "VIDEO" && onDemand.preparing ? <span className="lightbox__status">Preparing full-size view…</span> : null}
-        {item.mediaKind !== "VIDEO" && onDemand.failed ? <span className="lightbox__status" role="alert">Full-size view is temporarily unavailable.</span> : null}
+        {item.mediaKind !== "VIDEO" && imageDisplay.preparing ? <span className="lightbox__status">Preparing full-size view…</span> : null}
+        {item.mediaKind !== "VIDEO" && imageDisplay.failed ? <span className="lightbox__status" role="alert">Full-size view is temporarily unavailable.</span> : null}
         {item.caption ? <p>{item.caption}</p> : null}
       </div>
       <button className="lightbox__next" type="button" aria-label="Next media" disabled={!canNext} onClick={(event) => { event.stopPropagation(); onNext(); }}><Icon name="chevron-right" /></button>

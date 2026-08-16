@@ -82,6 +82,19 @@ func (r *mutationResolver) RequestItemLightbox(ctx context.Context, itemUUID str
 	return onDemandResource(value), nil
 }
 
+// RequestItemAnimatedPreview is the resolver for the requestItemAnimatedPreview field.
+func (r *mutationResolver) RequestItemAnimatedPreview(ctx context.Context, itemUUID string) (*OnDemandResource, error) {
+	ffmpegVersion, ffmpegErrorCode, err := r.ffmpegStatus(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	value, err := r.Database.Browse().RequestAnimatedPreview(ctx, itemUUID, ffmpegVersion, ffmpegErrorCode, time.Now())
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return onDemandResource(value), nil
+}
+
 // RequestItemVideoPlayback is the resolver for the requestItemVideoPlayback field.
 func (r *mutationResolver) RequestItemVideoPlayback(ctx context.Context, itemUUID string) (*VideoPlaybackStatus, error) {
 	if r.Operations == nil {
@@ -994,6 +1007,19 @@ func (r *queryResolver) MediaDetail(ctx context.Context, itemUUID string) (*Medi
 // ItemLightboxStatus is the resolver for the itemLightboxStatus field.
 func (r *queryResolver) ItemLightboxStatus(ctx context.Context, itemUUID string) (*OnDemandResource, error) {
 	value, err := r.Database.Browse().LightboxStatus(ctx, itemUUID)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return onDemandResource(value), nil
+}
+
+// ItemAnimatedPreviewStatus is the resolver for the itemAnimatedPreviewStatus field.
+func (r *queryResolver) ItemAnimatedPreviewStatus(ctx context.Context, itemUUID string) (*OnDemandResource, error) {
+	ffmpegVersion, ffmpegErrorCode, err := r.ffmpegStatus(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	value, err := r.Database.Browse().AnimatedPreviewStatus(ctx, itemUUID, ffmpegVersion, ffmpegErrorCode)
 	if err != nil {
 		return nil, publicError(err)
 	}

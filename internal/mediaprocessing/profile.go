@@ -41,3 +41,10 @@ func VideoPosterProfileHash(ffmpegVersion string) string {
 		Configuration: map[string]any{"position": 0.2, "maximum": 960, "format": "jpeg", "seek_fallback": "fast-accurate-zero"}}).Hash()
 	return value
 }
+
+func AnimatedPreviewProfileHash(ffmpegVersion string) string {
+	value, _ := (Profile{ContractVersion: product.MediaProcessingProfileVersion, Generator: "cgm-animated-preview", GeneratorVersion: "1", DependencyVersion: ffmpegVersion,
+		Configuration: map[string]any{"maximum": 480, "maximum_fps": 15, "duration": "complete-source", "format": "animated-webp", "loop": true,
+			"encoder": "libwebp_anim", "quality": 80, "compression_level": 4}}).Hash()
+	return value
+}

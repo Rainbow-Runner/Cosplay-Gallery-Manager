@@ -7,6 +7,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
+	"github.com/stashapp/stash/internal/browse"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 )
 
@@ -19,6 +20,7 @@ type OperationsService interface {
 	RestoreBackup(context.Context, string) (productdb.MaintenanceState, error)
 	CacheStorageStatus(context.Context) (CacheStorageStatus, error)
 	VideoDependencyStatus(context.Context) (VideoDependencyStatus, error)
+	MediaEmbeddedMetadata(context.Context, string, []string) (browse.MediaInformationSummary, error)
 }
 
 type VideoDependencyStatus struct {

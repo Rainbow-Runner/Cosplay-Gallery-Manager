@@ -229,6 +229,8 @@ type MediaDetail {
   videoTechnical: VideoTechnicalSummary
 }
 type VideoTechnicalSummary { probeState: String! errorCode: String! container: String! durationSeconds: Float! width: Int! height: Int! frameRate: Float! videoCodec: String! audioCodec: String! }
+type MediaInformationEntry { key: String! visibilityKey: String! label: String! group: String! value: String! }
+type MediaInformationSummary { state: String! errorCode: String! entries: [MediaInformationEntry!]! }
 
 type MediaPage {
   items: [RandomMediaItem!]!
@@ -391,6 +393,7 @@ type Query {
   characterDetail(slug: String!, scope: BrowseScope! = ALL, page: Int! = 1): CharacterDetail!
   tagDetail(slug: String!, scope: BrowseScope! = ALL, page: Int! = 1): TagDetail!
   mediaDetail(itemUUID: ID!): MediaDetail!
+  mediaEmbeddedMetadata(itemUUID: ID!, visibleFields: [String!]!): MediaInformationSummary!
   itemLightboxStatus(itemUUID: ID!): OnDemandResource!
   itemAnimatedPreviewStatus(itemUUID: ID!): OnDemandResource!
   itemVideoPlaybackStatus(itemUUID: ID!): VideoPlaybackStatus!

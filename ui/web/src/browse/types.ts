@@ -137,5 +137,6 @@ export interface CoserDetail { entity: EntityIndexItem; profileSummary: string; 
 export interface WorkDetail { entity: EntityIndexItem; characters: EntityIndexItem[]; redirected: boolean }
 export interface CharacterDetail { entity: EntityIndexItem; work: EntityIndexItem; galleries: GalleryPage; redirected: boolean }
 export interface TagDetail { entity: EntityIndexItem; galleries: GalleryPage; redirected: boolean }
+export interface MediaInformation { state: "READY" | "ERROR"; errorCode: string; entries: { key: string; visibilityKey: string; label: string; group: string; value: string }[] }
 export interface MediaDetail { item: GalleryMember; displayResource?: ResourceIdentity | null; gallery: BrowseGalleryCard; metadataRevision: number; videoTechnical?: { probeState: string; errorCode: string; container: string; durationSeconds: number; width: number; height: number; frameRate: number; videoCodec: string; audioCodec: string } | null }
 export interface MediaPage { items: RandomMediaItem[]; page: number; pageSize: number; totalItems: number; totalPages: number }

@@ -1522,3 +1522,30 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 2026-08-18 22:36 CST完成本机Linux amd64增量部署。替换前正式二进制备份为`/tmp/cgm-before-classification-scope-i18n-20260818-2233`，SHA-256为`5aa52944757232585f36effcb2f62b0f932e15be8f0b18c6f785c77bee83c7e0`；候选文件写入正式目录后与构建产物逐字节一致，再原子替换`/home/rainbowrunner/.local/bin/cgm`并只重启一次用户服务。
 - `cosplay-gallery-manager.service`保持`enabled/active/running`、`NRestarts=0`，Health/Ready均为204、首页为200；About精确报告`ef92526332ae175a5e5f6d4aba2c3ac5ed14893f`、`buildTime=2026-08-18T14:33:12Z`和`exactSourceAvailable=true`。新主资源`index-CYbhbCJu.js`与`index-rVfgypDI.css`均返回200。
 - 启动日志仅包含正常停止、启动、2个工作器以LibRaw/FFmpeg/FFprobe全部可用启动及验证请求，没有WARN、ERROR、FAILED、panic、fatal或迁移事件。配置SHA-256部署前后均为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`；本阶段没有Schema变更，也未替换数据库、媒体、Manifest或缓存。
+
+## 1.5-40 单媒体内嵌元数据与可见性管理
+
+日期：2026-08-18
+
+### 需求与边界
+
+- 单媒体详情不再只显示所属Gallery关系和视频摘要；新增基础文件、描述、日期、相机、图像、视频及其他安全EXIF分组，覆盖作者、来源、程序名称、获取/数字化日期、版权、制造商、型号、光圈、曝光时间、ISO、焦距、曝光补偿、闪光灯、测光与白平衡等常用字段。
+- 展示型内嵌元数据不自动写入Gallery、Coser、Work、Character或Cast业务字段，原始媒体继续只读。Browse仍不返回来源/缓存绝对路径、相对文件名或指纹。
+- “尽量完整”受安全和资源上限约束：保留全部已知且可安全文本化的EXIF项，但嵌入缩略图、IFD偏移、MakerNote、未知Tag、超过64值的数组、不透明二进制块和超长值直接丢弃。单值最多1,024字符、单次最多192项。
+- GPS及设备/图像唯一标识被划入独立敏感开关，产品默认关闭。Manage设置控制的是服务端GraphQL白名单，不是前端CSS隐藏；关闭项不会传到浏览器。
+
+### 数据、任务与API实现
+
+- 经产品确认撤销图片元数据表、schema v5和后台回填方案。产品数据库保持schema v4；扫描只保留原有BASE派生与视频技术任务，图片不排`ITEM_TECHNICAL_METADATA`，启动和调度器也不枚举存量图片。
+- 保留CGM安全提取器：只读前32MiB用于尺寸/EXIF解析，丢弃嵌入缩略图、IFD偏移、MakerNote、未知Tag、过大数组和不透明二进制块，单值最多1,024字符、单次最多192项。
+- `MediaDetail`继续只读产品数据库并快速返回；新增独立`mediaEmbeddedMetadata(itemUUID, visibleFields)`查询。前端在主详情到达后异步发起，图片经安全`Materializer`即时读取DIRECTORY或ZIP/CBZ当前内容，同时最多处理2项；来源或解析失败只返回稳定信息区错误状态，不使主详情失败。
+- 基础文件大小/类型/CGM收录时间来自现有Item记录；图片尺寸与EXIF每次实时读取且不写数据库/缓存，视频尺寸/时长/封装/编解码/帧率继续复用现有视频技术表。服务端先复核Browse可见性，再解析内部路径，响应不含任何物理路径或指纹。
+- 可见字段键由当前浏览器随独立查询发送，后端拒绝未知/重复键并在返回前过滤，因此关闭项不会进入GraphQL响应；GPS和设备/图像唯一标识仍默认关闭。
+
+### 管理界面与验证状态
+
+- Manage Settings保留中英双语“媒体详情元数据”区，按文件、描述、日期、相机、图像/视频和敏感信息分组提供独立复选框。选择明确保存到当前浏览器`localStorage`，不写数据库、不递增`settings_revision`、不进入完整备份；后端仍拒绝未知键和重复键。
+- 单媒体详情新增中英文分组、字段名、实时读取中/读取失败/无可见字段状态，并保持长值安全换行；普通字段默认开启，GPS和唯一标识明确标记为默认关闭。
+- Go目标回归覆盖真实合成JPEG的安全EXIF解析，以及改写原始图片后第二次查询立即得到新尺寸，证明未使用图片元数据持久化或缓存；productdb、productapi、productserver目标包均PASS。带`cgm_web_embed cgm_galleryepic`标签的Product API、Server与`cmd/cgm`组合回归PASS。
+- `corepack pnpm run test`通过28个测试文件、77项测试；`corepack pnpm run check`通过TypeScript检查；生产构建完成679模块转换。完整`go test ./internal/...`仍只有既有原Stash `internal/api`、`internal/api/urlbuilders`和`internal/manager`因仓库明确不提供`ui/v2.5/build`旧UI嵌入目录而在setup阶段失败，本轮没有恢复旧UI绕过隔离门禁。
+- 本项尚未提交、构建安装或重启正式服务。由于schema保持v4且不存在回填，增量部署不会迁移数据库或批量访问媒体；提交后仍需从清洁提交重新构建，并完成Health/Ready/About/journal门禁。

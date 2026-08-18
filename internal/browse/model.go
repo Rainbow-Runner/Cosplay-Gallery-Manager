@@ -290,6 +290,20 @@ type MediaDetail struct {
 	VideoTechnical   *VideoTechnicalSummary
 }
 
+type MediaInformationEntry struct {
+	Key           string
+	VisibilityKey string
+	Label         string
+	Group         string
+	Value         string
+}
+
+type MediaInformationSummary struct {
+	State     string
+	ErrorCode string
+	Entries   []MediaInformationEntry
+}
+
 type VideoTechnicalSummary struct {
 	ProbeState      string
 	ErrorCode       string

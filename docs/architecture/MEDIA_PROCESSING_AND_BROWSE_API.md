@@ -16,6 +16,15 @@
 - RAW由LibRaw兼容适配器只读生成JPEG代理；普通图片复用Stash已有图片栈；Video/动画Poster复用Stash FFmpeg命令构建能力。
 - EXIF/XMP日期、自拍目录语义和RAW/JPEG伴生只形成建议，明确接受后才改变业务元数据。
 
+### 2.1 单媒体内嵌元数据显示
+
+- 用于详情展示的文件/EXIF技术信息与Gallery、Coser、Work、Cast等业务元数据严格分离；读取作者、版权或拍摄日期不会自动写入或覆盖Gallery业务字段。
+- `MediaDetail`主查询不访问来源媒体；页面主数据完成后，前端通过独立`mediaEmbeddedMetadata`查询显式触发实时读取，失败只影响信息区，不拖慢或破坏媒体详情主体。
+- STATIC_IMAGE和ANIMATED_IMAGE经现有只读`Materializer`访问DIRECTORY或ZIP/CBZ成员，由安全提取器即时解析；最多同时执行2项图片读取。扫描不排图片元数据任务，不存在存量回填，也不新增图片元数据表、schema版本或缓存文件。
+- 详情白名单包含基础文件信息、常用描述/日期/相机/图像字段、视频现有技术摘要以及其余安全EXIF文本。单值最长1,024字符、单次最多192项；每次进入详情都读取当前来源内容，结果不持久化。
+- 嵌入缩略图、IFD偏移、MakerNote、未知Tag、过大数组及不透明二进制块永不返回；Browse继续不返回来源路径、缓存路径或文件指纹。
+- Manage设置页保存稳定可见字段键到当前浏览器`localStorage`，不写产品数据库且不进入完整备份。UI将选择随请求发送，服务端仍校验白名单并在响应前过滤；GPS及设备/图像唯一标识支持显式开启但默认关闭。
+
 ## 3. 封面与Scrubber
 
 - `preferred_cover`保存人工或Manifest意图，`effective_cover`保存实际可显示结果。

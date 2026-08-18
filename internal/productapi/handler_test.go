@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stashapp/stash/internal/browse"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/persistence/productdb"
@@ -552,6 +553,10 @@ func TestCoreEntityLifecycleGraphQLRequiresPreviewAndPreservesPermanentUUIDHisto
 type fakeOperationsService struct {
 	backup      productdb.BackupRecord
 	maintenance productdb.MaintenanceState
+}
+
+func (s fakeOperationsService) MediaEmbeddedMetadata(context.Context, string, []string) (browse.MediaInformationSummary, error) {
+	return browse.MediaInformationSummary{State: "READY"}, nil
 }
 
 func (s fakeOperationsService) CreateFullBackup(context.Context) (productdb.BackupRecord, error) {

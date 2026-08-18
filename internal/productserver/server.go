@@ -96,12 +96,14 @@ type Server struct {
 	CoserMetadata *cosermetadata.Service
 	VideoTools    mediaprocessing.VideoToolchain
 
-	handlerSwitch *switchHandler
-	operationMu   sync.Mutex
-	workerMu      sync.Mutex
-	workerCancel  context.CancelFunc
-	workerDone    sync.WaitGroup
-	workerRoot    context.Context
+	handlerSwitch      *switchHandler
+	operationMu        sync.Mutex
+	workerMu           sync.Mutex
+	workerCancel       context.CancelFunc
+	workerDone         sync.WaitGroup
+	workerRoot         context.Context
+	mediaMetadataOnce  sync.Once
+	mediaMetadataSlots chan struct{}
 
 	restoreAfterDatabaseSwapHook func() error
 }

@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { MANAGE_RUNTIME_SETTINGS } from "../api/manage";
 import { bytesToGiB, formatStorageBytes, gibToBytes, ManageSettingsPage } from "./ManageSettingsPage";
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); window.localStorage?.clear(); });
 
 const runtimeSettings = {
   settingsRevision: 1, homeScope: "LIST", galleryCardScrubberEnabled: true, galleryDetailMediaFilterEnabled: true,
@@ -41,6 +41,8 @@ describe("ManageSettingsPage cache status", () => {
 		expect(screen.getByLabelText("Reclaimable cache limit (GiB)")).toHaveValue(50);
 		expect(screen.getByLabelText("Animated playback limit")).toHaveValue(12);
 		expect(screen.getByLabelText("Animation lock interval (ms)")).toHaveValue(800);
+    expect(screen.getByLabelText("作者 / Author")).toBeChecked();
+    expect(screen.getByLabelText("GPS 位置元数据")).not.toBeChecked();
     expect(screen.queryByDisplayValue("/var/cache/cgm")).not.toBeInTheDocument();
 		fireEvent.change(screen.getByLabelText("Animation lock interval (ms)"), { target: { value: "699" } });
 		expect(screen.getByRole("button", { name: "Save all runtime settings" })).toBeDisabled();

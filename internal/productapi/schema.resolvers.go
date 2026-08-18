@@ -452,7 +452,8 @@ func (r *mutationResolver) UpdateRuntimeSettings(ctx context.Context, expectedSe
 		GalleryCardScrubberEnabled: input.GalleryCardScrubberEnabled, GalleryDetailMediaFilterEnabled: input.GalleryDetailMediaFilterEnabled,
 		GalleryCardControlsVisible: input.GalleryCardControlsVisible, MediaCardControlsVisible: input.MediaCardControlsVisible,
 		DetailPersonalControlsVisible: input.DetailPersonalControlsVisible, GalleryAnimatedPlaybackLimit: input.GalleryAnimatedPlaybackLimit,
-		GalleryAnimatedLockIntervalMS: input.GalleryAnimatedLockIntervalMs, RelatedLimit: input.RelatedLimit, TagParentWeight: input.TagParentWeight,
+		GalleryAnimatedLockIntervalMS: input.GalleryAnimatedLockIntervalMs,
+		RelatedLimit:                  input.RelatedLimit, TagParentWeight: input.TagParentWeight,
 		TagMinimumScore: input.TagMinimumScore, TagMaximumDepth: input.TagMaximumDepth, RandomLimit: input.RandomLimit,
 		RandomStaticQuota: input.RandomStaticQuota, RandomGIFQuota: input.RandomGIFQuota, RandomVideoQuota: input.RandomVideoQuota,
 		RandomGalleryRepeatDecay: input.RandomGalleryRepeatDecay, EnhancedCacheMaximumBytes: input.EnhancedCacheMaximumBytes,
@@ -1097,6 +1098,22 @@ func (r *queryResolver) MediaDetail(ctx context.Context, itemUUID string) (*Medi
 		result.VideoTechnical = &VideoTechnicalSummary{ProbeState: value.VideoTechnical.ProbeState, ErrorCode: value.VideoTechnical.ErrorCode, Container: value.VideoTechnical.Container,
 			DurationSeconds: value.VideoTechnical.DurationSeconds, Width: value.VideoTechnical.Width, Height: value.VideoTechnical.Height, FrameRate: value.VideoTechnical.FrameRate,
 			VideoCodec: value.VideoTechnical.VideoCodec, AudioCodec: value.VideoTechnical.AudioCodec}
+	}
+	return result, nil
+}
+
+// MediaEmbeddedMetadata is the resolver for the mediaEmbeddedMetadata field.
+func (r *queryResolver) MediaEmbeddedMetadata(ctx context.Context, itemUUID string, visibleFields []string) (*MediaInformationSummary, error) {
+	if r.Operations == nil {
+		return nil, publicError(errors.New("media metadata service is unavailable"))
+	}
+	value, err := r.Operations.MediaEmbeddedMetadata(ctx, itemUUID, visibleFields)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	result := &MediaInformationSummary{State: value.State, ErrorCode: value.ErrorCode}
+	for _, entry := range value.Entries {
+		result.Entries = append(result.Entries, &MediaInformationEntry{Key: entry.Key, VisibilityKey: entry.VisibilityKey, Label: entry.Label, Group: entry.Group, Value: entry.Value})
 	}
 	return result, nil
 }

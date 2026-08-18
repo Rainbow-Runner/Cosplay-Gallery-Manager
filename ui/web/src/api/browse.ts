@@ -253,6 +253,14 @@ export const MEDIA_DETAIL = gql`
   }
 `;
 
+export const MEDIA_EMBEDDED_METADATA = gql`
+  query MediaEmbeddedMetadata($itemUUID: ID!, $visibleFields: [String!]!) {
+    mediaEmbeddedMetadata(itemUUID: $itemUUID, visibleFields: $visibleFields) {
+      state errorCode entries { key visibilityKey label group value }
+    }
+  }
+`;
+
 export const FAVORITE_GALLERIES = gql`
   ${GALLERY_CARD_FIELDS}
   query FavoriteGalleries($scope: BrowseScope!, $page: Int!) {

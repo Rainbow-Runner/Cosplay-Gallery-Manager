@@ -712,6 +712,20 @@ type MediaDetail struct {
 	VideoTechnical   *VideoTechnicalSummary `json:"videoTechnical,omitempty"`
 }
 
+type MediaInformationEntry struct {
+	Key           string `json:"key"`
+	VisibilityKey string `json:"visibilityKey"`
+	Label         string `json:"label"`
+	Group         string `json:"group"`
+	Value         string `json:"value"`
+}
+
+type MediaInformationSummary struct {
+	State     string                   `json:"state"`
+	ErrorCode string                   `json:"errorCode"`
+	Entries   []*MediaInformationEntry `json:"entries"`
+}
+
 type MediaPage struct {
 	Items      []*RandomMediaItem `json:"items"`
 	Page       int                `json:"page"`

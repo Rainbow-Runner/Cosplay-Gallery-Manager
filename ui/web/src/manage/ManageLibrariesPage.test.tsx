@@ -5,8 +5,10 @@ import { MockedProvider } from "@apollo/client/testing/react";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
+import { IntlProvider } from "react-intl";
 
 import { DELETE_RECOGNITION_RULE, MANAGE_DISCOVERY, MANAGE_LIBRARIES, UPDATE_RECOGNITION_RULE } from "../api/manage";
+import { messages } from "../i18n/messages";
 import { ManageLibrariesPage } from "./ManageLibrariesPage";
 
 afterEach(cleanup);
@@ -28,9 +30,9 @@ const discoveryMock: MockedResponse = {
 
 function renderPage(mocks: ReadonlyArray<MockedResponse>) {
   return render(<MemoryRouter>
-    <MockedProvider mocks={mocks}>
+    <MockedProvider mocks={mocks}><IntlProvider locale="en-GB" messages={messages["en-GB"]}>
       <ManageLibrariesPage />
-    </MockedProvider>
+    </IntlProvider></MockedProvider>
   </MemoryRouter>);
 }
 
@@ -50,12 +52,12 @@ describe("ManageLibrariesPage recognition rules", () => {
     ]);
 
     fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
-    const editor = screen.getByText("Edit rule #3").closest("details");
+    const editor = screen.getByText("Edit discovery rule #3").closest("details");
     expect(editor).not.toBeNull();
     const fields = within(editor as HTMLElement);
     fireEvent.change(fields.getByLabelText("Name (required)"), { target: { value: "Marker updated" } });
     fireEvent.click(fields.getByRole("button", { name: "Save rule" }));
-    expect(await screen.findByText("Recognition rule updated. Scan the library to refresh discovery.")).toBeInTheDocument();
+    expect(await screen.findByText("Discovery rule updated. Scan the library to refresh discovery.")).toBeInTheDocument();
   });
 
   it("requires a second explicit action before deleting a rule", async () => {
@@ -72,6 +74,6 @@ describe("ManageLibrariesPage recognition rules", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
     expect(screen.getByRole("button", { name: "Confirm delete" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
-    await waitFor(() => expect(screen.getByText("Recognition rule deleted. Existing Galleries are unchanged; scan the library to refresh discovery.")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Discovery rule deleted. Existing Galleries are unchanged; scan the library to refresh discovery.")).toBeInTheDocument());
   });
 });

@@ -28,6 +28,10 @@ function renderRoute(path: string) {
 }
 
 describe("AppRoutes", () => {
+  it("keeps English and Simplified Chinese message catalogues aligned", () => {
+    expect(Object.keys(messages["zh-CN"]).sort()).toEqual(Object.keys(messages["en-GB"]).sort());
+  });
+
   it.each([
     ["/", "browse-shell"],
     ["/manage", "manage-shell"],

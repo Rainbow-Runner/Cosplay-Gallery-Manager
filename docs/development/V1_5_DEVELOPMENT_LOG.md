@@ -1493,3 +1493,28 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 迁移后主库保持原inode `19679716`，`integrity_check=ok`、schema v4、57张表/1932行。两条`system_default=1`规则已创建：`Default selfie folders`启用，`Optional selfie filenames`关闭；正式库原有`SELFIE_CATEGORY`建议为0，因此新建议表为空，迁移未丢失或重复生成建议。
 - 正式服务保持`enabled/active/running`、`NRestarts=0`；Health/Ready为204，首页、Setup、Legal和Session端点为200。About报告`version=1.5.0-dev`、完整提交、`buildTime=2026-08-17`和`exactSourceAvailable=true`；入口使用`index-CvDrpo1q.js`与`index-8_Nt1C6e.css`。两个工作器以FFmpeg/FFprobe/LibRaw全部可用启动，本轮journal未检出WARN、ERROR、FAILED、panic、fatal或迁移错误。
 - 配置SHA-256保持`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`且未替换。除产品数据库前向迁移和两条默认规则外，本轮没有修改媒体、Gallery/Coser Manifest、缓存或业务配置。
+
+## 1.5-39 媒体分类规则信息架构与中英文管理界面
+
+日期：2026-08-18
+
+### 问题确认
+
+- 后端既有模型是“全局规则 + 所选媒体库覆盖规则”，并不要求为每个媒体库重复配置；但分类规则组件原先嵌在每个媒体库工作区中，新建规则又默认`Selected library`，视觉层级与默认值共同造成了“每库必须单独配置”的误导。
+- 原页面还把规则作用范围、现有媒体预览/评估目标、全局默认恢复和当前库建议审核混在同一区块中；其中全局规则作用于所有库，而预览、评估与待审核建议实际以当前所选媒体库为目标，两种概念缺少明确边界。
+
+### 实现
+
+- 将Media classification从单个媒体库工作区提升到Libraries & import页的独立一级管理区，媒体库的根发现规则和最近发现结果仍留在所选媒体库工作区，未改变两套规则的业务边界。
+- 将有效分类规则拆分为“全局规则”和“当前媒体库覆盖规则”两个并列区块；全局区明确说明自动应用于所有媒体库，单库区明确说明只是可选例外，并显示实际媒体库名称。规则标签改为`GLOBAL`/`LIBRARY OVERRIDE`语义，空状态也按范围分别说明。
+- 新建分类规则默认选择“所有媒体库（推荐）”；只有用户明确选择时才创建单库覆盖。`Restore global defaults`只保留在全局规则区，避免被误认为会恢复当前库专属配置。
+- 独立增加“评估目标”说明和操作区；单路径测试仍不依赖媒体库，现有媒体预览、显式评估和待审核建议均明确显示所选媒体库名称。规则作用范围与执行目标在界面上分离，但GraphQL、数据库结构、order优先级、首命中停止、建议审核及媒体写入语义均未改动。
+- Libraries & import整页及分类工作流的可见文本接入既有`react-intl`消息表，覆盖媒体库新增/扫描、根发现规则CRUD、发现结果、分类范围/匹配项/校验/预览/评估/审核和成功/回退错误消息。中文环境下新建发现规则和分类规则也使用中文默认名称，不再残留英文种子文本；技术枚举、`.cosplay-root`、RE2、PHOTO/SELFIE及DRAFT保持稳定产品术语。
+- 新增响应式双栏规则分组、作用范围提示、范围Badge和评估目标样式；窄屏回落为单栏且操作头部垂直排列，继续复用Manage浅色Token与既有键盘焦点规则。
+
+### 验证与交付状态
+
+- `corepack pnpm@10.33.0 --dir ui/web exec vitest run src/manage/MediaClassificationRules.test.tsx src/manage/ManageLibrariesPage.test.tsx`通过：2个测试文件、5项测试覆盖RE2保存门禁、根发现规则编辑删除、全局/单库分组、新规则默认全局作用域和简体中文实际渲染。
+- `corepack pnpm@10.33.0 --dir ui/web run test`通过：27个测试文件、74项测试全部通过；除页面行为外，应用级回归还锁定英文与简体中文消息目录键集合完全一致；`corepack pnpm@10.33.0 --dir ui/web run check`通过TypeScript检查。
+- `corepack pnpm@10.33.0 --dir ui/web run build`通过，Vite完成678模块生产构建；本阶段没有Schema、GraphQL、数据库、媒体、Manifest或缓存变更。
+- 本阶段按当前请求仅完成源码、测试与开发记录，尚未提交，也未执行本机增量部署。

@@ -1517,4 +1517,8 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - `corepack pnpm@10.33.0 --dir ui/web exec vitest run src/manage/MediaClassificationRules.test.tsx src/manage/ManageLibrariesPage.test.tsx`通过：2个测试文件、5项测试覆盖RE2保存门禁、根发现规则编辑删除、全局/单库分组、新规则默认全局作用域和简体中文实际渲染。
 - `corepack pnpm@10.33.0 --dir ui/web run test`通过：27个测试文件、74项测试全部通过；除页面行为外，应用级回归还锁定英文与简体中文消息目录键集合完全一致；`corepack pnpm@10.33.0 --dir ui/web run check`通过TypeScript检查。
 - `corepack pnpm@10.33.0 --dir ui/web run build`通过，Vite完成678模块生产构建；本阶段没有Schema、GraphQL、数据库、媒体、Manifest或缓存变更。
-- 本阶段按当前请求仅完成源码、测试与开发记录，尚未提交，也未执行本机增量部署。
+- 页面重构、双语消息、测试与部署前记录提交为`ef92526332ae175a5e5f6d4aba2c3ac5ed14893f`（`Clarify media classification rule scopes`）；提交后工作树清洁。
+- 清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic`组合标签构建；`go version -m`确认`vcs.modified=false`，GalleryEpic Provider的Search/FetchProfile/OpenAsset均保留，正式候选二进制SHA-256为`023810836a04045e56eda97fe8e857ea8539555bdfea7ff53bb9f1d516c7eae0`。组合标签下`productapi`、`productserver`与`cmd/cgm`回归通过。
+- 2026-08-18 22:36 CST完成本机Linux amd64增量部署。替换前正式二进制备份为`/tmp/cgm-before-classification-scope-i18n-20260818-2233`，SHA-256为`5aa52944757232585f36effcb2f62b0f932e15be8f0b18c6f785c77bee83c7e0`；候选文件写入正式目录后与构建产物逐字节一致，再原子替换`/home/rainbowrunner/.local/bin/cgm`并只重启一次用户服务。
+- `cosplay-gallery-manager.service`保持`enabled/active/running`、`NRestarts=0`，Health/Ready均为204、首页为200；About精确报告`ef92526332ae175a5e5f6d4aba2c3ac5ed14893f`、`buildTime=2026-08-18T14:33:12Z`和`exactSourceAvailable=true`。新主资源`index-CYbhbCJu.js`与`index-rVfgypDI.css`均返回200。
+- 启动日志仅包含正常停止、启动、2个工作器以LibRaw/FFmpeg/FFprobe全部可用启动及验证请求，没有WARN、ERROR、FAILED、panic、fatal或迁移事件。配置SHA-256部署前后均为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`；本阶段没有Schema变更，也未替换数据库、媒体、Manifest或缓存。

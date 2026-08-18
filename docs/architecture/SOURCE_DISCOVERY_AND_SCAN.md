@@ -15,7 +15,9 @@ GallerySource仍是Gallery唯一的物理来源。DIRECTORY成员必须位于根
 
 PATH_TEMPLATE使用Go `regexp`的RE2语义匹配完整NFC相对目录路径。命名捕获只允许title、coser、work、character、year和month，命中结果只保存为建议。没有确定性命中的媒体按实际父目录聚合为未归属诊断，不存在启发式候选模块。
 
-候选导入只确认来源并创建DRAFT。即使规则开启AUTO_CREATE_DRAFT，正式标题、日期和实体关系也不会被自动写入。
+`.cosplay-root`只标记其所在父目录为GallerySource根，不会把唯一子目录提升为来源根。新MARKER候选的标题保底规则为：根内恰好一个直属、真实且非符号链接的子目录时取该子目录名；没有或存在多个直属子目录时取根目录名。标题在发现快照中确定，候选预览、手动导入和AUTO_CREATE_DRAFT使用同一值；不回写已有Gallery。根级媒体默认排除仍属于后续扫描选项，与标题判断无关；ARCHIVE候选不使用此规则。
+
+候选导入只确认来源并创建DRAFT。除上述MARKER确定性标题保底外，即使规则开启AUTO_CREATE_DRAFT，日期和实体关系也不会被自动写入。
 
 ## 3. set_id重绑定
 

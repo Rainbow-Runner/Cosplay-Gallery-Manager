@@ -30,6 +30,9 @@ func TestFilesystemDiscoveryHonoursMarkerRootAndSuppressesNestedDiagnostics(t *t
 	if err := os.WriteFile(filepath.Join(setRoot, "selfie", "01.jpg"), []byte("candidate"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(setRoot, "cover.jpg"), []byte("root media"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	mediaLibrary, err := db.Libraries().Create(ctx, CreateLibraryInput{Name: "Root", RootPath: root, Enabled: true}, now)
 	if err != nil {
 		t.Fatal(err)
@@ -41,11 +44,11 @@ func TestFilesystemDiscoveryHonoursMarkerRootAndSuppressesNestedDiagnostics(t *t
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(snapshot.Candidates) != 1 || snapshot.Candidates[0].RootPath != setRoot || snapshot.Candidates[0].MediaCount != 1 {
+	if len(snapshot.Candidates) != 1 || snapshot.Candidates[0].RootPath != setRoot || snapshot.Candidates[0].MediaCount != 2 {
 		t.Fatalf("filesystem candidates = %#v", snapshot.Candidates)
 	}
 	if len(snapshot.Candidates[0].Suggestions) != 1 ||
-		snapshot.Candidates[0].Suggestions[0] != (discovery.Suggestion{Field: "title", Value: "Set"}) {
+		snapshot.Candidates[0].Suggestions[0] != (discovery.Suggestion{Field: "title", Value: "selfie"}) {
 		t.Fatalf("marker title suggestions = %#v", snapshot.Candidates[0].Suggestions)
 	}
 	if len(snapshot.Unassigned) != 0 {
@@ -55,8 +58,8 @@ func TestFilesystemDiscoveryHonoursMarkerRootAndSuppressesNestedDiagnostics(t *t
 	if err != nil {
 		t.Fatal(err)
 	}
-	if created.Title != "Set" {
-		t.Fatalf("marker Gallery title = %q, want source directory name", created.Title)
+	if created.Title != "selfie" {
+		t.Fatalf("marker Gallery title = %q, want sole immediate child directory name", created.Title)
 	}
 	var pendingTitleSuggestions int
 	if err := db.QueryRowContext(ctx, `
@@ -67,6 +70,50 @@ func TestFilesystemDiscoveryHonoursMarkerRootAndSuppressesNestedDiagnostics(t *t
 	}
 	if pendingTitleSuggestions != 0 {
 		t.Fatalf("marker fallback created %d redundant title suggestions", pendingTitleSuggestions)
+	}
+}
+
+func TestFilesystemMarkerWithMultipleImmediateChildDirectoriesUsesRootName(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 19, 0, 10, 0, 0, time.UTC)
+	libraryRoot := t.TempDir()
+	setRoot := filepath.Join(libraryRoot, "Coser", "Set")
+	for _, relative := range []string{"part-a/01.jpg", "part-b/01.jpg"} {
+		filename := filepath.Join(setRoot, filepath.FromSlash(relative))
+		if err := os.MkdirAll(filepath.Dir(filename), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filename, []byte("candidate"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(setRoot, ".cosplay-root"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mediaLibrary, err := db.Libraries().Create(ctx, CreateLibraryInput{Name: "Root", RootPath: libraryRoot, Enabled: true}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.RecognitionRules().Create(ctx, CreateRecognitionRuleInput{LibraryID: mediaLibrary.ID, Name: "Marker", Kind: discovery.RuleKindMarker, Enabled: true, Order: 1}, now); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := db.CandidateDiscovery().DiscoverFilesystem(ctx, mediaLibrary.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Candidates) != 1 || snapshot.Candidates[0].RootPath != setRoot || snapshot.Candidates[0].MediaCount != 2 {
+		t.Fatalf("filesystem candidates = %#v", snapshot.Candidates)
+	}
+	if len(snapshot.Candidates[0].Suggestions) != 1 || snapshot.Candidates[0].Suggestions[0] != (discovery.Suggestion{Field: "title", Value: "Set"}) {
+		t.Fatalf("marker title suggestions = %#v", snapshot.Candidates[0].Suggestions)
+	}
+	created, err := db.CandidateDiscovery().ImportCandidate(ctx, snapshot.Candidates[0].ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.Title != "Set" {
+		t.Fatalf("marker Gallery title = %q, want marker root directory name", created.Title)
 	}
 }
 

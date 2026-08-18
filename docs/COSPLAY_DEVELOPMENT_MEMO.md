@@ -260,6 +260,7 @@ SocialAccount：
 
 - 所有自动规则默认关闭；显式来源直接建DRAFT。
 - 每条自动规则默认只生成Candidate，可逐规则开启AUTO_CREATE_DRAFT；仍只建DRAFT。
+- `.cosplay-root`所在父目录始终是DIRECTORY来源根；新候选若根内恰好一个直属真实子目录，标题保底取该子目录名，否则取来源根目录名。该规则不回写已有Gallery，不改变根级媒体默认Exclude，也不适用于ZIP/CBZ来源。
 - 完全移除启发式候选、评分和证据Provider。
 - 未归属媒体只按实际父目录聚合诊断；用户手工选根或修改确定性规则。
 

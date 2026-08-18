@@ -1552,3 +1552,19 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 2026-08-18 23:51 CST完成本机Linux amd64增量部署。替换前正式二进制备份为`/tmp/cgm-before-metadata-ondemand-20260818-2351`，SHA-256为`023810836a04045e56eda97fe8e857ea8539555bdfea7ff53bb9f1d516c7eae0`；候选先写入同目录并逐字节校验，再原子替换`/home/rainbowrunner/.local/bin/cgm`且只重启一次用户服务。
 - `cosplay-gallery-manager.service`保持`enabled/active/running`、`NRestarts=0`；Health/Ready均为204、首页为200。About精确报告`gitHash=2db91e9`、`buildTime=2026-08-18 23:50:36`和`exactSourceAvailable=true`。
 - 正式数据库身份仍为`cosplay-gallery-manager / schema 4`，`image_embedded_metadata`表数量为0且`PRAGMA integrity_check=ok`；启动日志只有正常停止、启动、2个工作器及健康验证请求，没有迁移、回填、WARN、ERROR、FAILED、panic或fatal。配置SHA-256部署前后均为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`，未替换数据库、媒体、Manifest或缓存。
+
+## 1.5-41 MARKER单子目录标题保底
+
+日期：2026-08-19
+
+### 已确认规则与实现
+
+- `.cosplay-root`所在父目录继续是GallerySource根；标题规则不改变发现根、媒体相对路径或后续扫描范围。
+- 新文件系统发现会统计MARKER根内直属、真实且非符号链接的子目录：恰好一个时标题取该子目录名；零个或多个时继续取根目录名。只统计直属目录，普通文件和根级媒体不影响目录数量。
+- 最终标题在发现快照阶段完成NFC、空值和300字符边界校验并保存为Candidate title建议；手动导入和AUTO_CREATE_DRAFT改为使用该快照值，避免预览与创建结果不一致。旧快照仍保持其发现时结果，已经导入的Gallery不会被重新计算或改名。
+- 根级媒体仍由Gallery扫描的`excludeNewRootMedia=true`默认选项处理；本项不改变Exclude/Restore持久选择、媒体计数、GallerySource扫描或派生任务。MANIFEST优先级及ZIP/CBZ ARCHIVE候选流程完全不变。
+
+### 验证与交付状态
+
+- 产品数据库集成测试覆盖MARKER根同时含根级媒体和唯一子目录时来源根保持不变、媒体总数不变且标题取子目录；新增双直属子目录样本锁定标题继续取根目录。既有Archive两阶段导入和扫描Exclude回归继续纳入相关包测试。
+- `internal/discovery`、`internal/persistence/productdb`、`internal/productapi`与`internal/productserver`回归通过；带`cgm_web_embed cgm_galleryepic`标签的Product API、Server和`cmd/cgm`组合回归通过。产品数据库全包测试同时覆盖既有Archive两阶段导入和根级媒体默认Exclude。本项没有Schema、GraphQL、前端、配置、媒体、Manifest或缓存变更，尚未提交或部署。

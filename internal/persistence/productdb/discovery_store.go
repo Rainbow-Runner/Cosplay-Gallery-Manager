@@ -190,6 +190,7 @@ type ObservedDirectory struct {
 	HasValidManifest bool
 	ManifestSetID    string
 	HasRootMarker    bool
+	MarkerTitle      string
 	MediaCount       int
 	HasConflict      bool
 	OverLimit        bool
@@ -353,6 +354,12 @@ func (s *CandidateDiscoveryStore) DiscoverFilesystem(ctx context.Context, librar
 			continue
 		}
 		observation := ObservedDirectory{RelativePath: filepath.ToSlash(relative), SourceType: gallery.SourceTypeDirectory, HasRootMarker: markerDirectories[directory], MediaCount: count, OverLimit: count > 1000}
+		if observation.HasRootMarker {
+			observation.MarkerTitle, err = markerGalleryTitle(directory)
+			if err != nil {
+				return DiscoverySnapshot{}, err
+			}
+		}
 		if manifestDirectories[directory] {
 			_, observation.HasValidManifest, observation.ManifestSetID = readManifestIdentity(filepath.Join(directory, ".cosplay.json"))
 			observation.HasConflict = !observation.HasValidManifest
@@ -372,6 +379,52 @@ func descendantMediaCount(root string, counts map[string]int) int {
 		}
 	}
 	return total
+}
+
+// markerGalleryTitle returns the deterministic title for a newly discovered
+// DIRECTORY marker root. The marker's parent remains the source root; only the
+// title changes when that root has exactly one immediate real subdirectory.
+func markerGalleryTitle(rootPath string) (string, error) {
+	cleaned := filepath.Clean(rootPath)
+	rootInfo, err := os.Lstat(cleaned)
+	if err != nil {
+		return "", err
+	}
+	if !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 {
+		return "", errors.New("MARKER candidate root must be a real directory")
+	}
+	entries, err := os.ReadDir(cleaned)
+	if err != nil {
+		return "", err
+	}
+	title := filepath.Base(cleaned)
+	var onlyChild string
+	childCount := 0
+	for _, entry := range entries {
+		if entry.Type()&os.ModeSymlink != 0 || !entry.IsDir() {
+			continue
+		}
+		childCount++
+		onlyChild = entry.Name()
+		if childCount > 1 {
+			break
+		}
+	}
+	if childCount == 1 {
+		title = onlyChild
+	}
+	return validateMarkerTitle(title)
+}
+
+func validateMarkerTitle(value string) (string, error) {
+	title := norm.NFC.String(strings.TrimSpace(value))
+	if title == "" || title == "." || title == string(filepath.Separator) {
+		return "", errors.New("MARKER candidate has no usable directory name")
+	}
+	if len([]rune(title)) > 300 {
+		return "", errors.New("MARKER candidate directory name exceeds the Gallery title limit")
+	}
+	return title, nil
 }
 
 func observeArchiveCandidate(libraryRoot, filename string, limits archivecheck.Limits) (ObservedDirectory, error) {
@@ -541,6 +594,13 @@ func (s *CandidateDiscoveryStore) CommitSnapshot(
 		if match == nil {
 			unassigned[absolute] += observed.MediaCount
 			continue
+		}
+		if match.Kind == discovery.RuleKindMarker && observed.MarkerTitle != "" {
+			markerTitle, err := validateMarkerTitle(observed.MarkerTitle)
+			if err != nil {
+				return DiscoverySnapshot{}, err
+			}
+			match.Suggestions = []discovery.Suggestion{{Field: "title", Value: markerTitle}}
 		}
 
 		rootPath := filepath.Join(mediaLibrary.RootPath, filepath.FromSlash(match.Root))
@@ -815,12 +875,17 @@ func (s *CandidateDiscoveryStore) ImportCandidate(
 	}
 	title := ""
 	if recognitionMethod == string(discovery.RuleKindMarker) {
-		title = norm.NFC.String(strings.TrimSpace(filepath.Base(filepath.Clean(rootPath))))
-		if title == "" || title == "." || title == string(filepath.Separator) {
-			return gallery.Gallery{}, errors.New("MARKER candidate root has no usable directory name")
+		if err := tx.QueryRowContext(ctx, `
+			SELECT value FROM gallery_candidate_suggestions
+			WHERE candidate_id = ? AND field_name = 'title' ORDER BY id LIMIT 1
+		`, candidateID).Scan(&title); errors.Is(err, sql.ErrNoRows) {
+			title = filepath.Base(filepath.Clean(rootPath))
+		} else if err != nil {
+			return gallery.Gallery{}, err
 		}
-		if len([]rune(title)) > 300 {
-			return gallery.Gallery{}, errors.New("MARKER candidate directory name exceeds the Gallery title limit")
+		title, err = validateMarkerTitle(title)
+		if err != nil {
+			return gallery.Gallery{}, err
 		}
 	}
 	timestamp := normalisedTime(now)

@@ -2,6 +2,12 @@
 
 ## 1.5 增量开发状态
 
+### 2026-08-19 MARKER单子目录标题保底增量部署
+
+- 2026-08-19 00:32 CST将正式服务升级到清洁提交`fbba7e2c9e2673ae652b67d2ebd748a0d6972dd4`。Go 1.25.12以`cgm_web_embed cgm_galleryepic`构建，`go version -m`确认`vcs.modified=false`；正式二进制SHA-256为`f35b84abdab4d5c5a8c42745a88a37917af5d2c3d38d8d90b997bea8e0aa498d`，旧二进制保留于`/tmp/cgm-before-marker-title-20260819`。
+- 新发现的`.cosplay-root`根若只有一个直属真实子目录，Candidate、手动导入和自动建DRAFT的标题取该子目录名；零个或多个子目录仍取根目录名。来源根、已有Gallery、根级媒体默认Exclude及ZIP/CBZ流程不变。
+- 服务保持`enabled/active/running`、`NRestarts=0`，Health/Ready为204，首页和Session为200；About报告完整提交和`exactSourceAvailable=true`。数据库保持schema v4、inode `19679716`且`integrity_check=ok`，配置SHA-256未变，本次启动日志无迁移或异常。
+
 ### 2026-08-17 媒体分类规则与schema v4增量部署
 
 - 2026-08-17 01:24 CST将正式服务升级到提交`6e61b9a6b0864a9619c74cfbe14c9f87210b33f4`。清洁提交以Go 1.25.12、`cgm_web_embed cgm_galleryepic`构建，`go version -m`确认`vcs.modified=false`；正式二进制SHA-256为`5aa52944757232585f36effcb2f62b0f932e15be8f0b18c6f785c77bee83c7e0`，旧二进制保留于`/tmp/cgm-before-media-classification-20260817`。
@@ -71,10 +77,10 @@
 ## 部署基线
 
 - 运行形态：Linux amd64 原生单所有者服务。
-- 当前源码提交：`4b3c1ec982544da46dd48791d5ad17057b09d930`。
+- 当前源码提交：`fbba7e2c9e2673ae652b67d2ebd748a0d6972dd4`。
 - 当前产品版本：`1.5.0-dev`。
 - 二进制：`/home/rainbowrunner/.local/bin/cgm`。
-- 当前二进制SHA-256：`2561c13c628f3fef8a244ac74e866fa62b059b05989e511fb3f4660314b813e2`。
+- 当前二进制SHA-256：`f35b84abdab4d5c5a8c42745a88a37917af5d2c3d38d8d90b997bea8e0aa498d`。
 - 启动配置：`/home/rainbowrunner/.config/cosplay-gallery-manager/cgm.json`，权限 `0600`。
 - 产品数据库：`/home/rainbowrunner/.local/share/cosplay-gallery-manager/product.sqlite`，权限 `0600`。
 - 生成缓存：`/home/rainbowrunner/.cache/cosplay-gallery-manager/`。

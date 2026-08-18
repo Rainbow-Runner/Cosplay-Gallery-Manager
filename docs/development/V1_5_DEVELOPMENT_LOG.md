@@ -1567,4 +1567,8 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 ### 验证与交付状态
 
 - 产品数据库集成测试覆盖MARKER根同时含根级媒体和唯一子目录时来源根保持不变、媒体总数不变且标题取子目录；新增双直属子目录样本锁定标题继续取根目录。既有Archive两阶段导入和扫描Exclude回归继续纳入相关包测试。
-- `internal/discovery`、`internal/persistence/productdb`、`internal/productapi`与`internal/productserver`回归通过；带`cgm_web_embed cgm_galleryepic`标签的Product API、Server和`cmd/cgm`组合回归通过。产品数据库全包测试同时覆盖既有Archive两阶段导入和根级媒体默认Exclude。本项没有Schema、GraphQL、前端、配置、媒体、Manifest或缓存变更，尚未提交或部署。
+- `internal/discovery`、`internal/persistence/productdb`、`internal/productapi`与`internal/productserver`回归通过；带`cgm_web_embed cgm_galleryepic`标签的Product API、Server和`cmd/cgm`组合回归通过。产品数据库全包测试同时覆盖既有Archive两阶段导入和根级媒体默认Exclude。
+- 功能、测试及部署前记录提交为`fbba7e2c9e2673ae652b67d2ebd748a0d6972dd4`（`Refine marker gallery title fallback`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic`组合标签构建；`go version -m`确认`vcs.modified=false`，正式二进制SHA-256为`f35b84abdab4d5c5a8c42745a88a37917af5d2c3d38d8d90b997bea8e0aa498d`。
+- 2026-08-19 00:32 CST完成本机Linux amd64增量部署。替换前正式二进制备份为`/tmp/cgm-before-marker-title-20260819`，SHA-256为`4a75dfc5edb5a20fd2406f39b7a48c95d4debd8558ac40711975715fc8cfd36a`；候选先安装至同目录临时路径并逐字节校验，再原子替换`/home/rainbowrunner/.local/bin/cgm`且只重启一次用户服务。
+- `cosplay-gallery-manager.service`保持`enabled/active/running`、`NRestarts=0`，Health/Ready均为204、首页和Session为200。About精确报告完整提交、`buildTime=2026-08-18T16:31:05Z`和`exactSourceAvailable=true`；首次健康探针发生在监听就绪前，自动重试后立即通过。
+- 正式数据库仍为`cosplay-gallery-manager / schema 4`、inode `19679716`且`PRAGMA integrity_check=ok`；配置SHA-256仍为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`。启动日志仅有正常停止、启动、两个工作器和验证请求，没有迁移、WARN、ERROR、FAILED、panic或fatal。本项未替换数据库、配置、媒体、Manifest或缓存。

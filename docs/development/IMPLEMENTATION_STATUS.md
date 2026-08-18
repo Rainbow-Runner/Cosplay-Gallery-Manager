@@ -2,7 +2,7 @@
 
 > 当前里程碑：1.5 本机业务迭代与可诊断性增强
 > 状态：进行中
-> 更新日期：2026-08-18
+> 更新日期：2026-08-19
 
 ## 已规划、尚未实现
 
@@ -10,7 +10,7 @@
 
 ## 已完成
 
-- 1.5（MARKER单子目录标题保底，待部署）：`.cosplay-root`所在父目录继续作为DIRECTORY来源根；新发现的MARKER根若恰好只有一个直属真实子目录，Candidate预览、手动导入及自动建DRAFT统一以该子目录名作为标题，零个或多个子目录仍取根目录名。已有Gallery不回写，根级媒体默认Exclude和ZIP/CBZ扫描规则不变。Discovery、产品数据库、API、Server及正式标签组合回归已通过，本轮尚未提交或部署。
+- 1.5（MARKER单子目录标题保底，已部署）：`.cosplay-root`所在父目录继续作为DIRECTORY来源根；新发现的MARKER根若恰好只有一个直属真实子目录，Candidate预览、手动导入及自动建DRAFT统一以该子目录名作为标题，零个或多个子目录仍取根目录名。已有Gallery不回写，根级媒体默认Exclude和ZIP/CBZ扫描规则不变。Discovery、产品数据库、API、Server及正式标签组合回归已通过；2026-08-19已从清洁提交`fbba7e2`完成本机增量部署，正式数据库保持schema v4且完整性复核通过。
 - 1.5（单媒体完整元数据显示，已部署）：单媒体详情新增文件、描述、日期、相机、图像、视频及其他安全EXIF分组。详情主体先完成，独立GraphQL查询再从当前原始媒体异步实时只读作者、来源、程序名称、版权、拍摄/获取日期、制造商/型号、光圈、曝光、ISO、焦距等字段；读取失败仅影响信息区。图片安全提取结果不写数据库、不生成缓存、不排后台任务、不回填存量数据，产品schema保持v4。Manage Settings按当前浏览器保存显示选择，服务端逐次校验并过滤；GPS与设备/图像唯一标识默认关闭，嵌入缩略图、MakerNote、未知Tag、二进制块和物理路径永不进入Browse。2026-08-18已从清洁提交`2db91e9`完成本机增量部署，数据库完整性与无图片元数据表状态均已复核。
 - 1.5（媒体分类规则信息架构与中文化，已部署）：将Media classification从单个媒体库工作区提升为Libraries & import页的独立管理区；有效规则按“全局规则”和“当前媒体库覆盖规则”分组，新增规则默认全局作用域，默认恢复只出现在全局区。规则作用范围与预览/评估目标明确分离，单库操作显示实际媒体库名称；媒体库、发现规则、导入发现及分类审核的可见文案已接入`react-intl`中英文消息，不改变后端叠加、优先级、建议审核或媒体写入语义。2026-08-18已从清洁提交`ef92526`完成本机增量部署。
 - 1.5（可管理媒体分类规则，已部署）：新增独立于Gallery根发现的全局/媒体库规则，支持父目录、文件名、文件stem、完整相对路径与Exact/Glob/Go RE2；order相同时媒体库规则优先，首个命中停止且PHOTO可显式排除。只评估STATIC_IMAGE并只生成待审核建议，扫描或保存规则不自动覆盖人工/Manifest分类。
@@ -190,6 +190,7 @@
 
 ## 本机实际业务应用测试部署（2026-07-27）
 
+- 2026-08-19 00:32 CST已从精确提交`fbba7e2c9e2673ae652b67d2ebd748a0d6972dd4`增量部署MARKER单子目录标题保底，SHA-256为`f35b84abdab4d5c5a8c42745a88a37917af5d2c3d38d8d90b997bea8e0aa498d`；旧二进制备份于`/tmp/cgm-before-marker-title-20260819`。服务保持`enabled/active/running`、`NRestarts=0`，Health/Ready为204，About报告精确源码且`exactSourceAvailable=true`；配置校验和和产品数据库inode不变，schema v4完整性为`ok`，启动日志无异常。
 - 2026-08-16 22:49 CST已从精确提交`4c0dadacee45b47850f3d3a4074f804838b16925`增量部署静态原图混合直读与完整时长动画预览构建，SHA-256为`c195f0e16b4c56628e241fa54ef4e113b2db1bbce2d1873830dc4abc373f68bf`；旧二进制备份于`/tmp/cgm-before-image-animation-20260816`。服务保持`active/running`、`NRestarts=0`，Health/Ready为204，About报告精确源码且`exactSourceAvailable=true`；配置和产品数据库inode不变，启动日志无迁移或处理错误。
 - 2026-08-17 00:03 CST已从精确提交`f22ca41d237def7d70e489522422dd4f7a3819a5`增量部署可配置动画播放窗口构建，SHA-256为`a66ab60a43cc5a9a572afca8b9767cf529f6e32b3bcfa0a6a36598bd8c252cfc`。部署前额外完整回滚包和自动schema v2快照均已解包/独立完整性校验；正式库无记录损失迁至schema v3并采用12项/800ms默认值。服务保持`active/running`、`NRestarts=0`，Health/Ready为204，About精确指向部署提交，启动日志无异常。
 - 2026-08-17 00:36 CST已从精确提交`edf4bf30c8090e70cbe2624487d65d4648853a10`增量部署Coser详情跨作品类型筛选构建，SHA-256为`f34233ad63c524cb60564c7fe19ba03f628819d70343a58aaa90671d4edc7c8f`；旧二进制保留于`/tmp/cgm-before-coser-types-20260817`。服务保持`active/running`、`NRestarts=0`，Health/Ready为204、About精确指向部署提交；配置/数据库inode不变且无schema迁移，启动日志无异常。

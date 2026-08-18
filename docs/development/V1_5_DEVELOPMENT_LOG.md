@@ -1548,4 +1548,7 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 单媒体详情新增中英文分组、字段名、实时读取中/读取失败/无可见字段状态，并保持长值安全换行；普通字段默认开启，GPS和唯一标识明确标记为默认关闭。
 - Go目标回归覆盖真实合成JPEG的安全EXIF解析，以及改写原始图片后第二次查询立即得到新尺寸，证明未使用图片元数据持久化或缓存；productdb、productapi、productserver目标包均PASS。带`cgm_web_embed cgm_galleryepic`标签的Product API、Server与`cmd/cgm`组合回归PASS。
 - `corepack pnpm run test`通过28个测试文件、77项测试；`corepack pnpm run check`通过TypeScript检查；生产构建完成679模块转换。完整`go test ./internal/...`仍只有既有原Stash `internal/api`、`internal/api/urlbuilders`和`internal/manager`因仓库明确不提供`ui/v2.5/build`旧UI嵌入目录而在setup阶段失败，本轮没有恢复旧UI绕过隔离门禁。
-- 本项尚未提交、构建安装或重启正式服务。由于schema保持v4且不存在回填，增量部署不会迁移数据库或批量访问媒体；提交后仍需从清洁提交重新构建，并完成Health/Ready/About/journal门禁。
+- 功能、测试及部署前记录提交为`2db91e94f6fcf85be60465bde94a898976d57d10`（`Read image metadata on demand`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic`组合标签重新构建；`go version -m`确认`vcs.modified=false`，候选二进制SHA-256为`4a75dfc5edb5a20fd2406f39b7a48c95d4debd8558ac40711975715fc8cfd36a`。
+- 2026-08-18 23:51 CST完成本机Linux amd64增量部署。替换前正式二进制备份为`/tmp/cgm-before-metadata-ondemand-20260818-2351`，SHA-256为`023810836a04045e56eda97fe8e857ea8539555bdfea7ff53bb9f1d516c7eae0`；候选先写入同目录并逐字节校验，再原子替换`/home/rainbowrunner/.local/bin/cgm`且只重启一次用户服务。
+- `cosplay-gallery-manager.service`保持`enabled/active/running`、`NRestarts=0`；Health/Ready均为204、首页为200。About精确报告`gitHash=2db91e9`、`buildTime=2026-08-18 23:50:36`和`exactSourceAvailable=true`。
+- 正式数据库身份仍为`cosplay-gallery-manager / schema 4`，`image_embedded_metadata`表数量为0且`PRAGMA integrity_check=ok`；启动日志只有正常停止、启动、2个工作器及健康验证请求，没有迁移、回填、WARN、ERROR、FAILED、panic或fatal。配置SHA-256部署前后均为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`，未替换数据库、媒体、Manifest或缓存。

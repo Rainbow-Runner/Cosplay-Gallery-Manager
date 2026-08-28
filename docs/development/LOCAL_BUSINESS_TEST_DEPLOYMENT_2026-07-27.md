@@ -1,5 +1,13 @@
 # 本机实际业务应用测试部署
 
+### 2026-08-28 可管理媒体自动排除规则部署
+
+- 从提交 `18d6485b34cb52bc0db77dca835142c2d4714bc6` 构建并部署带 `cgm_web_embed cgm_galleryepic` 的 Linux amd64 二进制，SHA-256 为 `ab1156db14e21c6f50f7cbe91a92be6c5df65021f6e2f3a2a086854a59412825`。
+- 停止服务后创建并校验额外完整回滚包 `/home/rainbowrunner/cos/bk/cgm-predeploy-20260828T123000Z-18d6485.tar.gz`，SHA-256 为 `4aa68c94c9361a86b3422726fadc57acf34fae5510e0baec4dd15e766b3da913`；包含旧二进制、启动配置、systemd 单元、Coser 托管元数据及 SQLite 快照，不包含媒体、缓存和日志。
+- 新服务启动时完成产品数据库 schema v4→v5 迁移；`cgm_product_identity.schema_version=5`，`PRAGMA integrity_check=ok`，`media_exclusion_rules` 与 `media_exclusion_decisions` 初始均为 0 行，既有媒体状态未改变。
+- 用户服务保持 `active`、`NRestarts=0`；`/healthz` 与 `/readyz` 均返回 204，`/about.json` 报告完整提交号、`exactSourceAvailable=true`。启动 journal 仅见正常停止/启动、2 个工作器及健康检查，无迁移错误、WARN、ERROR、FAILED、panic 或 fatal。
+
+
 ## 1.5 增量开发状态
 
 ### 2026-08-19 MARKER单子目录标题保底增量部署

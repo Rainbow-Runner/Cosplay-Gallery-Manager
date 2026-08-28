@@ -1602,3 +1602,10 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - `internal/mediarules`、`internal/mediaexclusion`、`internal/mediaclassification`、`internal/persistence/productdb`、`internal/productapi`、`internal/productserver`、`internal/sourcescan`和`internal/manifest`目标回归全部PASS；带`cgm_web_embed cgm_galleryepic`标签的Product API、Server和`cmd/cgm`组合PASS。
 - `corepack pnpm run check`通过；`corepack pnpm run test`通过29个测试文件80项；生产构建完成680模块转换。仓库级`go test ./...`中的CGM目标包均通过，但总命令仍因仓库不包含旧Stash `ui/v2.5/build`以及受限沙箱不允许`pkg/scraper`的`httptest`监听IPv6端口而失败，未把它记录为全仓通过。
 - 本阶段到此只完成源码、生成代码、测试和开发记录。尚未创建提交或正式候选，也没有触碰/迁移正式schema v4数据库，没有备份、重启或部署。后续部署必须先形成清洁提交，再建立并解包验证额外完整回滚包，随后核验自动v4快照、schema v5、`integrity_check`、规则表初始状态、正式服务Health/Ready/About和journal。
+
+### 1.5-42 部署记录
+
+- 2026-08-28 从清洁提交 `18d6485b34cb52bc0db77dca835142c2d4714bc6` 构建并部署带 `cgm_web_embed cgm_galleryepic` 的 Linux amd64 二进制，SHA-256 为 `ab1156db14e21c6f50f7cbe91a92be6c5df65021f6e2f3a2a086854a59412825`。
+- 停止服务后创建额外完整回滚包 `/home/rainbowrunner/cos/bk/cgm-predeploy-20260828T123000Z-18d6485.tar.gz`，SHA-256 为 `4aa68c94c9361a86b3422726fadc57acf34fae5510e0baec4dd15e766b3da913`；归档已实际列举校验，未包含媒体、缓存或日志。
+- 启动时自动完成 schema v4→v5 迁移；`cgm_product_identity.schema_version=5`、`PRAGMA integrity_check=ok`，规则与决策表初始为空，既有 Item 状态保持不变。
+- 用户服务保持 `active`、`NRestarts=0`，Health/Ready 均为 204；About 报告完整提交号与 `exactSourceAvailable=true`。journal 未发现迁移错误、WARN、ERROR、FAILED、panic 或 fatal。

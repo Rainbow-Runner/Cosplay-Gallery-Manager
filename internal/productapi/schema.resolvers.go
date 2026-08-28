@@ -18,6 +18,7 @@ import (
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/manifest"
 	"github.com/stashapp/stash/internal/mediaclassification"
+	"github.com/stashapp/stash/internal/mediaexclusion"
 	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/portableid"
@@ -401,6 +402,93 @@ func (r *mutationResolver) ResolveMediaClassificationSuggestion(ctx context.Cont
 	}
 	r.auditManage(ctx, "MEDIA_CLASSIFICATION_SUGGESTION_RESOLVE", "SUGGESTION", strconv.FormatInt(id, 10), "", nil, map[string]any{"accepted": accept, "rule_id": value.RuleID, "rule_revision": value.RuleRevision})
 	return manageMediaClassificationSuggestion(value), nil
+}
+
+// ValidateMediaExclusionRule is the resolver for the validateMediaExclusionRule field.
+func (r *mutationResolver) ValidateMediaExclusionRule(ctx context.Context, input MediaExclusionRuleInput) (*ManageRuleValidation, error) {
+	err := mediaexclusion.Validate(mediaExclusionRuleInput(input))
+	code, message := mediaexclusion.ValidationDetails(err)
+	return &ManageRuleValidation{Valid: err == nil, ErrorCode: code, Message: message}, nil
+}
+
+// CreateMediaExclusionRule is the resolver for the createMediaExclusionRule field.
+func (r *mutationResolver) CreateMediaExclusionRule(ctx context.Context, input MediaExclusionRuleInput) (*ManageMediaExclusionRule, error) {
+	value, err := r.Database.MediaExclusionRules().Create(ctx, mediaExclusionRuleInput(input), time.Now())
+	if err != nil {
+		r.auditManage(ctx, "MEDIA_EXCLUSION_RULE_CREATE", "RULE", "", "MEDIA_EXCLUSION_RULE_CREATE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "MEDIA_EXCLUSION_RULE_CREATE", "RULE", strconv.FormatInt(value.ID, 10), "", nil,
+		map[string]any{"library_id": value.LibraryID, "operator": value.Operator, "subject": value.Subject, "media_kind": value.MediaKind, "decision": value.Decision, "enabled": value.Enabled})
+	return manageMediaExclusionRule(value), nil
+}
+
+// UpdateMediaExclusionRule is the resolver for the updateMediaExclusionRule field.
+func (r *mutationResolver) UpdateMediaExclusionRule(ctx context.Context, input UpdateMediaExclusionRuleInput) (*ManageMediaExclusionRule, error) {
+	value, err := r.Database.MediaExclusionRules().Update(ctx, productdb.MediaExclusionRule{ID: input.ID, LibraryID: input.LibraryID,
+		Name: input.Name, Enabled: input.Enabled, Order: input.Order, Subject: mediaexclusion.Subject(input.Subject),
+		Operator: mediaexclusion.Operator(input.Operator), Pattern: input.Pattern, CaseSensitive: input.CaseSensitive,
+		MediaKind: mediaexclusion.MediaKind(input.MediaKind), Decision: mediaexclusion.Decision(input.Decision)}, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "MEDIA_EXCLUSION_RULE_UPDATE", "RULE", strconv.FormatInt(input.ID, 10), "MEDIA_EXCLUSION_RULE_UPDATE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "MEDIA_EXCLUSION_RULE_UPDATE", "RULE", strconv.FormatInt(value.ID, 10), "", nil,
+		map[string]any{"revision": value.Revision, "operator": value.Operator, "media_kind": value.MediaKind, "decision": value.Decision, "enabled": value.Enabled})
+	return manageMediaExclusionRule(value), nil
+}
+
+// DeleteMediaExclusionRule is the resolver for the deleteMediaExclusionRule field.
+func (r *mutationResolver) DeleteMediaExclusionRule(ctx context.Context, id int64) (bool, error) {
+	err := r.Database.MediaExclusionRules().Delete(ctx, id, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "MEDIA_EXCLUSION_RULE_DELETE", "RULE", strconv.FormatInt(id, 10), "MEDIA_EXCLUSION_RULE_DELETE_FAILED", err, nil)
+		return false, manageError(err)
+	}
+	r.auditManage(ctx, "MEDIA_EXCLUSION_RULE_DELETE", "RULE", strconv.FormatInt(id, 10), "", nil, nil)
+	return true, nil
+}
+
+// TestMediaExclusionRule is the resolver for the testMediaExclusionRule field.
+func (r *mutationResolver) TestMediaExclusionRule(ctx context.Context, input MediaExclusionRuleInput, relativePath string, mediaKind string) (*ManageMediaExclusionMatch, error) {
+	value, err := productdb.TestMediaExclusionRule(mediaExclusionRuleInput(input), relativePath, mediaKind)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	return manageMediaExclusionMatch(value), nil
+}
+
+// PreviewMediaExclusionRule is the resolver for the previewMediaExclusionRule field.
+func (r *mutationResolver) PreviewMediaExclusionRule(ctx context.Context, input MediaExclusionRuleInput, libraryID *int64) (*ManageMediaExclusionPreview, error) {
+	value, err := r.Database.MediaExclusionRules().Preview(ctx, mediaExclusionRuleInput(input), libraryID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	return manageMediaExclusionPreview(value), nil
+}
+
+// EvaluateMediaExclusionRules is the resolver for the evaluateMediaExclusionRules field.
+func (r *mutationResolver) EvaluateMediaExclusionRules(ctx context.Context, libraryID *int64) (*ManageMediaExclusionEvaluation, error) {
+	value, err := r.Database.MediaExclusionRules().EvaluateExisting(ctx, libraryID, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "MEDIA_EXCLUSION_EVALUATE", "LIBRARY", optionalInt64Target(libraryID), "MEDIA_EXCLUSION_EVALUATE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "MEDIA_EXCLUSION_EVALUATE", "LIBRARY", optionalInt64Target(libraryID), "", nil,
+		map[string]any{"evaluated": value.Evaluated, "matched": value.Matched, "pending": value.Pending, "superseded": value.Superseded})
+	return &ManageMediaExclusionEvaluation{Evaluated: value.Evaluated, Matched: value.Matched, Pending: value.Pending, Superseded: value.Superseded}, nil
+}
+
+// ResolveMediaExclusionDecision is the resolver for the resolveMediaExclusionDecision field.
+func (r *mutationResolver) ResolveMediaExclusionDecision(ctx context.Context, id int64, accept bool, expectedGalleryRevision int64) (*ManageMediaExclusionDecision, error) {
+	value, err := r.Database.MediaExclusionRules().ResolveDecision(ctx, id, accept, expectedGalleryRevision, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "MEDIA_EXCLUSION_DECISION_RESOLVE", "DECISION", strconv.FormatInt(id, 10), "MEDIA_EXCLUSION_DECISION_RESOLVE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "MEDIA_EXCLUSION_DECISION_RESOLVE", "DECISION", strconv.FormatInt(id, 10), "", nil,
+		map[string]any{"accepted": accept, "rule_id": value.RuleID, "rule_revision": value.RuleRevision})
+	return manageMediaExclusionDecision(value), nil
 }
 
 // DiscoverMediaLibrary is the resolver for the discoverMediaLibrary field.
@@ -1276,6 +1364,32 @@ func (r *queryResolver) ManageMediaClassificationSuggestions(ctx context.Context
 	result := make([]*ManageMediaClassificationSuggestion, 0, len(values))
 	for _, value := range values {
 		result = append(result, manageMediaClassificationSuggestion(value))
+	}
+	return result, nil
+}
+
+// ManageMediaExclusionRules is the resolver for the manageMediaExclusionRules field.
+func (r *queryResolver) ManageMediaExclusionRules(ctx context.Context, libraryID *int64) ([]*ManageMediaExclusionRule, error) {
+	values, err := r.Database.MediaExclusionRules().List(ctx, libraryID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	result := make([]*ManageMediaExclusionRule, 0, len(values))
+	for _, value := range values {
+		result = append(result, manageMediaExclusionRule(value))
+	}
+	return result, nil
+}
+
+// ManageMediaExclusionDecisions is the resolver for the manageMediaExclusionDecisions field.
+func (r *queryResolver) ManageMediaExclusionDecisions(ctx context.Context, libraryID *int64, status string) ([]*ManageMediaExclusionDecision, error) {
+	values, err := r.Database.MediaExclusionRules().Decisions(ctx, libraryID, status)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	result := make([]*ManageMediaExclusionDecision, 0, len(values))
+	for _, value := range values {
+		result = append(result, manageMediaExclusionDecision(value))
 	}
 	return result, nil
 }

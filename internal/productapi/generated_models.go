@@ -574,6 +574,72 @@ type ManageMediaClassificationSuggestion struct {
 	Status           string        `json:"status"`
 }
 
+type ManageMediaExclusionDecision struct {
+	ID              int64  `json:"id"`
+	GalleryID       int64  `json:"galleryID"`
+	GalleryRevision int64  `json:"galleryRevision"`
+	GallerySetID    string `json:"gallerySetID"`
+	GalleryTitle    string `json:"galleryTitle"`
+	ItemUUID        string `json:"itemUUID"`
+	RelativePath    string `json:"relativePath"`
+	RuleID          int64  `json:"ruleID"`
+	RuleRevision    int    `json:"ruleRevision"`
+	RuleName        string `json:"ruleName"`
+	Decision        string `json:"decision"`
+	MatchedSubject  string `json:"matchedSubject"`
+	MatchedValue    string `json:"matchedValue"`
+	Status          string `json:"status"`
+}
+
+type ManageMediaExclusionEvaluation struct {
+	Evaluated  int `json:"evaluated"`
+	Matched    int `json:"matched"`
+	Pending    int `json:"pending"`
+	Superseded int `json:"superseded"`
+}
+
+type ManageMediaExclusionMatch struct {
+	Matched      bool   `json:"matched"`
+	RuleID       int64  `json:"ruleID"`
+	RuleName     string `json:"ruleName"`
+	Decision     string `json:"decision"`
+	Subject      string `json:"subject"`
+	MatchedValue string `json:"matchedValue"`
+}
+
+type ManageMediaExclusionPreview struct {
+	TotalMatches int                                  `json:"totalMatches"`
+	Samples      []*ManageMediaExclusionPreviewSample `json:"samples"`
+}
+
+type ManageMediaExclusionPreviewSample struct {
+	GallerySetID      string `json:"gallerySetID"`
+	GalleryTitle      string `json:"galleryTitle"`
+	ItemUUID          string `json:"itemUUID"`
+	RelativePath      string `json:"relativePath"`
+	MediaKind         string `json:"mediaKind"`
+	CurrentlyExcluded bool   `json:"currentlyExcluded"`
+	ProposedDecision  string `json:"proposedDecision"`
+	WinningRuleName   string `json:"winningRuleName"`
+	MatchedValue      string `json:"matchedValue"`
+}
+
+type ManageMediaExclusionRule struct {
+	ID            int64  `json:"id"`
+	LibraryID     *int64 `json:"libraryID,omitempty"`
+	Name          string `json:"name"`
+	Enabled       bool   `json:"enabled"`
+	Order         int    `json:"order"`
+	Subject       string `json:"subject"`
+	Operator      string `json:"operator"`
+	Pattern       string `json:"pattern"`
+	CaseSensitive bool   `json:"caseSensitive"`
+	MediaKind     string `json:"mediaKind"`
+	Decision      string `json:"decision"`
+	Revision      int    `json:"revision"`
+	SystemDefault bool   `json:"systemDefault"`
+}
+
 type ManageProcessingJob struct {
 	ID                int64   `json:"id"`
 	Kind              string  `json:"kind"`
@@ -710,6 +776,20 @@ type MediaDetail struct {
 	Gallery          *BrowseGalleryCard     `json:"gallery"`
 	MetadataRevision int64                  `json:"metadataRevision"`
 	VideoTechnical   *VideoTechnicalSummary `json:"videoTechnical,omitempty"`
+}
+
+type MediaExclusionRuleInput struct {
+	ID            *int64 `json:"id,omitempty"`
+	LibraryID     *int64 `json:"libraryID,omitempty"`
+	Name          string `json:"name"`
+	Enabled       bool   `json:"enabled"`
+	Order         int    `json:"order"`
+	Subject       string `json:"subject"`
+	Operator      string `json:"operator"`
+	Pattern       string `json:"pattern"`
+	CaseSensitive bool   `json:"caseSensitive"`
+	MediaKind     string `json:"mediaKind"`
+	Decision      string `json:"decision"`
 }
 
 type MediaInformationEntry struct {
@@ -906,6 +986,20 @@ type UpdateMediaClassificationRuleInput struct {
 	Pattern        string        `json:"pattern"`
 	CaseSensitive  bool          `json:"caseSensitive"`
 	ResultCategory ImageCategory `json:"resultCategory"`
+}
+
+type UpdateMediaExclusionRuleInput struct {
+	ID            int64  `json:"id"`
+	LibraryID     *int64 `json:"libraryID,omitempty"`
+	Name          string `json:"name"`
+	Enabled       bool   `json:"enabled"`
+	Order         int    `json:"order"`
+	Subject       string `json:"subject"`
+	Operator      string `json:"operator"`
+	Pattern       string `json:"pattern"`
+	CaseSensitive bool   `json:"caseSensitive"`
+	MediaKind     string `json:"mediaKind"`
+	Decision      string `json:"decision"`
 }
 
 type UpdateRecognitionRuleInput struct {

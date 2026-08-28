@@ -1,7 +1,6 @@
-// Package mediaclassification contains the database-independent media rule
-// validator and matcher. It deliberately has no filesystem access: callers
-// provide normalized, gallery-relative paths from trusted scan/database data.
-package mediaclassification
+// Package mediaexclusion defines automatic GalleryItem exclusion policy on
+// top of the shared, filesystem-independent media path matcher.
+package mediaexclusion
 
 import (
 	"fmt"
@@ -10,16 +9,13 @@ import (
 	"github.com/stashapp/stash/internal/mediarules"
 )
 
-const (
-	MaxNameBytes    = 300
-	MaxPatternBytes = mediarules.MaxPatternBytes
-	MaxPatterns     = mediarules.MaxPatterns
-)
+const MaxNameBytes = 300
 
 type Subject = mediarules.Subject
 
 const (
 	SubjectParentFolder = mediarules.SubjectParentFolder
+	SubjectParentPath   = mediarules.SubjectParentPath
 	SubjectFileName     = mediarules.SubjectFileName
 	SubjectFileStem     = mediarules.SubjectFileStem
 	SubjectRelativePath = mediarules.SubjectRelativePath
@@ -33,11 +29,20 @@ const (
 	OperatorRE2   = mediarules.OperatorRE2
 )
 
-type Category string
+type MediaKind string
 
 const (
-	CategoryPhoto  Category = "PHOTO"
-	CategorySelfie Category = "SELFIE"
+	MediaKindAll      MediaKind = "ALL"
+	MediaKindStatic   MediaKind = "STATIC_IMAGE"
+	MediaKindAnimated MediaKind = "ANIMATED_IMAGE"
+	MediaKindVideo    MediaKind = "VIDEO"
+)
+
+type Decision string
+
+const (
+	DecisionExclude Decision = "EXCLUDE"
+	DecisionInclude Decision = "INCLUDE"
 )
 
 type Rule struct {
@@ -50,7 +55,8 @@ type Rule struct {
 	Operator      Operator
 	Pattern       string
 	CaseSensitive bool
-	Category      Category
+	MediaKind     MediaKind
+	Decision      Decision
 	Revision      int
 	SystemDefault bool
 }
@@ -61,15 +67,15 @@ func Validate(rule Rule) error {
 	if strings.TrimSpace(rule.Name) == "" || len(rule.Name) > MaxNameBytes {
 		return invalid("RULE_NAME_INVALID", fmt.Sprintf("Rule name must contain 1-%d bytes", MaxNameBytes))
 	}
-	switch rule.Subject {
-	case SubjectParentFolder, SubjectFileName, SubjectFileStem, SubjectRelativePath:
+	switch rule.MediaKind {
+	case MediaKindAll, MediaKindStatic, MediaKindAnimated, MediaKindVideo:
 	default:
-		return invalid("RULE_SUBJECT_INVALID", "Match subject is not supported")
+		return invalid("RULE_MEDIA_KIND_INVALID", "Media kind must be ALL, STATIC_IMAGE, ANIMATED_IMAGE or VIDEO")
 	}
-	switch rule.Category {
-	case CategoryPhoto, CategorySelfie:
+	switch rule.Decision {
+	case DecisionExclude, DecisionInclude:
 	default:
-		return invalid("RULE_CATEGORY_INVALID", "Result category must be PHOTO or SELFIE")
+		return invalid("RULE_DECISION_INVALID", "Decision must be EXCLUDE or INCLUDE")
 	}
 	return mediarules.Validate(mediarules.Spec{Subject: rule.Subject, Operator: rule.Operator, Pattern: rule.Pattern, CaseSensitive: rule.CaseSensitive})
 }
@@ -92,16 +98,15 @@ func Compile(rule Rule) (*CompiledRule, error) {
 
 func (r *CompiledRule) Rule() Rule { return r.rule }
 
-// Match returns the actual subject value that matched. Parent-folder rules
-// evaluate each folder segment from the file's immediate parent outward.
-func (r *CompiledRule) Match(relativePath string) (bool, string) {
+func (r *CompiledRule) Match(relativePath string, mediaKind string) (bool, string) {
+	if r.rule.MediaKind != MediaKindAll && string(r.rule.MediaKind) != mediaKind {
+		return false, ""
+	}
 	return r.matcher.Match(relativePath)
 }
 
+func ValidationDetails(err error) (string, string) { return mediarules.ValidationDetails(err) }
+
 func invalid(code, message string) error {
 	return &mediarules.ValidationError{Code: code, Message: message}
-}
-
-func ValidationDetails(err error) (string, string) {
-	return mediarules.ValidationDetails(err)
 }

@@ -375,6 +375,36 @@ func manageMediaClassificationSuggestion(value productdb.MediaClassificationSugg
 	return &ManageMediaClassificationSuggestion{ID: value.ID, GalleryID: value.GalleryID, GalleryRevision: value.GalleryRevision, GallerySetID: value.GallerySetID, GalleryTitle: value.GalleryTitle, ItemUUID: value.ItemUUID, RelativePath: value.RelativePath, RuleID: value.RuleID, RuleRevision: value.RuleRevision, RuleName: value.RuleName, ProposedCategory: ImageCategory(value.ProposedCategory), MatchedSubject: value.MatchedSubject, MatchedValue: value.MatchedValue, Status: value.Status}
 }
 
+func manageMediaExclusionRule(value productdb.MediaExclusionRule) *ManageMediaExclusionRule {
+	return &ManageMediaExclusionRule{ID: value.ID, LibraryID: value.LibraryID, Name: value.Name, Enabled: value.Enabled, Order: value.Order,
+		Subject: string(value.Subject), Operator: string(value.Operator), Pattern: value.Pattern, CaseSensitive: value.CaseSensitive,
+		MediaKind: string(value.MediaKind), Decision: string(value.Decision), Revision: value.Revision, SystemDefault: value.SystemDefault}
+}
+
+func manageMediaExclusionMatch(value productdb.MediaExclusionMatch) *ManageMediaExclusionMatch {
+	return &ManageMediaExclusionMatch{Matched: value.Matched, RuleID: value.RuleID, RuleName: value.RuleName,
+		Decision: value.Decision, Subject: value.Subject, MatchedValue: value.MatchedValue}
+}
+
+func manageMediaExclusionPreview(value productdb.MediaExclusionPreview) *ManageMediaExclusionPreview {
+	result := &ManageMediaExclusionPreview{TotalMatches: value.TotalMatches}
+	for _, sample := range value.Samples {
+		result.Samples = append(result.Samples, &ManageMediaExclusionPreviewSample{
+			GallerySetID: sample.GallerySetID, GalleryTitle: sample.GalleryTitle, ItemUUID: sample.ItemUUID,
+			RelativePath: sample.RelativePath, MediaKind: sample.MediaKind, CurrentlyExcluded: sample.CurrentlyExcluded,
+			ProposedDecision: sample.ProposedDecision, WinningRuleName: sample.WinningRuleName, MatchedValue: sample.MatchedValue,
+		})
+	}
+	return result
+}
+
+func manageMediaExclusionDecision(value productdb.MediaExclusionDecision) *ManageMediaExclusionDecision {
+	return &ManageMediaExclusionDecision{ID: value.ID, GalleryID: value.GalleryID, GalleryRevision: value.GalleryRevision,
+		GallerySetID: value.GallerySetID, GalleryTitle: value.GalleryTitle, ItemUUID: value.ItemUUID, RelativePath: value.RelativePath,
+		RuleID: value.RuleID, RuleRevision: value.RuleRevision, RuleName: value.RuleName, Decision: value.Decision,
+		MatchedSubject: value.MatchedSubject, MatchedValue: value.MatchedValue, Status: value.Status}
+}
+
 func manageDiscoverySnapshot(value productdb.DiscoverySnapshot) *ManageDiscoverySnapshot {
 	result := &ManageDiscoverySnapshot{ID: value.ID, LibraryID: value.LibraryID}
 	if !value.CompletedAt.IsZero() {

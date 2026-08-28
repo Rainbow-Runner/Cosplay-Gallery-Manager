@@ -271,6 +271,13 @@ func validateSchemaV4(ctx context.Context, db *sql.DB) error {
 	return validateMediaClassificationSchemaV4(ctx, db)
 }
 
+func validateSchemaV5(ctx context.Context, db *sql.DB) error {
+	if err := validateSchemaV4(ctx, db); err != nil {
+		return err
+	}
+	return validateMediaExclusionSchemaV5(ctx, db)
+}
+
 func schemaObjectExists(ctx context.Context, db *sql.DB, objectType string, name string) (bool, error) {
 	var count int
 	if err := db.QueryRowContext(ctx, `

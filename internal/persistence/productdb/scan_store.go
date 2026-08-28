@@ -14,6 +14,7 @@ import (
 	"github.com/stashapp/stash/internal/archivecheck"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/media"
+	"github.com/stashapp/stash/internal/mediaexclusion"
 	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/portableid"
 	"github.com/stashapp/stash/internal/sourcescan"
@@ -170,13 +171,15 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 	defer func() { _ = tx.Rollback() }()
 
 	var sourceID, galleryID int64
+	var sourceType gallery.SourceType
+	var sourceLibraryID sql.NullInt64
 	var runStatus string
 	if err := tx.QueryRowContext(ctx, `
-		SELECT run.source_id, source.gallery_id, run.status
+		SELECT run.source_id, source.gallery_id, source.source_type, source.library_id, run.status
 		FROM gallery_scan_runs run
 		JOIN gallery_sources source ON source.id = run.source_id
 		WHERE run.id = ?
-	`, scanRunID).Scan(&sourceID, &galleryID, &runStatus); err != nil {
+	`, scanRunID).Scan(&sourceID, &galleryID, &sourceType, &sourceLibraryID, &runStatus); err != nil {
 		return err
 	}
 	if runStatus != "STAGING" {
@@ -191,7 +194,24 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 	if err != nil {
 		return err
 	}
-	if effectiveScanMemberCount(observations, existing, options) > 1000 {
+	ruleExclusions := map[string]scanRuleExclusion{}
+	if sourceType == gallery.SourceTypeDirectory {
+		var libraryID *int64
+		if sourceLibraryID.Valid {
+			libraryID = &sourceLibraryID.Int64
+		}
+		compiledRules, err := loadCompiledMediaExclusionRules(ctx, tx, libraryID)
+		if err != nil {
+			return err
+		}
+		for _, observation := range observations {
+			winner, matchedValue := matchMediaExclusionRules(compiledRules, observation.RelativePath, string(observation.MediaKind))
+			if winner != nil && winner.Rule().Decision == mediaexclusion.DecisionExclude {
+				ruleExclusions[observation.RelativePath] = scanRuleExclusion{rule: winner.Rule(), matchedValue: matchedValue}
+			}
+		}
+	}
+	if effectiveScanMemberCount(observations, existing, options, ruleExclusions) > 1000 {
 		if err := markScanOverLimit(ctx, tx, scanRunID, sourceID, galleryID, now); err != nil {
 			return err
 		}
@@ -260,12 +280,20 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 		}
 
 		maxPosition += 1024
-		itemID, err := insertObservedItem(
+		rootExcluded := options.ExcludeNewRootMedia && isRootRelativePath(observation.RelativePath)
+		ruleExclusion, ruleExcluded := ruleExclusions[observation.RelativePath]
+		excluded := rootExcluded || ruleExcluded
+		itemID, itemUUID, err := insertObservedItem(
 			ctx, tx, galleryID, sourceID, observation, maxPosition,
-			options.ExcludeNewRootMedia && isRootRelativePath(observation.RelativePath), scanRunID, now,
+			excluded, scanRunID, now,
 		)
 		if err != nil {
 			return err
+		}
+		if ruleExcluded && !rootExcluded {
+			if err := recordAppliedMediaExclusion(ctx, tx, galleryID, itemUUID, ruleExclusion.rule, ruleExclusion.matchedValue, now); err != nil {
+				return err
+			}
 		}
 		seenItemIDs[itemID] = struct{}{}
 	}
@@ -581,11 +609,11 @@ func insertObservedItem(
 	excluded bool,
 	scanRunID int64,
 	now time.Time,
-) (int64, error) {
+) (int64, string, error) {
 	timestamp := normalisedTime(now)
 	itemUUID := portableid.New()
 	if _, err := registerPortableUUID(ctx, tx, itemUUID, portableid.KindGalleryItem, timestamp); err != nil {
-		return 0, err
+		return 0, "", err
 	}
 	result, err := tx.ExecContext(ctx, `
 		INSERT INTO gallery_items (
@@ -599,9 +627,10 @@ func insertObservedItem(
 		observation.ByteSize, observation.QuickFingerprint, observation.FullFingerprint, boolInt(excluded),
 		scanRunID, formatTime(timestamp), formatTime(timestamp))
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
-	return result.LastInsertId()
+	id, err := result.LastInsertId()
+	return id, itemUUID, err
 }
 
 func markScanOverLimit(
@@ -762,7 +791,12 @@ func validateScanObservation(observation ScanObservation) error {
 // hard Gallery limit. A successful rescan must never silently restore an
 // excluded item merely because the file remains present or moved within the
 // same source.
-func effectiveScanMemberCount(observations []ScanObservation, existing []gallery.Item, options ScanOptions) int {
+type scanRuleExclusion struct {
+	rule         MediaExclusionRule
+	matchedValue string
+}
+
+func effectiveScanMemberCount(observations []ScanObservation, existing []gallery.Item, options ScanOptions, ruleExclusions map[string]scanRuleExclusion) int {
 	byPath := make(map[string]gallery.Item, len(existing))
 	observationPaths := make(map[string]struct{}, len(observations))
 	observationFingerprintCount := make(map[string]int)
@@ -799,7 +833,7 @@ func effectiveScanMemberCount(observations []ScanObservation, existing []gallery
 		}
 		if _, found := byPath[observation.RelativePath]; !found &&
 			!(observation.FullFingerprint != "" && observationFingerprintCount[observation.FullFingerprint] == 1 && len(candidates) == 1) &&
-			options.ExcludeNewRootMedia && isRootRelativePath(observation.RelativePath) {
+			(options.ExcludeNewRootMedia && isRootRelativePath(observation.RelativePath) || ruleExclusions[observation.RelativePath].rule.ID != 0) {
 			continue
 		}
 		count++

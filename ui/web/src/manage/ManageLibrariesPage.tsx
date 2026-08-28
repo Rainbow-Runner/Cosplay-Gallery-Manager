@@ -4,6 +4,7 @@ import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { CREATE_MEDIA_LIBRARY, CREATE_RECOGNITION_RULE, DELETE_RECOGNITION_RULE, DISCOVER_MEDIA_LIBRARY, IMPORT_GALLERY_CANDIDATE, MANAGE_DISCOVERY, MANAGE_LIBRARIES, UPDATE_RECOGNITION_RULE } from "../api/manage";
 import { MediaClassificationRules } from "./MediaClassificationRules";
+import { MediaExclusionRules } from "./MediaExclusionRules";
 import type { ManageDiscoverySnapshot, ManageGalleryDetail, ManageLibrary, ManageRecognitionRule } from "./types";
 
 const emptyLibrary = { name: "", rootPath: "", enabled: true, readOnly: true, captureTimezone: "UTC" };
@@ -125,6 +126,7 @@ export function ManageLibrariesPage() {
       </>}</div>
     </section>
     <MediaClassificationRules library={selectedLibrary ? { id: selectedLibrary.id, name: selectedLibrary.name } : null} />
+    <MediaExclusionRules library={selectedLibrary ? { id: selectedLibrary.id, name: selectedLibrary.name } : null} />
   </main>;
 }
 

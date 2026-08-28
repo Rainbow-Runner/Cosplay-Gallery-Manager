@@ -254,6 +254,11 @@ func initialiseIdentity(ctx context.Context, db *sql.DB, now time.Time) (Identit
 			return Identity{}, err
 		}
 	}
+	if product.DatabaseSchemaVersion >= 5 {
+		if err := createMediaExclusionSchemaV5(ctx, tx); err != nil {
+			return Identity{}, err
+		}
+	}
 
 	createdAt := now.UTC().Format(time.RFC3339Nano)
 	persistedCreatedAt, err := time.Parse(time.RFC3339Nano, createdAt)

@@ -275,6 +275,7 @@ flowchart LR
 - LibraryPathIgnoreRule 只影响未绑定路径发现。
 - GalleryItemExclusion 只影响已绑定来源内成员。
 - 来源内媒体默认纳入；排除保留 Item 和元数据，重扫不得恢复，显式忘记才删除记录。
+- 增加独立数据库媒体自动排除规则：第一阶段仅对DIRECTORY新Item按全局/媒体库范围、路径/文件匹配及媒体类型决定EXCLUDE或INCLUDE；根级媒体本次扫描开关优先，既有路径/指纹重绑定Item保持持久决定，Archive不变。
 - Gallery 删除后写入永久 Tombstone 与 Ignore，文件保留时也不得重建。
 
 #### P02-08 归档与资源安全
@@ -374,6 +375,7 @@ flowchart LR
 
 - 静态图片默认 PHOTO；SELFIE 只能由人工或 Manifest 确认。
 - 可管理的媒体分类规则支持父目录、文件名、文件stem与完整相对路径的Exact/Glob/RE2匹配；只对静态图片产生非阻断PHOTO/SELFIE建议，并按规则revision保留接受或拒绝结果。无效RE2/Glob必须在后端保存前拒绝。
+- 可管理的自动排除规则与媒体分类保持业务分表但复用纯路径匹配器；存量评估只产生待审核EXCLUDE建议，规则修改/删除和普通重扫不得静默恢复或覆盖Item状态。schema v5与完整门禁见[专项计划](development/MEDIA_EXCLUSION_RULES_PLAN_2026-08-28.md)。
 - Item 只具有 Gallery 上下文中的 media kind、分类、Caption、Position、排除、评分和收藏。
 - Caption 为受长度限制的短纯文本，不扩展成单媒体完整业务元数据。
 
@@ -690,6 +692,7 @@ flowchart LR
 - 默认自动扫描关闭；支持手工、启动时和定时扫描。
 - 任务队列、重试、取消、缓存容量和处理 profile 状态。
 - LibraryPathIgnoreRule、IgnoredGallerySource、GalleryItemExclusion 分层管理。
+- 在Libraries & import提供独立双语自动排除规则区，按全局/当前媒体库分组，并提供后端校验、单路径测试、存量预览、显式评估和逐项/批量审核。
 
 ### 13.2 退出门禁 G7
 

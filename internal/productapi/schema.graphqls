@@ -290,6 +290,14 @@ type ManageMediaClassificationPreviewSample { gallerySetID: ID! galleryTitle: St
 type ManageMediaClassificationPreview { totalMatches: Int! samples: [ManageMediaClassificationPreviewSample!]! }
 type ManageMediaClassificationEvaluation { evaluated: Int! matched: Int! pending: Int! superseded: Int! }
 type ManageMediaClassificationSuggestion { id: Int64! galleryID: Int64! galleryRevision: Int64! gallerySetID: ID! galleryTitle: String! itemUUID: ID! relativePath: String! ruleID: Int64! ruleRevision: Int! ruleName: String! proposedCategory: ImageCategory! matchedSubject: String! matchedValue: String! status: String! }
+type ManageMediaExclusionRule { id: Int64! libraryID: Int64 name: String! enabled: Boolean! order: Int! subject: String! operator: String! pattern: String! caseSensitive: Boolean! mediaKind: String! decision: String! revision: Int! systemDefault: Boolean! }
+input MediaExclusionRuleInput { id: Int64 libraryID: Int64 name: String! enabled: Boolean! order: Int! subject: String! operator: String! pattern: String! caseSensitive: Boolean! mediaKind: String! decision: String! }
+input UpdateMediaExclusionRuleInput { id: Int64! libraryID: Int64 name: String! enabled: Boolean! order: Int! subject: String! operator: String! pattern: String! caseSensitive: Boolean! mediaKind: String! decision: String! }
+type ManageMediaExclusionMatch { matched: Boolean! ruleID: Int64! ruleName: String! decision: String! subject: String! matchedValue: String! }
+type ManageMediaExclusionPreviewSample { gallerySetID: ID! galleryTitle: String! itemUUID: ID! relativePath: String! mediaKind: String! currentlyExcluded: Boolean! proposedDecision: String! winningRuleName: String! matchedValue: String! }
+type ManageMediaExclusionPreview { totalMatches: Int! samples: [ManageMediaExclusionPreviewSample!]! }
+type ManageMediaExclusionEvaluation { evaluated: Int! matched: Int! pending: Int! superseded: Int! }
+type ManageMediaExclusionDecision { id: Int64! galleryID: Int64! galleryRevision: Int64! gallerySetID: ID! galleryTitle: String! itemUUID: ID! relativePath: String! ruleID: Int64! ruleRevision: Int! ruleName: String! decision: String! matchedSubject: String! matchedValue: String! status: String! }
 type ManageSuggestion { field: String! value: String! }
 type ManageCandidate { id: Int64! rootPath: String! sourceType: String! method: String! manifestSetID: ID status: String! autoCreateDraft: Boolean! hasConflict: Boolean! overLimit: Boolean! mediaCount: Int! suggestions: [ManageSuggestion!]! }
 type ManageUnassignedDiagnostic { parentPath: String! mediaCount: Int! }
@@ -407,6 +415,8 @@ type Query {
   manageLibraries: [ManageLibrary!]!
   manageMediaClassificationRules(libraryID: Int64): [ManageMediaClassificationRule!]!
   manageMediaClassificationSuggestions(libraryID: Int64, status: String! = "PENDING"): [ManageMediaClassificationSuggestion!]!
+  manageMediaExclusionRules(libraryID: Int64): [ManageMediaExclusionRule!]!
+  manageMediaExclusionDecisions(libraryID: Int64, status: String! = "PENDING"): [ManageMediaExclusionDecision!]!
   manageDiscovery(libraryID: Int64!): ManageDiscoverySnapshot!
   manageRuntimeSettings: ManageRuntimeSettings!
   manageCacheStorage: ManageCacheStorage!
@@ -454,6 +464,14 @@ type Mutation {
   previewMediaClassificationRule(input: MediaClassificationRuleInput!, libraryID: Int64): ManageMediaClassificationPreview!
   evaluateMediaClassificationRules(libraryID: Int64): ManageMediaClassificationEvaluation!
   resolveMediaClassificationSuggestion(id: Int64!, accept: Boolean!, expectedGalleryRevision: Int64!): ManageMediaClassificationSuggestion!
+  validateMediaExclusionRule(input: MediaExclusionRuleInput!): ManageRuleValidation!
+  createMediaExclusionRule(input: MediaExclusionRuleInput!): ManageMediaExclusionRule!
+  updateMediaExclusionRule(input: UpdateMediaExclusionRuleInput!): ManageMediaExclusionRule!
+  deleteMediaExclusionRule(id: Int64!): Boolean!
+  testMediaExclusionRule(input: MediaExclusionRuleInput!, relativePath: String!, mediaKind: String!): ManageMediaExclusionMatch!
+  previewMediaExclusionRule(input: MediaExclusionRuleInput!, libraryID: Int64): ManageMediaExclusionPreview!
+  evaluateMediaExclusionRules(libraryID: Int64): ManageMediaExclusionEvaluation!
+  resolveMediaExclusionDecision(id: Int64!, accept: Boolean!, expectedGalleryRevision: Int64!): ManageMediaExclusionDecision!
   discoverMediaLibrary(libraryID: Int64!): ManageDiscoverySnapshot!
   importGalleryCandidate(candidateID: Int64!): ManageGalleryDetail!
   scanGallerySource(setID: ID!, excludeNewRootMedia: Boolean! = true): ManageGalleryDetail!

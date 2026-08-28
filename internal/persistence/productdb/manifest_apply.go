@@ -434,18 +434,20 @@ func applyManifestExclusions(ctx context.Context, tx *sql.Tx, galleryID int64, e
 		}
 		desired[itemID] = struct{}{}
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT id, excluded FROM gallery_items WHERE gallery_id = ?`, galleryID)
+	rows, err := tx.QueryContext(ctx, `SELECT id, item_uuid, content_revision, excluded FROM gallery_items WHERE gallery_id = ?`, galleryID)
 	if err != nil {
 		return err
 	}
 	type state struct {
-		id       int64
-		excluded bool
+		id              int64
+		uuid            string
+		contentRevision int64
+		excluded        bool
 	}
 	var states []state
 	for rows.Next() {
 		var value state
-		if err := rows.Scan(&value.id, &value.excluded); err != nil {
+		if err := rows.Scan(&value.id, &value.uuid, &value.contentRevision, &value.excluded); err != nil {
 			rows.Close()
 			return err
 		}
@@ -454,12 +456,36 @@ func applyManifestExclusions(ctx context.Context, tx *sql.Tx, galleryID int64, e
 	if err := rows.Close(); err != nil {
 		return err
 	}
+	restored := false
 	for _, current := range states {
 		_, shouldExclude := desired[current.id]
 		if current.excluded == shouldExclude {
 			continue
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE gallery_items SET excluded = ?, updated_at_utc = ? WHERE id = ?`, shouldExclude, formatTime(normalisedTime(now)), current.id); err != nil {
+			return err
+		}
+		decisionStatus, currentStatus := "SUPERSEDED", "PENDING"
+		if !shouldExclude {
+			decisionStatus, currentStatus = "REVERSED", "APPLIED"
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE media_exclusion_decisions SET status=?,resolved_at_utc=?
+			WHERE item_uuid=? AND status=?`, decisionStatus, formatTime(normalisedTime(now)), current.uuid, currentStatus); err != nil {
+			return err
+		}
+		if shouldExclude {
+			if err := cancelItemProcessingJobs(ctx, tx, current.uuid, now); err != nil {
+				return err
+			}
+		} else {
+			restored = true
+			if err := resumeCancelledItemProcessingJobs(ctx, tx, current.uuid, current.contentRevision, now); err != nil {
+				return err
+			}
+		}
+	}
+	if restored {
+		if err := enqueueScanProcessingJobs(ctx, tx, galleryID, now); err != nil {
 			return err
 		}
 	}

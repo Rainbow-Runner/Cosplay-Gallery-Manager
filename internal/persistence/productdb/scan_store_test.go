@@ -12,6 +12,7 @@ import (
 
 	"github.com/stashapp/stash/internal/archivecheck"
 	"github.com/stashapp/stash/internal/gallery"
+	"github.com/stashapp/stash/internal/mediaexclusion"
 	"github.com/stashapp/stash/internal/mediaprocessing"
 )
 
@@ -212,6 +213,194 @@ func TestScanOptionExcludesOnlyNewRootMediaAndPreservesDurableChoices(t *testing
 	}
 }
 
+func TestDirectoryScanAppliesEffectiveExclusionRulesOnlyToNewItems(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 28, 12, 0, 0, 0, time.UTC)
+	root := t.TempDir()
+	library, err := db.Libraries().Create(ctx, CreateLibraryInput{Name: "Rule scan", RootPath: root, Enabled: true}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "Rule scan"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := db.Galleries().AddSource(ctx, created.ID, CreateSourceInput{
+		LibraryID: &library.ID, Type: gallery.SourceTypeDirectory, Path: filepath.Join(root, "gallery"), Availability: gallery.AvailabilityAvailable,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.MediaExclusionRules().Create(ctx, MediaExclusionRule{
+		Name: "global discard", Enabled: true, Order: 20, Subject: mediaexclusion.SubjectParentFolder,
+		Operator: mediaexclusion.OperatorExact, Pattern: "discard", MediaKind: mediaexclusion.MediaKindAll, Decision: mediaexclusion.DecisionExclude,
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.MediaExclusionRules().Create(ctx, MediaExclusionRule{
+		LibraryID: &library.ID, Name: "keep library exception", Enabled: true, Order: 20, Subject: mediaexclusion.SubjectParentPath,
+		Operator: mediaexclusion.OperatorExact, Pattern: "discard/keep", MediaKind: mediaexclusion.MediaKindAll, Decision: mediaexclusion.DecisionInclude,
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.MediaExclusionRules().Create(ctx, MediaExclusionRule{
+		LibraryID: &library.ID, Name: "root include loses to scan option", Enabled: true, Order: 1, Subject: mediaexclusion.SubjectRelativePath,
+		Operator: mediaexclusion.OperatorExact, Pattern: "loose.jpg", MediaKind: mediaexclusion.MediaKindAll, Decision: mediaexclusion.DecisionInclude,
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+
+	firstRun, err := db.Scans().Begin(ctx, source.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := []ScanObservation{
+		scanPhoto("discard/a.jpg", "discard-a"),
+		scanPhoto("discard/keep/b.jpg", "keep-b"),
+		scanPhoto("loose.jpg", "root-loose"),
+	}
+	for index := range first {
+		first[index].ProcessingState = gallery.ProcessingPending
+		if err := db.Scans().Stage(ctx, firstRun, first[index]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Scans().CommitWithOptions(ctx, firstRun, ScanOptions{ExcludeNewRootMedia: true}, now); err != nil {
+		t.Fatal(err)
+	}
+	items := loadGalleryItemsForTest(t, db, created.ID)
+	byPath := make(map[string]gallery.Item, len(items))
+	for _, item := range items {
+		byPath[item.RelativePath] = item
+	}
+	if !byPath["discard/a.jpg"].Excluded || byPath["discard/keep/b.jpg"].Excluded || !byPath["loose.jpg"].Excluded {
+		t.Fatalf("rule/root exclusions: discard=%t keep=%t root=%t", byPath["discard/a.jpg"].Excluded, byPath["discard/keep/b.jpg"].Excluded, byPath["loose.jpg"].Excluded)
+	}
+	keepUUID := byPath["discard/keep/b.jpg"].UUID
+	var jobs, applied int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_jobs WHERE gallery_id=?`, created.ID).Scan(&jobs); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM media_exclusion_decisions WHERE gallery_id=? AND status='APPLIED'`, created.ID).Scan(&applied); err != nil {
+		t.Fatal(err)
+	}
+	if jobs != 1 || applied != 1 {
+		t.Fatalf("jobs=%d applied rule decisions=%d, want 1/1", jobs, applied)
+	}
+
+	if _, err := db.MediaExclusionRules().Create(ctx, MediaExclusionRule{
+		LibraryID: &library.ID, Name: "new high-priority exclusion", Enabled: true, Order: 0, Subject: mediaexclusion.SubjectParentPath,
+		Operator: mediaexclusion.OperatorExact, Pattern: "discard/keep", MediaKind: mediaexclusion.MediaKindAll, Decision: mediaexclusion.DecisionExclude,
+	}, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	secondRun, err := db.Scans().Begin(ctx, source.ID, now.Add(2*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	second := []ScanObservation{
+		scanPhoto("discard/a.jpg", "discard-a"),
+		scanPhoto("discard/keep/moved-b.jpg", "keep-b"),
+		scanPhoto("loose.jpg", "root-loose"),
+		scanPhoto("discard/keep/c.jpg", "new-c"),
+	}
+	for _, observation := range second {
+		if err := db.Scans().Stage(ctx, secondRun, observation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Scans().CommitWithOptions(ctx, secondRun, ScanOptions{ExcludeNewRootMedia: true}, now.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	items = loadGalleryItemsForTest(t, db, created.ID)
+	byPath = make(map[string]gallery.Item, len(items))
+	for _, item := range items {
+		byPath[item.RelativePath] = item
+	}
+	if byPath["discard/keep/moved-b.jpg"].Excluded || byPath["discard/keep/moved-b.jpg"].UUID != keepUUID {
+		t.Fatal("fingerprint rebind did not preserve the existing Item exclusion decision and identity")
+	}
+	if !byPath["discard/keep/c.jpg"].Excluded {
+		t.Fatal("new Item did not use the current effective rule")
+	}
+}
+
+func TestMediaExclusionRulesDoNotApplyToArchiveSources(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 28, 13, 0, 0, 0, time.UTC)
+	if _, err := db.MediaExclusionRules().Create(ctx, MediaExclusionRule{
+		Name: "directory-only", Enabled: true, Order: 1, Subject: mediaexclusion.SubjectParentFolder,
+		Operator: mediaexclusion.OperatorExact, Pattern: "discard", MediaKind: mediaexclusion.MediaKindAll, Decision: mediaexclusion.DecisionExclude,
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+	created, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "Archive boundary"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := db.Galleries().AddSource(ctx, created.ID, CreateSourceInput{
+		Type: gallery.SourceTypeArchive, Path: filepath.Join(t.TempDir(), "gallery.cbz"), Availability: gallery.AvailabilityAvailable,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runID, err := db.Scans().Begin(ctx, source.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Stage(ctx, runID, scanPhoto("discard/a.jpg", "archive-a")); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Commit(ctx, runID, now); err != nil {
+		t.Fatal(err)
+	}
+	items := loadGalleryItemsForTest(t, db, created.ID)
+	if len(items) != 1 || items[0].Excluded {
+		t.Fatalf("archive Item was affected by directory exclusion rules: %#v", items)
+	}
+}
+
+func TestDirectoryScanExclusionRulesFilterAllSupportedMediaKinds(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 28, 13, 30, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	for _, rule := range []MediaExclusionRule{
+		{Name: "static only", Enabled: true, Order: 10, Subject: mediaexclusion.SubjectParentFolder, Operator: mediaexclusion.OperatorExact, Pattern: "static-only", MediaKind: mediaexclusion.MediaKindStatic, Decision: mediaexclusion.DecisionExclude},
+		{Name: "animated only", Enabled: true, Order: 10, Subject: mediaexclusion.SubjectParentFolder, Operator: mediaexclusion.OperatorExact, Pattern: "animated-only", MediaKind: mediaexclusion.MediaKindAnimated, Decision: mediaexclusion.DecisionExclude},
+		{Name: "video only", Enabled: true, Order: 10, Subject: mediaexclusion.SubjectParentFolder, Operator: mediaexclusion.OperatorExact, Pattern: "video-only", MediaKind: mediaexclusion.MediaKindVideo, Decision: mediaexclusion.DecisionExclude},
+	} {
+		if _, err := db.MediaExclusionRules().Create(ctx, rule, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	runID, err := db.Scans().Begin(ctx, source.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observations := []ScanObservation{
+		scanPhoto("static-only/photo.jpg", "static-match"), scanVideo("static-only/video.mp4", "static-miss"),
+		scanAnimated("animated-only/animation.gif", "animated-match"), scanPhoto("animated-only/photo.jpg", "animated-miss"),
+		scanVideo("video-only/video.mp4", "video-match"), scanAnimated("video-only/animation.gif", "video-miss"),
+	}
+	for _, observation := range observations {
+		if err := db.Scans().Stage(ctx, runID, observation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Scans().Commit(ctx, runID, now); err != nil {
+		t.Fatal(err)
+	}
+	wantExcluded := map[string]bool{"static-only/photo.jpg": true, "animated-only/animation.gif": true, "video-only/video.mp4": true}
+	for _, item := range loadGalleryItemsForTest(t, db, created.ID) {
+		if item.Excluded != wantExcluded[item.RelativePath] {
+			t.Fatalf("%s excluded=%t, want %t", item.RelativePath, item.Excluded, wantExcluded[item.RelativePath])
+		}
+	}
+}
+
 func TestScanRebindsUniqueFingerprintAndPreservesSamePathIdentity(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)
@@ -372,6 +561,48 @@ func TestOverLimitScanPreservesPreviousItemsAndMarksSource(t *testing.T) {
 	}
 	if !persistedSource.OverLimit || persistedSource.ReconcileState != gallery.ReconcileError {
 		t.Fatalf("over-limit Source = %#v", persistedSource)
+	}
+}
+
+func TestNewRuleExcludedItemDoesNotCountTowardGalleryLimit(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 28, 14, 0, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	if _, err := db.MediaExclusionRules().Create(ctx, MediaExclusionRule{
+		Name: "one limit exception", Enabled: true, Order: 1, Subject: mediaexclusion.SubjectFileName,
+		Operator: mediaexclusion.OperatorExact, Pattern: "1000.jpg", MediaKind: mediaexclusion.MediaKindAll, Decision: mediaexclusion.DecisionExclude,
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+	runID, err := db.Scans().Begin(ctx, source.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < 1001; index++ {
+		path := fmt.Sprintf("%04d.jpg", index)
+		if _, err := tx.ExecContext(ctx, `INSERT INTO gallery_scan_observations
+			(scan_run_id,relative_path,media_kind,image_category,full_fingerprint,processing_state)
+			VALUES (?,?,'STATIC_IMAGE','PHOTO',?,'READY')`, runID, path, fingerprint(path)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Commit(ctx, runID, now.Add(time.Minute)); err != nil {
+		t.Fatalf("effective 1000-member rule scan failed: %v", err)
+	}
+	var total, excluded int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*),SUM(excluded) FROM gallery_items WHERE gallery_id=?`, created.ID).Scan(&total, &excluded); err != nil {
+		t.Fatal(err)
+	}
+	if total != 1001 || excluded != 1 {
+		t.Fatalf("stored/excluded members=%d/%d, want 1001/1", total, excluded)
 	}
 }
 

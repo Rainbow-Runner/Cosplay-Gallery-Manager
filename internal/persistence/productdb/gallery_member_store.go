@@ -66,7 +66,22 @@ func (s *GalleryStore) SetItemExcluded(
 	`, boolInt(excluded), formatTime(normalisedTime(now)), itemID); err != nil {
 		return gallery.Item{}, fmt.Errorf("updating GalleryItem exclusion: %w", err)
 	}
+	decisionStatus, currentStatus := "SUPERSEDED", "PENDING"
 	if !excluded {
+		decisionStatus, currentStatus = "REVERSED", "APPLIED"
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE media_exclusion_decisions SET status=?,resolved_at_utc=?
+		WHERE item_uuid=? AND status=?`, decisionStatus, formatTime(normalisedTime(now)), item.UUID, currentStatus); err != nil {
+		return gallery.Item{}, fmt.Errorf("updating GalleryItem exclusion decision: %w", err)
+	}
+	if excluded {
+		if err := cancelItemProcessingJobs(ctx, tx, item.UUID, now); err != nil {
+			return gallery.Item{}, err
+		}
+	} else {
+		if err := resumeCancelledItemProcessingJobs(ctx, tx, item.UUID, item.ContentRevision, now); err != nil {
+			return gallery.Item{}, err
+		}
 		if err := enqueueScanProcessingJobs(ctx, tx, item.GalleryID, now); err != nil {
 			return gallery.Item{}, err
 		}
@@ -85,6 +100,22 @@ func (s *GalleryStore) SetItemExcluded(
 		return gallery.Item{}, err
 	}
 	return updated, nil
+}
+
+func cancelItemProcessingJobs(ctx context.Context, tx *sql.Tx, itemUUID string, now time.Time) error {
+	_, err := tx.ExecContext(ctx, `UPDATE processing_jobs SET status='CANCELLED',lease_owner=NULL,
+		lease_expires_at_utc=NULL,last_heartbeat_at_utc=NULL,last_error_code='ITEM_EXCLUDED',structural_failure=0,updated_at_utc=?
+		WHERE item_uuid=? AND status IN ('PENDING','RUNNING','RETRY_WAIT','PAUSED')`,
+		formatTime(normalisedTime(now)), itemUUID)
+	return err
+}
+
+func resumeCancelledItemProcessingJobs(ctx context.Context, tx *sql.Tx, itemUUID string, contentRevision int64, now time.Time) error {
+	timestamp := formatTime(normalisedTime(now))
+	_, err := tx.ExecContext(ctx, `UPDATE processing_jobs SET status='PENDING',attempt_count=0,not_before_utc=?,
+		lease_owner=NULL,lease_expires_at_utc=NULL,last_heartbeat_at_utc=NULL,last_error_code='',structural_failure=0,updated_at_utc=?
+		WHERE item_uuid=? AND content_revision=? AND status='CANCELLED' AND last_error_code='ITEM_EXCLUDED'`, timestamp, timestamp, itemUUID, contentRevision)
+	return err
 }
 
 // ReorderItemsWithinGroup atomically applies a complete ordering for one media

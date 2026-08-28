@@ -1572,3 +1572,33 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 2026-08-19 00:32 CST完成本机Linux amd64增量部署。替换前正式二进制备份为`/tmp/cgm-before-marker-title-20260819`，SHA-256为`4a75dfc5edb5a20fd2406f39b7a48c95d4debd8558ac40711975715fc8cfd36a`；候选先安装至同目录临时路径并逐字节校验，再原子替换`/home/rainbowrunner/.local/bin/cgm`且只重启一次用户服务。
 - `cosplay-gallery-manager.service`保持`enabled/active/running`、`NRestarts=0`，Health/Ready均为204、首页和Session为200。About精确报告完整提交、`buildTime=2026-08-18T16:31:05Z`和`exactSourceAvailable=true`；首次健康探针发生在监听就绪前，自动重试后立即通过。
 - 正式数据库仍为`cosplay-gallery-manager / schema 4`、inode `19679716`且`PRAGMA integrity_check=ok`；配置SHA-256仍为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`。启动日志仅有正常停止、启动、两个工作器和验证请求，没有迁移、WARN、ERROR、FAILED、panic或fatal。本项未替换数据库、配置、媒体、Manifest或缓存。
+
+## 1.5-42 可管理媒体自动排除规则
+
+日期：2026-08-28
+
+### 已确认边界与数据模型
+
+- 本功能与Gallery根发现规则及PHOTO/SELFIE媒体分类保持业务解耦，只复用新的纯路径匹配器。规则支持全局或单媒体库范围、`PARENT_FOLDER/PARENT_PATH/FILE_NAME/FILE_STEM/RELATIVE_PATH`、Exact/Glob/Go RE2、媒体类型过滤及`EXCLUDE/INCLUDE`结果；较小order优先，同order时单库规则优先，再按ID，首个命中决定。
+- 第一阶段只应用于DIRECTORY扫描中新建Item；现有根目录媒体本次扫描开关继续拥有最高优先级。按路径存在或唯一完整指纹重绑定的Item保留当前Exclude状态，规则编辑、禁用、删除或普通重扫均不自动恢复或覆盖；ZIP/CBZ扫描、安全校验和成员排除行为不变。
+- 产品数据库目标升级为schema v5，新增规则与决策历史表。`gallery_items.excluded`继续是当前状态事实来源；规则命中保存规则名称、revision、subject、matched value和`PENDING/APPLIED/REJECTED/SUPERSEDED/REVERSED`历史，删除规则通过`ON DELETE SET NULL`保留快照。迁移不播种规则、不扫描来源、不改变既有Item。
+- v4→v5继续执行来源版本准确的SQLite Online Backup，事务内建表并更新产品身份，随后验证schema和完整性。集成测试实际重开自动快照，证明它保持有效v4、既有排除状态未变且主库新表初始为空。
+
+### 扫描、审核与任务语义
+
+- 扫描提交事务在1000有效成员判断前一次加载并编译来源媒体库的有效规则；同一结果用于硬上限、新Item初始`excluded`和任务排队。新规则排除Item仍创建UUID与业务记录并写APPLIED来源，但不计入1000有效成员，也不排基础派生/视频技术任务。
+- 存量预览最多返回200条数据库样本；显式评估只读取AVAILABLE、当前未排除的DIRECTORY Item，并只为最终胜出的EXCLUDE建立PENDING项。接受时以Gallery metadata revision乐观锁排除Item并取消其未完成处理任务；拒绝只记录REJECTED。人工Restore把当前APPLIED历史改为REVERSED，恢复当前content revision被取消的任务并按既有规则补排。
+- 新的共享`internal/mediarules`匹配器无数据库、文件系统和Shell依赖，统一NFC、正斜杠和Unicode大小写折叠；Exact/Glob最多100行、总pattern最多4,000字节，RE2单表达式由Go引擎编译。原媒体分类规则迁移到同一匹配器后仍限制原有subject与STATIC_IMAGE业务语义。
+
+### API、管理界面与安全
+
+- Manage GraphQL新增规则查询/校验/CRUD、单路径和媒体类型测试、单库预览、显式评估、待审核查询及接受/拒绝；预览会把当前草稿替换进完整有效规则链后统一排序，只统计该草稿成为最终胜出规则的Item。全部入口沿用所有者认证、同源/CSRF、Gallery revision和管理审计。审计只记录规则ID、枚举、revision与数量，不记录pattern、matched value或媒体路径；Browse DTO未增加字段。
+- Libraries & import页在媒体分类区旁新增独立中英双语“自动排除规则”，按全局策略和当前媒体库覆盖分组，新规则默认全局。界面解释首匹配、单库优先和INCLUDE例外，提供五类subject、三类operator、媒体类型、结果、启停、编辑及删除二次确认。
+- RE2必须获得当前完整输入的后端valid响应后才能保存；路径测试要求选择媒体类型。已有媒体预览和评估明确绑定当前所选库，逐项或批量操作均提示“保存/删除规则不会修改既有Item”。
+
+### 自动验证与交付状态
+
+- 通用匹配器测试覆盖Unicode/大小写、五类subject、Exact/Glob/RE2、无效表达式和父路径祖先语义；SQLite测试覆盖v4→v5快照、CRUD/revision/范围优先级、预览、显式审核、删除保留历史、任务取消/恢复、根开关优先、INCLUDE例外、既有Item保持、1000上限及ARCHIVE不应用。
+- `internal/mediarules`、`internal/mediaexclusion`、`internal/mediaclassification`、`internal/persistence/productdb`、`internal/productapi`、`internal/productserver`、`internal/sourcescan`和`internal/manifest`目标回归全部PASS；带`cgm_web_embed cgm_galleryepic`标签的Product API、Server和`cmd/cgm`组合PASS。
+- `corepack pnpm run check`通过；`corepack pnpm run test`通过29个测试文件80项；生产构建完成680模块转换。仓库级`go test ./...`中的CGM目标包均通过，但总命令仍因仓库不包含旧Stash `ui/v2.5/build`以及受限沙箱不允许`pkg/scraper`的`httptest`监听IPv6端口而失败，未把它记录为全仓通过。
+- 本阶段到此只完成源码、生成代码、测试和开发记录。尚未创建提交或正式候选，也没有触碰/迁移正式schema v4数据库，没有备份、重启或部署。后续部署必须先形成清洁提交，再建立并解包验证额外完整回滚包，随后核验自动v4快照、schema v5、`integrity_check`、规则表初始状态、正式服务Health/Ready/About和journal。

@@ -214,7 +214,15 @@ SocialAccount：
 - 规则修改递增revision；同一Item对同一revision的接受/拒绝结果保持稳定，旧待处理建议会被更新规则或更高优先级命中标记为SUPERSEDED。只有STATIC_IMAGE参与，动画和视频永不生成PHOTO/SELFIE建议。
 - 保存规则不批量改写现有Item；人工“评估现有媒体”只产生预览/建议，必须逐项或批量明确接受。人工与Manifest现值不会被扫描自动覆盖；不使用人脸、相机信息或AI自动定类。
 
-### 8.3 Position
+### 8.3 自动排除规则
+
+- GalleryItem自动排除使用独立于根发现及PHOTO/SELFIE分类的数据库规则；后台支持全局/媒体库作用域、父目录段、父目录路径、文件名、文件stem与完整相对路径，以及Exact、Glob和Go RE2。
+- 规则结果为EXCLUDE或INCLUDE例外，按order、媒体库优先和ID确定首个命中；可限制STATIC_IMAGE、ANIMATED_IMAGE、VIDEO或全部媒体。路径只在NFC规范化Gallery相对字符串上匹配，不访问文件系统或执行Shell。
+- 第一阶段仅应用于DIRECTORY新Item；Archive保持现有行为。根目录新媒体本次扫描开关继续优先，既有路径/唯一指纹Item的人工Exclude/Restore及Manifest结果不被重扫覆盖。
+- 保存、编辑或删除规则不批量改写存量Item；显式存量评估只生成EXCLUDE待审核建议，接受后才改变状态。规则命中来源和revision持久化，但`gallery_items.excluded`仍是当前状态事实来源。
+- 详细schema v5、扫描、API、UI和部署门禁见[可管理媒体自动排除规则实施计划](development/MEDIA_EXCLUSION_RULES_PLAN_2026-08-28.md)。
+
+### 8.4 Position
 
 - GalleryItem共用一套Gallery内全局唯一int64 position，但只在分类组内比较。
 - 初始成员按固定组顺序及规范化完整相对路径自然排序；数字按数值比较，DIRECTORY和归档一致。
@@ -224,7 +232,7 @@ SocialAccount：
 - 文件夹排序只在所属PHOTO、SELFIE、ANIMATED_IMAGE或VIDEO组内生效；移动文件夹时保持文件夹内部既有顺序。
 - 按文件名自然排序必须由用户对具体文件夹显式触发，比较文件名而非完整父目录；整个媒体组顺序在单事务和单次metadata_revision递增中提交。
 
-### 8.4 Credit/Cast Position
+### 8.5 Credit/Cast Position
 
 - 两者同样使用int64间隔值。
 - Credit为Gallery全局顺序；Cast为所属Credit内部顺序。
@@ -431,6 +439,7 @@ SocialAccount：
 ## 14. 排除、MISSING与硬上限
 
 - 来源内支持媒体默认自动纳入；人工排除写数据库和Manifest，重扫不得恢复。
+- DIRECTORY中新发现媒体可由已启用的数据库自动排除规则设置初始状态；排除决策必须在1000上限和处理任务排队前统一计算。规则不覆盖既有Item，Archive第一阶段不应用。
 - 排除已有Item保留GalleryItem、UUID、分类、Position、Caption、评分和收藏，状态EXCLUDED，不进入Browse、计数、封面、随机或1000上限。
 - Manifest Push中被排除已有Item同时存在于 `items[]` 和 `excluded_items[]`；后者可含item_uuid。
 - 恢复沿用同一Item；Position冲突时追加目标组。

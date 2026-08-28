@@ -289,6 +289,76 @@ func TestMediaClassificationRE2ValidationCannotBeBypassed(t *testing.T) {
 	}
 }
 
+func TestMediaExclusionRE2ValidationCannotBeBypassed(t *testing.T) {
+	database := openTestDatabase(t)
+	handler := NewHandler(database, func(*http.Request) bool { return true })
+	call := func(query string) []byte {
+		t.Helper()
+		request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(fmt.Sprintf(`{"query":%q}`, query)))
+		request.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+		}
+		return response.Body.Bytes()
+	}
+	input := `libraryID:null,name:"Bad exclusion regex",enabled:true,order:100,subject:"FILE_NAME",operator:"RE2",pattern:"([",caseSensitive:false,mediaKind:"ALL",decision:"EXCLUDE"`
+	validated := call(`mutation { validateMediaExclusionRule(input:{` + input + `}) { valid errorCode message } }`)
+	if !bytes.Contains(validated, []byte(`"valid":false`)) || !bytes.Contains(validated, []byte(`RULE_RE2_INVALID`)) {
+		t.Fatalf("validation result=%s", validated)
+	}
+	created := call(`mutation { createMediaExclusionRule(input:{` + input + `}) { id } }`)
+	if !bytes.Contains(created, []byte(`RULE_RE2_INVALID`)) {
+		t.Fatalf("direct create did not reject invalid regex: %s", created)
+	}
+	var count int
+	if err := database.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM media_exclusion_rules WHERE name='Bad exclusion regex'`).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("invalid persisted count=%d err=%v", count, err)
+	}
+}
+
+func TestMediaExclusionManageContractCreatesUpdatesAndDeletesRule(t *testing.T) {
+	database := openTestDatabase(t)
+	handler := NewHandler(database, func(*http.Request) bool { return true })
+	call := func(query string) []byte {
+		t.Helper()
+		request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(fmt.Sprintf(`{"query":%q}`, query)))
+		request.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+		}
+		return response.Body.Bytes()
+	}
+	created := call(`mutation { createMediaExclusionRule(input:{libraryID:null,name:"Extras",enabled:true,order:20,subject:"PARENT_PATH",operator:"EXACT",pattern:"extras",caseSensitive:false,mediaKind:"STATIC_IMAGE",decision:"EXCLUDE"}) { id name revision decision } }`)
+	if !bytes.Contains(created, []byte(`"name":"Extras"`)) || !bytes.Contains(created, []byte(`"revision":1`)) {
+		t.Fatalf("create result=%s", created)
+	}
+	rules, err := database.MediaExclusionRules().List(context.Background(), nil)
+	if err != nil || len(rules) != 1 {
+		t.Fatalf("persisted rules=%#v err=%v", rules, err)
+	}
+	tested := call(`mutation { testMediaExclusionRule(input:{libraryID:null,name:"Extras",enabled:true,order:20,subject:"PARENT_PATH",operator:"EXACT",pattern:"extras",caseSensitive:false,mediaKind:"STATIC_IMAGE",decision:"EXCLUDE"},relativePath:"extras/raw/a.jpg",mediaKind:"STATIC_IMAGE") { matched matchedValue decision } }`)
+	if !bytes.Contains(tested, []byte(`"matched":true`)) || !bytes.Contains(tested, []byte(`"matchedValue":"extras"`)) {
+		t.Fatalf("test result=%s", tested)
+	}
+	updated := call(fmt.Sprintf(`mutation { updateMediaExclusionRule(input:{id:%d,libraryID:null,name:"Extras",enabled:false,order:20,subject:"PARENT_PATH",operator:"EXACT",pattern:"extras",caseSensitive:false,mediaKind:"STATIC_IMAGE",decision:"EXCLUDE"}) { id enabled revision } }`, rules[0].ID))
+	if !bytes.Contains(updated, []byte(`"enabled":false`)) || !bytes.Contains(updated, []byte(`"revision":2`)) {
+		t.Fatalf("update result=%s", updated)
+	}
+	deleted := call(fmt.Sprintf(`mutation { deleteMediaExclusionRule(id:%d) }`, rules[0].ID))
+	if !bytes.Contains(deleted, []byte(`"deleteMediaExclusionRule":true`)) {
+		t.Fatalf("delete result=%s", deleted)
+	}
+	var audits int
+	if err := database.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM management_audit_events
+		WHERE event_code IN ('MEDIA_EXCLUSION_RULE_CREATE','MEDIA_EXCLUSION_RULE_UPDATE','MEDIA_EXCLUSION_RULE_DELETE') AND outcome='SUCCESS'`).Scan(&audits); err != nil || audits != 3 {
+		t.Fatalf("management audit count=%d err=%v", audits, err)
+	}
+}
+
 func TestCharacterCreateWithoutWorkReturnsValidationErrorAndAudit(t *testing.T) {
 	database := openTestDatabase(t)
 	handler := NewHandler(database, func(*http.Request) bool { return true })

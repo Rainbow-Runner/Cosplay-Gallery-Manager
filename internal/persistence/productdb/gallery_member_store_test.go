@@ -75,6 +75,49 @@ func TestGalleryItemExclusionSurvivesScanAndAllowsEffectiveLimit(t *testing.T) {
 	}
 }
 
+func TestGalleryItemRestoreDoesNotResumeManuallyCancelledJob(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 28, 15, 0, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	runID, err := db.Scans().Begin(ctx, source.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Stage(ctx, runID, scanPendingPhoto("manual-cancel.jpg", "manual-cancel")); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Commit(ctx, runID, now); err != nil {
+		t.Fatal(err)
+	}
+	item := loadGalleryItemsForTest(t, db, created.ID)[0]
+	var jobID int64
+	if err := db.QueryRowContext(ctx, `SELECT id FROM processing_jobs WHERE item_uuid=?`, item.UUID).Scan(&jobID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.ProcessingJobs().Cancel(ctx, jobID, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	current, err := db.Galleries().Find(ctx, created.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Galleries().SetItemExcluded(ctx, item.ID, true, current.MetadataRevision, now.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	current, err = db.Galleries().Find(ctx, created.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Galleries().SetItemExcluded(ctx, item.ID, false, current.MetadataRevision, now.Add(3*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	var status string
+	if err := db.QueryRowContext(ctx, `SELECT status FROM processing_jobs WHERE id=?`, jobID).Scan(&status); err != nil || status != "CANCELLED" {
+		t.Fatalf("manually cancelled job status=%q err=%v", status, err)
+	}
+}
+
 func TestGalleryItemForgetRequiresSafeStateAndTombstonesUUID(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

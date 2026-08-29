@@ -629,6 +629,29 @@ func TestArchiveCandidateUsesSameTwoStageDraftFlow(t *testing.T) {
 	}
 }
 
+func TestArchiveCandidateUsesFilenameTitleFallbackWithoutManifest(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 7, 22, 21, 0, 0, 0, time.UTC)
+	mediaLibrary := createTestLibrary(t, db, now)
+	if _, err := db.RecognitionRules().Create(ctx, CreateRecognitionRuleInput{LibraryID: mediaLibrary.ID, Name: "Archive depth", Kind: discovery.RuleKindFixedDepth, Enabled: true, FixedDepth: 2, Order: 1}, now); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := db.CandidateDiscovery().CommitSnapshot(ctx, mediaLibrary.ID, []ObservedDirectory{{
+		RelativePath: "archives/Blue Archive Vol.1.cbz", SourceType: gallery.SourceTypeArchive, MediaCount: 1,
+	}}, now)
+	if err != nil || len(snapshot.Candidates) != 1 {
+		t.Fatalf("archive snapshot = %#v, err=%v", snapshot, err)
+	}
+	created, err := db.CandidateDiscovery().ImportCandidate(ctx, snapshot.Candidates[0].ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.Title != "Blue Archive Vol.1" {
+		t.Fatalf("archive title = %q, want filename stem", created.Title)
+	}
+}
+
 func TestCandidateFirstImportUsesManifestSetIDAndPullsMetadata(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

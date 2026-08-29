@@ -7,13 +7,13 @@
 
 ## 1. 目标
 
-为已绑定的DIRECTORY GallerySource增加数据库驱动的媒体自动排除规则。所有支持媒体仍由安全扫描器发现并形成GalleryItem；规则只决定新Item的初始`excluded`状态，不删除、不移动、不改写来源文件，也不把“排除”变成文件系统级忽略。
+为已绑定的 DIRECTORY GallerySource 及 ZIP/CBZ Archive 成员增加数据库驱动的媒体自动排除规则。所有支持媒体仍由安全扫描器发现并形成GalleryItem；规则只决定新Item的初始`excluded`状态，不删除、不移动、不改写来源文件，也不把“排除”变成文件系统级忽略。
 
 后台必须支持全局和单媒体库规则、文件夹与文件匹配、Exact/Glob/Go RE2校验、单路径测试、存量预览及人工审核。已有Item的人工Exclude/Restore、Manifest结果和唯一指纹重绑定结果不得被普通重扫覆盖。
 
 ## 2. 冻结边界
 
-- 第一阶段只对`DIRECTORY`来源应用自定义规则；ZIP/CBZ发现、成员安全校验和排除行为保持不变。
+- 自定义规则对`DIRECTORY`新Item和`ARCHIVE`新成员统一生效；ZIP/CBZ发现与成员安全校验保持不变。
 - 当前“自动排除本次新发现的Gallery根目录媒体”扫描开关继续保留，并高于自定义规则；关闭它不关闭自定义规则。
 - 自定义规则只自动决定扫描中新建Item；按路径或唯一完整指纹识别出的既有Item保持持久状态。
 - 规则编辑、禁用或删除不自动恢复过去已排除的Item。
@@ -58,7 +58,7 @@
 2. 唯一指纹重绑定既有Item保持原Exclude状态；
 3. 新根级Item且本次根目录开关开启时直接Exclude；
 4. 其他新DIRECTORY Item执行规则链；首个`EXCLUDE`命中则排除，首个`INCLUDE`命中则纳入；
-5. ARCHIVE不执行自定义规则；
+5. ARCHIVE成员使用经过安全校验的内部相对路径执行自定义规则；
 6. 排除结果在有效成员上限判断、Item插入和派生任务排队中使用同一决策，避免口径分裂。
 
 自动EXCLUDE的新Item同时写入APPLIED决策快照。扫描结束仍执行PHOTO/SELFIE分类建议，不让两套规则相互调用。
@@ -83,7 +83,7 @@ Manage → Libraries & import在现有独立“媒体分类规则”旁新增独
 
 - 通用匹配器：Unicode/大小写、五类subject、三类operator、无效Glob/RE2、父路径祖先语义。
 - 数据库：新库v5、v4→v5在线快照迁移、约束、CRUD/revision/优先级、预览、审核状态及删除保留历史。
-- 扫描：根目录开关优先、全局/媒体库规则、INCLUDE例外、三种媒体类型、既有路径与指纹状态保持、1000上限、处理任务、DIRECTORY生效且ARCHIVE不变。
+- 扫描：根目录开关优先、全局/媒体库规则、INCLUDE例外、三种媒体类型、既有路径与指纹状态保持、1000上限、处理任务、DIRECTORY与ARCHIVE成员路径均生效。
 - API：认证Manage契约、校验错误码、DTO无物理路径、接受建议revision冲突和无部分写入。
 - React：双语规则管理、范围分组、RE2保存门禁、测试/预览、审核及删除确认。
 - 回归：既有媒体分类规则、Gallery手动Exclude/Restore、Manifest、Archive、安全扫描、产品API/Server、正式嵌入标签和生产构建。
@@ -94,8 +94,8 @@ Manage → Libraries & import在现有独立“媒体分类规则”旁新增独
 
 - 已抽取无数据库、无文件系统访问的`internal/mediarules`共享匹配器；原媒体分类规则改为复用它且保持原有四类subject边界，自动排除使用包含`PARENT_PATH`的五类subject。
 - 产品数据库目标升级为schema v5；新库直接建表，v1～v4均沿用来源版本校验、SQLite Online Backup和单事务迁移。v4迁移测试证明原Item排除状态不变、新规则与决策表为空、自动快照仍是可独立打开的有效v4。
-- DIRECTORY扫描在硬上限判断前加载有效规则一次；根目录本次开关、既有路径、唯一指纹重绑定、单库优先、INCLUDE例外、新Item APPLIED记录、1000有效成员和ARCHIVE不应用均由SQLite集成测试锁定。
+- DIRECTORY与ARCHIVE扫描在硬上限判断前加载有效规则一次；根目录本次开关、既有路径、唯一指纹重绑定、单库优先、INCLUDE例外、新Item APPLIED记录、1000有效成员和Archive成员路径匹配均由SQLite集成测试锁定。
 - 存量评估不会直接修改Item；接受EXCLUDE后才递增Gallery metadata revision、排除Item并取消其未完成处理任务，人工Restore会把APPLIED历史改为REVERSED并恢复当前内容revision的任务。规则删除只把历史`rule_id`置空，保留规则名称、revision和命中快照。
 - Manage GraphQL与Libraries & import双语页面已完成规则CRUD/二次删除确认、范围分组、后端RE2校验、路径与媒体类型测试、最多200项预览、显式评估及逐项/批量审核。Browse schema和来源文件没有变化，管理审计不记录pattern或媒体路径。
 - 自动验证通过：目标Go包、带`cgm_web_embed cgm_galleryepic`标签的Product API/Server/cmd组合、TypeScript检查、29个Vitest文件80项测试及680模块Vite生产构建。仓库级`go test ./...`中的CGM产品包均通过，但总命令仍受既有旧Stash `ui/v2.5/build`缺失及沙箱禁止`httptest`监听IPv6端口影响，不能记为全仓通过。
-- 本轮没有提交、构建正式候选、触碰正式schema v4数据库、迁移、备份、重启或部署。进入正式部署前必须先形成清洁提交，再按本文件门禁执行额外完整回滚包与schema v4→v5迁移核验。
+- Archive扩展在现有schema v5上复用`relative_path`，不新增作用范围字段或数据库迁移；本轮源码尚未重新提交、构建正式候选或重新部署。进入正式部署前必须先形成清洁提交，再按本文件门禁执行额外完整回滚包和schema v5完整性核验。

@@ -10,7 +10,8 @@
 
 ## 已完成
 
-- 1.5（可管理媒体自动排除规则，源码完成、未部署）：新增独立于Gallery根发现和PHOTO/SELFIE分类的全局/媒体库规则，支持任意父目录段、完整父目录/祖先路径、文件名、文件stem、完整相对路径及Exact/Glob/Go RE2；可按STATIC_IMAGE/ANIMATED_IMAGE/VIDEO/ALL返回EXCLUDE或INCLUDE例外。有效规则按order、同order单库优先、ID执行并以首命中决定；不访问文件系统、不执行Shell，RE2保存前由后端强制校验。详细冻结边界和实施证据见[专项计划](MEDIA_EXCLUSION_RULES_PLAN_2026-08-28.md)。
+- 1.5（可管理媒体自动排除规则，Archive扩展源码完成、未重新部署）：全局/媒体库规则现统一作用于 DIRECTORY 新Item和经过安全校验的 Archive 新成员，按成员内部相对路径匹配；规则支持任意父目录段、完整父目录/祖先路径、文件名、文件stem、完整相对路径及 Exact/Glob/Go RE2。Archive 无有效 sidecar 时以存档文件名去除扩展名作为 Gallery 标题保底，并基于外部路径/文件名生成唯一实体待审核建议；不新增来源范围字段或数据库迁移。详细边界见[专项计划](MEDIA_EXCLUSION_RULES_PLAN_2026-08-28.md)和[Archive规划](ARCHIVE_RULES_AND_TITLE_PLAN_2026-08-29.md)。
+- Archive后续扩展规划：已记录存档内部成员排除、文件名标题保底及实体候选建议的独立实施方案，当前不改变已部署Archive行为，详见[Archive规则与标题规划](ARCHIVE_RULES_AND_TITLE_PLAN_2026-08-29.md)。
 - 1.5（自动排除扫描、审核与schema v5，源码完成、未部署）：规则只自动设置DIRECTORY新Item初始排除状态，根目录本次扫描开关继续优先；既有路径/唯一指纹Item、人工与Manifest决定不被重扫覆盖，ZIP/CBZ保持不变。存量评估仅建立PENDING EXCLUDE审核项，接受后才排除并取消未完成任务，Restore恢复当前revision任务且保留REVERSED历史；排除Item不进入1000有效成员、Browse或新任务口径。schema v5迁移不播种规则、不改既有Item，并在v4写入前生成可验证在线快照。
 - 1.5（自动排除双语管理界面，源码完成、未部署）：Libraries & import新增独立自动排除区，按全局策略与当前媒体库覆盖分组，新规则默认全局；提供规则CRUD与删除二次确认、五类subject、三类operator、媒体类型、EXCLUDE/INCLUDE、后端RE2门禁、单路径测试、最多200项存量预览、显式单库评估及逐项/批量审核。目标Go与正式标签组合、TypeScript、29文件80项Vitest和680模块生产构建通过；本轮尚未提交、备份、迁移正式schema v4数据库或部署。
 - 1.5（MARKER单子目录标题保底，已部署）：`.cosplay-root`所在父目录继续作为DIRECTORY来源根；新发现的MARKER根若恰好只有一个直属真实子目录，Candidate预览、手动导入及自动建DRAFT统一以该子目录名作为标题，零个或多个子目录仍取根目录名。已有Gallery不回写，根级媒体默认Exclude和ZIP/CBZ扫描规则不变。Discovery、产品数据库、API、Server及正式标签组合回归已通过；2026-08-19已从清洁提交`fbba7e2`完成本机增量部署，正式数据库保持schema v4且完整性复核通过。

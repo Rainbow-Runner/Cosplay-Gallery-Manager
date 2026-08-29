@@ -218,7 +218,7 @@ func (s *MediaExclusionRuleStore) Preview(ctx context.Context, rule MediaExclusi
 	})
 	query := `SELECT gallery.set_id,gallery.title,item.item_uuid,item.relative_path,item.media_kind,item.excluded
 		FROM gallery_items item JOIN galleries gallery ON gallery.id=item.gallery_id JOIN gallery_sources source ON source.id=item.source_id
-		WHERE source.source_type='DIRECTORY' AND item.availability_state='AVAILABLE'`
+		WHERE item.availability_state='AVAILABLE'`
 	args := []any{}
 	if libraryID != nil {
 		query += ` AND source.library_id=?`
@@ -283,7 +283,7 @@ func evaluateMediaExclusion(ctx context.Context, tx *sql.Tx, libraryID *int64, n
 	}
 	query := `SELECT item.item_uuid,item.gallery_id,item.relative_path,item.media_kind FROM gallery_items item
 		JOIN gallery_sources source ON source.id=item.source_id
-		WHERE source.source_type='DIRECTORY' AND item.availability_state='AVAILABLE' AND item.excluded=0`
+		WHERE item.availability_state='AVAILABLE' AND item.excluded=0`
 	args := []any{}
 	if libraryID != nil {
 		query += ` AND source.library_id=?`

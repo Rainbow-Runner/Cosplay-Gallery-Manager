@@ -427,6 +427,71 @@ func validateMarkerTitle(value string) (string, error) {
 	return title, nil
 }
 
+// archiveEntitySuggestions uses only the archive's external library path and
+// filename. It intentionally emits conservative pending suggestions: a token
+// must identify exactly one existing entity, and no relation is written here.
+func archiveEntitySuggestions(ctx context.Context, db *sql.DB, libraryRoot, archivePath string) ([]discovery.Suggestion, error) {
+	relative, err := filepath.Rel(libraryRoot, archivePath)
+	if err != nil {
+		return nil, err
+	}
+	parts := strings.FieldsFunc(filepath.ToSlash(relative), func(r rune) bool { return r == '/' })
+	if len(parts) == 0 {
+		return nil, nil
+	}
+	parts[len(parts)-1] = strings.TrimSuffix(parts[len(parts)-1], filepath.Ext(parts[len(parts)-1]))
+	tokens := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		if key := normalizedKey(part); key != "" {
+			tokens[key] = struct{}{}
+		}
+	}
+	if len(tokens) == 0 {
+		return nil, nil
+	}
+	type entity struct{ kind, name string }
+	rows, err := db.QueryContext(ctx, `
+		SELECT 'COSER', name FROM cosers
+		UNION ALL SELECT 'COSER', alias FROM coser_aliases
+		UNION ALL SELECT 'WORK', name FROM works
+		UNION ALL SELECT 'WORK', alias FROM work_aliases
+		UNION ALL SELECT 'CHARACTER', name FROM characters
+		UNION ALL SELECT 'CHARACTER', alias FROM character_aliases`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	matched := map[string]map[string]struct{}{}
+	for rows.Next() {
+		var kind, name string
+		if err := rows.Scan(&kind, &name); err != nil {
+			return nil, err
+		}
+		key := normalizedKey(name)
+		if _, ok := tokens[key]; !ok || key == "" {
+			continue
+		}
+		if matched[kind] == nil {
+			matched[kind] = map[string]struct{}{}
+		}
+		matched[kind][normalizedDisplay(name)] = struct{}{}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	var result []discovery.Suggestion
+	for _, kind := range []string{"COSER", "WORK", "CHARACTER"} {
+		values := matched[kind]
+		if len(values) != 1 {
+			continue
+		}
+		for value := range values {
+			result = append(result, discovery.Suggestion{Field: strings.ToLower(kind), Value: value})
+		}
+	}
+	return result, nil
+}
+
 func observeArchiveCandidate(libraryRoot, filename string, limits archivecheck.Limits) (ObservedDirectory, error) {
 	validation, err := archivecheck.ValidateFile(filename, limits)
 	if err != nil {
@@ -625,6 +690,13 @@ func (s *CandidateDiscoveryStore) CommitSnapshot(
 			if match.RuleID != 0 {
 				value := match.RuleID
 				candidate.ruleID = &value
+			}
+			if candidate.sourceType == gallery.SourceTypeArchive && !observed.HasValidManifest {
+				entitySuggestions, suggestionErr := archiveEntitySuggestions(ctx, s.db, mediaLibrary.RootPath, candidate.root)
+				if suggestionErr != nil {
+					return DiscoverySnapshot{}, suggestionErr
+				}
+				candidate.suggestions = append(candidate.suggestions, entitySuggestions...)
 			}
 			candidates[rootPath] = candidate
 		} else if candidate.sourceType != observed.SourceType {
@@ -883,6 +955,16 @@ func (s *CandidateDiscoveryStore) ImportCandidate(
 		} else if err != nil {
 			return gallery.Gallery{}, err
 		}
+		title, err = validateMarkerTitle(title)
+		if err != nil {
+			return gallery.Gallery{}, err
+		}
+	}
+	if title == "" && sourceType == gallery.SourceTypeArchive {
+		// Archives without a valid sidecar still need a stable, human-readable
+		// Gallery title. The filename is more specific than its parent folder.
+		archiveName := filepath.Base(filepath.Clean(rootPath))
+		title = strings.TrimSuffix(archiveName, filepath.Ext(archiveName))
 		title, err = validateMarkerTitle(title)
 		if err != nil {
 			return gallery.Gallery{}, err

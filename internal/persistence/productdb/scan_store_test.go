@@ -326,12 +326,12 @@ func TestDirectoryScanAppliesEffectiveExclusionRulesOnlyToNewItems(t *testing.T)
 	}
 }
 
-func TestMediaExclusionRulesDoNotApplyToArchiveSources(t *testing.T) {
+func TestMediaExclusionRulesApplyToArchiveMembers(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)
 	now := time.Date(2026, 8, 28, 13, 0, 0, 0, time.UTC)
 	if _, err := db.MediaExclusionRules().Create(ctx, MediaExclusionRule{
-		Name: "directory-only", Enabled: true, Order: 1, Subject: mediaexclusion.SubjectParentFolder,
+		Name: "archive-folder", Enabled: true, Order: 1, Subject: mediaexclusion.SubjectParentFolder,
 		Operator: mediaexclusion.OperatorExact, Pattern: "discard", MediaKind: mediaexclusion.MediaKindAll, Decision: mediaexclusion.DecisionExclude,
 	}, now); err != nil {
 		t.Fatal(err)
@@ -357,8 +357,8 @@ func TestMediaExclusionRulesDoNotApplyToArchiveSources(t *testing.T) {
 		t.Fatal(err)
 	}
 	items := loadGalleryItemsForTest(t, db, created.ID)
-	if len(items) != 1 || items[0].Excluded {
-		t.Fatalf("archive Item was affected by directory exclusion rules: %#v", items)
+	if len(items) != 1 || !items[0].Excluded {
+		t.Fatalf("archive Item did not use the effective exclusion rule: %#v", items)
 	}
 }
 

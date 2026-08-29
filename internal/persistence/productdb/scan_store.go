@@ -195,20 +195,18 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 		return err
 	}
 	ruleExclusions := map[string]scanRuleExclusion{}
-	if sourceType == gallery.SourceTypeDirectory {
-		var libraryID *int64
-		if sourceLibraryID.Valid {
-			libraryID = &sourceLibraryID.Int64
-		}
-		compiledRules, err := loadCompiledMediaExclusionRules(ctx, tx, libraryID)
-		if err != nil {
-			return err
-		}
-		for _, observation := range observations {
-			winner, matchedValue := matchMediaExclusionRules(compiledRules, observation.RelativePath, string(observation.MediaKind))
-			if winner != nil && winner.Rule().Decision == mediaexclusion.DecisionExclude {
-				ruleExclusions[observation.RelativePath] = scanRuleExclusion{rule: winner.Rule(), matchedValue: matchedValue}
-			}
+	var libraryID *int64
+	if sourceLibraryID.Valid {
+		libraryID = &sourceLibraryID.Int64
+	}
+	compiledRules, err := loadCompiledMediaExclusionRules(ctx, tx, libraryID)
+	if err != nil {
+		return err
+	}
+	for _, observation := range observations {
+		winner, matchedValue := matchMediaExclusionRules(compiledRules, observation.RelativePath, string(observation.MediaKind))
+		if winner != nil && winner.Rule().Decision == mediaexclusion.DecisionExclude {
+			ruleExclusions[observation.RelativePath] = scanRuleExclusion{rule: winner.Rule(), matchedValue: matchedValue}
 		}
 	}
 	if effectiveScanMemberCount(observations, existing, options, ruleExclusions) > 1000 {

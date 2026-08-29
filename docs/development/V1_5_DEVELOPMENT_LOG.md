@@ -1609,3 +1609,8 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 停止服务后创建额外完整回滚包 `/home/rainbowrunner/cos/bk/cgm-predeploy-20260828T123000Z-18d6485.tar.gz`，SHA-256 为 `4aa68c94c9361a86b3422726fadc57acf34fae5510e0baec4dd15e766b3da913`；归档已实际列举校验，未包含媒体、缓存或日志。
 - 启动时自动完成 schema v4→v5 迁移；`cgm_product_identity.schema_version=5`、`PRAGMA integrity_check=ok`，规则与决策表初始为空，既有 Item 状态保持不变。
 - 用户服务保持 `active`、`NRestarts=0`，Health/Ready 均为 204；About 报告完整提交号与 `exactSourceAvailable=true`。journal 未发现迁移错误、WARN、ERROR、FAILED、panic 或 fatal。
+
+## 1.5-43 Archive 内部规则与标题扩展规划
+
+- 经现状核对，PHOTO/SELFIE 媒体分类规则已对可用静态 Archive 成员生成待审核建议；本阶段将可管理自动排除规则扩展为统一匹配 DIRECTORY 新Item和经过安全校验的 Archive 新成员。Archive 的 `.cosplay-root` 不生效，现有有效相邻 Manifest 仍是标题和实体元数据首选来源。
+- 已实现 Archive 成员内部相对路径排除、无 Manifest 文件名标题保底，以及基于外部路径/文件名的唯一 Coser/Work/Character 待审核候选；复用 schema v5 的 `relative_path`，不新增作用范围字段或数据库迁移。定向产品数据库回归已通过，前端/API正式部署待后续重新构建验证。

@@ -1,5 +1,13 @@
 # 本机实际业务应用测试部署
 
+### 2026-08-29 Archive成员排除与标题/实体候选增量部署
+
+- 从清洁提交 `d9420fce4cf9584229ec5bcd31ef87e991d14b74` 构建并部署带 `cgm_web_embed cgm_galleryepic` 的 Linux amd64 二进制，SHA-256 为 `835597af497f93042633e9742a42301432df3f8ba51d9e8b1d6a21e982639b8c`。
+- 替换前正式二进制保存在 `/tmp/cgm-before-archive-rules-20260829`，SHA-256 为 `ab1156db14e21c6f50f7cbe91a92be6c5df65021f6e2f3a2a086854a59412825`；候选逐字节校验后原子替换，服务只重启一次。
+- 产品数据库保持 `cosplay-gallery-manager / schema 5`，`PRAGMA integrity_check=ok`；配置 SHA-256 仍为 `ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`，未迁移数据库或修改媒体、Manifest与缓存。
+- 用户服务保持 `active`、`NRestarts=0`，Health/Ready 均为 204；About 报告完整提交号与 `exactSourceAvailable=true`，启动 journal 无 WARN、ERROR、FAILED、panic 或 fatal。
+
+
 ### 2026-08-28 可管理媒体自动排除规则部署
 
 - 从提交 `18d6485b34cb52bc0db77dca835142c2d4714bc6` 构建并部署带 `cgm_web_embed cgm_galleryepic` 的 Linux amd64 二进制，SHA-256 为 `ab1156db14e21c6f50f7cbe91a92be6c5df65021f6e2f3a2a086854a59412825`。

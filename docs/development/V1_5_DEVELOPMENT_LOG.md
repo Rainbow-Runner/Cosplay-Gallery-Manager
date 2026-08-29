@@ -1614,3 +1614,5 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 
 - 经现状核对，PHOTO/SELFIE 媒体分类规则已对可用静态 Archive 成员生成待审核建议；本阶段将可管理自动排除规则扩展为统一匹配 DIRECTORY 新Item和经过安全校验的 Archive 新成员。Archive 的 `.cosplay-root` 不生效，现有有效相邻 Manifest 仍是标题和实体元数据首选来源。
 - 已实现 Archive 成员内部相对路径排除、无 Manifest 文件名标题保底，以及基于外部路径/文件名的唯一 Coser/Work/Character 待审核候选；复用 schema v5 的 `relative_path`，不新增作用范围字段或数据库迁移。定向产品数据库回归已通过，前端/API正式部署待后续重新构建验证。
+- 2026-08-29 从清洁提交 `d9420fce4cf9584229ec5bcd31ef87e991d14b74` 完成增量部署；正式二进制 SHA-256 为 `835597af497f93042633e9742a42301432df3f8ba51d9e8b1d6a21e982639b8c`，旧二进制保存于 `/tmp/cgm-before-archive-rules-20260829`。正式标签组合、29文件80项Vitest、TypeScript检查和680模块生产构建通过。
+- 服务保持 `active`、`NRestarts=0`，Health/Ready 为 204，About 精确对应源码提交；数据库保持 schema v5 且 `integrity_check=ok`，配置校验和未变，journal 未发现异常。

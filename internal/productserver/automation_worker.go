@@ -36,9 +36,20 @@ func (s *Server) runAutomationWorkerLoop(ctx context.Context) {
 			return
 		}
 		if done {
-			slog.Info("CGM_LIBRARY_AUTOMATION_COMPLETED", "run_id", run.ID, "candidates", run.CandidatesSeen,
-				"drafts", run.DraftsCreated, "scanned", run.Scanned, "activated", run.Activated,
-				"needs_review", run.NeedsReview)
+			switch run.Status {
+			case "COMPLETED":
+				slog.Info("CGM_LIBRARY_AUTOMATION_COMPLETED", "run_id", run.ID, "candidates", run.CandidatesSeen,
+					"drafts", run.DraftsCreated, "scanned", run.Scanned, "activated", run.Activated,
+					"needs_review", run.NeedsReview)
+			case "CANCELLED":
+				slog.Info("CGM_LIBRARY_AUTOMATION_CANCELLED", "run_id", run.ID, "candidates", run.CandidatesSeen,
+					"drafts", run.DraftsCreated, "scanned", run.Scanned, "activated", run.Activated,
+					"needs_review", run.NeedsReview)
+			case "FAILED":
+				slog.Error("CGM_LIBRARY_AUTOMATION_FAILED", "run_id", run.ID, "error_code", run.ErrorCode)
+			default:
+				slog.Error("CGM_LIBRARY_AUTOMATION_TERMINAL_STATE_INVALID", "run_id", run.ID)
+			}
 		}
 	}
 }

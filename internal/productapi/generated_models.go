@@ -352,11 +352,13 @@ type ManageCoserManifestState struct {
 }
 
 type ManageDiscoverySnapshot struct {
-	ID          int64                         `json:"id"`
-	LibraryID   int64                         `json:"libraryID"`
-	CompletedAt string                        `json:"completedAt"`
-	Candidates  []*ManageCandidate            `json:"candidates"`
-	Unassigned  []*ManageUnassignedDiagnostic `json:"unassigned"`
+	ID                  int64                              `json:"id"`
+	LibraryID           int64                              `json:"libraryID"`
+	CompletedAt         string                             `json:"completedAt"`
+	Candidates          []*ManageCandidate                 `json:"candidates"`
+	Unassigned          []*ManageUnassignedDiagnostic      `json:"unassigned"`
+	CoverageSummary     *ManageLibraryCoverageSummary      `json:"coverageSummary"`
+	CoverageDiagnostics []*ManageLibraryCoverageDiagnostic `json:"coverageDiagnostics"`
 }
 
 type ManageFocalPoint struct {
@@ -547,6 +549,27 @@ type ManageLibraryAutomationRun struct {
 	ErrorCode             string  `json:"errorCode"`
 	StartedAt             string  `json:"startedAt"`
 	CompletedAt           *string `json:"completedAt,omitempty"`
+}
+
+type ManageLibraryCoverageDiagnostic struct {
+	Path       string `json:"path"`
+	EntryKind  string `json:"entryKind"`
+	ReasonCode string `json:"reasonCode"`
+	FileCount  int    `json:"fileCount"`
+	ByteSize   int64  `json:"byteSize"`
+}
+
+type ManageLibraryCoverageSummary struct {
+	RegularFileCount        int `json:"regularFileCount"`
+	SupportedMediaCount     int `json:"supportedMediaCount"`
+	SupportedArchiveCount   int `json:"supportedArchiveCount"`
+	UnsupportedArchiveCount int `json:"unsupportedArchiveCount"`
+	ControlFileCount        int `json:"controlFileCount"`
+	IgnoredOtherCount       int `json:"ignoredOtherCount"`
+	ActionableIssueCount    int `json:"actionableIssueCount"`
+	RegisteredSourceCount   int `json:"registeredSourceCount"`
+	IndexedItemCount        int `json:"indexedItemCount"`
+	SourceNeedsScanCount    int `json:"sourceNeedsScanCount"`
 }
 
 type ManageMaintenanceState struct {

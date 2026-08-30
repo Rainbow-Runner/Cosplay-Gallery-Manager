@@ -337,11 +337,13 @@ type ComplexityRoot struct {
 	}
 
 	ManageDiscoverySnapshot struct {
-		Candidates  func(childComplexity int) int
-		CompletedAt func(childComplexity int) int
-		ID          func(childComplexity int) int
-		LibraryID   func(childComplexity int) int
-		Unassigned  func(childComplexity int) int
+		Candidates          func(childComplexity int) int
+		CompletedAt         func(childComplexity int) int
+		CoverageDiagnostics func(childComplexity int) int
+		CoverageSummary     func(childComplexity int) int
+		ID                  func(childComplexity int) int
+		LibraryID           func(childComplexity int) int
+		Unassigned          func(childComplexity int) int
 	}
 
 	ManageFocalPoint struct {
@@ -532,6 +534,27 @@ type ComplexityRoot struct {
 		Scanned               func(childComplexity int) int
 		StartedAt             func(childComplexity int) int
 		Status                func(childComplexity int) int
+	}
+
+	ManageLibraryCoverageDiagnostic struct {
+		ByteSize   func(childComplexity int) int
+		EntryKind  func(childComplexity int) int
+		FileCount  func(childComplexity int) int
+		Path       func(childComplexity int) int
+		ReasonCode func(childComplexity int) int
+	}
+
+	ManageLibraryCoverageSummary struct {
+		ActionableIssueCount    func(childComplexity int) int
+		ControlFileCount        func(childComplexity int) int
+		IgnoredOtherCount       func(childComplexity int) int
+		IndexedItemCount        func(childComplexity int) int
+		RegisteredSourceCount   func(childComplexity int) int
+		RegularFileCount        func(childComplexity int) int
+		SourceNeedsScanCount    func(childComplexity int) int
+		SupportedArchiveCount   func(childComplexity int) int
+		SupportedMediaCount     func(childComplexity int) int
+		UnsupportedArchiveCount func(childComplexity int) int
 	}
 
 	ManageMaintenanceState struct {
@@ -2562,6 +2585,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageDiscoverySnapshot.CompletedAt(childComplexity), true
 
+	case "ManageDiscoverySnapshot.coverageDiagnostics":
+		if e.complexity.ManageDiscoverySnapshot.CoverageDiagnostics == nil {
+			break
+		}
+
+		return e.complexity.ManageDiscoverySnapshot.CoverageDiagnostics(childComplexity), true
+
+	case "ManageDiscoverySnapshot.coverageSummary":
+		if e.complexity.ManageDiscoverySnapshot.CoverageSummary == nil {
+			break
+		}
+
+		return e.complexity.ManageDiscoverySnapshot.CoverageSummary(childComplexity), true
+
 	case "ManageDiscoverySnapshot.id":
 		if e.complexity.ManageDiscoverySnapshot.ID == nil {
 			break
@@ -3534,6 +3571,111 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageLibraryAutomationRun.Status(childComplexity), true
+
+	case "ManageLibraryCoverageDiagnostic.byteSize":
+		if e.complexity.ManageLibraryCoverageDiagnostic.ByteSize == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageDiagnostic.ByteSize(childComplexity), true
+
+	case "ManageLibraryCoverageDiagnostic.entryKind":
+		if e.complexity.ManageLibraryCoverageDiagnostic.EntryKind == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageDiagnostic.EntryKind(childComplexity), true
+
+	case "ManageLibraryCoverageDiagnostic.fileCount":
+		if e.complexity.ManageLibraryCoverageDiagnostic.FileCount == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageDiagnostic.FileCount(childComplexity), true
+
+	case "ManageLibraryCoverageDiagnostic.path":
+		if e.complexity.ManageLibraryCoverageDiagnostic.Path == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageDiagnostic.Path(childComplexity), true
+
+	case "ManageLibraryCoverageDiagnostic.reasonCode":
+		if e.complexity.ManageLibraryCoverageDiagnostic.ReasonCode == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageDiagnostic.ReasonCode(childComplexity), true
+
+	case "ManageLibraryCoverageSummary.actionableIssueCount":
+		if e.complexity.ManageLibraryCoverageSummary.ActionableIssueCount == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageSummary.ActionableIssueCount(childComplexity), true
+
+	case "ManageLibraryCoverageSummary.controlFileCount":
+		if e.complexity.ManageLibraryCoverageSummary.ControlFileCount == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageSummary.ControlFileCount(childComplexity), true
+
+	case "ManageLibraryCoverageSummary.ignoredOtherCount":
+		if e.complexity.ManageLibraryCoverageSummary.IgnoredOtherCount == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageSummary.IgnoredOtherCount(childComplexity), true
+
+	case "ManageLibraryCoverageSummary.indexedItemCount":
+		if e.complexity.ManageLibraryCoverageSummary.IndexedItemCount == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageSummary.IndexedItemCount(childComplexity), true
+
+	case "ManageLibraryCoverageSummary.registeredSourceCount":
+		if e.complexity.ManageLibraryCoverageSummary.RegisteredSourceCount == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageSummary.RegisteredSourceCount(childComplexity), true
+
+	case "ManageLibraryCoverageSummary.regularFileCount":
+		if e.complexity.ManageLibraryCoverageSummary.RegularFileCount == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageSummary.RegularFileCount(childComplexity), true
+
+	case "ManageLibraryCoverageSummary.sourceNeedsScanCount":
+		if e.complexity.ManageLibraryCoverageSummary.SourceNeedsScanCount == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageSummary.SourceNeedsScanCount(childComplexity), true
+
+	case "ManageLibraryCoverageSummary.supportedArchiveCount":
+		if e.complexity.ManageLibraryCoverageSummary.SupportedArchiveCount == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageSummary.SupportedArchiveCount(childComplexity), true
+
+	case "ManageLibraryCoverageSummary.supportedMediaCount":
+		if e.complexity.ManageLibraryCoverageSummary.SupportedMediaCount == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageSummary.SupportedMediaCount(childComplexity), true
+
+	case "ManageLibraryCoverageSummary.unsupportedArchiveCount":
+		if e.complexity.ManageLibraryCoverageSummary.UnsupportedArchiveCount == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryCoverageSummary.UnsupportedArchiveCount(childComplexity), true
 
 	case "ManageMaintenanceState.lastErrorCode":
 		if e.complexity.ManageMaintenanceState.LastErrorCode == nil {
@@ -21578,6 +21720,128 @@ func (ec *executionContext) fieldContext_ManageDiscoverySnapshot_unassigned(_ co
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageDiscoverySnapshot_coverageSummary(ctx context.Context, field graphql.CollectedField, obj *ManageDiscoverySnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageDiscoverySnapshot_coverageSummary(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CoverageSummary, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageLibraryCoverageSummary)
+	fc.Result = res
+	return ec.marshalNManageLibraryCoverageSummary2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageLibraryCoverageSummary(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageDiscoverySnapshot_coverageSummary(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageDiscoverySnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "regularFileCount":
+				return ec.fieldContext_ManageLibraryCoverageSummary_regularFileCount(ctx, field)
+			case "supportedMediaCount":
+				return ec.fieldContext_ManageLibraryCoverageSummary_supportedMediaCount(ctx, field)
+			case "supportedArchiveCount":
+				return ec.fieldContext_ManageLibraryCoverageSummary_supportedArchiveCount(ctx, field)
+			case "unsupportedArchiveCount":
+				return ec.fieldContext_ManageLibraryCoverageSummary_unsupportedArchiveCount(ctx, field)
+			case "controlFileCount":
+				return ec.fieldContext_ManageLibraryCoverageSummary_controlFileCount(ctx, field)
+			case "ignoredOtherCount":
+				return ec.fieldContext_ManageLibraryCoverageSummary_ignoredOtherCount(ctx, field)
+			case "actionableIssueCount":
+				return ec.fieldContext_ManageLibraryCoverageSummary_actionableIssueCount(ctx, field)
+			case "registeredSourceCount":
+				return ec.fieldContext_ManageLibraryCoverageSummary_registeredSourceCount(ctx, field)
+			case "indexedItemCount":
+				return ec.fieldContext_ManageLibraryCoverageSummary_indexedItemCount(ctx, field)
+			case "sourceNeedsScanCount":
+				return ec.fieldContext_ManageLibraryCoverageSummary_sourceNeedsScanCount(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageLibraryCoverageSummary", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageDiscoverySnapshot_coverageDiagnostics(ctx context.Context, field graphql.CollectedField, obj *ManageDiscoverySnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageDiscoverySnapshot_coverageDiagnostics(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CoverageDiagnostics, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageLibraryCoverageDiagnostic)
+	fc.Result = res
+	return ec.marshalNManageLibraryCoverageDiagnostic2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageLibraryCoverageDiagnosticᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageDiscoverySnapshot_coverageDiagnostics(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageDiscoverySnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "path":
+				return ec.fieldContext_ManageLibraryCoverageDiagnostic_path(ctx, field)
+			case "entryKind":
+				return ec.fieldContext_ManageLibraryCoverageDiagnostic_entryKind(ctx, field)
+			case "reasonCode":
+				return ec.fieldContext_ManageLibraryCoverageDiagnostic_reasonCode(ctx, field)
+			case "fileCount":
+				return ec.fieldContext_ManageLibraryCoverageDiagnostic_fileCount(ctx, field)
+			case "byteSize":
+				return ec.fieldContext_ManageLibraryCoverageDiagnostic_byteSize(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageLibraryCoverageDiagnostic", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageFocalPoint_x(ctx context.Context, field graphql.CollectedField, obj *ManageFocalPoint) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageFocalPoint_x(ctx, field)
 	if err != nil {
@@ -27819,6 +28083,666 @@ func (ec *executionContext) fieldContext_ManageLibraryAutomationRun_completedAt(
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageDiagnostic_path(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageDiagnostic) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageDiagnostic_path(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Path, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageDiagnostic_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageDiagnostic",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageDiagnostic_entryKind(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageDiagnostic) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageDiagnostic_entryKind(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EntryKind, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageDiagnostic_entryKind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageDiagnostic",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageDiagnostic_reasonCode(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageDiagnostic) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageDiagnostic_reasonCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ReasonCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageDiagnostic_reasonCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageDiagnostic",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageDiagnostic_fileCount(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageDiagnostic) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageDiagnostic_fileCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FileCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageDiagnostic_fileCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageDiagnostic",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageDiagnostic_byteSize(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageDiagnostic) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageDiagnostic_byteSize(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ByteSize, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageDiagnostic_byteSize(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageDiagnostic",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageSummary_regularFileCount(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageSummary_regularFileCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RegularFileCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageSummary_regularFileCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageSummary_supportedMediaCount(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageSummary_supportedMediaCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SupportedMediaCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageSummary_supportedMediaCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageSummary_supportedArchiveCount(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageSummary_supportedArchiveCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SupportedArchiveCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageSummary_supportedArchiveCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageSummary_unsupportedArchiveCount(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageSummary_unsupportedArchiveCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UnsupportedArchiveCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageSummary_unsupportedArchiveCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageSummary_controlFileCount(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageSummary_controlFileCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ControlFileCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageSummary_controlFileCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageSummary_ignoredOtherCount(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageSummary_ignoredOtherCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IgnoredOtherCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageSummary_ignoredOtherCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageSummary_actionableIssueCount(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageSummary_actionableIssueCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ActionableIssueCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageSummary_actionableIssueCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageSummary_registeredSourceCount(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageSummary_registeredSourceCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RegisteredSourceCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageSummary_registeredSourceCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageSummary_indexedItemCount(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageSummary_indexedItemCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IndexedItemCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageSummary_indexedItemCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryCoverageSummary_sourceNeedsScanCount(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryCoverageSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryCoverageSummary_sourceNeedsScanCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SourceNeedsScanCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryCoverageSummary_sourceNeedsScanCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryCoverageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -39770,6 +40694,10 @@ func (ec *executionContext) fieldContext_Mutation_discoverMediaLibrary(ctx conte
 				return ec.fieldContext_ManageDiscoverySnapshot_candidates(ctx, field)
 			case "unassigned":
 				return ec.fieldContext_ManageDiscoverySnapshot_unassigned(ctx, field)
+			case "coverageSummary":
+				return ec.fieldContext_ManageDiscoverySnapshot_coverageSummary(ctx, field)
+			case "coverageDiagnostics":
+				return ec.fieldContext_ManageDiscoverySnapshot_coverageDiagnostics(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageDiscoverySnapshot", field.Name)
 		},
@@ -44011,6 +44939,10 @@ func (ec *executionContext) fieldContext_Query_manageDiscovery(ctx context.Conte
 				return ec.fieldContext_ManageDiscoverySnapshot_candidates(ctx, field)
 			case "unassigned":
 				return ec.fieldContext_ManageDiscoverySnapshot_unassigned(ctx, field)
+			case "coverageSummary":
+				return ec.fieldContext_ManageDiscoverySnapshot_coverageSummary(ctx, field)
+			case "coverageDiagnostics":
+				return ec.fieldContext_ManageDiscoverySnapshot_coverageDiagnostics(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageDiscoverySnapshot", field.Name)
 		},
@@ -53135,6 +54067,16 @@ func (ec *executionContext) _ManageDiscoverySnapshot(ctx context.Context, sel as
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "coverageSummary":
+			out.Values[i] = ec._ManageDiscoverySnapshot_coverageSummary(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "coverageDiagnostics":
+			out.Values[i] = ec._ManageDiscoverySnapshot_coverageDiagnostics(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -54415,6 +55357,149 @@ func (ec *executionContext) _ManageLibraryAutomationRun(ctx context.Context, sel
 			}
 		case "completedAt":
 			out.Values[i] = ec._ManageLibraryAutomationRun_completedAt(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageLibraryCoverageDiagnosticImplementors = []string{"ManageLibraryCoverageDiagnostic"}
+
+func (ec *executionContext) _ManageLibraryCoverageDiagnostic(ctx context.Context, sel ast.SelectionSet, obj *ManageLibraryCoverageDiagnostic) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageLibraryCoverageDiagnosticImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageLibraryCoverageDiagnostic")
+		case "path":
+			out.Values[i] = ec._ManageLibraryCoverageDiagnostic_path(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "entryKind":
+			out.Values[i] = ec._ManageLibraryCoverageDiagnostic_entryKind(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "reasonCode":
+			out.Values[i] = ec._ManageLibraryCoverageDiagnostic_reasonCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "fileCount":
+			out.Values[i] = ec._ManageLibraryCoverageDiagnostic_fileCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "byteSize":
+			out.Values[i] = ec._ManageLibraryCoverageDiagnostic_byteSize(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageLibraryCoverageSummaryImplementors = []string{"ManageLibraryCoverageSummary"}
+
+func (ec *executionContext) _ManageLibraryCoverageSummary(ctx context.Context, sel ast.SelectionSet, obj *ManageLibraryCoverageSummary) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageLibraryCoverageSummaryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageLibraryCoverageSummary")
+		case "regularFileCount":
+			out.Values[i] = ec._ManageLibraryCoverageSummary_regularFileCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "supportedMediaCount":
+			out.Values[i] = ec._ManageLibraryCoverageSummary_supportedMediaCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "supportedArchiveCount":
+			out.Values[i] = ec._ManageLibraryCoverageSummary_supportedArchiveCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "unsupportedArchiveCount":
+			out.Values[i] = ec._ManageLibraryCoverageSummary_unsupportedArchiveCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "controlFileCount":
+			out.Values[i] = ec._ManageLibraryCoverageSummary_controlFileCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ignoredOtherCount":
+			out.Values[i] = ec._ManageLibraryCoverageSummary_ignoredOtherCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "actionableIssueCount":
+			out.Values[i] = ec._ManageLibraryCoverageSummary_actionableIssueCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "registeredSourceCount":
+			out.Values[i] = ec._ManageLibraryCoverageSummary_registeredSourceCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "indexedItemCount":
+			out.Values[i] = ec._ManageLibraryCoverageSummary_indexedItemCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sourceNeedsScanCount":
+			out.Values[i] = ec._ManageLibraryCoverageSummary_sourceNeedsScanCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -60821,6 +61906,70 @@ func (ec *executionContext) marshalNManageLibraryAutomationRun2ᚖgithubᚗcom�
 		return graphql.Null
 	}
 	return ec._ManageLibraryAutomationRun(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageLibraryCoverageDiagnostic2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageLibraryCoverageDiagnosticᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageLibraryCoverageDiagnostic) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageLibraryCoverageDiagnostic2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageLibraryCoverageDiagnostic(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageLibraryCoverageDiagnostic2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageLibraryCoverageDiagnostic(ctx context.Context, sel ast.SelectionSet, v *ManageLibraryCoverageDiagnostic) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageLibraryCoverageDiagnostic(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageLibraryCoverageSummary2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageLibraryCoverageSummary(ctx context.Context, sel ast.SelectionSet, v *ManageLibraryCoverageSummary) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageLibraryCoverageSummary(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNManageMaintenanceState2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageMaintenanceState(ctx context.Context, sel ast.SelectionSet, v ManageMaintenanceState) graphql.Marshaler {

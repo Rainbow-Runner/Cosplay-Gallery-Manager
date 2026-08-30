@@ -3,7 +3,6 @@
 package mediaaccess
 
 import (
-	"archive/zip"
 	"context"
 	"errors"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/stashapp/stash/internal/archivefile"
 	"github.com/stashapp/stash/internal/gallery"
 	"golang.org/x/text/unicode/norm"
 )
@@ -125,39 +125,9 @@ func openDirectory(source Source) (Materialized, error) {
 }
 
 func (m Materializer) openArchive(ctx context.Context, source Source) (Materialized, error) {
-	archiveInfo, err := os.Lstat(source.Path)
-	if err != nil {
-		return Materialized{}, err
-	}
-	if archiveInfo.Mode()&os.ModeSymlink != 0 || !archiveInfo.Mode().IsRegular() {
-		return Materialized{}, errors.New("archive source must be a regular non-symlink file")
-	}
-	reader, err := zip.OpenReader(source.Path)
-	if err != nil {
-		return Materialized{}, err
-	}
-	defer reader.Close()
-	var entry *zip.File
-	for _, candidate := range reader.File {
-		if norm.NFC.String(candidate.Name) == source.RelativePath {
-			if entry != nil {
-				return Materialized{}, errors.New("archive contains duplicate GalleryItem path")
-			}
-			entry = candidate
-		}
-	}
-	if entry == nil {
-		return Materialized{}, os.ErrNotExist
-	}
-	if entry.FileInfo().IsDir() || entry.Mode()&os.ModeSymlink != 0 {
-		return Materialized{}, errors.New("archive GalleryItem is not a regular file")
-	}
 	maximum := m.MaximumBytes
 	if maximum <= 0 {
 		maximum = 2 << 30
-	}
-	if int64(entry.UncompressedSize64) > maximum {
-		return Materialized{}, errors.New("archive GalleryItem exceeds materialization limit")
 	}
 	temporaryRoot, err := filepath.Abs(m.TemporaryRoot)
 	if err != nil {
@@ -170,55 +140,80 @@ func (m Materializer) openArchive(ctx context.Context, source Source) (Materiali
 	if rootInfo.Mode()&os.ModeSymlink != 0 || !rootInfo.IsDir() {
 		return Materialized{}, errors.New("temporary root must be a real directory")
 	}
-	input, err := entry.Open()
-	if err != nil {
-		return Materialized{}, err
-	}
-	defer input.Close()
-	extension := filepath.Ext(source.RelativePath)
-	temporary, err := os.CreateTemp(temporaryRoot, "cgm-media-*"+extension)
-	if err != nil {
-		return Materialized{}, err
-	}
-	name := temporary.Name()
-	cleanup := true
+	matched := false
+	name := ""
 	defer func() {
-		_ = temporary.Close()
-		if cleanup {
+		if name != "" {
 			_ = os.Remove(name)
 		}
 	}()
-	buffer := make([]byte, 128*1024)
-	written := int64(0)
-	for {
-		if err := ctx.Err(); err != nil {
-			return Materialized{}, err
+	err = archivefile.Walk(source.Path, func(entry archivefile.Entry) error {
+		if norm.NFC.String(entry.Name) != source.RelativePath {
+			return nil
 		}
-		count, readErr := input.Read(buffer)
-		if count > 0 {
-			written += int64(count)
-			if written > maximum {
-				return Materialized{}, errors.New("archive GalleryItem exceeds materialization limit")
+		if matched {
+			return errors.New("archive contains duplicate GalleryItem path")
+		}
+		matched = true
+		if entry.IsDir() || entry.Mode&os.ModeSymlink != 0 || !entry.Mode.IsRegular() {
+			return errors.New("archive GalleryItem is not a regular file")
+		}
+		if entry.UncompressedSize > uint64(maximum) {
+			return errors.New("archive GalleryItem exceeds materialization limit")
+		}
+		input, err := entry.Open()
+		if err != nil {
+			return err
+		}
+		defer input.Close()
+		temporary, err := os.CreateTemp(temporaryRoot, "cgm-media-*"+filepath.Ext(source.RelativePath))
+		if err != nil {
+			return err
+		}
+		name = temporary.Name()
+		buffer := make([]byte, 128*1024)
+		written := int64(0)
+		for {
+			if err := ctx.Err(); err != nil {
+				_ = temporary.Close()
+				return err
 			}
-			if _, err := temporary.Write(buffer[:count]); err != nil {
-				return Materialized{}, err
+			count, readErr := input.Read(buffer)
+			if count > 0 {
+				written += int64(count)
+				if written > maximum {
+					_ = temporary.Close()
+					return errors.New("archive GalleryItem exceeds materialization limit")
+				}
+				if _, err := temporary.Write(buffer[:count]); err != nil {
+					_ = temporary.Close()
+					return err
+				}
+			}
+			if readErr == io.EOF {
+				break
+			}
+			if readErr != nil {
+				_ = temporary.Close()
+				return readErr
 			}
 		}
-		if readErr == io.EOF {
-			break
+		if err := temporary.Sync(); err != nil {
+			_ = temporary.Close()
+			return err
 		}
-		if readErr != nil {
-			return Materialized{}, readErr
-		}
-	}
-	if err := temporary.Sync(); err != nil {
+		return temporary.Close()
+	})
+	if err != nil {
 		return Materialized{}, err
 	}
-	if err := temporary.Close(); err != nil {
-		return Materialized{}, err
+	if !matched {
+		return Materialized{}, os.ErrNotExist
 	}
-	cleanup = false
-	return Materialized{Path: name, cleanup: func() error { return os.Remove(name) }}, nil
+	materializedPath := name
+	result := Materialized{Path: materializedPath, cleanup: func() error { return os.Remove(materializedPath) }}
+	name = ""
+	return result, nil
 }
 
 func validateRelative(value string) error {

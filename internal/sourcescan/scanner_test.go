@@ -1,13 +1,16 @@
 package sourcescan
 
 import (
+	"archive/tar"
 	"archive/zip"
 	"context"
+	"encoding/base64"
 	"image"
 	"image/color"
 	"image/jpeg"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stashapp/stash/internal/archivecheck"
@@ -122,6 +125,37 @@ func TestScanArchiveUsesCompressedSizeAndBlocksUnsafeMedia(t *testing.T) {
 	}
 }
 
+func TestScanArchiveReadsTARAndSevenZIPMedia(t *testing.T) {
+	gif := []byte("GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x01L\x00;")
+	tarPath := filepath.Join(t.TempDir(), "set.tar")
+	file, err := os.Create(tarPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := tar.NewWriter(file)
+	if err := writer.WriteHeader(&tar.Header{Name: "photos/one.gif", Mode: 0o600, Size: int64(len(gif))}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writer.Write(gif); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	for _, filename := range []string{tarPath, decodeScannerSevenZIP(t)} {
+		result, err := ScanArchive(context.Background(), filename, archivecheck.DefaultLimits())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !result.Complete || len(result.Observations) != 1 || result.Observations[0].ContentFormat != gallery.ContentFormatImage || result.Observations[0].MediaKind != gallery.MediaKindAnimatedImage || result.Observations[0].ByteSize <= 0 {
+			t.Fatalf("archive scan %q = %#v", filename, result)
+		}
+	}
+}
+
 func hasIssue(issues []Issue, code string) bool {
 	for _, issue := range issues {
 		if issue.Code == code {
@@ -129,4 +163,21 @@ func hasIssue(issues []Issue, code string) bool {
 		}
 	}
 	return false
+}
+
+func decodeScannerSevenZIP(t *testing.T) string {
+	t.Helper()
+	encoded, err := os.ReadFile(filepath.Join("..", "archivefile", "testdata", "gallery.7z.b64"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(encoded)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	filename := filepath.Join(t.TempDir(), "gallery.7z")
+	if err := os.WriteFile(filename, body, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return filename
 }

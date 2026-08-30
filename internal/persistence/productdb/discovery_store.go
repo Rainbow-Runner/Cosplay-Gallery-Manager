@@ -1,7 +1,6 @@
 package productdb
 
 import (
-	"archive/zip"
 	"context"
 	"database/sql"
 	"errors"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/stashapp/stash/internal/archivecheck"
+	"github.com/stashapp/stash/internal/archivefile"
 	"github.com/stashapp/stash/internal/discovery"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/manifest"
@@ -218,12 +218,31 @@ type UnassignedDiagnostic struct {
 	MediaCount int
 }
 
+type LibraryCoverageSummary struct {
+	RegularFileCount, SupportedMediaCount, SupportedArchiveCount                       int
+	UnsupportedArchiveCount, ControlFileCount, IgnoredOtherCount, ActionableIssueCount int
+	RegisteredSourceCount, IndexedItemCount, SourceNeedsScanCount                      int
+}
+
+type LibraryCoverageDiagnostic struct {
+	Path, EntryKind, ReasonCode string
+	FileCount                   int
+	ByteSize                    int64
+}
+
 type DiscoverySnapshot struct {
-	ID          int64
-	LibraryID   int64
-	CompletedAt time.Time
-	Candidates  []Candidate
-	Unassigned  []UnassignedDiagnostic
+	ID                  int64
+	LibraryID           int64
+	CompletedAt         time.Time
+	Candidates          []Candidate
+	Unassigned          []UnassignedDiagnostic
+	CoverageSummary     LibraryCoverageSummary
+	CoverageDiagnostics []LibraryCoverageDiagnostic
+}
+
+type filesystemCoverage struct {
+	summary     LibraryCoverageSummary
+	diagnostics []LibraryCoverageDiagnostic
 }
 
 type CandidateDiscoveryStore struct {
@@ -270,6 +289,7 @@ func (s *CandidateDiscoveryStore) DiscoverFilesystem(ctx context.Context, librar
 	markerDirectories := make(map[string]bool)
 	manifestDirectories := make(map[string]bool)
 	var archives []ObservedDirectory
+	coverage := &filesystemCoverage{}
 	err = filepath.WalkDir(mediaLibrary.RootPath, func(filename string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -299,29 +319,38 @@ func (s *CandidateDiscoveryStore) DiscoverFilesystem(ctx context.Context, librar
 		if !info.Mode().IsRegular() {
 			return nil
 		}
+		coverage.summary.RegularFileCount++
 		base := strings.ToLower(entry.Name())
 		directory := filepath.Dir(filename)
 		if base == ".cosplay-root" {
+			coverage.summary.ControlFileCount++
 			markerDirectories[directory] = true
 			return nil
 		}
 		if base == ".cosplay.json" {
+			coverage.summary.ControlFileCount++
 			manifestDirectories[directory] = true
 			return nil
 		}
-		extension := strings.ToLower(filepath.Ext(filename))
-		if extension == ".zip" || extension == ".cbz" {
-			observation, err := observeArchiveCandidate(mediaLibrary.RootPath, filename, archiveLimits)
-			if err != nil {
-				return err
+		if archivefile.IsSupportedPath(filename) {
+			coverage.summary.SupportedArchiveCount++
+			observation, reason := observeArchiveCandidate(mediaLibrary.RootPath, filename, archiveLimits)
+			if reason != "" {
+				coverage.diagnostics = append(coverage.diagnostics, LibraryCoverageDiagnostic{Path: filename, EntryKind: "ARCHIVE", ReasonCode: reason, FileCount: 1, ByteSize: info.Size()})
 			}
-			if observation.MediaCount > 0 {
+			if observation.MediaCount > 0 || observation.HasConflict {
 				archives = append(archives, observation)
 			}
 			return nil
 		}
 		if sourcescan.IsSupportedMediaPath(filename) {
+			coverage.summary.SupportedMediaCount++
 			directoryCounts[directory]++
+		} else if archivefile.IsArchiveLikePath(filename) {
+			coverage.summary.UnsupportedArchiveCount++
+			coverage.diagnostics = append(coverage.diagnostics, LibraryCoverageDiagnostic{Path: filename, EntryKind: "ARCHIVE", ReasonCode: "UNSUPPORTED_ARCHIVE_FORMAT", FileCount: 1, ByteSize: info.Size()})
+		} else {
+			coverage.summary.IgnoredOtherCount++
 		}
 		return nil
 	})
@@ -368,7 +397,7 @@ func (s *CandidateDiscoveryStore) DiscoverFilesystem(ctx context.Context, librar
 	}
 	observations = append(observations, archives...)
 	sort.Slice(observations, func(i, j int) bool { return observations[i].RelativePath < observations[j].RelativePath })
-	return s.CommitSnapshot(ctx, libraryID, observations, now)
+	return s.commitSnapshot(ctx, libraryID, observations, coverage, now)
 }
 
 func descendantMediaCount(root string, counts map[string]int) int {
@@ -439,7 +468,7 @@ func archiveEntitySuggestions(ctx context.Context, db *sql.DB, libraryRoot, arch
 	if len(parts) == 0 {
 		return nil, nil
 	}
-	parts[len(parts)-1] = strings.TrimSuffix(parts[len(parts)-1], filepath.Ext(parts[len(parts)-1]))
+	parts[len(parts)-1] = archivefile.BaseName(parts[len(parts)-1])
 	tokens := make(map[string]struct{}, len(parts))
 	for _, part := range parts {
 		if key := normalizedKey(part); key != "" {
@@ -492,27 +521,24 @@ func archiveEntitySuggestions(ctx context.Context, db *sql.DB, libraryRoot, arch
 	return result, nil
 }
 
-func observeArchiveCandidate(libraryRoot, filename string, limits archivecheck.Limits) (ObservedDirectory, error) {
+func observeArchiveCandidate(libraryRoot, filename string, limits archivecheck.Limits) (ObservedDirectory, string) {
 	validation, err := archivecheck.ValidateFile(filename, limits)
 	if err != nil {
-		return ObservedDirectory{}, err
-	}
-	reader, err := zip.OpenReader(filename)
-	if err != nil {
-		return ObservedDirectory{}, err
+		return ObservedDirectory{}, "UNREADABLE_ARCHIVE"
 	}
 	count := 0
-	for _, entry := range reader.File {
-		if !entry.FileInfo().IsDir() && sourcescan.IsSupportedMediaPath(entry.Name) {
+	err = archivefile.Walk(filename, func(entry archivefile.Entry) error {
+		if !entry.IsDir() && sourcescan.IsSupportedMediaPath(entry.Name) {
 			count++
 		}
-	}
-	if err := reader.Close(); err != nil {
-		return ObservedDirectory{}, err
+		return nil
+	})
+	if err != nil && !archivefile.IsEncryptedError(err) {
+		return ObservedDirectory{}, "UNREADABLE_ARCHIVE"
 	}
 	relative, err := filepath.Rel(libraryRoot, filename)
 	if err != nil {
-		return ObservedDirectory{}, err
+		return ObservedDirectory{}, "UNREADABLE_ARCHIVE"
 	}
 	conflict := false
 	for _, issue := range validation.Issues {
@@ -526,7 +552,20 @@ func observeArchiveCandidate(libraryRoot, filename string, limits archivecheck.L
 		observation.HasValidManifest, observation.ManifestSetID = valid, setID
 		observation.HasConflict = observation.HasConflict || !valid
 	}
-	return observation, nil
+	reason := ""
+	for _, issue := range validation.Issues {
+		if issue.Code == "ENCRYPTED_ARCHIVE" || issue.Code == "ENCRYPTED_ENTRY" {
+			reason = "ENCRYPTED_ARCHIVE"
+			break
+		}
+		if issue.Code != "UNSUPPORTED_ARCHIVE_MEDIA" {
+			reason = "UNSAFE_ARCHIVE"
+		}
+	}
+	if reason == "" && count == 0 {
+		reason = "ARCHIVE_WITHOUT_SUPPORTED_MEDIA"
+	}
+	return observation, reason
 }
 
 func readManifestIdentity(filename string) (exists, valid bool, setID string) {
@@ -589,6 +628,12 @@ func (s *CandidateDiscoveryStore) CommitSnapshot(
 	libraryID int64,
 	observations []ObservedDirectory,
 	now time.Time,
+) (DiscoverySnapshot, error) {
+	return s.commitSnapshot(ctx, libraryID, observations, nil, now)
+}
+
+func (s *CandidateDiscoveryStore) commitSnapshot(
+	ctx context.Context, libraryID int64, observations []ObservedDirectory, coverage *filesystemCoverage, now time.Time,
 ) (DiscoverySnapshot, error) {
 	mediaLibrary, err := findLibrary(ctx, s.db, libraryID)
 	if err != nil {
@@ -779,6 +824,30 @@ func (s *CandidateDiscoveryStore) CommitSnapshot(
 			return DiscoverySnapshot{}, err
 		}
 	}
+	if coverage != nil {
+		for _, parent := range diagnosticPaths {
+			coverage.diagnostics = append(coverage.diagnostics, LibraryCoverageDiagnostic{Path: parent, EntryKind: "DIRECTORY", ReasonCode: "UNASSIGNED_MEDIA_DIRECTORY", FileCount: unassigned[parent]})
+		}
+		coverage.summary.ActionableIssueCount = len(coverage.diagnostics)
+		if _, err := tx.ExecContext(ctx, `INSERT INTO library_coverage_summaries (
+			snapshot_id,library_id,regular_file_count,supported_media_count,supported_archive_count,
+			unsupported_archive_count,control_file_count,ignored_other_count,actionable_issue_count
+		) VALUES (?,?,?,?,?,?,?,?,?)`, snapshotID, libraryID, coverage.summary.RegularFileCount,
+			coverage.summary.SupportedMediaCount, coverage.summary.SupportedArchiveCount,
+			coverage.summary.UnsupportedArchiveCount, coverage.summary.ControlFileCount, coverage.summary.IgnoredOtherCount,
+			coverage.summary.ActionableIssueCount); err != nil {
+			return DiscoverySnapshot{}, err
+		}
+		sort.Slice(coverage.diagnostics, func(i, j int) bool { return coverage.diagnostics[i].Path < coverage.diagnostics[j].Path })
+		for _, diagnostic := range coverage.diagnostics {
+			if _, err := tx.ExecContext(ctx, `INSERT INTO library_coverage_diagnostics (
+				snapshot_id,library_id,path,entry_kind,reason_code,file_count,byte_size
+			) VALUES (?,?,?,?,?,?,?)`, snapshotID, libraryID, diagnostic.Path, diagnostic.EntryKind,
+				diagnostic.ReasonCode, diagnostic.FileCount, diagnostic.ByteSize); err != nil {
+				return DiscoverySnapshot{}, err
+			}
+		}
+	}
 
 	if err := tx.Commit(); err != nil {
 		return DiscoverySnapshot{}, err
@@ -895,7 +964,40 @@ func (s *CandidateDiscoveryStore) FindSnapshot(ctx context.Context, snapshotID i
 		}
 		result.Unassigned = append(result.Unassigned, diagnostic)
 	}
-	return result, diagnosticRows.Err()
+	if err := diagnosticRows.Err(); err != nil {
+		return DiscoverySnapshot{}, err
+	}
+	_ = diagnosticRows.Close()
+	if err := s.db.QueryRowContext(ctx, `SELECT regular_file_count,supported_media_count,supported_archive_count,
+		unsupported_archive_count,control_file_count,ignored_other_count,actionable_issue_count FROM library_coverage_summaries WHERE snapshot_id=?`, snapshotID).
+		Scan(&result.CoverageSummary.RegularFileCount, &result.CoverageSummary.SupportedMediaCount,
+			&result.CoverageSummary.SupportedArchiveCount, &result.CoverageSummary.UnsupportedArchiveCount, &result.CoverageSummary.ControlFileCount,
+			&result.CoverageSummary.IgnoredOtherCount, &result.CoverageSummary.ActionableIssueCount); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return DiscoverySnapshot{}, err
+	}
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(SUM(CASE WHEN availability_state!='AVAILABLE' OR reconcile_state!='IN_SYNC' THEN 1 ELSE 0 END),0)
+		FROM gallery_sources WHERE library_id=?`, result.LibraryID).Scan(&result.CoverageSummary.RegisteredSourceCount, &result.CoverageSummary.SourceNeedsScanCount); err != nil {
+		return DiscoverySnapshot{}, err
+	}
+	result.CoverageSummary.ActionableIssueCount += result.CoverageSummary.SourceNeedsScanCount
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_items i JOIN gallery_sources s ON s.id=i.source_id WHERE s.library_id=?`, result.LibraryID).
+		Scan(&result.CoverageSummary.IndexedItemCount); err != nil {
+		return DiscoverySnapshot{}, err
+	}
+	coverageRows, err := s.db.QueryContext(ctx, `SELECT path,entry_kind,reason_code,file_count,byte_size
+		FROM library_coverage_diagnostics WHERE snapshot_id=? ORDER BY reason_code,path`, snapshotID)
+	if err != nil {
+		return DiscoverySnapshot{}, err
+	}
+	defer coverageRows.Close()
+	for coverageRows.Next() {
+		var value LibraryCoverageDiagnostic
+		if err := coverageRows.Scan(&value.Path, &value.EntryKind, &value.ReasonCode, &value.FileCount, &value.ByteSize); err != nil {
+			return DiscoverySnapshot{}, err
+		}
+		result.CoverageDiagnostics = append(result.CoverageDiagnostics, value)
+	}
+	return result, coverageRows.Err()
 }
 
 func (s *CandidateDiscoveryStore) LatestSnapshot(ctx context.Context, libraryID int64) (DiscoverySnapshot, error) {
@@ -963,8 +1065,7 @@ func (s *CandidateDiscoveryStore) ImportCandidate(
 	if title == "" && sourceType == gallery.SourceTypeArchive {
 		// Archives without a valid sidecar still need a stable, human-readable
 		// Gallery title. The filename is more specific than its parent folder.
-		archiveName := filepath.Base(filepath.Clean(rootPath))
-		title = strings.TrimSuffix(archiveName, filepath.Ext(archiveName))
+		title = archivefile.BaseName(rootPath)
 		title, err = validateMarkerTitle(title)
 		if err != nil {
 			return gallery.Gallery{}, err

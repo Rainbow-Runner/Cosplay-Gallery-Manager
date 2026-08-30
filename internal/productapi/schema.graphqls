@@ -306,7 +306,9 @@ type ManageMediaExclusionDecision { id: Int64! galleryID: Int64! galleryRevision
 type ManageSuggestion { field: String! value: String! }
 type ManageCandidate { id: Int64! rootPath: String! sourceType: String! method: String! manifestSetID: ID status: String! autoCreateDraft: Boolean! hasConflict: Boolean! overLimit: Boolean! mediaCount: Int! suggestions: [ManageSuggestion!]! }
 type ManageUnassignedDiagnostic { parentPath: String! mediaCount: Int! }
-type ManageDiscoverySnapshot { id: Int64! libraryID: Int64! completedAt: String! candidates: [ManageCandidate!]! unassigned: [ManageUnassignedDiagnostic!]! }
+type ManageLibraryCoverageSummary { regularFileCount: Int! supportedMediaCount: Int! supportedArchiveCount: Int! unsupportedArchiveCount: Int! controlFileCount: Int! ignoredOtherCount: Int! actionableIssueCount: Int! registeredSourceCount: Int! indexedItemCount: Int! sourceNeedsScanCount: Int! }
+type ManageLibraryCoverageDiagnostic { path: String! entryKind: String! reasonCode: String! fileCount: Int! byteSize: Int64! }
+type ManageDiscoverySnapshot { id: Int64! libraryID: Int64! completedAt: String! candidates: [ManageCandidate!]! unassigned: [ManageUnassignedDiagnostic!]! coverageSummary: ManageLibraryCoverageSummary! coverageDiagnostics: [ManageLibraryCoverageDiagnostic!]! }
 input CreateMediaLibraryInput { name: String! rootPath: String! enabled: Boolean! readOnly: Boolean! captureTimezone: String! }
 input CreateRecognitionRuleInput { libraryID: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }
 input UpdateRecognitionRuleInput { id: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }

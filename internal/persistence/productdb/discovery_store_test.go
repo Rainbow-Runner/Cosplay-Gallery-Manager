@@ -1,15 +1,18 @@
 package productdb
 
 import (
-	"archive/zip"
+	"archive/tar"
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/stashapp/stash/internal/archivecheck"
 	"github.com/stashapp/stash/internal/discovery"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/library"
@@ -148,22 +151,22 @@ func TestParentFilesystemDiscoverySkipsConfiguredChildLibrary(t *testing.T) {
 	}
 }
 
-func TestFilesystemArchiveVideoCanCreateDraftForExplicitExclusion(t *testing.T) {
+func TestFilesystemTARVideoCanCreateDraftForExplicitExclusion(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)
 	now := time.Date(2026, 7, 23, 2, 30, 0, 0, time.UTC)
 	root := t.TempDir()
-	archivePath := filepath.Join(root, "video-set.zip")
+	archivePath := filepath.Join(root, "video-set.tar")
 	file, err := os.Create(archivePath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	writer := zip.NewWriter(file)
-	entry, err := writer.Create("clip.mp4")
-	if err != nil {
+	writer := tar.NewWriter(file)
+	body := []byte("not decoded during discovery")
+	if err := writer.WriteHeader(&tar.Header{Name: "clip.mp4", Mode: 0o600, Size: int64(len(body))}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := entry.Write([]byte("not decoded during discovery")); err != nil {
+	if _, err := writer.Write(body); err != nil {
 		t.Fatal(err)
 	}
 	if err := writer.Close(); err != nil {
@@ -189,6 +192,13 @@ func TestFilesystemArchiveVideoCanCreateDraftForExplicitExclusion(t *testing.T) 
 	if _, err := db.CandidateDiscovery().ImportCandidate(ctx, snapshot.Candidates[0].ID, now); err != nil {
 		t.Fatalf("video archive could not enter DRAFT: %v", err)
 	}
+	refreshed, err := db.CandidateDiscovery().FindSnapshot(ctx, snapshot.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if refreshed.CoverageSummary.RegisteredSourceCount != 1 || refreshed.CoverageSummary.IndexedItemCount != 0 || refreshed.CoverageSummary.SourceNeedsScanCount != 1 {
+		t.Fatalf("source coverage after import = %#v", refreshed.CoverageSummary)
+	}
 }
 
 func TestDiscoveryDefaultsToUnassignedDiagnostics(t *testing.T) {
@@ -211,6 +221,69 @@ func TestDiscoveryDefaultsToUnassignedDiagnostics(t *testing.T) {
 	}
 	if len(snapshot.Candidates) != 0 || len(snapshot.Unassigned) != 1 || snapshot.Unassigned[0].MediaCount != 3 {
 		t.Fatalf("snapshot = %#v", snapshot)
+	}
+}
+
+func TestFilesystemDiscoveryPersistsCoverageDiagnostics(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 30, 3, 0, 0, 0, time.UTC)
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "forgot-marker"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "forgot-marker", "photo.jpg"), []byte("media"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "unsupported.rar"), []byte("archive"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "broken.7z"), []byte("broken"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte("other"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	library, err := db.Libraries().Create(ctx, CreateLibraryInput{Name: "Coverage", RootPath: root, Enabled: true}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := db.CandidateDiscovery().DiscoverFilesystem(ctx, library.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := snapshot.CoverageSummary; got.RegularFileCount != 4 || got.SupportedMediaCount != 1 ||
+		got.SupportedArchiveCount != 1 || got.UnsupportedArchiveCount != 1 || got.IgnoredOtherCount != 1 || got.ActionableIssueCount != 3 {
+		t.Fatalf("coverage summary = %#v", got)
+	}
+	wantReasons := map[string]bool{"UNASSIGNED_MEDIA_DIRECTORY": false, "UNSUPPORTED_ARCHIVE_FORMAT": false, "UNREADABLE_ARCHIVE": false}
+	for _, diagnostic := range snapshot.CoverageDiagnostics {
+		wantReasons[diagnostic.ReasonCode] = true
+	}
+	for reason, found := range wantReasons {
+		if !found {
+			t.Fatalf("missing coverage reason %s: %#v", reason, snapshot.CoverageDiagnostics)
+		}
+	}
+}
+
+func TestObserveSevenZIPCandidate(t *testing.T) {
+	root := t.TempDir()
+	encoded, err := os.ReadFile(filepath.Join("..", "..", "archivefile", "testdata", "gallery.7z.b64"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(encoded)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	filename := filepath.Join(root, "Seven Set.7z")
+	if err := os.WriteFile(filename, body, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	observation, reason := observeArchiveCandidate(root, filename, archivecheck.DefaultLimits())
+	if reason != "" || observation.RelativePath != "Seven Set.7z" || observation.MediaCount != 1 || observation.HasConflict {
+		t.Fatalf("7z observation=%#v reason=%q", observation, reason)
 	}
 }
 
@@ -638,7 +711,7 @@ func TestArchiveCandidateUsesFilenameTitleFallbackWithoutManifest(t *testing.T) 
 		t.Fatal(err)
 	}
 	snapshot, err := db.CandidateDiscovery().CommitSnapshot(ctx, mediaLibrary.ID, []ObservedDirectory{{
-		RelativePath: "archives/Blue Archive Vol.1.cbz", SourceType: gallery.SourceTypeArchive, MediaCount: 1,
+		RelativePath: "archives/Blue Archive Vol.1.tar.gz", SourceType: gallery.SourceTypeArchive, MediaCount: 1,
 	}}, now)
 	if err != nil || len(snapshot.Candidates) != 1 {
 		t.Fatalf("archive snapshot = %#v, err=%v", snapshot, err)

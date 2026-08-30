@@ -25,6 +25,7 @@ const discoveryMock: MockedResponse = {
   request: { query: MANAGE_DISCOVERY, variables: { libraryID: 2 } },
   result: { data: { manageDiscovery: {
     id: 1, libraryID: 2, completedAt: "2026-07-27T15:00:00Z", candidates: [], unassigned: [],
+    coverageSummary: { regularFileCount: 0, supportedMediaCount: 0, supportedArchiveCount: 0, unsupportedArchiveCount: 0, controlFileCount: 0, ignoredOtherCount: 0, actionableIssueCount: 0, registeredSourceCount: 0, indexedItemCount: 0, sourceNeedsScanCount: 0 }, coverageDiagnostics: [],
   } } },
 };
 const manualAutomation = {
@@ -57,6 +58,7 @@ describe("ManageLibrariesPage recognition rules", () => {
     ]);
 
     expect(await screen.findByRole("button", { name: "Queue automation" }, { timeout: 5000 })).toBeDisabled();
+    expect(await screen.findByRole("heading", { name: "Library coverage" })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Automation level"), { target: { value: "ASSISTED" } });
     fireEvent.click(screen.getByRole("button", { name: "Save automation policy" }));
     expect(await screen.findByText("Automation policy saved.")).toBeInTheDocument();

@@ -1,8 +1,10 @@
 package archivecheck
 
 import (
+	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"encoding/base64"
 	"image"
 	"image/color"
 	"image/png"
@@ -21,6 +23,46 @@ func TestValidateFileAcceptsOrdinaryCBZ(t *testing.T) {
 	}
 	if !result.Safe() || result.EntryCount != 2 {
 		t.Fatalf("ordinary archive result = %#v", result)
+	}
+}
+
+func TestValidateFileAcceptsTARAndSevenZIP(t *testing.T) {
+	tarPath := filepath.Join(t.TempDir(), "gallery.tar")
+	file, err := os.Create(tarPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := tar.NewWriter(file)
+	if err := writer.WriteHeader(&tar.Header{Name: "photos/one.jpg", Mode: 0o600, Size: 5}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writer.Write([]byte("image")); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	for _, filename := range []string{tarPath, decodeSevenZIP(t, "gallery.7z.b64")} {
+		result, err := ValidateFile(filename, DefaultLimits())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !result.Safe() || result.EntryCount != 1 {
+			t.Fatalf("archive %q result = %#v", filename, result)
+		}
+	}
+}
+
+func TestValidateFileReportsEncryptedSevenZIP(t *testing.T) {
+	result, err := ValidateFile(decodeSevenZIP(t, "encrypted.7z.b64"), DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Safe() || !hasIssue(result, "ENCRYPTED_ARCHIVE") {
+		t.Fatalf("encrypted 7z result = %#v", result)
 	}
 }
 
@@ -176,6 +218,32 @@ func writeArchive(t *testing.T, filename string, entries []archiveEntry) {
 	if err := file.Close(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func decodeSevenZIP(t *testing.T, name string) string {
+	t.Helper()
+	encoded, err := os.ReadFile(filepath.Join("..", "archivefile", "testdata", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(encoded)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	filename := filepath.Join(t.TempDir(), strings.TrimSuffix(name, ".b64"))
+	if err := os.WriteFile(filename, body, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return filename
+}
+
+func hasIssue(result Result, code string) bool {
+	for _, issue := range result.Issues {
+		if issue.Code == code {
+			return true
+		}
+	}
+	return false
 }
 
 func containsIssue(issues []Issue, code string) bool {

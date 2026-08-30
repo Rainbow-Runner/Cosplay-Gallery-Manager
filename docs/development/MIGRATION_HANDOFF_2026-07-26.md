@@ -354,3 +354,5 @@ GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
 本地提交后已在干净工作树执行`CGM_VERSION=0.1.0-dev scripts/verify-cgm-release.sh`：嵌入式Linux amd64二进制报告完整提交，`go version -m`确认VCS revision一致且`modified=false`，`git archive`生成的同提交源码包包含`LICENSE`，二者SHA-256均成功生成。该结果证明本地源码对应链路可用，不代替未来正式RC签名和远端runner结果。
 
 2026-07-27开始本机实际业务应用测试：基于提交`3dc86fb6be38216349fb039a6b3253fb392ae422`安装Linux amd64原生单文件和用户级systemd服务，仅监听`127.0.0.1:9999`。健康、就绪、Setup、Legal、精确源码信息和服务重启持久化均已验证；按照产品流程没有在部署阶段预置媒体库、所有者密码或扫描任务，当前等待所有者从Setup进入系统后再在Manage → Libraries配置真实绝对路径。本机dcraw可用，FFmpeg/FFprobe因交互式sudo门禁尚未安装，故Video真实业务验收仍明确未通过。安装路径、操作命令与第一轮业务验收清单见`docs/development/LOCAL_BUSINESS_TEST_DEPLOYMENT_2026-07-27.md`。
+
+2026-08-30后续本地开发把归档来源扩展到TAR/TAR.GZ/TGZ/7Z，并新增目标schema v7的媒体库覆盖摘要和遗漏诊断。该迁移只新增发现快照从表，不改变既有业务属性；正式环境当前仍为schema v6。下一交付动作必须先完成全部回归、提交并创建额外完整回滚包，再验证自动`pre-schema-v6`快照、v7表为空迁移、业务计数、`integrity_check`及服务Health/Ready/About；未获部署授权前不得触碰正式数据库。

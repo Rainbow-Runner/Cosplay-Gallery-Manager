@@ -714,6 +714,21 @@ a { color: inherit; text-decoration: none; }
 .candidate-card button:disabled { opacity: .3; cursor: default; }
 .unassigned p { display: flex; justify-content: space-between; gap: 1rem; color: var(--ink-muted); font-size: .6rem; }
 .unassigned p span { overflow-wrap: anywhere; }
+.coverage-report { margin-top: 1rem; padding: 1rem; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 92%, var(--ink) 8%); }
+.coverage-report > header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+.coverage-report h4, .coverage-report p { margin: 0; }
+.coverage-report h4 { font: 600 .78rem/1.2 Arial, sans-serif; }
+.coverage-report header p { margin-top: .3rem; color: var(--ink-muted); font-size: .58rem; }
+.coverage-report header > strong { color: #a44b3f; font-size: .62rem; white-space: nowrap; }
+.coverage-report dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: .5rem; margin: .9rem 0; }
+.coverage-report dl div { padding: .6rem; border: 1px solid var(--line); }
+.coverage-report dt { color: var(--ink-muted); font-size: .55rem; }
+.coverage-report dd { margin: .2rem 0 0; font: 600 .9rem/1 Arial, sans-serif; }
+.coverage-report details summary { cursor: pointer; font-size: .62rem; }
+.coverage-report details article { display: flex; justify-content: space-between; gap: 1rem; padding: .55rem 0; border-top: 1px solid var(--line); font-size: .58rem; }
+.coverage-report details article div { min-width: 0; display: grid; gap: .18rem; }
+.coverage-report details article span { color: var(--ink-muted); overflow-wrap: anywhere; }
+@media (max-width: 760px) { .coverage-report dl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .settings-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; max-width: 80rem; }
 .settings-form fieldset { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem 1rem; margin: 0; padding: 1.2rem; border: 1px solid var(--line); background: var(--surface); }
 .settings-form legend { padding: 0 .45rem; color: #e4dbd4; font: 400 1.2rem Georgia, serif; }

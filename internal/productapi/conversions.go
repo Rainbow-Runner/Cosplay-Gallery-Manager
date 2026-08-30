@@ -437,7 +437,12 @@ func manageMediaExclusionDecision(value productdb.MediaExclusionDecision) *Manag
 }
 
 func manageDiscoverySnapshot(value productdb.DiscoverySnapshot) *ManageDiscoverySnapshot {
-	result := &ManageDiscoverySnapshot{ID: value.ID, LibraryID: value.LibraryID}
+	result := &ManageDiscoverySnapshot{ID: value.ID, LibraryID: value.LibraryID,
+		CoverageSummary: &ManageLibraryCoverageSummary{RegularFileCount: value.CoverageSummary.RegularFileCount,
+			SupportedMediaCount: value.CoverageSummary.SupportedMediaCount, SupportedArchiveCount: value.CoverageSummary.SupportedArchiveCount,
+			UnsupportedArchiveCount: value.CoverageSummary.UnsupportedArchiveCount, ControlFileCount: value.CoverageSummary.ControlFileCount, IgnoredOtherCount: value.CoverageSummary.IgnoredOtherCount,
+			ActionableIssueCount: value.CoverageSummary.ActionableIssueCount, RegisteredSourceCount: value.CoverageSummary.RegisteredSourceCount,
+			IndexedItemCount: value.CoverageSummary.IndexedItemCount, SourceNeedsScanCount: value.CoverageSummary.SourceNeedsScanCount}}
 	if !value.CompletedAt.IsZero() {
 		result.CompletedAt = value.CompletedAt.UTC().Format("2006-01-02T15:04:05Z")
 	}
@@ -453,6 +458,10 @@ func manageDiscoverySnapshot(value productdb.DiscoverySnapshot) *ManageDiscovery
 	}
 	for _, diagnostic := range value.Unassigned {
 		result.Unassigned = append(result.Unassigned, &ManageUnassignedDiagnostic{ParentPath: diagnostic.ParentPath, MediaCount: diagnostic.MediaCount})
+	}
+	for _, diagnostic := range value.CoverageDiagnostics {
+		result.CoverageDiagnostics = append(result.CoverageDiagnostics, &ManageLibraryCoverageDiagnostic{Path: diagnostic.Path,
+			EntryKind: diagnostic.EntryKind, ReasonCode: diagnostic.ReasonCode, FileCount: diagnostic.FileCount, ByteSize: diagnostic.ByteSize})
 	}
 	return result
 }

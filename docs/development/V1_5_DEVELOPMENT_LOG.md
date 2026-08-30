@@ -1660,3 +1660,15 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 运行中取消从游标4683发起，约93毫秒后在4685成为CANCELLED。验收发现业务状态正确但旧工作器把所有`done=true`误记为COMPLETED；修复提交`ce953f24b9033855647305f7805ca00a9b344588`按COMPLETED/CANCELLED/FAILED分别记录事件，最终隔离复测约10毫秒并实际输出`CGM_LIBRARY_AUTOMATION_CANCELLED`。
 - 最终正式二进制SHA-256为`c049b359fb05b040c9448de463b4b34f52e5ab46291c148e713870c40547f585`，旧schema v6二进制另存`/tmp/cgm-before-automation-log-20260830`。服务`active/running`、`NRestarts=0`，Health/Ready均为204，About精确指向`ce953f24`且`exactSourceAvailable=true`；正式数据库与配置未被隔离验收修改。
 - 生产租约仍为30分钟、心跳周期10分钟。本轮实际扫描未持续超过10分钟；只有90毫秒短租约并发测试验证了续租，因此生产周期长扫描心跳仍保留为后续人工门禁，不虚报通过。正式媒体库策略继续由所有者在Manage明确启用。
+
+## 1.5-45 TAR/7Z来源与媒体库查缺补漏（本地开发，未部署）
+
+日期：2026-08-30
+
+- 新增独立`internal/archivefile`顺序只读适配层，统一支持ZIP/CBZ、TAR、TAR.GZ/TGZ和7Z；发现、正式来源扫描、按需媒体物化与归档安全检查均复用该边界。纯Go 7Z运行时不调用外部命令，固实压缩流按成员顺序消费，避免反复重放。
+- 归档标题保底可正确去除`.tar.gz`等复合扩展名；成员路径继续经过NFC、路径穿越、大小写碰撞、符号链接/特殊Entry、嵌套存档、容量、压缩比和图片像素门禁。密码保护的ZIP/7Z拒绝导入，不保存密码、不自动猜测密码。
+- 产品数据库目标推进到schema v7，纯新增发现快照覆盖摘要和诊断表，不改变Gallery、来源、Item、规则、自动化策略或Manifest。每次媒体库发现保存普通文件、松散媒体、支持/不支持存档、CGM控制文件和其他忽略文件计数；查询时同时显示当前已登记Gallery来源、已入库Item和等待扫描来源数量，便于对照“发现”与“实际入库”进度。
+- “查缺补漏”诊断记录未匹配Gallery根的媒体目录、不支持的存档格式、密码保护、损坏/不可读、未通过安全校验和不含受支持媒体的存档，并保留Manage所有者可见的定位路径。发现遇到单个损坏或加密存档时不再中止整个媒体库扫描。
+- Libraries & import页面新增中英双语覆盖摘要和待校核路径清单；现有候选和未分配媒体界面继续保留。本阶段只完成源码与测试，尚未提交、备份、迁移正式schema v6数据库或增量部署。
+- 定向Go回归通过`archivefile/archivecheck/sourcescan/mediaaccess/productdb/productapi/productserver`，并通过`cgm_web_embed cgm_galleryepic`标签组合；schema v6→v7测试实际创建并核验来源准确的`pre-schema-v6`快照，主库新表为空。TypeScript检查与Vitest 29文件/82项通过，Vite生产构建转换680模块；主共享JS约517.96KiB，保留既有大于500KiB提示。
+- 新增运行时编译依赖后使用项目确定性生成器更新Third-Party Notices与SPDX 2.3应用清单，共67项依赖。该记录不代表已完成正式发行或部署验证。

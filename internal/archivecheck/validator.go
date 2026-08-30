@@ -1,4 +1,4 @@
-// Package archivecheck validates ZIP/CBZ sources without extracting them into
+// Package archivecheck validates supported archive sources without extracting them into
 // a user media library. Structural checks are unconditional; resource limits
 // are configurable but cannot disable path and entry safety rules.
 package archivecheck
@@ -11,12 +11,13 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"io"
 	"math"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
+	"github.com/stashapp/stash/internal/archivefile"
 	_ "golang.org/x/image/webp"
 	"golang.org/x/text/unicode/norm"
 )
@@ -69,84 +70,129 @@ func ValidateFile(filename string, limits Limits) (Result, error) {
 	if err := limits.Validate(); err != nil {
 		return Result{}, err
 	}
-	extension := strings.ToLower(filepath.Ext(filename))
-	if extension != ".zip" && extension != ".cbz" {
-		return Result{}, fmt.Errorf("unsupported archive extension %q", extension)
-	}
-	reader, err := zip.OpenReader(filename)
+	result := Result{}
+	seenPaths := make(map[string]string)
+	err := archivefile.Walk(filename, func(entry archivefile.Entry) error {
+		result.EntryCount++
+		validateEntry(&result, seenPaths, entry, limits)
+		return nil
+	})
 	if err != nil {
-		return Result{}, fmt.Errorf("opening ZIP/CBZ: %w", err)
+		if archivefile.IsEncryptedError(err) {
+			result.add("ENCRYPTED_ARCHIVE", "", true, "password-protected archives are not supported")
+			return result, nil
+		}
+		return Result{}, err
 	}
-	defer reader.Close()
-	return Validate(reader.File, limits), nil
+	finishValidation(&result, filename, limits)
+	return result, nil
 }
 
 func Validate(files []*zip.File, limits Limits) Result {
-	result := Result{EntryCount: len(files)}
-	if len(files) > limits.MaxEntries {
-		result.add("ENTRY_COUNT_LIMIT", "", false, "archive entry count exceeds configured limit")
-	}
+	result := Result{}
 	seenPaths := make(map[string]string, len(files))
 	for _, file := range files {
-		entryPath, pathIssue := canonicalEntryPath(file.Name)
-		if pathIssue != nil {
-			result.Issues = append(result.Issues, *pathIssue)
-			entryPath = file.Name
-		}
-		if prior, duplicate := seenPaths[strings.ToLower(norm.NFC.String(entryPath))]; duplicate {
-			result.add("AMBIGUOUS_ENTRY_PATH", entryPath, true,
-				fmt.Sprintf("entry conflicts with %q after NFC/case folding", prior))
-		} else {
-			seenPaths[strings.ToLower(norm.NFC.String(entryPath))] = entryPath
-		}
+		result.EntryCount++
+		validateEntry(&result, seenPaths, archivefile.Entry{Name: file.Name, Mode: file.Mode(),
+			UncompressedSize: file.UncompressedSize64, CompressedSize: file.CompressedSize64,
+			Encrypted: file.Flags&0x1 != 0, OpenReader: file.Open}, limits)
+	}
+	finishValidation(&result, "", limits)
+	return result
+}
 
-		if file.Flags&0x1 != 0 {
-			result.add("ENCRYPTED_ENTRY", entryPath, true, "encrypted ZIP entries are not supported")
-		}
-		mode := file.Mode()
-		if mode&os.ModeSymlink != 0 {
-			result.add("SYMLINK_ENTRY", entryPath, true, "symbolic links are forbidden in archives")
-		} else if !file.FileInfo().IsDir() && !mode.IsRegular() {
-			result.add("SPECIAL_ENTRY", entryPath, true, "special filesystem entries are forbidden in archives")
-		}
-		if isNestedArchive(entryPath) {
-			result.add("NESTED_ARCHIVE", entryPath, true, "nested archives are not supported")
-		}
-		if isBlockedArchiveMedia(entryPath) {
-			result.add("UNSUPPORTED_ARCHIVE_MEDIA", entryPath, false,
-				"video, RAW and AVIF entries must be excluded or imported as a DIRECTORY source")
-		}
-
-		uncompressed := file.UncompressedSize64
-		if math.MaxUint64-result.TotalUncompressed < uncompressed {
-			result.TotalUncompressed = math.MaxUint64
-			result.add("TOTAL_SIZE_OVERFLOW", entryPath, false, "archive size total overflowed")
+func validateEntry(result *Result, seenPaths map[string]string, entry archivefile.Entry, limits Limits) {
+	entryName := entry.Name
+	if entry.IsDir() {
+		entryName = strings.TrimSuffix(entryName, "/")
+	}
+	entryPath, pathIssue := canonicalEntryPath(entryName)
+	if pathIssue != nil {
+		result.Issues = append(result.Issues, *pathIssue)
+		entryPath = entryName
+	}
+	if prior, duplicate := seenPaths[strings.ToLower(norm.NFC.String(entryPath))]; duplicate {
+		result.add("AMBIGUOUS_ENTRY_PATH", entryPath, true,
+			fmt.Sprintf("entry conflicts with %q after NFC/case folding", prior))
+	} else {
+		seenPaths[strings.ToLower(norm.NFC.String(entryPath))] = entryPath
+	}
+	if entry.Encrypted {
+		result.add("ENCRYPTED_ENTRY", entryPath, true, "password-protected archive entries are not supported")
+	}
+	if entry.Mode&os.ModeSymlink != 0 {
+		result.add("SYMLINK_ENTRY", entryPath, true, "symbolic links are forbidden in archives")
+	} else if !entry.IsDir() && !entry.Mode.IsRegular() {
+		result.add("SPECIAL_ENTRY", entryPath, true, "special filesystem entries are forbidden in archives")
+	}
+	if isNestedArchive(entryPath) {
+		result.add("NESTED_ARCHIVE", entryPath, true, "nested archives are not supported")
+	}
+	if isBlockedArchiveMedia(entryPath) {
+		result.add("UNSUPPORTED_ARCHIVE_MEDIA", entryPath, false,
+			"video, RAW and AVIF entries must be excluded or imported as a DIRECTORY source")
+	}
+	if math.MaxUint64-result.TotalUncompressed < entry.UncompressedSize {
+		result.TotalUncompressed = math.MaxUint64
+		result.add("TOTAL_SIZE_OVERFLOW", entryPath, false, "archive size total overflowed")
+	} else {
+		result.TotalUncompressed += entry.UncompressedSize
+	}
+	if entry.UncompressedSize > limits.MaxEntryUncompressed {
+		result.add("ENTRY_SIZE_LIMIT", entryPath, false, "entry uncompressed size exceeds configured limit")
+	}
+	if !entry.IsDir() && entry.UncompressedSize > 0 && entry.CompressedSize > 0 &&
+		float64(entry.UncompressedSize)/float64(entry.CompressedSize) > limits.MaxCompressionRatio {
+		result.add("COMPRESSION_RATIO_LIMIT", entryPath, false, "entry compression ratio exceeds configured limit")
+	}
+	if entry.Encrypted || entry.IsDir() || !entry.Mode.IsRegular() || entry.UncompressedSize > limits.MaxEntryUncompressed {
+		return
+	}
+	part, err := entry.Open()
+	if err != nil {
+		if archivefile.IsEncryptedError(err) {
+			result.add("ENCRYPTED_ARCHIVE", entryPath, true, "password-protected archives are not supported")
 		} else {
-			result.TotalUncompressed += uncompressed
+			result.add("ARCHIVE_ENTRY_UNREADABLE", entryPath, true, "archive entry could not be opened")
 		}
-		if uncompressed > limits.MaxEntryUncompressed {
-			result.add("ENTRY_SIZE_LIMIT", entryPath, false, "entry uncompressed size exceeds configured limit")
+		return
+	}
+	if !isProbeableImage(entryPath) {
+		var probe [1]byte
+		_, readErr := part.Read(probe[:])
+		closeErr := part.Close()
+		if archivefile.IsEncryptedError(readErr) || archivefile.IsEncryptedError(closeErr) {
+			result.add("ENCRYPTED_ARCHIVE", entryPath, true, "password-protected archives are not supported")
+		} else if readErr != nil && !errors.Is(readErr, io.EOF) {
+			result.add("ARCHIVE_ENTRY_UNREADABLE", entryPath, true, "archive entry could not be read")
 		}
-		if !file.FileInfo().IsDir() && uncompressed > 0 {
-			if file.CompressedSize64 == 0 || float64(uncompressed)/float64(file.CompressedSize64) > limits.MaxCompressionRatio {
-				result.add("COMPRESSION_RATIO_LIMIT", entryPath, false, "entry compression ratio exceeds configured limit")
-			}
-		}
-		if isProbeableImage(entryPath) && uncompressed <= limits.MaxEntryUncompressed {
-			part, err := file.Open()
-			if err == nil {
-				config, _, decodeErr := image.DecodeConfig(part)
-				_ = part.Close()
-				if decodeErr == nil && imagePixelsOverLimit(config.Width, config.Height, limits.MaxImagePixels) {
-					result.add("IMAGE_PIXEL_LIMIT", entryPath, false, "image dimensions exceed configured pixel limit")
-				}
-			}
-		}
+		return
+	}
+	config, _, decodeErr := image.DecodeConfig(part)
+	closeErr := part.Close()
+	if archivefile.IsEncryptedError(decodeErr) || archivefile.IsEncryptedError(closeErr) {
+		result.add("ENCRYPTED_ARCHIVE", entryPath, true, "password-protected archives are not supported")
+		return
+	}
+	if decodeErr == nil && imagePixelsOverLimit(config.Width, config.Height, limits.MaxImagePixels) {
+		result.add("IMAGE_PIXEL_LIMIT", entryPath, false, "image dimensions exceed configured pixel limit")
+	}
+}
+
+func finishValidation(result *Result, filename string, limits Limits) {
+	if result.EntryCount > limits.MaxEntries {
+		result.add("ENTRY_COUNT_LIMIT", "", false, "archive entry count exceeds configured limit")
 	}
 	if result.TotalUncompressed > limits.MaxTotalUncompressed {
 		result.add("TOTAL_SIZE_LIMIT", "", false, "archive total uncompressed size exceeds configured limit")
 	}
-	return result
+	if filename == "" || result.TotalUncompressed == 0 {
+		return
+	}
+	info, err := os.Stat(filename)
+	if err == nil && info.Size() > 0 && float64(result.TotalUncompressed)/float64(info.Size()) > limits.MaxCompressionRatio {
+		result.add("COMPRESSION_RATIO_LIMIT", "", false, "archive total compression ratio exceeds configured limit")
+	}
 }
 
 func isProbeableImage(value string) bool {
@@ -185,12 +231,7 @@ func hasWindowsVolumePrefix(value string) bool {
 }
 
 func isNestedArchive(value string) bool {
-	switch strings.ToLower(path.Ext(value)) {
-	case ".zip", ".cbz", ".rar", ".7z":
-		return true
-	default:
-		return false
-	}
+	return archivefile.IsArchiveLikePath(value)
 }
 
 func isBlockedArchiveMedia(value string) bool {

@@ -4,7 +4,6 @@
 package sourcescan
 
 import (
-	"archive/zip"
 	"bytes"
 	"context"
 	"encoding/binary"
@@ -13,11 +12,13 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/stashapp/stash/internal/archivecheck"
+	"github.com/stashapp/stash/internal/archivefile"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/zeebo/blake3"
 	"golang.org/x/text/unicode/norm"
@@ -140,9 +141,9 @@ func ScanDirectory(ctx context.Context, root string) (Result, error) {
 	return result, err
 }
 
-// ScanArchive validates the central directory before reading any Entry. It
-// hashes decompressed member content but records compressed size for Gallery
-// storage totals, matching the product contract.
+// ScanArchive validates the complete archive directory before reading media.
+// ZIP records per-entry compressed bytes; TAR and solid 7z use uncompressed
+// bytes because those formats do not expose a meaningful per-entry size.
 func ScanArchive(ctx context.Context, filename string, limits archivecheck.Limits) (Result, error) {
 	validation, err := archivecheck.ValidateFile(filename, limits)
 	if err != nil {
@@ -163,34 +164,41 @@ func ScanArchive(ctx context.Context, filename string, limits archivecheck.Limit
 	}
 	result.Complete = true
 
-	reader, err := zip.OpenReader(filename)
-	if err != nil {
-		return Result{}, err
-	}
-	defer reader.Close()
-	for _, entry := range reader.File {
+	err = archivefile.Walk(filename, func(entry archivefile.Entry) error {
 		if err := ctx.Err(); err != nil {
-			return Result{}, err
+			return err
 		}
-		if entry.FileInfo().IsDir() || !supportedExtension(entry.Name) {
-			continue
+		if entry.IsDir() || !supportedExtension(entry.Name) {
+			return nil
 		}
 		part, err := entry.Open()
 		if err != nil {
-			return Result{}, fmt.Errorf("opening archive Entry %q: %w", entry.Name, err)
+			return fmt.Errorf("opening archive Entry %q: %w", entry.Name, err)
 		}
-		observation, issues, scanErr := observeReader(ctx, entry.Name, int64(entry.CompressedSize64), part)
+		storedSize := entry.CompressedSize
+		if storedSize == 0 {
+			storedSize = entry.UncompressedSize
+		}
+		if storedSize > math.MaxInt64 {
+			_ = part.Close()
+			return fmt.Errorf("archive Entry %q size exceeds supported range", entry.Name)
+		}
+		observation, issues, scanErr := observeReader(ctx, entry.Name, int64(storedSize), part)
 		closeErr := part.Close()
 		if scanErr != nil {
-			return Result{}, scanErr
+			return scanErr
 		}
 		if closeErr != nil {
-			return Result{}, closeErr
+			return closeErr
 		}
 		result.Issues = append(result.Issues, issues...)
 		if observation != nil {
 			result.Observations = append(result.Observations, *observation)
 		}
+		return nil
+	})
+	if err != nil {
+		return Result{}, err
 	}
 	return result, nil
 }

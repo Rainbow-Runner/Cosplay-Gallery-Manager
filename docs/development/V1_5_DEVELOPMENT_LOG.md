@@ -1672,3 +1672,10 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - Libraries & import页面新增中英双语覆盖摘要和待校核路径清单；现有候选和未分配媒体界面继续保留。本阶段只完成源码与测试，尚未提交、备份、迁移正式schema v6数据库或增量部署。
 - 定向Go回归通过`archivefile/archivecheck/sourcescan/mediaaccess/productdb/productapi/productserver`，并通过`cgm_web_embed cgm_galleryepic`标签组合；schema v6→v7测试实际创建并核验来源准确的`pre-schema-v6`快照，主库新表为空。TypeScript检查与Vitest 29文件/82项通过，Vite生产构建转换680模块；主共享JS约517.96KiB，保留既有大于500KiB提示。
 - 新增运行时编译依赖后使用项目确定性生成器更新Third-Party Notices与SPDX 2.3应用清单，共67项依赖。该记录不代表已完成正式发行或部署验证。
+
+### schema v7提交与增量部署
+
+- 功能、测试和部署前记录提交为`28e71a7a4c095b095b58d9c742ccc48941d30769`（`Add archive formats and library coverage reporting`）。清洁提交以Go 1.25.12及`cgm_web_embed cgm_galleryepic`标签构建，`go version -m`确认VCS revision一致且`modified=false`；正式二进制SHA-256为`07cc18ecbe5611a812170e753b8e48db2224adbbfc6d851a43556d8cce6f6729`。
+- 2026-08-30 22:35 CST停止用户服务并确认`MainPID=0`，创建额外完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260830T142000Z-28e71a7.tar.gz`，权限0600、SHA-256为`2e2cb02cca5d2227bd1b30d74c5355418b739a4030733d7b42bd4ad29d68ff7b`。归档包含一致schema v6数据库、旧二进制、启动配置、systemd单元和Coser托管资源，不包含媒体、缓存或日志；实际解包后数据库、文件和Coser资源逐项一致。
+- 首次启动生成自动快照`product.sqlite.pre-schema-v6-1788100566661475656.bak`，权限0600、SHA-256为`bc3330368f500efe20118ba18bec3a21aca2f22e51491f73b6fcd0148a38e6f8`；独立验证保持schema v6、62张表、`integrity_check=ok`和2/5/5/322业务计数。正式库迁移到schema v7后为64张表、`integrity_check=ok`，媒体库/Gallery/来源/Item仍为2/5/5/322，新增覆盖摘要和诊断表均为空。
+- 候选文件逐字节校验后原子替换`/home/rainbowrunner/.local/bin/cgm`，旧二进制保存在`/tmp/cgm-before-archive-coverage-20260830`。服务只启动一次，保持`active/running`、`NRestarts=0`，Health/Ready为204，Root/Legal/Session为200，About精确指向`28e71a7`且`exactSourceAvailable=true`。配置SHA-256继续为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`；部署日志未发现迁移、WARN、ERROR、FAILED、panic或fatal。

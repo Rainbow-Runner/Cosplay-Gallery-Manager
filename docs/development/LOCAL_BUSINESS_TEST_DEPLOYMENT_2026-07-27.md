@@ -1,5 +1,12 @@
 # 本机实际业务应用测试部署
 
+### 2026-08-30 TAR/7Z与媒体库覆盖报告、schema v7部署
+
+- 从清洁提交`28e71a7a4c095b095b58d9c742ccc48941d30769`构建并部署`cgm_web_embed cgm_galleryepic` Linux amd64单文件，SHA-256为`07cc18ecbe5611a812170e753b8e48db2224adbbfc6d851a43556d8cce6f6729`；VCS元数据为`modified=false`，About精确对应源码。
+- 停服后创建并实际解包核验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260830T142000Z-28e71a7.tar.gz`，SHA-256为`2e2cb02cca5d2227bd1b30d74c5355418b739a4030733d7b42bd4ad29d68ff7b`。其schema v6 SQLite快照、旧二进制、配置、systemd单元与Coser托管资源均和正式来源一致，未包含媒体、缓存或日志。
+- 自动迁移快照`product.sqlite.pre-schema-v6-1788100566661475656.bak`保持schema v6、62张表、`integrity_check=ok`和2/5/5/322计数，SHA-256为`bc3330368f500efe20118ba18bec3a21aca2f22e51491f73b6fcd0148a38e6f8`。正式库迁移到schema v7、64张表后完整性和业务计数不变，覆盖摘要/诊断表初始为空。
+- 服务只启动一次并保持`active/running`、`NRestarts=0`；Health/Ready为204，Root/Legal/Session为200。配置SHA-256未变，本次启动日志只有正常停止、启动、工作器和探针记录，无迁移错误或异常级别日志。
+
 ### 2026-08-30 媒体库自动化与schema v6部署
 
 - 从清洁提交`ed275690d5f13dd60e868557eba6ef3327953f06`完成自动化主体部署，并以验收修复提交`ce953f24b9033855647305f7805ca00a9b344588`更新最终二进制。最终SHA-256为`c049b359fb05b040c9448de463b4b34f52e5ab46291c148e713870c40547f585`，About报告精确提交且`exactSourceAvailable=true`。
@@ -101,10 +108,10 @@
 ## 部署基线
 
 - 运行形态：Linux amd64 原生单所有者服务。
-- 当前源码提交：`ce953f24b9033855647305f7805ca00a9b344588`。
+- 当前源码提交：`28e71a7a4c095b095b58d9c742ccc48941d30769`。
 - 当前产品版本：`1.5.0-dev`。
 - 二进制：`/home/rainbowrunner/.local/bin/cgm`。
-- 当前二进制SHA-256：`c049b359fb05b040c9448de463b4b34f52e5ab46291c148e713870c40547f585`。
+- 当前二进制SHA-256：`07cc18ecbe5611a812170e753b8e48db2224adbbfc6d851a43556d8cce6f6729`。
 - 启动配置：`/home/rainbowrunner/.config/cosplay-gallery-manager/cgm.json`，权限 `0600`。
 - 产品数据库：`/home/rainbowrunner/.local/share/cosplay-gallery-manager/product.sqlite`，权限 `0600`。
 - 生成缓存：`/home/rainbowrunner/.cache/cosplay-gallery-manager/`。

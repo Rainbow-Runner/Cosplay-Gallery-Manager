@@ -22,7 +22,7 @@ const (
 
 	// DatabaseSchemaVersion versions the new, product-owned database schema.
 	// It does not correspond to any original Stash schema version.
-	DatabaseSchemaVersion uint = 5
+	DatabaseSchemaVersion uint = 6
 
 	// ManifestSchemaVersion is the major schema version shared by the Gallery
 	// and Coser v1 manifest families.

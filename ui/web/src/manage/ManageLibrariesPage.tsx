@@ -2,10 +2,10 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { type FormEvent, useEffect, useState } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
-import { CREATE_MEDIA_LIBRARY, CREATE_RECOGNITION_RULE, DELETE_RECOGNITION_RULE, DISCOVER_MEDIA_LIBRARY, IMPORT_GALLERY_CANDIDATE, MANAGE_DISCOVERY, MANAGE_LIBRARIES, UPDATE_RECOGNITION_RULE } from "../api/manage";
+import { CANCEL_LIBRARY_AUTOMATION, CREATE_MEDIA_LIBRARY, CREATE_RECOGNITION_RULE, DELETE_RECOGNITION_RULE, DISCOVER_MEDIA_LIBRARY, IMPORT_GALLERY_CANDIDATE, MANAGE_DISCOVERY, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, RUN_LIBRARY_AUTOMATION, SAVE_LIBRARY_AUTOMATION_POLICY, UPDATE_RECOGNITION_RULE } from "../api/manage";
 import { MediaClassificationRules } from "./MediaClassificationRules";
 import { MediaExclusionRules } from "./MediaExclusionRules";
-import type { ManageDiscoverySnapshot, ManageGalleryDetail, ManageLibrary, ManageRecognitionRule } from "./types";
+import type { ManageDiscoverySnapshot, ManageGalleryDetail, ManageLibrary, ManageLibraryAutomation, ManageLibraryAutomationPolicy, ManageLibraryAutomationRun, ManageRecognitionRule } from "./types";
 
 const emptyLibrary = { name: "", rootPath: "", enabled: true, readOnly: true, captureTimezone: "UTC" };
 type RuleDraft = Omit<ManageRecognitionRule, "id">;
@@ -118,6 +118,7 @@ export function ManageLibrariesPage() {
         <details><summary>{f("manage.library.add")}</summary><form onSubmit={addLibrary}><label>{f("manage.library.nameRequired")}<input required value={libraryDraft.name} onChange={(event) => setLibraryDraft({ ...libraryDraft, name: event.target.value })} /></label><label>{f("manage.library.pathRequired")}<input required value={libraryDraft.rootPath} onChange={(event) => setLibraryDraft({ ...libraryDraft, rootPath: event.target.value })} /></label><label>{f("manage.library.timezoneRequired")}<input required value={libraryDraft.captureTimezone} onChange={(event) => setLibraryDraft({ ...libraryDraft, captureTimezone: event.target.value })} /></label><label className="check"><input type="checkbox" checked={libraryDraft.readOnly} onChange={(event) => setLibraryDraft({ ...libraryDraft, readOnly: event.target.checked })} /> {f("manage.library.readOnly")}</label><button type="submit" disabled={!libraryValid || createLibraryState.loading}>{createLibraryState.loading ? f("manage.library.creating") : f("manage.library.create")}</button></form></details>
       </aside>
       <div className="library-workspace">{selectedLibrary === null ? <p className="state-message">{f("manage.library.createFirst")}</p> : <>
+        <LibraryAutomationPanel key={selectedLibrary.id} libraryID={selectedLibrary.id} report={setMessage} />
         <LibraryRules library={selectedLibrary} draft={ruleDraft} setDraft={setRuleDraft} submit={saveRule} saving={createRuleState.loading || updateRuleState.loading} editingRuleID={editingRuleID} deletingRuleID={deletingRuleID} editRule={editRule} cancelEdit={resetRuleEditor} requestDelete={setDeletingRuleID} deleteRule={removeRule} />
         <section className="candidate-section"><header><h3>{f("manage.library.latestDiscovery")}</h3><span>{snapshot?.completedAt || f("manage.library.notScanned")}</span></header>{snapshot?.candidates.map((candidate) => <article className={`candidate-card ${candidate.hasConflict || candidate.overLimit ? "has-issue" : ""}`} key={candidate.id}><div><strong>{candidate.rootPath}</strong><p>{candidate.sourceType} · {candidate.method} · {f("manage.library.mediaCount", { count: candidate.mediaCount })}</p>{candidate.suggestions.length ? <ul>{candidate.suggestions.map((suggestion) => <li key={`${suggestion.field}:${suggestion.value}`}>{suggestion.field}: {suggestion.value}</li>)}</ul> : null}</div><div><span>{candidate.status}</span><button type="button" disabled={candidate.status !== "PENDING" || candidate.hasConflict || candidate.overLimit} onClick={() => createDraft(candidate.id)}>{f("manage.library.createDraft")}</button></div></article>)}
           {snapshot && snapshot.candidates.length === 0 ? <p className="state-message">{f("manage.library.noCandidates")}</p> : null}
@@ -128,6 +129,76 @@ export function ManageLibrariesPage() {
     <MediaClassificationRules library={selectedLibrary ? { id: selectedLibrary.id, name: selectedLibrary.name } : null} />
     <MediaExclusionRules library={selectedLibrary ? { id: selectedLibrary.id, name: selectedLibrary.name } : null} />
   </main>;
+}
+
+function LibraryAutomationPanel({ libraryID, report }: { libraryID: number; report: (message: string) => void }) {
+  const intl = useIntl();
+  const f = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
+  const query = useQuery<{ manageLibraryAutomation: ManageLibraryAutomation }>(MANAGE_LIBRARY_AUTOMATION, { variables: { libraryID } });
+  const [save, saveState] = useMutation<{ saveLibraryAutomationPolicy: ManageLibraryAutomation }>(SAVE_LIBRARY_AUTOMATION_POLICY);
+  const [run, runState] = useMutation<{ runLibraryAutomation: ManageLibraryAutomationRun }>(RUN_LIBRARY_AUTOMATION);
+  const [cancel, cancelState] = useMutation(CANCEL_LIBRARY_AUTOMATION);
+  const [draft, setDraft] = useState<ManageLibraryAutomationPolicy | null>(null);
+  useEffect(() => {
+    if (query.data?.manageLibraryAutomation.policy) setDraft(query.data.manageLibraryAutomation.policy);
+  }, [query.data]);
+  const activeRun = query.data?.manageLibraryAutomation.recentRuns.find((value) => value.status === "QUEUED" || value.status === "RUNNING") ?? null;
+  useEffect(() => {
+    if (activeRun) query.startPolling(1500);
+    else query.stopPolling();
+    return () => query.stopPolling();
+  }, [activeRun?.id, activeRun?.status, query.startPolling, query.stopPolling]);
+  if (query.loading || draft === null) return <section className="rule-section automation-section"><p>{f("manage.automation.loading")}</p></section>;
+  if (query.error) return <section className="rule-section automation-section"><p role="alert">{query.error.message}</p></section>;
+  const state = query.data?.manageLibraryAutomation;
+  async function savePolicy(event: FormEvent) {
+    event.preventDefault();
+    if (!draft) return;
+    report("");
+    try {
+      const input = { mode: draft.mode, defaultContentRating: draft.defaultContentRating || null, excludeNewRootMedia: draft.excludeNewRootMedia,
+        autoAcceptUniqueEntities: draft.autoAcceptUniqueEntities, autoAcceptMediaClassification: draft.autoAcceptMediaClassification,
+        autoActivate: draft.mode === "TRUSTED" ? draft.autoActivate : false };
+      const result = await save({ variables: { libraryID, expectedRevision: draft.revision, input } });
+      if (result.data) setDraft(result.data.saveLibraryAutomationPolicy.policy);
+      report(f("manage.automation.saved"));
+    } catch (error) { report(error instanceof Error ? error.message : f("manage.automation.saveFailed")); }
+  }
+  async function runNow() {
+    report("");
+    try {
+      const result = await run({ variables: { libraryID } });
+      const value = result.data?.runLibraryAutomation;
+      if (value) report(f("manage.automation.queued", { id: value.id }));
+      await query.refetch();
+    } catch (error) { report(error instanceof Error ? error.message : f("manage.automation.runFailed")); }
+  }
+  async function cancelRun() {
+    if (!activeRun) return;
+    report("");
+    try {
+      await cancel({ variables: { runID: activeRun.id } });
+      report(f("manage.automation.cancelRequested"));
+      await query.refetch();
+    } catch (error) { report(error instanceof Error ? error.message : f("manage.automation.cancelFailed")); }
+  }
+  const canRun = draft.revision > 0 && draft.mode !== "MANUAL" && activeRun === null;
+  const autoActivationValid = draft.mode !== "TRUSTED" || !draft.autoActivate || Boolean(draft.defaultContentRating);
+  return <section className="rule-section automation-section">
+    <header><div><h3>{f("manage.automation.title")}</h3><p>{f("manage.automation.help")}</p></div><div className="automation-actions"><button type="button" disabled={!canRun || runState.loading} onClick={runNow}>{runState.loading ? f("manage.automation.queueing") : f("manage.automation.run")}</button>{activeRun ? <button type="button" disabled={cancelState.loading || activeRun.cancellationRequested} onClick={cancelRun}>{activeRun.cancellationRequested ? f("manage.automation.cancelling") : f("manage.automation.cancel")}</button> : null}</div></header>
+    <form className="automation-form" onSubmit={savePolicy}>
+      <label>{f("manage.automation.mode")}<select value={draft.mode} onChange={(event) => setDraft({ ...draft, mode: event.target.value as ManageLibraryAutomationPolicy["mode"], autoActivate: event.target.value === "TRUSTED" ? draft.autoActivate : false })}><option value="MANUAL">{f("manage.automation.manual")}</option><option value="ASSISTED">{f("manage.automation.assisted")}</option><option value="TRUSTED">{f("manage.automation.trusted")}</option></select></label>
+      <label>{f("manage.automation.rating")}<select value={draft.defaultContentRating ?? ""} onChange={(event) => setDraft({ ...draft, defaultContentRating: (event.target.value || null) as ManageLibraryAutomationPolicy["defaultContentRating"] })}><option value="">{f("manage.automation.noDefault")}</option><option value="NON_ADULT">LIST</option><option value="ADULT">MAGIC</option></select></label>
+      <label className="check"><input type="checkbox" checked={draft.excludeNewRootMedia} onChange={(event) => setDraft({ ...draft, excludeNewRootMedia: event.target.checked })} /> {f("manage.automation.excludeRoot")}</label>
+      <label className="check"><input type="checkbox" checked={draft.autoAcceptUniqueEntities} onChange={(event) => setDraft({ ...draft, autoAcceptUniqueEntities: event.target.checked })} /> {f("manage.automation.entities")}</label>
+      <label className="check"><input type="checkbox" checked={draft.autoAcceptMediaClassification} onChange={(event) => setDraft({ ...draft, autoAcceptMediaClassification: event.target.checked })} /> {f("manage.automation.classification")}</label>
+      <label className="check"><input type="checkbox" disabled={draft.mode !== "TRUSTED"} checked={draft.autoActivate} onChange={(event) => setDraft({ ...draft, autoActivate: event.target.checked })} /> {f("manage.automation.activate")}</label>
+      {!autoActivationValid ? <p className="automation-warning">{f("manage.automation.ratingRequired")}</p> : null}
+      <button type="submit" disabled={!autoActivationValid || saveState.loading}>{saveState.loading ? f("manage.library.saving") : f("manage.automation.save")}</button>
+    </form>
+    {state ? <div className="automation-summary"><span>{f("manage.automation.candidates", { count: state.preview.candidateCount })}</span><span>{f("manage.automation.drafts", { count: state.preview.draftCount })}</span><span>{f("manage.automation.ready", { count: state.preview.activationReady })}</span><span>{f("manage.automation.review", { count: state.preview.needsReview })}</span></div> : null}
+    {state?.recentRuns[0] ? <p className="automation-last-run" role="status">{f("manage.automation.lastRun", { status: state.recentRuns[0].status, scanned: state.recentRuns[0].scanned, activated: state.recentRuns[0].activated, review: state.recentRuns[0].needsReview })}</p> : null}
+  </section>;
 }
 
 function LibraryRules({ library, draft, setDraft, submit, saving, editingRuleID, deletingRuleID, editRule, cancelEdit, requestDelete, deleteRule }: {

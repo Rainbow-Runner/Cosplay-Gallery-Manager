@@ -91,3 +91,42 @@ func TestAutomaticScanIsOptInPersistentAndRunsDiscovery(t *testing.T) {
 		t.Fatalf("automatic scan lease/due guard = %v", err)
 	}
 }
+
+func TestAutomaticScanQueuesSavedLibraryAutomationPolicy(t *testing.T) {
+	server := testServer(t)
+	ctx := context.Background()
+	now := time.Date(2026, 8, 29, 7, 0, 0, 0, time.UTC)
+	mediaLibrary, err := server.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{
+		Name: "Automated", RootPath: t.TempDir(), Enabled: true, ReadOnly: true, CaptureTimezone: "UTC",
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := server.Database.Automation().SavePolicy(ctx, productdb.LibraryAutomationPolicy{
+		LibraryID: mediaLibrary.ID, Mode: productdb.AutomationAssisted, ExcludeNewRootMedia: true,
+	}, 0, now); err != nil {
+		t.Fatal(err)
+	}
+	runtime, err := server.Database.Settings().Find(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime.AutomaticScanEnabled = true
+	if _, err := server.Database.Settings().Update(ctx, runtime.Revision, runtime, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.RunAutomaticScanOnce(ctx, now); err != nil {
+		t.Fatal(err)
+	}
+	active, err := server.Database.Automation().FindActiveRun(ctx, mediaLibrary.ID)
+	if err != nil || active == nil || active.Status != "QUEUED" {
+		t.Fatalf("scheduled automation = %#v err=%v", active, err)
+	}
+	finished, done, err := server.RunAutomationBatchOnce(ctx, "test-automation", time.Minute, 1, now.Add(time.Second))
+	if err != nil || !done || finished.Status != "COMPLETED" || !finished.DiscoveryCompleted {
+		t.Fatalf("automation batch = %#v done=%v err=%v", finished, done, err)
+	}
+	if snapshot, err := server.Database.CandidateDiscovery().LatestSnapshot(ctx, mediaLibrary.ID); err != nil || snapshot.ID == 0 {
+		t.Fatalf("automation discovery snapshot = %#v/%v", snapshot, err)
+	}
+}

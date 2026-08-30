@@ -275,6 +275,11 @@ func (s *Server) startWorkers(ctx context.Context) error {
 		defer s.workerDone.Done()
 		s.runSchedulerLoop(workerContext)
 	}()
+	s.workerDone.Add(1)
+	go func() {
+		defer s.workerDone.Done()
+		s.runAutomationWorkerLoop(workerContext)
+	}()
 	return nil
 }
 

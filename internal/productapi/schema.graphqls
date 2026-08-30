@@ -281,6 +281,11 @@ input GalleryExternalLinkInput { type: String! label: String! url: String! posit
 input ManifestConflictChoiceInput { path: String! choice: String! }
 type ManageRecognitionRule { id: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }
 type ManageLibrary { id: Int64! name: String! rootPath: String! enabled: Boolean! readOnly: Boolean! captureTimezone: String! rules: [ManageRecognitionRule!]! }
+type ManageLibraryAutomationPolicy { libraryID: Int64! mode: String! defaultContentRating: ContentRating excludeNewRootMedia: Boolean! autoAcceptUniqueEntities: Boolean! autoAcceptMediaClassification: Boolean! autoActivate: Boolean! revision: Int64! }
+type ManageLibraryAutomationPreview { candidateCount: Int! autoCreateEligible: Int! draftCount: Int! activationReady: Int! needsReview: Int! }
+type ManageLibraryAutomationRun { id: Int64! libraryID: Int64! policyRevision: Int64! mode: String! status: String! cancellationRequested: Boolean! candidatesSeen: Int! draftsCreated: Int! scanned: Int! activated: Int! needsReview: Int! issueCount: Int! errorCode: String! startedAt: String! completedAt: String }
+type ManageLibraryAutomation { policy: ManageLibraryAutomationPolicy! preview: ManageLibraryAutomationPreview! recentRuns: [ManageLibraryAutomationRun!]! }
+input LibraryAutomationPolicyInput { mode: String! defaultContentRating: ContentRating excludeNewRootMedia: Boolean! autoAcceptUniqueEntities: Boolean! autoAcceptMediaClassification: Boolean! autoActivate: Boolean! }
 type ManageMediaClassificationRule { id: Int64! libraryID: Int64 name: String! enabled: Boolean! order: Int! subject: String! operator: String! pattern: String! caseSensitive: Boolean! resultCategory: ImageCategory! revision: Int! systemDefault: Boolean! }
 input MediaClassificationRuleInput { libraryID: Int64 name: String! enabled: Boolean! order: Int! subject: String! operator: String! pattern: String! caseSensitive: Boolean! resultCategory: ImageCategory! }
 input UpdateMediaClassificationRuleInput { id: Int64! libraryID: Int64 name: String! enabled: Boolean! order: Int! subject: String! operator: String! pattern: String! caseSensitive: Boolean! resultCategory: ImageCategory! }
@@ -413,6 +418,7 @@ type Query {
   manageGalleryManifest(setID: ID!): ManageGalleryManifestState!
   manageCoserManifest(coserUUID: ID!): ManageCoserManifestState!
   manageLibraries: [ManageLibrary!]!
+  manageLibraryAutomation(libraryID: Int64!): ManageLibraryAutomation!
   manageMediaClassificationRules(libraryID: Int64): [ManageMediaClassificationRule!]!
   manageMediaClassificationSuggestions(libraryID: Int64, status: String! = "PENDING"): [ManageMediaClassificationSuggestion!]!
   manageMediaExclusionRules(libraryID: Int64): [ManageMediaExclusionRule!]!
@@ -455,6 +461,9 @@ type Mutation {
   createRecognitionRule(input: CreateRecognitionRuleInput!): ManageRecognitionRule!
   updateRecognitionRule(input: UpdateRecognitionRuleInput!): ManageRecognitionRule!
   deleteRecognitionRule(id: Int64!): Boolean!
+  saveLibraryAutomationPolicy(libraryID: Int64!, expectedRevision: Int64!, input: LibraryAutomationPolicyInput!): ManageLibraryAutomation!
+  runLibraryAutomation(libraryID: Int64!): ManageLibraryAutomationRun!
+  cancelLibraryAutomation(runID: Int64!): ManageLibraryAutomationRun!
   validateMediaClassificationRule(input: MediaClassificationRuleInput!): ManageRuleValidation!
   createMediaClassificationRule(input: MediaClassificationRuleInput!): ManageMediaClassificationRule!
   updateMediaClassificationRule(input: UpdateMediaClassificationRuleInput!): ManageMediaClassificationRule!

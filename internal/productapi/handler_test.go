@@ -81,6 +81,46 @@ func TestHandlerServesPathFreeBrowseContract(t *testing.T) {
 	}
 }
 
+func TestLibraryAutomationGraphQLQueuesAndCancelsPersistentRun(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 8, 29, 6, 0, 0, 0, time.UTC)
+	library, err := database.Libraries().Create(ctx, productdb.CreateLibraryInput{
+		Name: "Automation", RootPath: t.TempDir(), Enabled: true, ReadOnly: true, CaptureTimezone: "UTC",
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(database, func(*http.Request) bool { return true })
+	requestGraphQL := func(query string) []byte {
+		t.Helper()
+		request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(fmt.Sprintf(`{"query":%q}`, query)))
+		request.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) {
+			t.Fatalf("GraphQL response = %d %s", response.Code, response.Body.String())
+		}
+		return response.Body.Bytes()
+	}
+	saved := requestGraphQL(fmt.Sprintf(`mutation { saveLibraryAutomationPolicy(libraryID:%d,expectedRevision:0,input:{mode:"ASSISTED",defaultContentRating:NON_ADULT,excludeNewRootMedia:true,autoAcceptUniqueEntities:false,autoAcceptMediaClassification:false,autoActivate:false}) { policy { mode revision } } }`, library.ID))
+	if !bytes.Contains(saved, []byte(`"mode":"ASSISTED"`)) || !bytes.Contains(saved, []byte(`"revision":1`)) {
+		t.Fatalf("save response = %s", saved)
+	}
+	queued := requestGraphQL(fmt.Sprintf(`mutation { runLibraryAutomation(libraryID:%d) { id status cancellationRequested } }`, library.ID))
+	if !bytes.Contains(queued, []byte(`"status":"QUEUED"`)) {
+		t.Fatalf("queue response = %s", queued)
+	}
+	var runID int64
+	if err := database.QueryRowContext(ctx, `SELECT id FROM library_automation_runs WHERE library_id=?`, library.ID).Scan(&runID); err != nil {
+		t.Fatal(err)
+	}
+	cancelled := requestGraphQL(fmt.Sprintf(`mutation { cancelLibraryAutomation(runID:%d) { status completedAt } }`, runID))
+	if !bytes.Contains(cancelled, []byte(`"status":"CANCELLED"`)) {
+		t.Fatalf("cancel response = %s", cancelled)
+	}
+}
+
 func TestVideoPlaybackGraphQLReturnsOpaqueDirectIdentityWithoutQueuing(t *testing.T) {
 	database := openTestDatabase(t)
 	ctx := context.Background()

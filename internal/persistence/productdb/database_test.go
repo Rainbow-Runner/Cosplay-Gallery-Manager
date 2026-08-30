@@ -383,6 +383,93 @@ func TestOpenMigratesSchemaV4MediaExclusionWithoutChangingItems(t *testing.T) {
 	}
 }
 
+func TestOpenMigratesSchemaV5AutomationAsOptIn(t *testing.T) {
+	ctx := context.Background()
+	directory := t.TempDir()
+	path := filepath.Join(directory, "library.sqlite")
+	connection, err := sql.Open(sqliteDriver, sqliteDSN(path, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := connection.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ExecContext(ctx, `CREATE TABLE cgm_product_identity(singleton_id INTEGER NOT NULL PRIMARY KEY CHECK(singleton_id=1),product_id TEXT NOT NULL,database_schema_version INTEGER NOT NULL,created_at_utc TEXT NOT NULL)`); err != nil {
+		t.Fatal(err)
+	}
+	for _, create := range []func(context.Context, *sql.Tx) error{
+		createSchemaV1, createMediaProcessingSchemaV2, createSettingsSchemaV3,
+		createMediaClassificationSchemaV4, createMediaExclusionSchemaV5,
+	} {
+		if err := create(ctx, tx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO media_libraries(id,name,root_path,enabled,read_only,capture_timezone,created_at_utc,updated_at_utc)
+		VALUES(1,'Existing',?,1,1,'UTC','2026-08-29T00:00:00Z','2026-08-29T00:00:00Z');
+		INSERT INTO cgm_product_identity VALUES(1,?,5,'2026-08-29T00:00:00Z')`, filepath.Join(directory, "media"), product.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if err := connection.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := Open(ctx, path)
+	if err != nil {
+		t.Fatalf("migrating schema v5: %v", err)
+	}
+	defer db.Close()
+	policy, err := db.Automation().FindPolicy(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy.Mode != AutomationManual || policy.Revision != 0 {
+		t.Fatalf("migrated policy = %#v, want implicit MANUAL", policy)
+	}
+	var storedPolicies, storedRuns, storedIssues int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM library_automation_policies`).Scan(&storedPolicies); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM library_automation_runs`).Scan(&storedRuns); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM library_automation_run_issues`).Scan(&storedIssues); err != nil {
+		t.Fatal(err)
+	}
+	if storedPolicies != 0 || storedRuns != 0 || storedIssues != 0 {
+		t.Fatalf("migration unexpectedly opted into automation: policies=%d runs=%d issues=%d", storedPolicies, storedRuns, storedIssues)
+	}
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var snapshot string
+	for _, entry := range entries {
+		if strings.Contains(entry.Name(), ".pre-schema-v5-") {
+			snapshot = filepath.Join(directory, entry.Name())
+		}
+	}
+	if snapshot == "" {
+		t.Fatal("schema v5 pre-migration snapshot was not created")
+	}
+	backup, err := sql.Open(sqliteDriver, sqliteDSN(snapshot, true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backup.Close()
+	identity, err := readIdentity(ctx, backup)
+	if err != nil || identity.DatabaseSchemaVersion != 5 {
+		t.Fatalf("snapshot identity=%#v err=%v", identity, err)
+	}
+	if err := validateAutomationSchemaV6(ctx, backup); err == nil {
+		t.Fatal("schema v5 snapshot unexpectedly contains schema v6 automation tables")
+	}
+}
+
 func TestOpenExistingProductDatabase(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "library.sqlite")

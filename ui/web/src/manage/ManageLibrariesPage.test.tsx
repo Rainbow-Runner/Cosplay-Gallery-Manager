@@ -7,7 +7,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { IntlProvider } from "react-intl";
 
-import { DELETE_RECOGNITION_RULE, MANAGE_DISCOVERY, MANAGE_LIBRARIES, UPDATE_RECOGNITION_RULE } from "../api/manage";
+import { CANCEL_LIBRARY_AUTOMATION, DELETE_RECOGNITION_RULE, MANAGE_DISCOVERY, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, SAVE_LIBRARY_AUTOMATION_POLICY, UPDATE_RECOGNITION_RULE } from "../api/manage";
 import { messages } from "../i18n/messages";
 import { ManageLibrariesPage } from "./ManageLibrariesPage";
 
@@ -27,6 +27,11 @@ const discoveryMock: MockedResponse = {
     id: 1, libraryID: 2, completedAt: "2026-07-27T15:00:00Z", candidates: [], unassigned: [],
   } } },
 };
+const manualAutomation = {
+  __typename: "ManageLibraryAutomation",
+  policy: { __typename: "ManageLibraryAutomationPolicy", libraryID: 2, mode: "MANUAL", defaultContentRating: null, excludeNewRootMedia: true, autoAcceptUniqueEntities: false, autoAcceptMediaClassification: false, autoActivate: false, revision: 0 },
+  preview: { __typename: "ManageLibraryAutomationPreview", candidateCount: 0, autoCreateEligible: 0, draftCount: 0, activationReady: 0, needsReview: 0 }, recentRuns: [],
+};
 
 function renderPage(mocks: ReadonlyArray<MockedResponse>) {
   return render(<MemoryRouter>
@@ -37,6 +42,43 @@ function renderPage(mocks: ReadonlyArray<MockedResponse>) {
 }
 
 describe("ManageLibrariesPage recognition rules", () => {
+  it("keeps automation opt-in and saves an assisted policy explicitly", async () => {
+    renderPage([
+      { request: { query: MANAGE_LIBRARIES }, result: { data: { manageLibraries: [library] } } },
+      discoveryMock,
+      { request: { query: MANAGE_LIBRARY_AUTOMATION, variables: { libraryID: 2 } }, result: { data: { manageLibraryAutomation: manualAutomation } }, maxUsageCount: 2 },
+      {
+        request: { query: SAVE_LIBRARY_AUTOMATION_POLICY, variables: { libraryID: 2, expectedRevision: 0, input: {
+          mode: "ASSISTED", defaultContentRating: null, excludeNewRootMedia: true,
+          autoAcceptUniqueEntities: false, autoAcceptMediaClassification: false, autoActivate: false,
+        } } },
+        result: { data: { saveLibraryAutomationPolicy: { ...manualAutomation, policy: { ...manualAutomation.policy, mode: "ASSISTED", revision: 1 } } } },
+      },
+    ]);
+
+    expect(await screen.findByRole("button", { name: "Queue automation" }, { timeout: 5000 })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Automation level"), { target: { value: "ASSISTED" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save automation policy" }));
+    expect(await screen.findByText("Automation policy saved.")).toBeInTheDocument();
+  });
+
+  it("shows background progress and requests cancellation", async () => {
+    const activeRun = { __typename: "ManageLibraryAutomationRun", id: 9, libraryID: 2, policyRevision: 1, mode: "ASSISTED", status: "RUNNING", cancellationRequested: false,
+      candidatesSeen: 50, draftsCreated: 30, scanned: 12, activated: 0, needsReview: 12, issueCount: 2, errorCode: "", startedAt: "2026-08-29T06:00:00Z", completedAt: null };
+    const activeState = { ...manualAutomation, policy: { ...manualAutomation.policy, mode: "ASSISTED", revision: 1 }, recentRuns: [activeRun] };
+    renderPage([
+      { request: { query: MANAGE_LIBRARIES }, result: { data: { manageLibraries: [library] } } },
+      discoveryMock,
+      { request: { query: MANAGE_LIBRARY_AUTOMATION, variables: { libraryID: 2 } }, result: { data: { manageLibraryAutomation: activeState } } },
+      { request: { query: CANCEL_LIBRARY_AUTOMATION, variables: { runID: 9 } }, result: { data: { cancelLibraryAutomation: { __typename: "ManageLibraryAutomationRun", id: 9, status: "RUNNING", cancellationRequested: true, completedAt: null } } } },
+      { request: { query: MANAGE_LIBRARY_AUTOMATION, variables: { libraryID: 2 } }, result: { data: { manageLibraryAutomation: { ...activeState, recentRuns: [{ ...activeRun, cancellationRequested: true }] } } } },
+    ]);
+
+    expect(await screen.findByText("Last run: RUNNING · scanned 12 · activated 0 · needs review 12", {}, { timeout: 5000 })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel run" }));
+    expect(await screen.findByText("Cancellation requested.")).toBeInTheDocument();
+  });
+
   it("loads an existing rule into the editor and saves all deterministic fields", async () => {
     renderPage([
       { request: { query: MANAGE_LIBRARIES }, result: { data: { manageLibraries: [library] } } },

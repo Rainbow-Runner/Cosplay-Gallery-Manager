@@ -200,6 +200,15 @@ type HomeGalleryPage struct {
 	Page  *GalleryPage `json:"page"`
 }
 
+type LibraryAutomationPolicyInput struct {
+	Mode                          string         `json:"mode"`
+	DefaultContentRating          *ContentRating `json:"defaultContentRating,omitempty"`
+	ExcludeNewRootMedia           bool           `json:"excludeNewRootMedia"`
+	AutoAcceptUniqueEntities      bool           `json:"autoAcceptUniqueEntities"`
+	AutoAcceptMediaClassification bool           `json:"autoAcceptMediaClassification"`
+	AutoActivate                  bool           `json:"autoActivate"`
+}
+
 type ManageAuditEvent struct {
 	ID          int64  `json:"id"`
 	EventCode   string `json:"eventCode"`
@@ -495,6 +504,49 @@ type ManageLibrary struct {
 	ReadOnly        bool                     `json:"readOnly"`
 	CaptureTimezone string                   `json:"captureTimezone"`
 	Rules           []*ManageRecognitionRule `json:"rules"`
+}
+
+type ManageLibraryAutomation struct {
+	Policy     *ManageLibraryAutomationPolicy  `json:"policy"`
+	Preview    *ManageLibraryAutomationPreview `json:"preview"`
+	RecentRuns []*ManageLibraryAutomationRun   `json:"recentRuns"`
+}
+
+type ManageLibraryAutomationPolicy struct {
+	LibraryID                     int64          `json:"libraryID"`
+	Mode                          string         `json:"mode"`
+	DefaultContentRating          *ContentRating `json:"defaultContentRating,omitempty"`
+	ExcludeNewRootMedia           bool           `json:"excludeNewRootMedia"`
+	AutoAcceptUniqueEntities      bool           `json:"autoAcceptUniqueEntities"`
+	AutoAcceptMediaClassification bool           `json:"autoAcceptMediaClassification"`
+	AutoActivate                  bool           `json:"autoActivate"`
+	Revision                      int64          `json:"revision"`
+}
+
+type ManageLibraryAutomationPreview struct {
+	CandidateCount     int `json:"candidateCount"`
+	AutoCreateEligible int `json:"autoCreateEligible"`
+	DraftCount         int `json:"draftCount"`
+	ActivationReady    int `json:"activationReady"`
+	NeedsReview        int `json:"needsReview"`
+}
+
+type ManageLibraryAutomationRun struct {
+	ID                    int64   `json:"id"`
+	LibraryID             int64   `json:"libraryID"`
+	PolicyRevision        int64   `json:"policyRevision"`
+	Mode                  string  `json:"mode"`
+	Status                string  `json:"status"`
+	CancellationRequested bool    `json:"cancellationRequested"`
+	CandidatesSeen        int     `json:"candidatesSeen"`
+	DraftsCreated         int     `json:"draftsCreated"`
+	Scanned               int     `json:"scanned"`
+	Activated             int     `json:"activated"`
+	NeedsReview           int     `json:"needsReview"`
+	IssueCount            int     `json:"issueCount"`
+	ErrorCode             string  `json:"errorCode"`
+	StartedAt             string  `json:"startedAt"`
+	CompletedAt           *string `json:"completedAt,omitempty"`
 }
 
 type ManageMaintenanceState struct {

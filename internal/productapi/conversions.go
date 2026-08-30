@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/stashapp/stash/internal/browse"
 	"github.com/stashapp/stash/internal/discovery"
@@ -348,6 +349,36 @@ func manageLibrary(value library.Library, rules []discovery.Rule) *ManageLibrary
 
 func manageRecognitionRule(value discovery.Rule) *ManageRecognitionRule {
 	return &ManageRecognitionRule{ID: value.ID, Name: value.Name, Kind: string(value.Kind), Enabled: value.Enabled, AutoCreateDraft: value.AutoCreateDraft, Order: value.Order, Pattern: value.Pattern, FixedDepth: value.FixedDepth}
+}
+
+func manageAutomationPolicy(value productdb.LibraryAutomationPolicy) *ManageLibraryAutomationPolicy {
+	result := &ManageLibraryAutomationPolicy{
+		LibraryID: value.LibraryID, Mode: string(value.Mode), ExcludeNewRootMedia: value.ExcludeNewRootMedia,
+		AutoAcceptUniqueEntities: value.AutoAcceptUniqueEntities, AutoAcceptMediaClassification: value.AutoAcceptMediaClassification,
+		AutoActivate: value.AutoActivate, Revision: value.Revision,
+	}
+	if value.DefaultContentRating != "" {
+		rating := ContentRating(value.DefaultContentRating)
+		result.DefaultContentRating = &rating
+	}
+	return result
+}
+
+func manageAutomationPreview(value productdb.AutomationPreview) *ManageLibraryAutomationPreview {
+	return &ManageLibraryAutomationPreview{CandidateCount: value.CandidateCount, AutoCreateEligible: value.AutoCreateEligible,
+		DraftCount: value.DraftCount, ActivationReady: value.ActivationReady, NeedsReview: value.NeedsReview}
+}
+
+func manageAutomationRun(value productdb.AutomationRun) *ManageLibraryAutomationRun {
+	result := &ManageLibraryAutomationRun{ID: value.ID, LibraryID: value.LibraryID, PolicyRevision: value.PolicyRevision,
+		Mode: string(value.Mode), Status: value.Status, CandidatesSeen: value.CandidatesSeen, DraftsCreated: value.DraftsCreated,
+		Scanned: value.Scanned, Activated: value.Activated, NeedsReview: value.NeedsReview, IssueCount: value.IssueCount, ErrorCode: value.ErrorCode,
+		CancellationRequested: value.CancellationRequested, StartedAt: value.StartedAtUTC.Format(time.RFC3339Nano)}
+	if value.CompletedAtUTC != nil {
+		completed := value.CompletedAtUTC.Format(time.RFC3339Nano)
+		result.CompletedAt = &completed
+	}
+	return result
 }
 
 func manageMediaClassificationRule(value productdb.MediaClassificationRule) *ManageMediaClassificationRule {

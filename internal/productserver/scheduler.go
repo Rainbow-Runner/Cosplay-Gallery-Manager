@@ -186,9 +186,31 @@ func (s *Server) RunAutomaticScanOnce(ctx context.Context, now time.Time) error 
 		_ = s.Database.Operations().FailScheduled(context.Background(), automaticScanTaskKey, owner, "AUTO_SCAN_LIST_FAILED", now)
 		return err
 	}
-	discovered, discoveryFailures := 0, 0
+	discovered, discoveryFailures, automationQueued := 0, 0, 0
+	automatedLibraries := map[int64]bool{}
 	for _, mediaLibrary := range libraries {
 		if !mediaLibrary.Enabled {
+			continue
+		}
+		policy, policyErr := s.Database.Automation().FindPolicy(ctx, mediaLibrary.ID)
+		if policyErr != nil {
+			discoveryFailures++
+			continue
+		}
+		if policy.Mode != productdb.AutomationManual && policy.Revision > 0 {
+			automatedLibraries[mediaLibrary.ID] = true
+			active, activeErr := s.Database.Automation().FindActiveRun(ctx, mediaLibrary.ID)
+			if activeErr != nil {
+				discoveryFailures++
+				continue
+			}
+			if active == nil {
+				if _, queueErr := s.Database.Automation().EnqueueRun(ctx, policy, now); queueErr != nil {
+					discoveryFailures++
+				} else {
+					automationQueued++
+				}
+			}
 			continue
 		}
 		if _, err := s.Database.CandidateDiscovery().DiscoverFilesystem(ctx, mediaLibrary.ID, now); err != nil {
@@ -197,7 +219,8 @@ func (s *Server) RunAutomaticScanOnce(ctx context.Context, now time.Time) error 
 			discovered++
 		}
 	}
-	rows, err := s.Database.QueryContext(ctx, `SELECT source.id FROM gallery_sources source
+	rows, err := s.Database.QueryContext(ctx, `SELECT source.id,source.library_id,gallery.state FROM gallery_sources source
+		JOIN galleries gallery ON gallery.id=source.gallery_id
 		JOIN media_libraries library ON library.id=source.library_id
 		WHERE library.enabled=1 ORDER BY source.id`)
 	if err != nil {
@@ -206,11 +229,15 @@ func (s *Server) RunAutomaticScanOnce(ctx context.Context, now time.Time) error 
 	}
 	var sourceIDs []int64
 	for rows.Next() {
-		var sourceID int64
-		if err := rows.Scan(&sourceID); err != nil {
+		var sourceID, libraryID int64
+		var galleryState string
+		if err := rows.Scan(&sourceID, &libraryID, &galleryState); err != nil {
 			rows.Close()
 			_ = s.Database.Operations().FailScheduled(context.Background(), automaticScanTaskKey, owner, "AUTO_SCAN_SOURCE_LIST_FAILED", now)
 			return err
+		}
+		if automatedLibraries[libraryID] && galleryState == "DRAFT" {
+			continue
 		}
 		sourceIDs = append(sourceIDs, sourceID)
 	}
@@ -239,7 +266,7 @@ func (s *Server) RunAutomaticScanOnce(ctx context.Context, now time.Time) error 
 	if err := s.Database.Operations().CompleteScheduled(ctx, automaticScanTaskKey, owner, now); err != nil {
 		return err
 	}
-	summary := map[string]any{"libraries_discovered": discovered, "discovery_failures": discoveryFailures, "sources_scanned": scanned, "scan_failures": scanFailures}
+	summary := map[string]any{"libraries_discovered": discovered, "automation_queued": automationQueued, "discovery_failures": discoveryFailures, "sources_scanned": scanned, "scan_failures": scanFailures}
 	if discoveryFailures > 0 || scanFailures > 0 {
 		_ = s.Database.Operations().Audit(ctx, "SCHEDULED_TASK", "SCAN", "", "FAILURE", "AUTO_SCAN_PARTIAL_FAILURE", summary, now)
 		return errors.New("automatic scan completed with failures")

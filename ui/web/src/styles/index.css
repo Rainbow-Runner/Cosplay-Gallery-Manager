@@ -692,6 +692,16 @@ a { color: inherit; text-decoration: none; }
 .classification-review article > div:first-child { display: grid; min-width: 0; gap: .2rem; }
 .classification-review article span, .classification-review article small { overflow-wrap: anywhere; }
 .candidate-section { padding: 1.2rem; }
+.automation-section { margin-bottom: 1rem; }
+.automation-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; margin-top: 1rem; }
+.automation-form label:not(.check) { display: grid; gap: .35rem; color: var(--ink-muted); font-size: .62rem; }
+.automation-form .check { align-self: center; }
+.automation-form > button { justify-self: start; padding: .55rem .9rem; }
+.automation-warning { grid-column: 1 / -1; margin: 0; color: var(--danger); font-size: .65rem; }
+.automation-summary { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+.automation-summary span { padding: .35rem .55rem; border: 1px solid var(--line); color: var(--ink-muted); font-size: .6rem; }
+.automation-last-run { margin: .75rem 0 0; color: var(--ink-muted); font-size: .62rem; }
+.automation-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
 .candidate-section > header span { color: var(--ink-muted); font-size: .58rem; }
 .candidate-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; margin-top: .8rem; padding: .9rem; border: 1px solid var(--line); background: #121013; }
 .candidate-card.has-issue { border-color: rgb(164 49 68 / 55%); }

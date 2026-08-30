@@ -82,6 +82,11 @@ export const MANAGE_LIBRARIES = gql`
 export const MANAGE_DISCOVERY = gql`
   query ManageDiscovery($libraryID: Int64!) { manageDiscovery(libraryID: $libraryID) { id libraryID completedAt candidates { id rootPath sourceType method manifestSetID status autoCreateDraft hasConflict overLimit mediaCount suggestions { field value } } unassigned { parentPath mediaCount } } }
 `;
+const LIBRARY_AUTOMATION_FIELDS = gql`fragment LibraryAutomationFields on ManageLibraryAutomation { policy { libraryID mode defaultContentRating excludeNewRootMedia autoAcceptUniqueEntities autoAcceptMediaClassification autoActivate revision } preview { candidateCount autoCreateEligible draftCount activationReady needsReview } recentRuns { id libraryID policyRevision mode status cancellationRequested candidatesSeen draftsCreated scanned activated needsReview issueCount errorCode startedAt completedAt } }`;
+export const MANAGE_LIBRARY_AUTOMATION = gql`${LIBRARY_AUTOMATION_FIELDS} query ManageLibraryAutomation($libraryID: Int64!) { manageLibraryAutomation(libraryID: $libraryID) { ...LibraryAutomationFields } }`;
+export const SAVE_LIBRARY_AUTOMATION_POLICY = gql`${LIBRARY_AUTOMATION_FIELDS} mutation SaveLibraryAutomationPolicy($libraryID: Int64!, $expectedRevision: Int64!, $input: LibraryAutomationPolicyInput!) { saveLibraryAutomationPolicy(libraryID: $libraryID, expectedRevision: $expectedRevision, input: $input) { ...LibraryAutomationFields } }`;
+export const RUN_LIBRARY_AUTOMATION = gql`mutation RunLibraryAutomation($libraryID: Int64!) { runLibraryAutomation(libraryID: $libraryID) { id libraryID policyRevision mode status cancellationRequested candidatesSeen draftsCreated scanned activated needsReview issueCount errorCode startedAt completedAt } }`;
+export const CANCEL_LIBRARY_AUTOMATION = gql`mutation CancelLibraryAutomation($runID: Int64!) { cancelLibraryAutomation(runID: $runID) { id status cancellationRequested completedAt } }`;
 export const CREATE_MEDIA_LIBRARY = gql`
   mutation CreateMediaLibrary($input: CreateMediaLibraryInput!) { createMediaLibrary(input: $input) { id name rootPath enabled readOnly captureTimezone rules { id } } }
 `;

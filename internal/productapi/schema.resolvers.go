@@ -309,6 +309,57 @@ func (r *mutationResolver) DeleteRecognitionRule(ctx context.Context, id int64) 
 	return true, nil
 }
 
+// SaveLibraryAutomationPolicy is the resolver for the saveLibraryAutomationPolicy field.
+func (r *mutationResolver) SaveLibraryAutomationPolicy(ctx context.Context, libraryID int64, expectedRevision int64, input LibraryAutomationPolicyInput) (*ManageLibraryAutomation, error) {
+	rating := gallery.ContentRating("")
+	if input.DefaultContentRating != nil {
+		rating = gallery.ContentRating(*input.DefaultContentRating)
+	}
+	value, err := r.Database.Automation().SavePolicy(ctx, productdb.LibraryAutomationPolicy{
+		LibraryID: libraryID, Mode: productdb.AutomationMode(input.Mode), DefaultContentRating: rating,
+		ExcludeNewRootMedia: input.ExcludeNewRootMedia, AutoAcceptUniqueEntities: input.AutoAcceptUniqueEntities,
+		AutoAcceptMediaClassification: input.AutoAcceptMediaClassification, AutoActivate: input.AutoActivate,
+	}, expectedRevision, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "LIBRARY_AUTOMATION_POLICY_SAVE", "LIBRARY", strconv.FormatInt(libraryID, 10), "AUTOMATION_POLICY_SAVE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "LIBRARY_AUTOMATION_POLICY_SAVE", "LIBRARY", strconv.FormatInt(libraryID, 10), "", nil,
+		map[string]any{"mode": value.Mode, "revision": value.Revision, "auto_activate": value.AutoActivate})
+	return r.manageLibraryAutomation(ctx, libraryID)
+}
+
+// RunLibraryAutomation is the resolver for the runLibraryAutomation field.
+func (r *mutationResolver) RunLibraryAutomation(ctx context.Context, libraryID int64) (*ManageLibraryAutomationRun, error) {
+	policy, err := r.Database.Automation().FindPolicy(ctx, libraryID)
+	if err == nil {
+		var value productdb.AutomationRun
+		value, err = r.Database.Automation().EnqueueRun(ctx, policy, time.Now())
+		if err == nil {
+			r.auditManage(ctx, "LIBRARY_AUTOMATION_QUEUE", "LIBRARY", strconv.FormatInt(libraryID, 10), "", nil,
+				map[string]any{"run_id": value.ID, "policy_revision": value.PolicyRevision, "mode": value.Mode})
+			return manageAutomationRun(value), nil
+		}
+	}
+	if err != nil {
+		r.auditManage(ctx, "LIBRARY_AUTOMATION_QUEUE", "LIBRARY", strconv.FormatInt(libraryID, 10), "AUTOMATION_QUEUE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	return nil, manageError(errors.New("automation queue returned no run"))
+}
+
+// CancelLibraryAutomation is the resolver for the cancelLibraryAutomation field.
+func (r *mutationResolver) CancelLibraryAutomation(ctx context.Context, runID int64) (*ManageLibraryAutomationRun, error) {
+	value, err := r.Database.Automation().RequestCancel(ctx, runID, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "LIBRARY_AUTOMATION_CANCEL", "AUTOMATION_RUN", strconv.FormatInt(runID, 10), "AUTOMATION_CANCEL_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "LIBRARY_AUTOMATION_CANCEL", "AUTOMATION_RUN", strconv.FormatInt(runID, 10), "", nil,
+		map[string]any{"status": value.Status, "cancellation_requested": value.CancellationRequested})
+	return manageAutomationRun(value), nil
+}
+
 // ValidateMediaClassificationRule is the resolver for the validateMediaClassificationRule field.
 func (r *mutationResolver) ValidateMediaClassificationRule(ctx context.Context, input MediaClassificationRuleInput) (*ManageRuleValidation, error) {
 	err := mediaclassification.Validate(mediaClassificationRuleInput(input))
@@ -1340,6 +1391,11 @@ func (r *queryResolver) ManageLibraries(ctx context.Context) ([]*ManageLibrary, 
 		result = append(result, manageLibrary(value, rules))
 	}
 	return result, nil
+}
+
+// ManageLibraryAutomation is the resolver for the manageLibraryAutomation field.
+func (r *queryResolver) ManageLibraryAutomation(ctx context.Context, libraryID int64) (*ManageLibraryAutomation, error) {
+	return r.manageLibraryAutomation(ctx, libraryID)
 }
 
 // ManageMediaClassificationRules is the resolver for the manageMediaClassificationRules field.

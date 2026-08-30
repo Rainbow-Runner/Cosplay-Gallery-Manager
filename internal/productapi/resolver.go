@@ -73,6 +73,26 @@ func (r *mutationResolver) loadManageGalleryDetail(ctx context.Context, setID st
 	return manageGalleryDetail(value), nil
 }
 
+func (r *Resolver) manageLibraryAutomation(ctx context.Context, libraryID int64) (*ManageLibraryAutomation, error) {
+	policy, err := r.Database.Automation().FindPolicy(ctx, libraryID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	preview, err := r.Database.Automation().Preview(ctx, libraryID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	runs, err := r.Database.Automation().RecentRuns(ctx, libraryID, 20)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	result := &ManageLibraryAutomation{Policy: manageAutomationPolicy(policy), Preview: manageAutomationPreview(preview)}
+	for _, run := range runs {
+		result.RecentRuns = append(result.RecentRuns, manageAutomationRun(run))
+	}
+	return result, nil
+}
+
 func (r *Resolver) manageGalleryManifestState(ctx context.Context, state productdb.GalleryManifestState) (*ManageGalleryManifestState, error) {
 	var metadataRevision int64
 	if err := r.Database.QueryRowContext(ctx, `SELECT metadata_revision FROM galleries WHERE id=?`, state.GalleryID).Scan(&metadataRevision); err != nil {

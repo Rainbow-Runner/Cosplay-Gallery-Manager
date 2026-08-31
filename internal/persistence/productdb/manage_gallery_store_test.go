@@ -81,6 +81,41 @@ func TestManageCoreEntityOptionsSearchStandaloneNamesAndAliases(t *testing.T) {
 	}
 }
 
+func TestManageCoserNameConflictsUseNormalizedExactNamesAndAliases(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 31, 15, 0, 0, 0, time.UTC)
+	created, err := db.CoreEntities().CreateCoser(ctx, CreateCoserInput{CreateNamedEntityInput: CreateNamedEntityInput{
+		Name: "Straße", Aliases: []string{"Alice"},
+	}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.CoreEntities().CreateCoser(ctx, CreateCoserInput{CreateNamedEntityInput: CreateNamedEntityInput{Name: "Strasse Extra"}}, now); err != nil {
+		t.Fatal(err)
+	}
+	galleryValue, _ := createEmptySourceFixture(t, db, now)
+	if err := db.Galleries().ReplaceRelations(ctx, galleryValue.ID, galleryValue.MetadataRevision,
+		ReplaceGalleryRelationsInput{Credits: []ReplaceGalleryCreditInput{{CoserUUID: created.UUID, Position: 1024}}}, now); err != nil {
+		t.Fatal(err)
+	}
+	byName, err := db.CoreEntities().ManageCoserNameConflicts(ctx, "  STRASSE  ", 10)
+	if err != nil || len(byName) != 1 || byName[0].Coser.UUID != created.UUID || byName[0].GalleryCount != 1 || len(byName[0].MatchedValues) != 1 || byName[0].MatchedValues[0] != "Straße" {
+		t.Fatalf("normalized Coser name conflicts = %#v, %v", byName, err)
+	}
+	byAlias, err := db.CoreEntities().ManageCoserNameConflicts(ctx, "ALICE", 10)
+	if err != nil || len(byAlias) != 1 || byAlias[0].Coser.UUID != created.UUID || len(byAlias[0].MatchedValues) != 1 || byAlias[0].MatchedValues[0] != "Alice" {
+		t.Fatalf("normalized Coser Alias conflicts = %#v, %v", byAlias, err)
+	}
+	partial, err := db.CoreEntities().ManageCoserNameConflicts(ctx, "Strass", 10)
+	if err != nil || len(partial) != 0 {
+		t.Fatalf("partial Coser name conflicts = %#v, %v", partial, err)
+	}
+	if _, err := db.CoreEntities().ManageCoserNameConflicts(ctx, "Alice", 21); err == nil {
+		t.Fatal("Coser conflict check accepted an unbounded limit")
+	}
+}
+
 func TestReplaceGalleryRelationsIsAtomicAndRevisionGuarded(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

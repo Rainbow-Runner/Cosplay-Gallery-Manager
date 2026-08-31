@@ -1719,3 +1719,12 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 定向Vitest新增“完整头像+Banner”与“两者均缺失”对照，校验真实图片、空白占位、双状态及可访问名称；ManageCoreEntitiesPage 4项与TypeScript检查通过。
 - 功能、测试和部署前记录提交为`8170e92c232dc75928ba08e5c0e5fe06c3739e19`（`Show Coser image completeness in management`）。完整Vitest 29文件85项、TypeScript和680模块生产构建通过，仅保留既有主共享包超过500KiB提示。清洁提交以Go 1.25.12及`cgm_web_embed cgm_galleryepic`构建，`vcs.modified=false`，二进制SHA-256为`a9163ff447fe8d64245a8f11b68e7b10d72bbbee90ffe5db5bb99fd2861e3c71`。
 - 2026-08-31完成无schema增量部署；旧二进制保存于`/tmp/cgm-before-coser-completeness-20260831`，候选逐字节校验后原子替换并只启动服务一次。服务保持`active/running`、`NRestarts=0`，Health/Ready均为204，About精确指向`8170e92`且`exactSourceAvailable=true`；入口资源为`index-BfrLW-Cd.js`与`index-DfSgBTN-.css`。正式库保持schema v8、`integrity_check=ok`，配置、媒体、Manifest和缓存均未替换；本次启动journal未检出WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-49 Coser创建前同名/别名复核（本地开发，未部署）
+
+日期：2026-08-31
+
+- 保留“Coser可以真实同名、UUID决定身份”的已确认模型，不新增名称唯一索引或schema迁移。新增Manage专用`manageCoserNameConflicts`查询，后端使用与核心实体一致的NFC、首尾清理和Unicode大小写折叠，对所有现有Coser主名及Alias做精确匹配；不执行子串、简繁、标点或罗马音推断。
+- 查询最多返回10个审核候选，每项包含已有Coser编辑DTO、实际命中值和关联Gallery数。前端在新建Coser的Name停止350ms后查询，展示头像、名称、Aliases、匹配值、UUID末8位和Gallery数，并可直接打开已有实体。
+- 命中时Create按钮保持禁用，直到所有者勾选“已复核且确认为不同人物”；查询失败时也需要显式承认后才能继续，避免网络/API错误静默绕过复核。修改Name会立即清除上次确认；无精确命中时正常创建。
+- 定向回归已通过：后端覆盖`Straße/STRASSE`的Unicode折叠、Alias命中、子串不误报、Gallery计数与上限；GraphQL覆盖认证查询数据；前端覆盖禁用Create、显式确认和打开已有实体。`productdb/productapi`、ManageCoreEntitiesPage 5项和TypeScript检查通过。

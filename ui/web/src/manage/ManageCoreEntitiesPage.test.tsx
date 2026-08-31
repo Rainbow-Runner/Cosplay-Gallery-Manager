@@ -7,7 +7,7 @@ import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { MANAGE_CORE_ENTITIES, MANAGE_CORE_ENTITY, MANAGE_CORE_ENTITY_OPTIONS } from "../api/manage";
+import { MANAGE_CORE_ENTITIES, MANAGE_CORE_ENTITY, MANAGE_CORE_ENTITY_OPTIONS, MANAGE_COSER_NAME_CONFLICTS } from "../api/manage";
 import { messages } from "../i18n/messages";
 import { ManageCoreEntitiesPage, parseAliases, socialPlatformOptions } from "./ManageCoreEntitiesPage";
 import type { ManageCoreEntity } from "./types";
@@ -27,6 +27,39 @@ function renderPage(mocks: ReadonlyArray<MockedResponse>, initialEntry: string, 
 }
 
 describe("ManageCoreEntitiesPage validation", () => {
+  it("requires review of exact Coser identity matches and can open the existing entity", async () => {
+    const existing = {
+      __typename: "ManageCoreEntity", kind: "COSER", uuid: "018f4c8e-7a9b-7def-8123-456789abcdea", name: "Alice", sortName: "", aliases: ["Alicia"], slug: "alice", metadataRevision: 3,
+      workUUID: null, avatarURL: "/resource/coser/alice/3/avatar-480", bannerURL: null, avatarCrop: null, bannerFocalPoint: null,
+      profileSummary: "Existing profile", biography: "", countryOrRegion: "", useInRecommendation: true, socialAccounts: [], parents: [],
+    } as ManageCoreEntity & { __typename: string };
+    renderPage([
+      {
+        request: { query: MANAGE_CORE_ENTITIES, variables: { kind: "COSER", page: 1 } },
+        result: { data: { manageCoreEntities: { ...emptyPage, totalItems: 1, totalPages: 1, items: [existing] } } },
+      },
+      {
+        request: { query: MANAGE_COSER_NAME_CONFLICTS, variables: { name: "Alice", limit: 10 } },
+        result: { data: { manageCoserNameConflicts: [{ __typename: "ManageCoserNameConflict", coser: existing, matchedValues: ["Alice"], galleryCount: 4 }] } },
+      },
+      {
+        request: { query: MANAGE_CORE_ENTITY, variables: { kind: "COSER", uuid: existing.uuid } },
+        result: { data: { manageCoreEntity: existing } },
+      },
+    ], "/manage/cosers", true);
+
+    const create = await screen.findByRole("button", { name: "Create" });
+    fireEvent.change(screen.getByLabelText("Name (required)"), { target: { value: "Alice" } });
+    expect(create).toBeDisabled();
+    expect(await screen.findByText(/Found 1 exact identity match/)).toBeInTheDocument();
+    expect(screen.getByText(/UUID …89abcdea · 4 Gallery/)).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/confirm this is a different person/));
+    expect(create).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Open existing" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save revision 3" })).toBeInTheDocument());
+    expect(screen.getByLabelText("Name (required)")).toHaveValue("Alice");
+  });
+
   it("shows Coser avatars, blank placeholders, and Avatar/Banner completeness markers", async () => {
     const complete = {
       __typename: "ManageCoreEntity", kind: "COSER", uuid: "018f4c8e-7a9b-7def-8123-456789abcde1", name: "Alice", sortName: "", aliases: [], slug: "alice", metadataRevision: 2,

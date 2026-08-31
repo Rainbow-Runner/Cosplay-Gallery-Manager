@@ -423,6 +423,26 @@ func TestCharacterCreateWithoutWorkReturnsValidationErrorAndAudit(t *testing.T) 
 	}
 }
 
+func TestManageCoserNameConflictsExposeExactReviewData(t *testing.T) {
+	database := openTestDatabase(t)
+	created, err := database.CoreEntities().CreateCoser(context.Background(), productdb.CreateCoserInput{
+		CreateNamedEntityInput: productdb.CreateNamedEntityInput{Name: "Alice", Aliases: []string{"Alicia"}},
+	}, time.Date(2026, 8, 31, 15, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := `{"query":"query { manageCoserNameConflicts(name:\"ALICIA\",limit:10) { coser { uuid name aliases } matchedValues galleryCount } }"}`
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	NewHandler(database, func(*http.Request) bool { return true }).ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(created.UUID)) || !bytes.Contains(response.Body.Bytes(), []byte(`"matchedValues":["Alicia"]`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(`"galleryCount":0`)) {
+		t.Fatalf("Coser name conflict response = %d %s", response.Code, response.Body.String())
+	}
+}
+
 func TestGalleryRelationMutationPersistsAndWritesTechnicalAudit(t *testing.T) {
 	database := openTestDatabase(t)
 	ctx := context.Background()

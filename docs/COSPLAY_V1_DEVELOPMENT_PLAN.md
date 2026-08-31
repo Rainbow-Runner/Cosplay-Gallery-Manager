@@ -684,6 +684,7 @@ flowchart LR
 #### P08-05 核心实体管理
 
 - Work/Character/Tag 的最小字段编辑、关系维护、Slug 历史、DAG 环检测。
+- 新建Coser前对主名与Alias进行Unicode规范化精确查重，展示可识别的已有人物摘要并提供直达入口；允许真实同名人物，但必须显式确认后继续创建。
 - Coser/Work/Character/Tag 合并预览、冲突处理、Alias 和 Tombstone。
 - 只有无引用实体提供删除数据库记录操作。
 

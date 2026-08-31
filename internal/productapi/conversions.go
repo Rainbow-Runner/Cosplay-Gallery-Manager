@@ -573,6 +573,10 @@ func manageCoreEntityPage(value productdb.ManageCoreEntityPage) *ManageCoreEntit
 	return result
 }
 
+func manageCoserNameConflict(value productdb.ManageCoserNameConflict) *ManageCoserNameConflict {
+	return &ManageCoserNameConflict{Coser: manageCoreEntity(value.Coser), MatchedValues: value.MatchedValues, GalleryCount: value.GalleryCount}
+}
+
 func manageCoreEntityMergePreview(value productdb.CoreEntityMergePreview) *ManageCoreEntityMergePreview {
 	result := &ManageCoreEntityMergePreview{
 		Kind: SearchEntityKind(value.Kind), SourceUUID: value.SourceUUID, TargetUUID: value.TargetUUID,

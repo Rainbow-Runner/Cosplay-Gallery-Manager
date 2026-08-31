@@ -373,6 +373,7 @@ type ManageCoreEntity {
   socialAccounts: [ManageSocialAccount!]! parents: [ManageCoreEntityRef!]!
 }
 type ManageCoreEntityPage { items: [ManageCoreEntity!]! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
+type ManageCoserNameConflict { coser: ManageCoreEntity! matchedValues: [String!]! galleryCount: Int! }
 type ManageCoreEntityMergeConflict { code: String! details: String! }
 type ManageCoreEntityMergePreview {
   kind: SearchEntityKind! sourceUUID: ID! targetUUID: ID! sourceRevision: Int64! targetRevision: Int64!
@@ -436,6 +437,7 @@ type Query {
   manageCoreEntities(kind: SearchEntityKind!, page: Int! = 1): ManageCoreEntityPage!
   manageCoreEntity(kind: SearchEntityKind!, uuid: ID!): ManageCoreEntity!
   manageCoreEntityOptions(kind: SearchEntityKind!, query: String! = "", limit: Int! = 20): [ManageCoreEntity!]!
+  manageCoserNameConflicts(name: String!, limit: Int! = 10): [ManageCoserNameConflict!]!
   previewCoreEntityMerge(kind: SearchEntityKind!, sourceUUID: ID!, targetUUID: ID!): ManageCoreEntityMergePreview!
   previewCoreEntityDelete(kind: SearchEntityKind!, uuid: ID!): ManageCoreEntityDeletePreview!
   previewGalleryDelete(setID: ID!): ManageGalleryDeletePreview!

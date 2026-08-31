@@ -352,6 +352,12 @@ type ManageCoserManifestState struct {
 	Conflicts        []*ManageManifestConflict `json:"conflicts"`
 }
 
+type ManageCoserNameConflict struct {
+	Coser         *ManageCoreEntity `json:"coser"`
+	MatchedValues []string          `json:"matchedValues"`
+	GalleryCount  int               `json:"galleryCount"`
+}
+
 type ManageDiscoverySnapshot struct {
 	ID                  int64                              `json:"id"`
 	LibraryID           int64                              `json:"libraryID"`

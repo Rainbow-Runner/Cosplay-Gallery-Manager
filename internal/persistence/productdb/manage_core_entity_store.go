@@ -2,6 +2,7 @@ package productdb
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"math"
 	"strings"
@@ -34,6 +35,86 @@ type ManageCoreEntityRef struct {
 	UUID             string
 	Name             string
 	MetadataRevision int64
+}
+
+type ManageCoserNameConflict struct {
+	Coser         ManageCoreEntity
+	MatchedValues []string
+	GalleryCount  int
+}
+
+// ManageCoserNameConflicts returns normalized exact primary-name and Alias
+// matches. Coser names intentionally remain non-unique, so this is a review
+// aid rather than a creation constraint.
+func (s *CoreEntityStore) ManageCoserNameConflicts(ctx context.Context, name string, limit int) ([]ManageCoserNameConflict, error) {
+	wanted := normalizedKey(name)
+	if wanted == "" || runeLength(name) > 300 || limit < 1 || limit > 20 {
+		return nil, errors.New("invalid Coser name conflict check")
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT coser.uuid,coser.name,alias.alias
+		FROM cosers coser LEFT JOIN coser_aliases alias ON alias.coser_uuid=coser.uuid
+		ORDER BY COALESCE(NULLIF(coser.sort_name,''),coser.name),coser.uuid,alias.position`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	type match struct {
+		uuid   string
+		values []string
+	}
+	var matches []match
+	positions := map[string]int{}
+	for rows.Next() {
+		var uuid, primary string
+		var alias sql.NullString
+		if err := rows.Scan(&uuid, &primary, &alias); err != nil {
+			return nil, err
+		}
+		var values []string
+		if normalizedKey(primary) == wanted {
+			values = append(values, primary)
+		}
+		if alias.Valid && normalizedKey(alias.String) == wanted {
+			values = append(values, alias.String)
+		}
+		if len(values) == 0 {
+			continue
+		}
+		position, found := positions[uuid]
+		if !found {
+			if len(matches) >= limit {
+				continue
+			}
+			position = len(matches)
+			positions[uuid] = position
+			matches = append(matches, match{uuid: uuid})
+		}
+		for _, value := range values {
+			duplicate := false
+			for _, existing := range matches[position].values {
+				duplicate = duplicate || normalizedKey(existing) == normalizedKey(value)
+			}
+			if !duplicate {
+				matches[position].values = append(matches[position].values, value)
+			}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	result := make([]ManageCoserNameConflict, 0, len(matches))
+	for _, candidate := range matches {
+		coser, err := s.ManageFind(ctx, "COSER", candidate.uuid)
+		if err != nil {
+			return nil, err
+		}
+		var galleryCount int
+		if err := s.db.QueryRowContext(ctx, `SELECT COUNT(DISTINCT gallery_id) FROM gallery_credits WHERE coser_uuid=?`, candidate.uuid).Scan(&galleryCount); err != nil {
+			return nil, err
+		}
+		result = append(result, ManageCoserNameConflict{Coser: coser, MatchedValues: candidate.values, GalleryCount: galleryCount})
+	}
+	return result, nil
 }
 
 // ManageOptions searches every entity of a kind, including standalone Cosers

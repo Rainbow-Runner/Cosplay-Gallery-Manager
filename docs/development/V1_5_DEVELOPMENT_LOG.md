@@ -1709,3 +1709,11 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 输入框新增可见格式提示与多语言示例；定向Vitest覆盖`Komachi / こまち / 小 丁`完整保留及提交解析，3项通过，TypeScript检查通过。
 - 修复及部署前记录提交为`f415c1a1a11c087fd68cb0a9767cf9a3f4403b2d`（`Fix core entity alias editing`）。完整Vitest 29文件84项、TypeScript和680模块生产构建通过；清洁提交以Go 1.25.12及`cgm_web_embed cgm_galleryepic`构建，`vcs.modified=false`，二进制SHA-256为`af7232e77ebef6b331313b5055e0ed6cb93878cbe8426e8dbc8fbfcb4ada92d8`。
 - 2026-08-31完成无schema增量部署；替换前二进制保存于`/tmp/cgm-before-alias-input-20260831`，新候选逐字节校验后原子替换并只启动服务一次。服务保持`active/running`、`NRestarts=0`，Health/Ready均为204，About精确指向`f415c1a`且`exactSourceAvailable=true`。正式库保持schema v8和`integrity_check=ok`，本次启动journal未检出WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-48 Coser管理列表头像与Banner完善状态（本地开发，未部署）
+
+日期：2026-08-31
+
+- Coser管理列表每页已有的`ManageCoreEntityFields`本就返回`avatarURL`与`bannerURL`，因此本轮不新增API查询、DTO、数据表或schema。只在COSER行前增加40px固定圆形头像；已设置头像用现有revision化认证URL、`loading=lazy`和异步解码，未设置时显示等尺寸浅灰空白占位，文件加载失败时使用独立错误色而不留破损图标。
+- 每行右侧增加人物与图片两个低干扰小图标，分别表示Avatar与Banner；绿色表示已设置，灰色表示缺失，琼珀色表示Avatar URL存在但资源加载失败。中英文title和`aria-label`明确说明具体Coser及状态，不使用姓名首字母伪装成已有头像。Work/Character/Tag保持旧列表布局。
+- 定向Vitest新增“完整头像+Banner”与“两者均缺失”对照，校验真实图片、空白占位、双状态及可访问名称；ManageCoreEntitiesPage 4项与TypeScript检查通过。

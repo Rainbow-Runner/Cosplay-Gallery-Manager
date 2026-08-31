@@ -812,7 +812,19 @@ a { color: inherit; text-decoration: none; }
 .entity-manage-list > button { display: grid; gap: .3rem; padding: .8rem; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: #fff; text-align: left; cursor: pointer; }
 .entity-manage-list > button.is-active { background: rgb(182 154 124 / 9%); }
 .entity-manage-list > button strong { font: 400 1rem Georgia, serif; }
-.entity-manage-list > button span { overflow: hidden; color: var(--ink-muted); font-size: .55rem; text-overflow: ellipsis; white-space: nowrap; }
+.entity-manage-list > button > span { overflow: hidden; color: var(--ink-muted); font-size: .55rem; text-overflow: ellipsis; white-space: nowrap; }
+.entity-manage-list > button.is-coser { grid-template-columns: 2.5rem minmax(0, 1fr) auto; align-items: center; gap: .65rem; min-height: 4rem; }
+.entity-manage-list__avatar { display: block; width: 2.5rem; height: 2.5rem; overflow: hidden; border: 1px solid var(--line); border-radius: 50%; background: var(--cgm-muted); }
+.entity-manage-list__avatar.is-error { border-color: #b45309; }
+.entity-manage-list__avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.entity-manage-list__copy { display: grid; min-width: 0; gap: .3rem; }
+.entity-manage-list__copy > strong, .entity-manage-list__copy > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entity-manage-list__copy > span { color: var(--ink-muted); font-size: .55rem; }
+.entity-manage-list__asset-status { display: flex; flex: none; gap: .25rem; overflow: visible; }
+.entity-manage-list__asset { display: grid; width: 1.35rem; height: 1.35rem; place-items: center; border: 1px solid var(--cgm-border); border-radius: 50%; background: var(--cgm-surface-subtle); color: var(--cgm-muted-foreground); }
+.entity-manage-list__asset .cgm-icon { width: .72rem; height: .72rem; }
+.entity-manage-list__asset.is-set { border-color: #86b69d; background: #edf7f1; color: #28704a; }
+.entity-manage-list__asset.is-error { border-color: #d6a55a; background: #fff7e8; color: #9a5d00; }
 .entity-manage-list .manage-pagination { padding: .8rem; margin: 0; }
 .entity-editor { min-width: 0; }
 .entity-editor > .manage-panel + .manage-panel, .entity-editor > .metadata-form + .manage-panel { margin-top: 1rem; }

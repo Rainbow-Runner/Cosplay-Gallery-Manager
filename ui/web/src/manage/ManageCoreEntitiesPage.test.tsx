@@ -27,6 +27,28 @@ function renderPage(mocks: ReadonlyArray<MockedResponse>, initialEntry: string, 
 }
 
 describe("ManageCoreEntitiesPage validation", () => {
+  it("shows Coser avatars, blank placeholders, and Avatar/Banner completeness markers", async () => {
+    const complete = {
+      __typename: "ManageCoreEntity", kind: "COSER", uuid: "018f4c8e-7a9b-7def-8123-456789abcde1", name: "Alice", sortName: "", aliases: [], slug: "alice", metadataRevision: 2,
+      workUUID: null, avatarURL: "/resource/coser/alice/2/avatar-480", bannerURL: "/resource/coser/alice/2/banner-1600", avatarCrop: null, bannerFocalPoint: null,
+      profileSummary: "", biography: "", countryOrRegion: "", useInRecommendation: true, socialAccounts: [], parents: [],
+    } as ManageCoreEntity & { __typename: string };
+    const incomplete = { ...complete, uuid: "018f4c8e-7a9b-7def-8123-456789abcde2", name: "Bob", slug: "bob", avatarURL: null, bannerURL: null };
+    renderPage([{
+      request: { query: MANAGE_CORE_ENTITIES, variables: { kind: "COSER", page: 1 } },
+      result: { data: { manageCoreEntities: { ...emptyPage, totalItems: 2, totalPages: 1, items: [complete, incomplete] } } },
+    }], "/manage/cosers", true);
+
+    const alice = await screen.findByRole("button", { name: /Alice/ });
+    const bob = screen.getByRole("button", { name: /Bob/ });
+    expect(alice.querySelector(".entity-manage-list__avatar img")).toHaveAttribute("src", complete.avatarURL);
+    expect(bob.querySelector(".entity-manage-list__avatar img")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Alice: Avatar set")).toHaveClass("is-set");
+    expect(screen.getByLabelText("Alice: Banner set")).toHaveClass("is-set");
+    expect(screen.getByLabelText("Bob: Avatar missing")).not.toHaveClass("is-set");
+    expect(screen.getByLabelText("Bob: Banner missing")).not.toHaveClass("is-set");
+  });
+
   it("keeps alias separators editable and parses aliases only for persistence", async () => {
     renderPage([{
       request: { query: MANAGE_CORE_ENTITIES, variables: { kind: "COSER", page: 1 } },

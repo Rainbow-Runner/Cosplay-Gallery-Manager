@@ -1,7 +1,9 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { type FormEvent, useEffect, useState } from "react";
+import { useIntl } from "react-intl";
 import { Link, useSearchParams } from "react-router-dom";
 import { ADD_COSER_SOCIAL_ACCOUNT, CREATE_CORE_ENTITY, MANAGE_CORE_ENTITIES, MANAGE_CORE_ENTITY, MANAGE_COSER_MANIFEST, PULL_COSER_MANIFEST, PUSH_COSER_MANIFEST, REPLACE_TAG_PARENTS, RESOLVE_COSER_MANIFEST, UPDATE_CORE_ENTITY } from "../api/manage";
+import { Icon } from "../ui/Icon";
 import { ManageEntitySelector } from "./ManageEntitySelector";
 import { ManageEntityLifecyclePanel } from "./ManageEntityLifecyclePanel";
 import { ManageCoserAssetsPanel } from "./ManageCoserAssetsPanel";
@@ -19,6 +21,24 @@ export const socialPlatformOptions = [
   ["facebook", "Facebook"], ["bluesky", "Bluesky"], ["patreon", "Patreon"],
   ["fanbox", "FANBOX"], ["website", "Website"],
 ] as const;
+
+function ManageCoserListItem({ item }: { item: ManageCoreEntity }) {
+  const intl = useIntl();
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const avatarState = avatarFailed ? "unavailable" : item.avatarURL ? "set" : "missing";
+  const avatarLabel = intl.formatMessage({ id: `manage.coserList.avatar.${avatarState}` }, { name: item.name });
+  const bannerLabel = intl.formatMessage({ id: item.bannerURL ? "manage.coserList.banner.set" : "manage.coserList.banner.missing" }, { name: item.name });
+  return <>
+    <span className={`entity-manage-list__avatar${avatarFailed ? " is-error" : ""}`} aria-hidden="true">
+      {item.avatarURL && !avatarFailed ? <img src={item.avatarURL} alt="" width="40" height="40" loading="lazy" decoding="async" onError={() => setAvatarFailed(true)} /> : null}
+    </span>
+    <span className="entity-manage-list__copy"><strong>{item.name}</strong><span>{item.aliases.join(" / ") || item.uuid}</span></span>
+    <span className="entity-manage-list__asset-status" aria-label={intl.formatMessage({ id: "manage.coserList.assetStatus" }, { name: item.name })}>
+      <span data-asset="avatar" className={`entity-manage-list__asset${avatarState === "set" ? " is-set" : avatarState === "unavailable" ? " is-error" : ""}`} aria-label={avatarLabel} title={avatarLabel}><Icon name="user" /></span>
+      <span data-asset="banner" className={`entity-manage-list__asset${item.bannerURL ? " is-set" : ""}`} aria-label={bannerLabel} title={bannerLabel}><Icon name="gallery" /></span>
+    </span>
+  </>;
+}
 
 function isAbsoluteHTTPURL(value: string) {
   try {
@@ -54,7 +74,7 @@ export function ManageCoreEntitiesPage({ coserOnly = false }: { coserOnly?: bool
   async function merged(target: ManageCoreEntity, completionWarning?: string | null) { setDraft(target); setParameters({ ...(coserOnly ? {} : { kind }), uuid: target.uuid }); await listQuery.refetch(); setMessage(completionWarning ? `Merged. ${completionWarning}` : "Merged into the selected target; the source UUID is now a permanent alias."); }
   async function deleted() { setDraft(blank(kind)); setParameters(coserOnly ? {} : { kind }); await listQuery.refetch(); setMessage("Entity deleted from the database and UUID permanently tombstoned; files were not removed."); }
   return <main className="manage-page"><header className="manage-heading"><div><p>PORTABLE UUID ENTITIES</p><h2>{coserOnly ? "Coser" : "Core entities"}</h2></div><button type="button" onClick={() => { setParameters(coserOnly ? {} : { kind }); setDraft(blank(kind)); setAliasText(""); }}>＋ New</button></header>{!coserOnly ? <nav className="task-filters">{kinds.map((value) => <button key={value} type="button" className={kind === value ? "is-active" : ""} onClick={() => setParameters({ kind: value })}>{value}</button>)}</nav> : null}{message ? <p className="manage-message">{message}</p> : null}
-    <section className="entity-manage-layout"><aside className="entity-manage-list">{data?.items.map((item) => <button type="button" className={item.uuid === selected ? "is-active" : ""} key={item.uuid} onClick={() => setParameters({ ...(coserOnly ? {} : { kind }), uuid: item.uuid, page: String(page) })}><strong>{item.name}</strong><span>{item.aliases.join(" / ") || item.uuid}</span></button>)}{data && data.totalPages > 1 ? <nav className="manage-pagination"><button disabled={page <= 1} onClick={() => setParameters({ ...(coserOnly ? {} : { kind }), page: String(page - 1) })}>←</button><span>{page}/{data.totalPages}</span><button disabled={page >= data.totalPages} onClick={() => setParameters({ ...(coserOnly ? {} : { kind }), page: String(page + 1) })}>→</button></nav> : null}</aside>
+    <section className="entity-manage-layout"><aside className="entity-manage-list">{data?.items.map((item) => <button type="button" className={`${item.uuid === selected ? "is-active" : ""}${item.kind === "COSER" ? " is-coser" : ""}`} key={item.uuid} onClick={() => setParameters({ ...(coserOnly ? {} : { kind }), uuid: item.uuid, page: String(page) })}>{item.kind === "COSER" ? <ManageCoserListItem item={item} /> : <><strong>{item.name}</strong><span>{item.aliases.join(" / ") || item.uuid}</span></>}</button>)}{data && data.totalPages > 1 ? <nav className="manage-pagination"><button disabled={page <= 1} onClick={() => setParameters({ ...(coserOnly ? {} : { kind }), page: String(page - 1) })}>←</button><span>{page}/{data.totalPages}</span><button disabled={page >= data.totalPages} onClick={() => setParameters({ ...(coserOnly ? {} : { kind }), page: String(page + 1) })}>→</button></nav> : null}</aside>
       <div className="entity-editor">{kind === "COSER" && draft.uuid ? <nav className="editor-tabs">{["profile", "social", "galleries", "manifest"].map((tab) => <button type="button" key={tab} className={coserTab === tab ? "is-active" : ""} onClick={() => setCoserTab(tab)}>{tab}</button>)}</nav> : null}
         {kind !== "COSER" || coserTab === "profile" || !draft.uuid ? <><EntityForm draft={draft} aliasText={aliasText} setAliasText={setAliasText} setDraft={setDraft} submit={save} saving={createState.loading || updateState.loading} valid={entityValid} />{kind === "COSER" && draft.uuid ? <><ManageCoserAssetsPanel coser={draft} onUpdated={async () => { const result = await detailQuery.refetch(); if (result.data) setDraft(result.data.manageCoreEntity); await listQuery.refetch(); }} /><ManageCoserMetadataImport coser={draft} onUpdated={async () => { const result = await detailQuery.refetch(); if (result.data) setDraft(result.data.manageCoreEntity); await listQuery.refetch(); }} /></> : null}</> : null}
         {kind === "TAG" && draft.uuid ? <section className="manage-panel tag-parent-editor"><h3>Direct parent DAG</h3><p>A Tag may have multiple parents. The batch save checks every affected Tag revision and the database rejects cycles.</p><div className="manage-inline-toolbar"><span>{draft.parents.length} direct parents</span><button type="button" onClick={() => setDraft({ ...draft, parents: [...draft.parents, { uuid: "", name: "", metadataRevision: 0 }] })}>Add parent</button></div>{draft.parents.map((parent, index) => <div className="manage-tag-row" key={`${parent.uuid}-${index}`}><ManageEntitySelector kind="TAG" label="Parent Tag" uuid={parent.uuid} name={parent.name} onSelect={(entity) => setDraft({ ...draft, parents: draft.parents.map((value, position) => position === index ? { uuid: entity.uuid, name: entity.name, metadataRevision: entity.metadataRevision } : value) })} /><button type="button" onClick={() => setDraft({ ...draft, parents: draft.parents.filter((_, position) => position !== index) })}>Remove</button></div>)}<div className="manage-panel-actions"><button type="button" disabled={replaceTagParentsState.loading || draft.parents.some((parent) => !parent.uuid)} onClick={saveTagParents}>{replaceTagParentsState.loading ? "Saving…" : "Save parent DAG"}</button></div></section> : null}

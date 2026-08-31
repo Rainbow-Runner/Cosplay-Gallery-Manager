@@ -1680,7 +1680,7 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 首次启动生成自动快照`product.sqlite.pre-schema-v6-1788100566661475656.bak`，权限0600、SHA-256为`bc3330368f500efe20118ba18bec3a21aca2f22e51491f73b6fcd0148a38e6f8`；独立验证保持schema v6、62张表、`integrity_check=ok`和2/5/5/322业务计数。正式库迁移到schema v7后为64张表、`integrity_check=ok`，媒体库/Gallery/来源/Item仍为2/5/5/322，新增覆盖摘要和诊断表均为空。
 - 候选文件逐字节校验后原子替换`/home/rainbowrunner/.local/bin/cgm`，旧二进制保存在`/tmp/cgm-before-archive-coverage-20260830`。服务只启动一次，保持`active/running`、`NRestarts=0`，Health/Ready为204，Root/Legal/Session为200，About精确指向`28e71a7`且`exactSourceAvailable=true`。配置SHA-256继续为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`；部署日志未发现迁移、WARN、ERROR、FAILED、panic或fatal。
 
-## 1.5-46 Archive内置Gallery根与校核语义修复（本地开发，未部署）
+## 1.5-46 Archive内置Gallery根与校核语义修复
 
 日期：2026-08-31
 
@@ -1691,4 +1691,11 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 产品数据库目标推进到schema v8：重建候选及建议表以增加准确的`ARCHIVE_FILE`枚举，并给策略和运行快照增加默认0字段。v7→v8集成测试实际创建、重开和校验来源准确的`pre-schema-v7`快照；历史候选模型、Gallery、来源、Item、Manifest和媒体文件均不发生业务迁移。
 - Libraries & import将“发现覆盖率待处理项”与“Gallery自动化待复核”改为不同文案；未分配列表明确只表示散装媒体目录，安全Archive在Candidate区显示。真正未分配目录可点击“准备精确目录规则”，界面只预填并启用精确PATH_TEMPLATE，默认不自动建Draft，仍需所有者检查并保存。
 - 验证通过：目标Go包`archivefile/archivecheck/discovery/productdb/productapi/productserver/cmd/cgm`；schema v7→v8、无规则Archive、显式自动导入授权和DIRECTORY嵌套优先回归；带`cgm_web_embed cgm_galleryepic`正式标签组合；TypeScript；Vitest 29文件83项；Vite生产构建680模块。主共享JS约518.74KiB并保留既有大于500KiB提示。
-- 本阶段没有提交、备份、迁移或部署正式实例；正式数据库仍为schema v7，已部署服务仍对应`28e71a7`。后续部署必须先形成清洁提交并创建额外完整回滚包，再核验自动`pre-schema-v7`快照、schema v8完整性、既有策略默认关闭、真实两个TAR进入Candidate/自动化流程及Health/Ready/About/journal。
+
+### 提交、备份、schema v8迁移与增量部署
+
+- 功能、测试与部署前记录提交为`2c4bd3a24da56365d180682501966ddb17a629d3`（`Recognize archive files as gallery roots`）。清洁提交使用Go 1.25.12和`cgm_web_embed cgm_galleryepic`构建；`go version -m`确认revision一致且`vcs.modified=false`，正式二进制SHA-256为`1f5addf1b1b30c7538d8eabd61a4c88fcd773aa956af775394987a77f9e53b9d`。
+- 2026-08-31 21:22 CST停止用户服务并确认`MainPID=0`，创建0600额外完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260831T132134Z-2c4bd3a.tar.gz`，SHA-256为`8c1d236e5c4dacabe511bd883fd3ace027a8f7c0bfb1cc6fea6e902be05ae5c3`。包含一致schema v7数据库、旧二进制、启动配置、systemd单元和Coser托管资源，不含媒体、缓存或日志；实际解包后文件与Coser树逐项一致，源库与备份库均为`integrity_check=ok`及2/5/5/322业务计数。
+- 首次启动生成自动快照`product.sqlite.pre-schema-v7-1788182665735158828.bak`，权限0600、SHA-256为`ce3b13e2e535c18e960171c7255dd4aefb8104a7e652828ec848dadbb4ef155e`；独立只读校验保持schema v7、`integrity_check=ok`和2/5/5/322。正式库迁移到schema v8后仍为`integrity_check=ok`且业务计数不变；现有1条自动化策略的`auto_import_archives=0`，升级没有暗中开启存档自动导入。
+- 旧二进制保存于`/tmp/cgm-before-archive-root-v8-20260831`；候选文件逐字节校验后原子替换，服务只启动一次并保持`active/running`、`NRestarts=0`。Health/Ready为204，Root/Legal/Session为200；About精确指向`2c4bd3a`且`exactSourceAvailable=true`。配置SHA-256继续为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`，本次启动journal未检出WARN、ERROR、FAILED、panic或fatal。
+- 为避免验收改写正式发现快照，从停服备份制作隔离数据库副本，再以真实媒体库路径执行完整发现。两个TAR分别生成72与74成员的`ARCHIVE_FILE / PENDING`候选，`has_conflict=0`且`over_limit=0`；证明原先的“未分配媒体”问题已在真实输入上修复，且正式业务库没有因验收扫描产生新快照。

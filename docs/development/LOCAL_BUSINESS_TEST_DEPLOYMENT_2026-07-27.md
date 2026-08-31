@@ -1,5 +1,13 @@
 # 本机实际业务应用测试部署
 
+### 2026-08-31 Archive内置Gallery根与schema v8部署
+
+- 从清洁提交`2c4bd3a24da56365d180682501966ddb17a629d3`构建并部署`cgm_web_embed cgm_galleryepic` Linux amd64单文件，SHA-256为`1f5addf1b1b30c7538d8eabd61a4c88fcd773aa956af775394987a77f9e53b9d`；VCS元数据为`modified=false`，About精确对应源码。
+- 停服后创建并实际解包核验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260831T132134Z-2c4bd3a.tar.gz`，SHA-256为`8c1d236e5c4dacabe511bd883fd3ace027a8f7c0bfb1cc6fea6e902be05ae5c3`；包内schema v7库、旧二进制、配置、systemd单元和Coser托管资源与正式来源一致，不含媒体、缓存或日志。
+- 自动迁移快照`product.sqlite.pre-schema-v7-1788182665735158828.bak`保持schema v7、`integrity_check=ok`和2/5/5/322业务计数，SHA-256为`ce3b13e2e535c18e960171c7255dd4aefb8104a7e652828ec848dadbb4ef155e`。正式库迁移到schema v8后完整性和业务计数不变；1条既有自动化策略的Archive自动导入保持关闭。
+- 在备份派生的隔离数据库上扫描真实媒体根，两个TAR分别生成72/74成员的`ARCHIVE_FILE`待处理Candidate，均无冲突且未超限；该验收没有修改正式发现快照。
+- 服务只启动一次并保持`active/running`、`NRestarts=0`；Health/Ready为204，Root/Legal/Session为200。配置SHA-256未变，启动journal无WARN、ERROR、FAILED、panic或fatal。
+
 ### 2026-08-30 TAR/7Z与媒体库覆盖报告、schema v7部署
 
 - 从清洁提交`28e71a7a4c095b095b58d9c742ccc48941d30769`构建并部署`cgm_web_embed cgm_galleryepic` Linux amd64单文件，SHA-256为`07cc18ecbe5611a812170e753b8e48db2224adbbfc6d851a43556d8cce6f6729`；VCS元数据为`modified=false`，About精确对应源码。

@@ -10,7 +10,7 @@
 
 ## 已完成
 
-- 1.5（Coser创建前重复身份复核，本地完成）：新建Coser输入Name后350ms防抖调用认证Manage查询，后端使用NFC、去除首尾空格和Unicode大小写折叠，对现有Coser主名和Alias只做精确匹配，不将包含子串误报为同一人。命中时展示头像、主名、Aliases、匹配值、UUID末8位和关联Gallery数，可直接打开已有Coser；Create保持禁用，直到所有者明确确认是不同人物。查重失败也必须明确承认后才可继续；无命中时正常创建。Coser同名业务语义、UUID/Slug身份和数据库schema不变。
+- 1.5（Coser创建前重复身份复核，已部署）：新建Coser输入Name后350ms防抖调用认证Manage查询，后端使用NFC、去除首尾空格和Unicode大小写折叠，对现有Coser主名和Alias只做精确匹配，不将包含子串误报为同一人。命中时展示头像、主名、Aliases、匹配值、UUID末8位和关联Gallery数，可直接打开已有Coser；Create保持禁用，直到所有者明确确认是不同人物。查重失败也必须明确承认后才可继续；无命中时正常创建。Coser同名业务语义、UUID/Slug身份和数据库schema不变。2026-08-31已从清洁提交`4e1e43e`完成无schema增量部署。
 - 1.5（Coser管理列表图片完善度，已部署）：Coser名称前新增40px圆形头像，已配置时复用认证的revision资源URL并延迟解码，未配置时保留等尺寸浅灰空白占位，资源加载失败与未设置区分为琼珀色错误状态。每行右侧增加低干扰头像/Banner图标，绿色表示已设置、灰色表示缺失，提供中英文悬浮说明和可访问名称。列表现有查询已包含`avatarURL/bannerURL`，因此不增加GraphQL请求、数据库或schema变更；Work/Character/Tag列表不受影响。2026-08-31已从清洁提交`8170e92`增量部署。
 - 1.5（核心实体Alias输入修复，已部署）：修复Coser/Work/Character/Tag共用Aliases受控输入框在每次按键后立即拆分、trim并重组，导致用户无法输入`/`、分隔空格或名字内部空格的问题。编辑期现保留原始文本，仅在创建/保存时按`/`拆分、去除两端空格并忽略空项；补充可见格式示例和英文/日文/中文/名字内空格回归。2026-08-31已从清洁提交`f415c1a`增量部署，schema v8和配置不变。
 - 1.5（Archive内置Gallery根与校核入口，已部署）：修复安全Archive观察结果错误复用DIRECTORY根规则的问题；ZIP/CBZ、TAR/TAR.GZ/TGZ和7Z只要通过安全校验且含受支持媒体，就以内置`ARCHIVE_FILE`方式直接成为独立Candidate，不依赖PATH_TEMPLATE/FIXED_DEPTH。有效相邻Manifest仍优先，明确DIRECTORY根拥有完整子树并压住内部Archive，避免嵌套Gallery。手工发现默认只生成Candidate；媒体库ASSISTED/TRUSTED新增默认关闭的“自动导入安全存档”策略开关并冻结进运行快照。schema v8扩展候选识别枚举及两个策略字段，v7迁移前创建来源准确快照且既有策略全部保持关闭。Libraries页将“发现覆盖率待处理”与“Gallery自动化待复核”分开，未分配项明确限定为目录并可预填精确PATH_TEMPLATE；安全Archive直接显示可创建草稿的Candidate。2026-08-31已从清洁提交`2c4bd3a`构建并迁移正式库到schema v8；业务计数不变，真实两个TAR在隔离库发现中分别产生72/74成员的无冲突Candidate。产品Go、schema v7→v8、GraphQL、正式标签组合、TypeScript、29文件83项Vitest和680模块生产构建均通过。

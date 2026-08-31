@@ -1699,3 +1699,11 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 首次启动生成自动快照`product.sqlite.pre-schema-v7-1788182665735158828.bak`，权限0600、SHA-256为`ce3b13e2e535c18e960171c7255dd4aefb8104a7e652828ec848dadbb4ef155e`；独立只读校验保持schema v7、`integrity_check=ok`和2/5/5/322。正式库迁移到schema v8后仍为`integrity_check=ok`且业务计数不变；现有1条自动化策略的`auto_import_archives=0`，升级没有暗中开启存档自动导入。
 - 旧二进制保存于`/tmp/cgm-before-archive-root-v8-20260831`；候选文件逐字节校验后原子替换，服务只启动一次并保持`active/running`、`NRestarts=0`。Health/Ready为204，Root/Legal/Session为200；About精确指向`2c4bd3a`且`exactSourceAvailable=true`。配置SHA-256继续为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`，本次启动journal未检出WARN、ERROR、FAILED、panic或fatal。
 - 为避免验收改写正式发现快照，从停服备份制作隔离数据库副本，再以真实媒体库路径执行完整发现。两个TAR分别生成72与74成员的`ARCHIVE_FILE / PENDING`候选，`has_conflict=0`且`over_limit=0`；证明原先的“未分配媒体”问题已在真实输入上修复，且正式业务库没有因验收扫描产生新快照。
+
+## 1.5-47 核心实体Aliases受控输入修复（本地开发，未部署）
+
+日期：2026-08-31
+
+- 实际业务测试确认Coser的Aliases输入框无法输入英文斜杠或空格。原因是输入框每次`onChange`都立即执行`split("/")`、`trim`、删除空项和`join(" / ")`；用户刚输入的分隔符尚未有右侧名字就被删除，名字内部正在输入的空格也会被trim。
+- EntityForm现在编辑期保留原始Alias文本，只在Create/Save提交边界按`/`拆分、清理两端空格并忽略空项；后端仍收到原有字符串数组，数据模型、GraphQL和schema均不变。Coser、Work、Character和Tag共用该修复。
+- 输入框新增可见格式提示与多语言示例；定向Vitest覆盖`Komachi / こまち / 小 丁`完整保留及提交解析，3项通过，TypeScript检查通过。

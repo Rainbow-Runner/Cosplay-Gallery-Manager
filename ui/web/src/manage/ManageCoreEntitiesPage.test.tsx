@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { MANAGE_CORE_ENTITIES, MANAGE_CORE_ENTITY, MANAGE_CORE_ENTITY_OPTIONS } from "../api/manage";
 import { messages } from "../i18n/messages";
-import { ManageCoreEntitiesPage, socialPlatformOptions } from "./ManageCoreEntitiesPage";
+import { ManageCoreEntitiesPage, parseAliases, socialPlatformOptions } from "./ManageCoreEntitiesPage";
 import type { ManageCoreEntity } from "./types";
 
 afterEach(cleanup);
@@ -27,6 +27,19 @@ function renderPage(mocks: ReadonlyArray<MockedResponse>, initialEntry: string, 
 }
 
 describe("ManageCoreEntitiesPage validation", () => {
+  it("keeps alias separators editable and parses aliases only for persistence", async () => {
+    renderPage([{
+      request: { query: MANAGE_CORE_ENTITIES, variables: { kind: "COSER", page: 1 } },
+      result: { data: { manageCoreEntities: emptyPage } },
+    }], "/manage/cosers", true);
+
+    const aliases = await screen.findByLabelText(/^Aliases/);
+    fireEvent.change(aliases, { target: { value: "Komachi / こまち / 小 丁" } });
+    expect(aliases).toHaveValue("Komachi / こまち / 小 丁");
+    expect(parseAliases(String((aliases as HTMLInputElement).value))).toEqual(["Komachi", "こまち", "小 丁"]);
+    expect(screen.getByText(/Separate multiple aliases with/)).toBeInTheDocument();
+  });
+
   it("keeps Character creation disabled until both Name and Primary Work are set", async () => {
     const work = {
       kind: "WORK", uuid: "018f4c8e-7a9b-7def-8123-456789abcdef", name: "Fate",

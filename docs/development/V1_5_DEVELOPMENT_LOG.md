@@ -1700,10 +1700,12 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 旧二进制保存于`/tmp/cgm-before-archive-root-v8-20260831`；候选文件逐字节校验后原子替换，服务只启动一次并保持`active/running`、`NRestarts=0`。Health/Ready为204，Root/Legal/Session为200；About精确指向`2c4bd3a`且`exactSourceAvailable=true`。配置SHA-256继续为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`，本次启动journal未检出WARN、ERROR、FAILED、panic或fatal。
 - 为避免验收改写正式发现快照，从停服备份制作隔离数据库副本，再以真实媒体库路径执行完整发现。两个TAR分别生成72与74成员的`ARCHIVE_FILE / PENDING`候选，`has_conflict=0`且`over_limit=0`；证明原先的“未分配媒体”问题已在真实输入上修复，且正式业务库没有因验收扫描产生新快照。
 
-## 1.5-47 核心实体Aliases受控输入修复（本地开发，未部署）
+## 1.5-47 核心实体Aliases受控输入修复
 
 日期：2026-08-31
 
 - 实际业务测试确认Coser的Aliases输入框无法输入英文斜杠或空格。原因是输入框每次`onChange`都立即执行`split("/")`、`trim`、删除空项和`join(" / ")`；用户刚输入的分隔符尚未有右侧名字就被删除，名字内部正在输入的空格也会被trim。
 - EntityForm现在编辑期保留原始Alias文本，只在Create/Save提交边界按`/`拆分、清理两端空格并忽略空项；后端仍收到原有字符串数组，数据模型、GraphQL和schema均不变。Coser、Work、Character和Tag共用该修复。
 - 输入框新增可见格式提示与多语言示例；定向Vitest覆盖`Komachi / こまち / 小 丁`完整保留及提交解析，3项通过，TypeScript检查通过。
+- 修复及部署前记录提交为`f415c1a1a11c087fd68cb0a9767cf9a3f4403b2d`（`Fix core entity alias editing`）。完整Vitest 29文件84项、TypeScript和680模块生产构建通过；清洁提交以Go 1.25.12及`cgm_web_embed cgm_galleryepic`构建，`vcs.modified=false`，二进制SHA-256为`af7232e77ebef6b331313b5055e0ed6cb93878cbe8426e8dbc8fbfcb4ada92d8`。
+- 2026-08-31完成无schema增量部署；替换前二进制保存于`/tmp/cgm-before-alias-input-20260831`，新候选逐字节校验后原子替换并只启动服务一次。服务保持`active/running`、`NRestarts=0`，Health/Ready均为204，About精确指向`f415c1a`且`exactSourceAvailable=true`。正式库保持schema v8和`integrity_check=ok`，本次启动journal未检出WARN、ERROR、FAILED、panic或fatal。

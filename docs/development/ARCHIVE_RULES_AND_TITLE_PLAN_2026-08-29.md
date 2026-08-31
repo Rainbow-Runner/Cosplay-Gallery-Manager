@@ -6,7 +6,7 @@
 
 ## 1. 当前行为与问题
 
-ZIP/CBZ 在媒体库发现时作为独立 `ARCHIVE` GallerySource，来源路径是存档文件本身。发现阶段只读取中央目录并统计受支持媒体成员；正式扫描阶段再读取成员内容、计算指纹和建立 GalleryItem。
+ZIP/CBZ、TAR、TAR.GZ/TGZ和7Z在媒体库发现时作为独立 `ARCHIVE` GallerySource，来源路径是存档文件本身。发现阶段只读取归档索引并统计受支持媒体成员；正式扫描阶段再读取成员内容、计算指纹和建立 GalleryItem。
 
 当前规则边界如下：
 
@@ -155,3 +155,5 @@ Archive 扫描在安全校验完成后，对新发现成员执行规则链：
 - 部署：若引入 schema v6，必须先提交、创建额外完整回滚包、验证 v5 快照和迁移后完整性，再执行正式迁移和服务核验。
 
 阶段 A 已按本规划实现并于 2026-08-29 增量部署。2026-08-30后续阶段把相同的安全校验、发现、正式扫描、按需物化、标题扩展名去除和相邻Manifest规则扩展到TAR、TAR.GZ/TGZ与7Z；7Z由纯Go适配层读取，不依赖宿主机7z命令。加密ZIP/7Z不会保存或尝试密码，而是进入媒体库覆盖诊断；该扩展已随schema v7在完整回滚包和自动v6快照保护下部署。阶段 B/C 仍只定义后续开发边界。
+
+2026-08-31排查真实媒体库后确认：Archive观察结果曾错误复用DIRECTORY的MARKER/PATH_TEMPLATE/FIXED_DEPTH根匹配器，使未配置路径规则的安全TAR被列为“未分配媒体文件夹”。修复基线为：安全且含受支持媒体的Archive以内置`ARCHIVE_FILE`方式直接成为Candidate；PATH_TEMPLATE只可提供元数据建议，不再决定Archive能否成为Gallery根。手工发现不自动导入，ASSISTED/TRUSTED由默认关闭的`auto_import_archives`策略开关显式授权；明确DIRECTORY根优先拥有其子树，避免嵌套Gallery。该实现目标为schema v8。

@@ -204,6 +204,7 @@ type LibraryAutomationPolicyInput struct {
 	Mode                          string         `json:"mode"`
 	DefaultContentRating          *ContentRating `json:"defaultContentRating,omitempty"`
 	ExcludeNewRootMedia           bool           `json:"excludeNewRootMedia"`
+	AutoImportArchives            bool           `json:"autoImportArchives"`
 	AutoAcceptUniqueEntities      bool           `json:"autoAcceptUniqueEntities"`
 	AutoAcceptMediaClassification bool           `json:"autoAcceptMediaClassification"`
 	AutoActivate                  bool           `json:"autoActivate"`
@@ -519,6 +520,7 @@ type ManageLibraryAutomationPolicy struct {
 	Mode                          string         `json:"mode"`
 	DefaultContentRating          *ContentRating `json:"defaultContentRating,omitempty"`
 	ExcludeNewRootMedia           bool           `json:"excludeNewRootMedia"`
+	AutoImportArchives            bool           `json:"autoImportArchives"`
 	AutoAcceptUniqueEntities      bool           `json:"autoAcceptUniqueEntities"`
 	AutoAcceptMediaClassification bool           `json:"autoAcceptMediaClassification"`
 	AutoActivate                  bool           `json:"autoActivate"`

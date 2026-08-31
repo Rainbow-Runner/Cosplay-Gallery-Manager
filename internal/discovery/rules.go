@@ -19,6 +19,9 @@ const (
 	RuleKindMarker       RuleKind = "MARKER"
 	RuleKindPathTemplate RuleKind = "PATH_TEMPLATE"
 	RuleKindFixedDepth   RuleKind = "FIXED_DEPTH"
+	// RuleKindArchiveFile is a built-in recognition result, not a
+	// user-configurable rule. A safe supported archive is its own source root.
+	RuleKindArchiveFile RuleKind = "ARCHIVE_FILE"
 )
 
 type Rule struct {

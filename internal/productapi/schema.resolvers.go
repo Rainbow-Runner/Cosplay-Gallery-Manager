@@ -317,7 +317,7 @@ func (r *mutationResolver) SaveLibraryAutomationPolicy(ctx context.Context, libr
 	}
 	value, err := r.Database.Automation().SavePolicy(ctx, productdb.LibraryAutomationPolicy{
 		LibraryID: libraryID, Mode: productdb.AutomationMode(input.Mode), DefaultContentRating: rating,
-		ExcludeNewRootMedia: input.ExcludeNewRootMedia, AutoAcceptUniqueEntities: input.AutoAcceptUniqueEntities,
+		ExcludeNewRootMedia: input.ExcludeNewRootMedia, AutoImportArchives: input.AutoImportArchives, AutoAcceptUniqueEntities: input.AutoAcceptUniqueEntities,
 		AutoAcceptMediaClassification: input.AutoAcceptMediaClassification, AutoActivate: input.AutoActivate,
 	}, expectedRevision, time.Now())
 	if err != nil {
@@ -325,7 +325,7 @@ func (r *mutationResolver) SaveLibraryAutomationPolicy(ctx context.Context, libr
 		return nil, manageError(err)
 	}
 	r.auditManage(ctx, "LIBRARY_AUTOMATION_POLICY_SAVE", "LIBRARY", strconv.FormatInt(libraryID, 10), "", nil,
-		map[string]any{"mode": value.Mode, "revision": value.Revision, "auto_activate": value.AutoActivate})
+		map[string]any{"mode": value.Mode, "revision": value.Revision, "auto_import_archives": value.AutoImportArchives, "auto_activate": value.AutoActivate})
 	return r.manageLibraryAutomation(ctx, libraryID)
 }
 

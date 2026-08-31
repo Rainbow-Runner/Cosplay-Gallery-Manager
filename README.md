@@ -1,6 +1,6 @@
 # Cosplay Gallery Manager
 
-Cosplay Gallery Manager（CGM）是一个本地优先、单所有者、自托管的 Cosplay 与写真作品集管理系统。它以 **Gallery** 为业务聚合根，把一个媒体目录或 ZIP/CBZ 归档作为一个完整作品集进行发现、整理、浏览、备份和元数据同步。
+Cosplay Gallery Manager（CGM）是一个本地优先、单所有者、自托管的 Cosplay 与写真作品集管理系统。它以 **Gallery** 为业务聚合根，把一个媒体目录或 ZIP/CBZ、TAR、TAR.GZ/TGZ、7Z 归档作为一个完整作品集进行发现、整理、浏览、备份和元数据同步。
 
 > [!WARNING]
 > 当前代码处于 `1.5.0-dev` 本机业务迭代阶段，尚未发布正式稳定版。第一版以 Linux 原生部署和 Linux 容器为目标；Windows 与 macOS 原生构建已经延期，不属于当前支持范围。

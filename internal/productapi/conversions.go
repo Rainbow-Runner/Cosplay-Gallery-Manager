@@ -354,6 +354,7 @@ func manageRecognitionRule(value discovery.Rule) *ManageRecognitionRule {
 func manageAutomationPolicy(value productdb.LibraryAutomationPolicy) *ManageLibraryAutomationPolicy {
 	result := &ManageLibraryAutomationPolicy{
 		LibraryID: value.LibraryID, Mode: string(value.Mode), ExcludeNewRootMedia: value.ExcludeNewRootMedia,
+		AutoImportArchives:       value.AutoImportArchives,
 		AutoAcceptUniqueEntities: value.AutoAcceptUniqueEntities, AutoAcceptMediaClassification: value.AutoAcceptMediaClassification,
 		AutoActivate: value.AutoActivate, Revision: value.Revision,
 	}

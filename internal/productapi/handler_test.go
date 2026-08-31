@@ -103,7 +103,7 @@ func TestLibraryAutomationGraphQLQueuesAndCancelsPersistentRun(t *testing.T) {
 		}
 		return response.Body.Bytes()
 	}
-	saved := requestGraphQL(fmt.Sprintf(`mutation { saveLibraryAutomationPolicy(libraryID:%d,expectedRevision:0,input:{mode:"ASSISTED",defaultContentRating:NON_ADULT,excludeNewRootMedia:true,autoAcceptUniqueEntities:false,autoAcceptMediaClassification:false,autoActivate:false}) { policy { mode revision } } }`, library.ID))
+	saved := requestGraphQL(fmt.Sprintf(`mutation { saveLibraryAutomationPolicy(libraryID:%d,expectedRevision:0,input:{mode:"ASSISTED",defaultContentRating:NON_ADULT,excludeNewRootMedia:true,autoImportArchives:false,autoAcceptUniqueEntities:false,autoAcceptMediaClassification:false,autoActivate:false}) { policy { mode revision } } }`, library.ID))
 	if !bytes.Contains(saved, []byte(`"mode":"ASSISTED"`)) || !bytes.Contains(saved, []byte(`"revision":1`)) {
 		t.Fatalf("save response = %s", saved)
 	}

@@ -712,8 +712,10 @@ a { color: inherit; text-decoration: none; }
 .candidate-card > div:last-child { display: grid; align-content: space-between; justify-items: end; gap: .6rem; }
 .candidate-card > div:last-child span { color: var(--ink-muted); font-size: .55rem; }
 .candidate-card button:disabled { opacity: .3; cursor: default; }
-.unassigned p { display: flex; justify-content: space-between; gap: 1rem; color: var(--ink-muted); font-size: .6rem; }
-.unassigned p span { overflow-wrap: anywhere; }
+.unassigned > article { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 1rem; padding: .5rem 0; color: var(--ink-muted); font-size: .68rem; }
+.unassigned > article span { overflow-wrap: anywhere; }
+.unassigned > article button { white-space: nowrap; }
+.unassigned .unassigned-help { color: var(--ink-muted); font-size: .72rem; }
 .coverage-report { margin-top: 1rem; padding: 1rem; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 92%, var(--ink) 8%); }
 .coverage-report > header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
 .coverage-report h4, .coverage-report p { margin: 0; }

@@ -12,7 +12,7 @@
 
 第一版交付目标是一个可离线运行、单所有者使用、以 Gallery 为最小管理单元的独立产品。它能够：
 
-1. 从 DIRECTORY、ZIP 或 CBZ 单一来源发现并导入 Gallery。
+1. 从 DIRECTORY、ZIP/CBZ、TAR/TAR.GZ/TGZ或7Z单一来源发现并导入 Gallery。
 2. 在不删除用户媒体文件的前提下完成扫描、对账、分类、排序、排除和媒体派生处理。
 3. 管理 Coser、Work、Character、Tag、Credit、Cast、Manifest 和个人状态。
 4. 提供全新的 React 19 BrowseShell 与 ManageShell。
@@ -230,12 +230,14 @@ flowchart LR
 
 #### P02-02 确定性根识别
 
-- 严格按 IgnoredGallerySource → 已绑定 GallerySource → 有效 Manifest → `.cosplay-root` → PATH_TEMPLATE → FIXED_DEPTH/DIRECT_CHILD → 人工绑定处理。
+- 严格按 IgnoredGallerySource → 已绑定 GallerySource → 有效 Manifest → 内置ARCHIVE_FILE → `.cosplay-root` → PATH_TEMPLATE → FIXED_DEPTH/DIRECT_CHILD → 人工绑定处理。
 - 已绑定来源是人工显式身份；PATH_TEMPLATE 是尚未绑定来源的自动规则最高优先级。
 - 多种自动规则可以同时启用，默认全部关闭。
 - DIRECT_CHILD 是 FIXED_DEPTH=1 的界面预设；深度规则不生成元数据建议。
 - MARKER的来源根保持为`.cosplay-root`所在父目录；新发现时若仅有一个直属真实子目录，确定性标题保底使用该子目录名，否则使用来源根目录名。已有Gallery、根级媒体Exclude策略和ARCHIVE发现均不受影响。
-- 移除启发式候选模块；未归属媒体只生成按实际父目录聚合的诊断报告。
+- 安全且包含受支持媒体的Archive文件以内置`ARCHIVE_FILE`方式直接成为独立候选，不依赖PATH_TEMPLATE或FIXED_DEPTH；已确认DIRECTORY根优先拥有其子树，防止内部Archive形成嵌套Gallery。
+- Archive手工发现默认只生成Candidate；ASSISTED/TRUSTED策略通过默认关闭的媒体库级开关显式授权自动创建DRAFT。加密、损坏、不安全、无受支持媒体和超限Archive不得自动导入。
+- 移除启发式候选模块；未归属媒体只生成按实际父目录聚合的DIRECTORY诊断报告，安全受支持Archive不得误报为未分配媒体文件夹。
 
 #### P02-03 正则建议系统
 
@@ -280,11 +282,11 @@ flowchart LR
 
 #### P02-08 归档与资源安全
 
-- ZIP/CBZ 禁止路径穿越、绝对路径、危险链接和超限解压资源。
+- ZIP/CBZ、TAR、TAR.GZ/TGZ和7Z禁止路径穿越、绝对路径、危险链接和超限解压资源。
 - 默认限制为总 Entry 20,000、单成员解压后 2GiB、总解压估算 100GiB、单图 200MP、压缩比 1,000。
 - 阈值可配置，但 Unicode/大小写重复、加密 Entry、嵌套归档、路径穿越和特殊文件等结构性安全校验不可关闭。
 - 归档中的未排除视频、RAW 和 AVIF 是激活阻断错误。
-- ZIP/CBZ 不可附加外部视频或其他外部媒体来源。
+- Archive不可附加外部视频或其他外部媒体来源。
 
 #### P02-09 成员排序与上限
 
@@ -299,7 +301,7 @@ flowchart LR
 
 ### 7.3 退出门禁 G2
 
-- DIRECTORY、ZIP、CBZ 候选和两阶段导入集成测试通过。
+- DIRECTORY及全部受支持Archive候选和两阶段导入集成测试通过。
 - 父子媒体库、路径规范化、符号链接、路径穿越、扫描中断和来源失联测试通过。
 - 两次扫描在输入未变时产生幂等结果。
 - 应用代码不存在删除用户来源媒体文件的调用路径。

@@ -27,7 +27,7 @@ func (s *AutomationStore) ProcessClaimedRunBatch(ctx context.Context, runID int6
 	ctx, stopHeartbeat := s.startAutomationRunHeartbeat(ctx, run.ID, owner, lease)
 	defer stopHeartbeat()
 	policy := LibraryAutomationPolicy{LibraryID: run.LibraryID, Mode: run.Mode, DefaultContentRating: run.DefaultContentRating,
-		ExcludeNewRootMedia: run.ExcludeNewRootMedia, AutoAcceptUniqueEntities: run.AutoAcceptUniqueEntities,
+		ExcludeNewRootMedia: run.ExcludeNewRootMedia, AutoImportArchives: run.AutoImportArchives, AutoAcceptUniqueEntities: run.AutoAcceptUniqueEntities,
 		AutoAcceptMediaClassification: run.AutoAcceptMediaClassification, AutoActivate: run.AutoActivate,
 		Revision: run.PolicyRevision}
 	fail := func(code string, cause error) (AutomationRun, bool, error) {
@@ -49,7 +49,8 @@ func (s *AutomationStore) ProcessClaimedRunBatch(ctx context.Context, runID int6
 		if err != nil {
 			return fail("DRAFT_COUNT_FAILED", err)
 		}
-		snapshot, err := (&CandidateDiscoveryStore{db: s.db}).DiscoverFilesystem(ctx, run.LibraryID, now)
+		snapshot, err := (&CandidateDiscoveryStore{db: s.db}).DiscoverFilesystemWithOptions(ctx, run.LibraryID,
+			DiscoveryOptions{AutoCreateArchives: policy.AutoImportArchives}, now)
 		if err != nil {
 			return fail("DISCOVERY_FAILED", err)
 		}

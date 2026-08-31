@@ -244,7 +244,7 @@ SocialAccount：
 
 - 类型仅 `DIRECTORY | ARCHIVE`；一个Gallery恰好最多一个物理来源。
 - DIRECTORY允许纯视频Gallery；所有成员必须在根内，递归发现但永不跟随符号链接。
-- ARCHIVE仅ZIP/CBZ；不能附加外部视频；内部未排除Video、RAW或AVIF均为阻断错误。
+- ARCHIVE支持ZIP/CBZ、TAR、TAR.GZ/TGZ和7Z；不能附加外部媒体；内部未排除Video、RAW或AVIF均为阻断错误。
 - Gallery不嵌套；确认根后内部Marker/Manifest不得拆出新Gallery。
 - DRAFT无来源时不能包含媒体。
 
@@ -261,16 +261,19 @@ SocialAccount：
 1. IgnoredGallerySource；
 2. 已绑定GallerySource；
 3. 有效Gallery Manifest；
-4. 可选空文件 `.cosplay-root`；
-5. PATH_TEMPLATE；
-6. FIXED_DEPTH（DIRECT_CHILD是深度1预设）；
-7. 人工绑定。
+4. 安全且包含受支持媒体的Archive文件本身；
+5. 可选空文件 `.cosplay-root`；
+6. PATH_TEMPLATE；
+7. FIXED_DEPTH（DIRECT_CHILD是深度1预设）；
+8. 人工绑定。
 
 - 所有自动规则默认关闭；显式来源直接建DRAFT。
 - 每条自动规则默认只生成Candidate，可逐规则开启AUTO_CREATE_DRAFT；仍只建DRAFT。
-- `.cosplay-root`所在父目录始终是DIRECTORY来源根；新候选若根内恰好一个直属真实子目录，标题保底取该子目录名，否则取来源根目录名。该规则不回写已有Gallery，不改变根级媒体默认Exclude，也不适用于ZIP/CBZ来源。
+- Archive文件是内置确定性来源根，不依赖PATH_TEMPLATE或FIXED_DEPTH；手工发现默认只生成`ARCHIVE_FILE` Candidate，ASSISTED/TRUSTED可通过默认关闭的媒体库级开关授权自动创建DRAFT。有效相邻Manifest继续优先；加密、损坏、不安全或无受支持媒体的Archive进入覆盖诊断，超限Archive保留为受阻Candidate，二者均不得自动导入。
+- 已确认的DIRECTORY来源或候选拥有完整子树，其内部Archive不得再形成嵌套Gallery；普通组织目录不阻止其中每个安全Archive分别成为候选。
+- `.cosplay-root`所在父目录始终是DIRECTORY来源根；新候选若根内恰好一个直属真实子目录，标题保底取该子目录名，否则取来源根目录名。该规则不回写已有Gallery，不改变根级媒体默认Exclude，也不适用于ARCHIVE来源。
 - 完全移除启发式候选、评分和证据Provider。
-- 未归属媒体只按实际父目录聚合诊断；用户手工选根或修改确定性规则。
+- 未归属媒体只指未命中DIRECTORY根的散装媒体，并按实际父目录聚合诊断；安全受支持Archive不得误列为未分配媒体文件夹。用户可从诊断项预填精确目录规则或使用其他人工根确认流程。
 
 ### 9.4 PATH_TEMPLATE
 
@@ -291,13 +294,13 @@ SocialAccount：
 - 批量仅允许无冲突、未超限、根明确的Candidate建DRAFT；不批量接受人物/角色/日期。
 - Candidate和未归属报告只使用最近一次完整扫描快照。
 
-### 9.7 ZIP/CBZ结构与资源安全
+### 9.7 Archive结构与资源安全
 
 - 默认限制：总Entry 20,000、非排除Gallery成员1,000、单成员解压后2GiB、总解压估算100GiB、单图200MP、压缩比1000。
 - 上述资源阈值可在后台调整；Gallery 1,000成员仍是产品硬上限。
 - 路径穿越、绝对路径、Unicode/大小写重复、符号链接、硬链接、设备/特殊文件、加密Entry和嵌套归档等结构性校验不得关闭。
 - CRC或成员读取失败产生明确Issue；不把归档完整解压到用户媒体库，也不递归处理内嵌压缩包。
-- ZIP/CBZ中的Video、RAW和AVIF沿用阻断规则；必须明确排除，或解压为DIRECTORY后再激活。
+- Archive中的Video、RAW和AVIF沿用阻断规则；必须明确排除，或解压为DIRECTORY后再激活。
 
 ## 10. 扫描、指纹与对账
 
@@ -332,17 +335,17 @@ SocialAccount：
 ### 11.1 发现与实际内容
 
 - 默认图片候选扩展名：`png, jpg, jpeg, gif, webp, avif, jxl`，另加第11.2节RAW扩展名；默认视频：`m4v, mp4, mov, wmv, avi, mpg, mpeg, rmvb, rm, flv, asf, mkv, webm, f4v`。
-- 扩展名集合可在后台增减；HEIC、SVG、音频、RAR和7z不在第一版默认/支持范围。
+- 扩展名集合可在后台增减；HEIC、SVG、音频和RAR不在第一版默认/支持范围；7Z只作为受安全校验的ARCHIVE容器支持。
 - 最终使用签名、容器探测和实际解码分类；错配格式保留并警告，不自动重命名。
 - 图片后缀实际为Video需用户确认后Gallery才可激活。
-- 不支持SVG、音频、RAR、7z；无后缀/未知扩展即使内容可解码也不发现。
+- 不支持SVG、音频和RAR；无后缀/未知扩展即使内容可解码也不发现。
 
 ### 11.2 RAW
 
 - 使用固定版本LibRaw；DIRECTORY支持常见CR2/CR3/CRW、NEF/NRW、ARW/SR2/SRF、RAF、ORF/ORI、RW2/RWL、PEF、DNG、SRW、3FR/FFF、X3F等。
 - 不默认启用含义模糊的 `.raw`；扩展名只发现，LibRaw确认内容。
 - RAW为STATIC_IMAGE，默认PHOTO；原始文件永不修改，优先嵌入预览，必要时解码为sRGB代理。
-- ZIP/CBZ内RAW阻断；LibRaw不可用产生RAW_DECODER_UNAVAILABLE。
+- Archive内RAW阻断；LibRaw不可用产生RAW_DECODER_UNAVAILABLE。
 - 同目录同主名RAW+JPEG保持独立Item，只生成伴生提示，由用户决定排除。
 
 ### 11.3 EXIF/XMP
@@ -356,7 +359,7 @@ SocialAccount：
 
 - 卡片/网格派生480/960/1600响应尺寸；Lightbox和媒体详情默认4096长边代理。
 - 浏览器兼容的JPEG、PNG和静态WebP在来源文件不超过20MiB、宽高均不超过4096时，经认证不透明资源接口直接查看原图；超过任一阈值、RAW或其他格式回落到按需4096代理。
-- 原图直读支持DIRECTORY和ZIP/CBZ Entry；必须继续校验ACTIVE/Browse可见性、content revision、实际文件签名和非符号链接边界，不向GraphQL或URL暴露物理路径。
+- 原图直读支持DIRECTORY和受支持Archive Entry；必须继续校验ACTIVE/Browse可见性、content revision、实际文件签名和非符号链接边界，不向GraphQL或URL暴露物理路径。
 - 正确应用方向、转换sRGB、保留Alpha、不放大。
 - 默认最大解码像素200MP；第一版无裁剪写回、滤镜或图片编辑。
 
@@ -452,7 +455,7 @@ SocialAccount：
 ### 15.1 路径与可选性
 
 - DIRECTORY：根内 `.cosplay.json`。
-- ZIP/CBZ：相邻 `<完整归档文件名>.cosplay.json`；永不因写Manifest重打包归档。
+- Archive：相邻 `<完整归档文件名>.cosplay.json`；永不因写Manifest重打包归档。
 - Gallery和Coser Manifest均可选；`NONE`与曾同步后丢失的`MISSING`明确区分。
 - 首次发现自动读入DRAFT；后续扫描只检测状态。后续Pull/Push必须用户显式触发。
 

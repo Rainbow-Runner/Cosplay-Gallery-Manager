@@ -179,14 +179,11 @@ func TestFilesystemTARVideoCanCreateDraftForExplicitExclusion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.RecognitionRules().Create(ctx, CreateRecognitionRuleInput{LibraryID: mediaLibrary.ID, Name: "Direct child", Kind: discovery.RuleKindFixedDepth, Enabled: true, FixedDepth: 1, Order: 1}, now); err != nil {
-		t.Fatal(err)
-	}
 	snapshot, err := db.CandidateDiscovery().DiscoverFilesystem(ctx, mediaLibrary.ID, now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(snapshot.Candidates) != 1 || snapshot.Candidates[0].HasConflict {
+	if len(snapshot.Candidates) != 1 || snapshot.Candidates[0].HasConflict || snapshot.Candidates[0].Method != string(discovery.RuleKindArchiveFile) || len(snapshot.Unassigned) != 0 {
 		t.Fatalf("archive candidate = %#v", snapshot.Candidates)
 	}
 	if _, err := db.CandidateDiscovery().ImportCandidate(ctx, snapshot.Candidates[0].ID, now); err != nil {
@@ -707,9 +704,6 @@ func TestArchiveCandidateUsesFilenameTitleFallbackWithoutManifest(t *testing.T) 
 	db, _ := openTestDatabaseAndRegistry(t)
 	now := time.Date(2026, 7, 22, 21, 0, 0, 0, time.UTC)
 	mediaLibrary := createTestLibrary(t, db, now)
-	if _, err := db.RecognitionRules().Create(ctx, CreateRecognitionRuleInput{LibraryID: mediaLibrary.ID, Name: "Archive depth", Kind: discovery.RuleKindFixedDepth, Enabled: true, FixedDepth: 2, Order: 1}, now); err != nil {
-		t.Fatal(err)
-	}
 	snapshot, err := db.CandidateDiscovery().CommitSnapshot(ctx, mediaLibrary.ID, []ObservedDirectory{{
 		RelativePath: "archives/Blue Archive Vol.1.tar.gz", SourceType: gallery.SourceTypeArchive, MediaCount: 1,
 	}}, now)
@@ -722,6 +716,71 @@ func TestArchiveCandidateUsesFilenameTitleFallbackWithoutManifest(t *testing.T) 
 	}
 	if created.Title != "Blue Archive Vol.1" {
 		t.Fatalf("archive title = %q, want filename stem", created.Title)
+	}
+}
+
+func TestArchiveCandidateDoesNotRequireDirectoryRuleAndAutomationConsentIsExplicit(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 30, 18, 0, 0, 0, time.UTC)
+	root := t.TempDir()
+	archivePath := filepath.Join(root, "Independent Set.tar")
+	file, err := os.Create(archivePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := tar.NewWriter(file)
+	body := []byte("discovery-only")
+	if err := writer.WriteHeader(&tar.Header{Name: "01.jpg", Mode: 0o600, Size: int64(len(body))}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writer.Write(body); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	library, err := db.Libraries().Create(ctx, CreateLibraryInput{Name: "Archive roots", RootPath: root, Enabled: true}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manual, err := db.CandidateDiscovery().DiscoverFilesystem(ctx, library.ID, now)
+	if err != nil || len(manual.Candidates) != 1 || manual.Candidates[0].AutoCreateDraft || manual.Candidates[0].Method != string(discovery.RuleKindArchiveFile) {
+		t.Fatalf("manual archive discovery = %#v, err=%v", manual, err)
+	}
+	var drafts int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM galleries`).Scan(&drafts); err != nil || drafts != 0 {
+		t.Fatalf("manual discovery drafts=%d err=%v", drafts, err)
+	}
+	automated, err := db.CandidateDiscovery().DiscoverFilesystemWithOptions(ctx, library.ID, DiscoveryOptions{AutoCreateArchives: true}, now.Add(time.Minute))
+	if err != nil || len(automated.Candidates) != 1 || !automated.Candidates[0].AutoCreateDraft || automated.Candidates[0].Status != "IMPORTED" {
+		t.Fatalf("automated archive discovery = %#v, err=%v", automated, err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM galleries WHERE state='DRAFT'`).Scan(&drafts); err != nil || drafts != 1 {
+		t.Fatalf("automated discovery drafts=%d err=%v", drafts, err)
+	}
+}
+
+func TestDirectoryCandidateOwnsNestedArchive(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 30, 18, 30, 0, 0, time.UTC)
+	library := createTestLibrary(t, db, now)
+	if _, err := db.RecognitionRules().Create(ctx, CreateRecognitionRuleInput{LibraryID: library.ID, Name: "Marker", Kind: discovery.RuleKindMarker, Enabled: true, Order: 1}, now); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := db.CandidateDiscovery().CommitSnapshot(ctx, library.ID, []ObservedDirectory{
+		{RelativePath: "set", SourceType: gallery.SourceTypeDirectory, HasRootMarker: true, MediaCount: 2},
+		{RelativePath: "set/backup.tar", SourceType: gallery.SourceTypeArchive, MediaCount: 2},
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Candidates) != 1 || snapshot.Candidates[0].SourceType != gallery.SourceTypeDirectory || snapshot.Candidates[0].RootPath != filepath.Join(library.RootPath, "set") {
+		t.Fatalf("nested source candidates = %#v", snapshot.Candidates)
 	}
 }
 

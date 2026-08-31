@@ -2,7 +2,7 @@
 
 > 当前里程碑：1.5 本机业务迭代与可诊断性增强
 > 状态：进行中
-> 更新日期：2026-08-30
+> 更新日期：2026-08-31
 
 ## 已规划、尚未实现
 
@@ -10,6 +10,7 @@
 
 ## 已完成
 
+- 1.5（Archive内置Gallery根与校核入口，源码完成、未部署）：修复安全Archive观察结果错误复用DIRECTORY根规则的问题；ZIP/CBZ、TAR/TAR.GZ/TGZ和7Z只要通过安全校验且含受支持媒体，就以内置`ARCHIVE_FILE`方式直接成为独立Candidate，不依赖PATH_TEMPLATE/FIXED_DEPTH。有效相邻Manifest仍优先，明确DIRECTORY根拥有完整子树并压住内部Archive，避免嵌套Gallery。手工发现默认只生成Candidate；媒体库ASSISTED/TRUSTED新增默认关闭的“自动导入安全存档”策略开关并冻结进运行快照。schema v8扩展候选识别枚举及两个策略字段，v7迁移前创建来源准确快照且既有策略全部保持关闭。Libraries页将“发现覆盖率待处理”与“Gallery自动化待复核”分开，未分配项明确限定为目录并可预填精确PATH_TEMPLATE；安全Archive直接显示可创建草稿的Candidate。产品Go、schema v7→v8、GraphQL、正式标签组合、TypeScript、29文件83项Vitest和680模块生产构建均通过。
 - 1.5（可管理媒体自动排除规则，Archive扩展已部署）：全局/媒体库规则现统一作用于 DIRECTORY 新Item和经过安全校验的 Archive 新成员，按成员内部相对路径匹配；规则支持任意父目录段、完整父目录/祖先路径、文件名、文件stem、完整相对路径及 Exact/Glob/Go RE2。Archive 无有效 sidecar 时以存档文件名去除扩展名作为 Gallery 标题保底，并基于外部路径/文件名生成唯一实体待审核建议；不新增来源范围字段或数据库迁移。2026-08-29已从清洁提交 `d9420fc` 完成增量部署，schema v5和配置保持不变。详细边界见[专项计划](MEDIA_EXCLUSION_RULES_PLAN_2026-08-28.md)和[Archive规划](ARCHIVE_RULES_AND_TITLE_PLAN_2026-08-29.md)。
 - Archive后续扩展规划：已记录存档内部成员排除、文件名标题保底及实体候选建议的独立实施方案，当前不改变已部署Archive行为，详见[Archive规则与标题规划](ARCHIVE_RULES_AND_TITLE_PLAN_2026-08-29.md)。
 - 1.5（自动排除扫描、审核与schema v5，源码完成、未部署）：规则只自动设置DIRECTORY新Item初始排除状态，根目录本次扫描开关继续优先；既有路径/唯一指纹Item、人工与Manifest决定不被重扫覆盖，ZIP/CBZ保持不变。存量评估仅建立PENDING EXCLUDE审核项，接受后才排除并取消未完成任务，Restore恢复当前revision任务且保留REVERSED历史；排除Item不进入1000有效成员、Browse或新任务口径。schema v5迁移不播种规则、不改既有Item，并在v4写入前生成可验证在线快照。

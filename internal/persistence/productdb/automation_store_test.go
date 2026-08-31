@@ -291,6 +291,29 @@ func TestAutomationPreviewIsEmptyBeforeDiscovery(t *testing.T) {
 	}
 }
 
+func TestAutomationPolicyFreezesArchiveImportConsentIntoRun(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 8, 30, 19, 0, 0, 0, time.UTC)
+	library := createTestLibrary(t, db, now)
+	policy, err := db.Automation().SavePolicy(ctx, LibraryAutomationPolicy{
+		LibraryID: library.ID, Mode: AutomationAssisted, ExcludeNewRootMedia: true, AutoImportArchives: true,
+	}, 0, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !policy.AutoImportArchives {
+		t.Fatalf("saved policy = %#v", policy)
+	}
+	run, err := db.Automation().EnqueueRun(ctx, policy, now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !run.AutoImportArchives {
+		t.Fatalf("queued run did not freeze archive consent: %#v", run)
+	}
+}
+
 func TestTrustedAutomationKeepsBlockedGalleryDraftAndRecordsIssue(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

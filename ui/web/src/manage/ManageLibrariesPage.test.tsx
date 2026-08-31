@@ -30,7 +30,7 @@ const discoveryMock: MockedResponse = {
 };
 const manualAutomation = {
   __typename: "ManageLibraryAutomation",
-  policy: { __typename: "ManageLibraryAutomationPolicy", libraryID: 2, mode: "MANUAL", defaultContentRating: null, excludeNewRootMedia: true, autoAcceptUniqueEntities: false, autoAcceptMediaClassification: false, autoActivate: false, revision: 0 },
+  policy: { __typename: "ManageLibraryAutomationPolicy", libraryID: 2, mode: "MANUAL", defaultContentRating: null, excludeNewRootMedia: true, autoImportArchives: false, autoAcceptUniqueEntities: false, autoAcceptMediaClassification: false, autoActivate: false, revision: 0 },
   preview: { __typename: "ManageLibraryAutomationPreview", candidateCount: 0, autoCreateEligible: 0, draftCount: 0, activationReady: 0, needsReview: 0 }, recentRuns: [],
 };
 
@@ -51,6 +51,7 @@ describe("ManageLibrariesPage recognition rules", () => {
       {
         request: { query: SAVE_LIBRARY_AUTOMATION_POLICY, variables: { libraryID: 2, expectedRevision: 0, input: {
           mode: "ASSISTED", defaultContentRating: null, excludeNewRootMedia: true,
+          autoImportArchives: false,
           autoAcceptUniqueEntities: false, autoAcceptMediaClassification: false, autoActivate: false,
         } } },
         result: { data: { saveLibraryAutomationPolicy: { ...manualAutomation, policy: { ...manualAutomation.policy, mode: "ASSISTED", revision: 1 } } } },
@@ -76,7 +77,7 @@ describe("ManageLibrariesPage recognition rules", () => {
       { request: { query: MANAGE_LIBRARY_AUTOMATION, variables: { libraryID: 2 } }, result: { data: { manageLibraryAutomation: { ...activeState, recentRuns: [{ ...activeRun, cancellationRequested: true }] } } } },
     ]);
 
-    expect(await screen.findByText("Last run: RUNNING · scanned 12 · activated 0 · needs review 12", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText("Last run: RUNNING · scanned 12 · activated 0 · Gallery review 12", {}, { timeout: 5000 })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Cancel run" }));
     expect(await screen.findByText("Cancellation requested.")).toBeInTheDocument();
   });
@@ -102,6 +103,29 @@ describe("ManageLibrariesPage recognition rules", () => {
     fireEvent.change(fields.getByLabelText("Name (required)"), { target: { value: "Marker updated" } });
     fireEvent.click(fields.getByRole("button", { name: "Save rule" }));
     expect(await screen.findByText("Discovery rule updated. Scan the library to refresh discovery.")).toBeInTheDocument();
+  });
+
+  it("prepares an exact deterministic rule from a genuinely unassigned directory", async () => {
+    const unassignedDiscovery: MockedResponse = {
+      request: { query: MANAGE_DISCOVERY, variables: { libraryID: 2 } },
+      result: { data: { manageDiscovery: {
+        id: 2, libraryID: 2, completedAt: "2026-08-30T15:00:00Z", candidates: [],
+        unassigned: [{ parentPath: "/media/collection/Loose Set", mediaCount: 12 }],
+        coverageSummary: { regularFileCount: 12, supportedMediaCount: 12, supportedArchiveCount: 0, unsupportedArchiveCount: 0, controlFileCount: 0, ignoredOtherCount: 0, actionableIssueCount: 1, registeredSourceCount: 0, indexedItemCount: 0, sourceNeedsScanCount: 0 },
+        coverageDiagnostics: [{ path: "/media/collection/Loose Set", entryKind: "DIRECTORY", reasonCode: "UNASSIGNED_MEDIA_DIRECTORY", fileCount: 12, byteSize: 0 }],
+      } } },
+    };
+    renderPage([
+      { request: { query: MANAGE_LIBRARIES }, result: { data: { manageLibraries: [library] } } },
+      unassignedDiscovery,
+      { request: { query: MANAGE_LIBRARY_AUTOMATION, variables: { libraryID: 2 } }, result: { data: { manageLibraryAutomation: manualAutomation } } },
+    ]);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Prepare exact directory rule" }));
+    const pattern = await screen.findByLabelText("Full relative path RE2 (required)");
+    expect(pattern).toHaveValue("(?P<title>Loose Set)");
+    expect(screen.getByLabelText("Enable rule")).toBeChecked();
+    expect(screen.getByLabelText("Auto-create DRAFT")).not.toBeChecked();
   });
 
   it("requires a second explicit action before deleting a rule", async () => {

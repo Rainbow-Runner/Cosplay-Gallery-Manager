@@ -245,6 +245,13 @@ type filesystemCoverage struct {
 	diagnostics []LibraryCoverageDiagnostic
 }
 
+type DiscoveryOptions struct {
+	// AutoCreateArchives is only supplied by an explicitly saved ASSISTED or
+	// TRUSTED automation run. Manual discovery always leaves archive candidates
+	// for the owner to import explicitly.
+	AutoCreateArchives bool
+}
+
 type CandidateDiscoveryStore struct {
 	db *sql.DB
 }
@@ -257,6 +264,10 @@ func (db *Database) CandidateDiscovery() *CandidateDiscoveryStore {
 // It never creates GalleryItems or accepts metadata suggestions. Configured
 // child library roots are hard traversal boundaries.
 func (s *CandidateDiscoveryStore) DiscoverFilesystem(ctx context.Context, libraryID int64, now time.Time) (DiscoverySnapshot, error) {
+	return s.DiscoverFilesystemWithOptions(ctx, libraryID, DiscoveryOptions{}, now)
+}
+
+func (s *CandidateDiscoveryStore) DiscoverFilesystemWithOptions(ctx context.Context, libraryID int64, options DiscoveryOptions, now time.Time) (DiscoverySnapshot, error) {
 	mediaLibrary, err := findLibrary(ctx, s.db, libraryID)
 	if err != nil {
 		return DiscoverySnapshot{}, err
@@ -397,7 +408,7 @@ func (s *CandidateDiscoveryStore) DiscoverFilesystem(ctx context.Context, librar
 	}
 	observations = append(observations, archives...)
 	sort.Slice(observations, func(i, j int) bool { return observations[i].RelativePath < observations[j].RelativePath })
-	return s.commitSnapshot(ctx, libraryID, observations, coverage, now)
+	return s.commitSnapshot(ctx, libraryID, observations, coverage, options, now)
 }
 
 func descendantMediaCount(root string, counts map[string]int) int {
@@ -629,11 +640,11 @@ func (s *CandidateDiscoveryStore) CommitSnapshot(
 	observations []ObservedDirectory,
 	now time.Time,
 ) (DiscoverySnapshot, error) {
-	return s.commitSnapshot(ctx, libraryID, observations, nil, now)
+	return s.commitSnapshot(ctx, libraryID, observations, nil, DiscoveryOptions{}, now)
 }
 
 func (s *CandidateDiscoveryStore) commitSnapshot(
-	ctx context.Context, libraryID int64, observations []ObservedDirectory, coverage *filesystemCoverage, now time.Time,
+	ctx context.Context, libraryID int64, observations []ObservedDirectory, coverage *filesystemCoverage, options DiscoveryOptions, now time.Time,
 ) (DiscoverySnapshot, error) {
 	mediaLibrary, err := findLibrary(ctx, s.db, libraryID)
 	if err != nil {
@@ -694,7 +705,25 @@ func (s *CandidateDiscoveryStore) commitSnapshot(
 
 		var match *discovery.Match
 		if observed.HasValidManifest {
-			match = &discovery.Match{Root: relative, Kind: "MANIFEST"}
+			match = &discovery.Match{Root: relative, Kind: "MANIFEST", AutoCreate: observed.SourceType == gallery.SourceTypeArchive && options.AutoCreateArchives}
+		} else if observed.SourceType == gallery.SourceTypeArchive {
+			match = &discovery.Match{Root: relative, Kind: discovery.RuleKindArchiveFile, AutoCreate: options.AutoCreateArchives}
+			// PATH_TEMPLATE remains an optional metadata suggestion provider for
+			// archives; it no longer decides whether the archive is a Gallery root.
+			for _, rule := range rules {
+				if rule.Kind != discovery.RuleKindPathTemplate {
+					continue
+				}
+				templateMatch, matchErr := discovery.MatchDirectory(relative, false, []discovery.Rule{rule})
+				if matchErr != nil {
+					return DiscoverySnapshot{}, matchErr
+				}
+				if templateMatch != nil {
+					match.RuleID = templateMatch.RuleID
+					match.Suggestions = append(match.Suggestions, templateMatch.Suggestions...)
+					break
+				}
+			}
 		} else {
 			match, err = discovery.MatchDirectory(relative, observed.HasRootMarker, rules)
 			if err != nil {
@@ -750,6 +779,19 @@ func (s *CandidateDiscoveryStore) commitSnapshot(
 		candidate.mediaCount += observed.MediaCount
 		candidate.conflict = candidate.conflict || observed.HasConflict
 		candidate.overLimit = candidate.overLimit || observed.OverLimit || candidate.mediaCount > 1000
+	}
+	// A confirmed DIRECTORY candidate owns its complete subtree. Archives under
+	// that root are files within that Gallery, not nested Gallery sources.
+	for archiveRoot, archiveCandidate := range candidates {
+		if archiveCandidate.sourceType != gallery.SourceTypeArchive {
+			continue
+		}
+		for directoryRoot, directoryCandidate := range candidates {
+			if directoryCandidate.sourceType == gallery.SourceTypeDirectory && directoryRoot != archiveRoot && pathWithin(directoryRoot, archiveRoot) {
+				delete(candidates, archiveRoot)
+				break
+			}
+		}
 	}
 	for unassignedPath := range unassigned {
 		for candidateRoot := range candidates {

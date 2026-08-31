@@ -503,6 +503,7 @@ type ComplexityRoot struct {
 		AutoAcceptMediaClassification func(childComplexity int) int
 		AutoAcceptUniqueEntities      func(childComplexity int) int
 		AutoActivate                  func(childComplexity int) int
+		AutoImportArchives            func(childComplexity int) int
 		DefaultContentRating          func(childComplexity int) int
 		ExcludeNewRootMedia           func(childComplexity int) int
 		LibraryID                     func(childComplexity int) int
@@ -3396,6 +3397,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageLibraryAutomationPolicy.AutoActivate(childComplexity), true
+
+	case "ManageLibraryAutomationPolicy.autoImportArchives":
+		if e.complexity.ManageLibraryAutomationPolicy.AutoImportArchives == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryAutomationPolicy.AutoImportArchives(childComplexity), true
 
 	case "ManageLibraryAutomationPolicy.defaultContentRating":
 		if e.complexity.ManageLibraryAutomationPolicy.DefaultContentRating == nil {
@@ -26715,6 +26723,8 @@ func (ec *executionContext) fieldContext_ManageLibraryAutomation_policy(_ contex
 				return ec.fieldContext_ManageLibraryAutomationPolicy_defaultContentRating(ctx, field)
 			case "excludeNewRootMedia":
 				return ec.fieldContext_ManageLibraryAutomationPolicy_excludeNewRootMedia(ctx, field)
+			case "autoImportArchives":
+				return ec.fieldContext_ManageLibraryAutomationPolicy_autoImportArchives(ctx, field)
 			case "autoAcceptUniqueEntities":
 				return ec.fieldContext_ManageLibraryAutomationPolicy_autoAcceptUniqueEntities(ctx, field)
 			case "autoAcceptMediaClassification":
@@ -27023,6 +27033,50 @@ func (ec *executionContext) _ManageLibraryAutomationPolicy_excludeNewRootMedia(c
 }
 
 func (ec *executionContext) fieldContext_ManageLibraryAutomationPolicy_excludeNewRootMedia(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryAutomationPolicy",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryAutomationPolicy_autoImportArchives(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryAutomationPolicy) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryAutomationPolicy_autoImportArchives(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AutoImportArchives, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryAutomationPolicy_autoImportArchives(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ManageLibraryAutomationPolicy",
 		Field:      field,
@@ -50921,7 +50975,7 @@ func (ec *executionContext) unmarshalInputLibraryAutomationPolicyInput(ctx conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"mode", "defaultContentRating", "excludeNewRootMedia", "autoAcceptUniqueEntities", "autoAcceptMediaClassification", "autoActivate"}
+	fieldsInOrder := [...]string{"mode", "defaultContentRating", "excludeNewRootMedia", "autoImportArchives", "autoAcceptUniqueEntities", "autoAcceptMediaClassification", "autoActivate"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -50949,6 +51003,13 @@ func (ec *executionContext) unmarshalInputLibraryAutomationPolicyInput(ctx conte
 				return it, err
 			}
 			it.ExcludeNewRootMedia = data
+		case "autoImportArchives":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("autoImportArchives"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AutoImportArchives = data
 		case "autoAcceptUniqueEntities":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("autoAcceptUniqueEntities"))
 			data, err := ec.unmarshalNBoolean2bool(ctx, v)
@@ -55169,6 +55230,11 @@ func (ec *executionContext) _ManageLibraryAutomationPolicy(ctx context.Context, 
 			out.Values[i] = ec._ManageLibraryAutomationPolicy_defaultContentRating(ctx, field, obj)
 		case "excludeNewRootMedia":
 			out.Values[i] = ec._ManageLibraryAutomationPolicy_excludeNewRootMedia(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "autoImportArchives":
+			out.Values[i] = ec._ManageLibraryAutomationPolicy_autoImportArchives(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

@@ -162,13 +162,15 @@ func validateSchemaVersion(ctx context.Context, db *sql.DB, version uint) error 
 		return validateSchemaV6(ctx, db)
 	case 7:
 		return validateSchemaV7(ctx, db)
+	case 8:
+		return validateSchemaV8(ctx, db)
 	default:
 		return &SchemaVersionMismatchError{Found: version, Required: product.DatabaseSchemaVersion}
 	}
 }
 
 func migrateProductDatabase(ctx context.Context, connection *sql.DB, databasePath string, from uint) error {
-	if from < 1 || from >= product.DatabaseSchemaVersion || product.DatabaseSchemaVersion != 7 {
+	if from < 1 || from >= product.DatabaseSchemaVersion || product.DatabaseSchemaVersion != 8 {
 		return &SchemaVersionMismatchError{Found: from, Required: product.DatabaseSchemaVersion}
 	}
 	backupPath := fmt.Sprintf("%s.pre-schema-v%d-%d.bak", databasePath, from, time.Now().UTC().UnixNano())
@@ -210,13 +212,18 @@ func migrateProductDatabase(ctx context.Context, connection *sql.DB, databasePat
 			return err
 		}
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE cgm_product_identity SET database_schema_version=7 WHERE singleton_id=1 AND database_schema_version=?`, from); err != nil {
+	if from < 8 {
+		if err := createArchiveDiscoverySchemaV8(ctx, tx); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE cgm_product_identity SET database_schema_version=8 WHERE singleton_id=1 AND database_schema_version=?`, from); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	if err := validateSchemaV7(ctx, connection); err != nil {
+	if err := validateSchemaV8(ctx, connection); err != nil {
 		return fmt.Errorf("validating migrated schema: %w", err)
 	}
 	return validateIntegrity(ctx, connection)

@@ -24,6 +24,7 @@ type LibraryAutomationPolicy struct {
 	Mode                          AutomationMode
 	DefaultContentRating          gallery.ContentRating
 	ExcludeNewRootMedia           bool
+	AutoImportArchives            bool
 	AutoAcceptUniqueEntities      bool
 	AutoAcceptMediaClassification bool
 	AutoActivate                  bool
@@ -41,6 +42,7 @@ type AutomationRun struct {
 	Mode                                              AutomationMode
 	DefaultContentRating                              gallery.ContentRating
 	ExcludeNewRootMedia                               bool
+	AutoImportArchives                                bool
 	AutoAcceptUniqueEntities                          bool
 	AutoAcceptMediaClassification                     bool
 	AutoActivate                                      bool
@@ -66,11 +68,11 @@ func (db *Database) Automation() *AutomationStore { return &AutomationStore{db: 
 func (s *AutomationStore) FindPolicy(ctx context.Context, libraryID int64) (LibraryAutomationPolicy, error) {
 	var result LibraryAutomationPolicy
 	var rating sql.NullString
-	var excludeRoot, acceptEntities, acceptClassification, activate int
+	var excludeRoot, importArchives, acceptEntities, acceptClassification, activate int
 	err := s.db.QueryRowContext(ctx, `SELECT library_id,mode,default_content_rating,exclude_new_root_media,
-		auto_accept_unique_entities,auto_accept_media_classification,auto_activate,revision
+		auto_import_archives,auto_accept_unique_entities,auto_accept_media_classification,auto_activate,revision
 		FROM library_automation_policies WHERE library_id=?`, libraryID).Scan(&result.LibraryID, &result.Mode, &rating,
-		&excludeRoot, &acceptEntities, &acceptClassification, &activate, &result.Revision)
+		&excludeRoot, &importArchives, &acceptEntities, &acceptClassification, &activate, &result.Revision)
 	if errors.Is(err, sql.ErrNoRows) {
 		var exists int
 		if findErr := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM media_libraries WHERE id=?`, libraryID).Scan(&exists); findErr != nil {
@@ -86,6 +88,7 @@ func (s *AutomationStore) FindPolicy(ctx context.Context, libraryID int64) (Libr
 	}
 	result.DefaultContentRating = gallery.ContentRating(rating.String)
 	result.ExcludeNewRootMedia = excludeRoot == 1
+	result.AutoImportArchives = importArchives == 1
 	result.AutoAcceptUniqueEntities = acceptEntities == 1
 	result.AutoAcceptMediaClassification = acceptClassification == 1
 	result.AutoActivate = activate == 1
@@ -111,19 +114,19 @@ func (s *AutomationStore) SavePolicy(ctx context.Context, input LibraryAutomatio
 	timestamp := formatTime(normalisedTime(now))
 	if expectedRevision == 0 {
 		_, err := s.db.ExecContext(ctx, `INSERT INTO library_automation_policies
-			(library_id,mode,default_content_rating,exclude_new_root_media,auto_accept_unique_entities,
+			(library_id,mode,default_content_rating,exclude_new_root_media,auto_import_archives,auto_accept_unique_entities,
 			auto_accept_media_classification,auto_activate,revision,created_at_utc,updated_at_utc)
-			VALUES (?,?,NULLIF(?,''),?,?,?,?,1,?,?)`, input.LibraryID, input.Mode, input.DefaultContentRating,
-			boolInt(input.ExcludeNewRootMedia), boolInt(input.AutoAcceptUniqueEntities), boolInt(input.AutoAcceptMediaClassification),
+			VALUES (?,?,NULLIF(?,''),?,?,?,?,?,1,?,?)`, input.LibraryID, input.Mode, input.DefaultContentRating,
+			boolInt(input.ExcludeNewRootMedia), boolInt(input.AutoImportArchives), boolInt(input.AutoAcceptUniqueEntities), boolInt(input.AutoAcceptMediaClassification),
 			boolInt(input.AutoActivate), timestamp, timestamp)
 		if err != nil {
 			return LibraryAutomationPolicy{}, err
 		}
 	} else {
 		result, err := s.db.ExecContext(ctx, `UPDATE library_automation_policies SET mode=?,default_content_rating=NULLIF(?,''),
-			exclude_new_root_media=?,auto_accept_unique_entities=?,auto_accept_media_classification=?,auto_activate=?,
+			exclude_new_root_media=?,auto_import_archives=?,auto_accept_unique_entities=?,auto_accept_media_classification=?,auto_activate=?,
 			revision=revision+1,updated_at_utc=? WHERE library_id=? AND revision=?`, input.Mode, input.DefaultContentRating,
-			boolInt(input.ExcludeNewRootMedia), boolInt(input.AutoAcceptUniqueEntities), boolInt(input.AutoAcceptMediaClassification),
+			boolInt(input.ExcludeNewRootMedia), boolInt(input.AutoImportArchives), boolInt(input.AutoAcceptUniqueEntities), boolInt(input.AutoAcceptMediaClassification),
 			boolInt(input.AutoActivate), timestamp, input.LibraryID, expectedRevision)
 		if err != nil {
 			return LibraryAutomationPolicy{}, err
@@ -136,12 +139,13 @@ func (s *AutomationStore) SavePolicy(ctx context.Context, input LibraryAutomatio
 }
 
 func (s *AutomationStore) Preview(ctx context.Context, libraryID int64) (AutomationPreview, error) {
-	if _, err := s.FindPolicy(ctx, libraryID); err != nil {
+	policy, err := s.FindPolicy(ctx, libraryID)
+	if err != nil {
 		return AutomationPreview{}, err
 	}
 	var result AutomationPreview
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*),COALESCE(SUM(auto_create_draft=1 AND has_conflict=0 AND over_limit=0 AND status='PENDING'),0)
-		FROM gallery_candidates WHERE snapshot_id=(SELECT id FROM discovery_snapshots WHERE library_id=? ORDER BY id DESC LIMIT 1)`, libraryID).
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*),COALESCE(SUM((auto_create_draft=1 OR (?=1 AND source_type='ARCHIVE')) AND has_conflict=0 AND over_limit=0 AND status='PENDING'),0)
+		FROM gallery_candidates WHERE snapshot_id=(SELECT id FROM discovery_snapshots WHERE library_id=? ORDER BY id DESC LIMIT 1)`, boolInt(policy.AutoImportArchives), libraryID).
 		Scan(&result.CandidateCount, &result.AutoCreateEligible); err != nil {
 		return AutomationPreview{}, err
 	}
@@ -187,10 +191,10 @@ func (s *AutomationStore) EnqueueRun(ctx context.Context, policy LibraryAutomati
 	}
 	timestamp := formatTime(normalisedTime(now))
 	result, err := s.db.ExecContext(ctx, `INSERT INTO library_automation_runs
-		(library_id,policy_revision,mode,default_content_rating,exclude_new_root_media,auto_accept_unique_entities,
-		auto_accept_media_classification,auto_activate,status,started_at_utc) VALUES (?,?,?,NULLIF(?,''),?,?,?,?,'QUEUED',?)`,
+		(library_id,policy_revision,mode,default_content_rating,exclude_new_root_media,auto_import_archives,auto_accept_unique_entities,
+		auto_accept_media_classification,auto_activate,status,started_at_utc) VALUES (?,?,?,NULLIF(?,''),?,?,?,?,?,'QUEUED',?)`,
 		policy.LibraryID, policy.Revision, policy.Mode, policy.DefaultContentRating, boolInt(policy.ExcludeNewRootMedia),
-		boolInt(policy.AutoAcceptUniqueEntities), boolInt(policy.AutoAcceptMediaClassification), boolInt(policy.AutoActivate), timestamp)
+		boolInt(policy.AutoImportArchives), boolInt(policy.AutoAcceptUniqueEntities), boolInt(policy.AutoAcceptMediaClassification), boolInt(policy.AutoActivate), timestamp)
 	if err != nil {
 		return AutomationRun{}, err
 	}
@@ -339,7 +343,7 @@ func (s *AutomationStore) FindRun(ctx context.Context, id int64) (AutomationRun,
 	return scanAutomationRun(s.db.QueryRowContext(ctx, `SELECT id,library_id,policy_revision,mode,status,candidates_seen,
 		drafts_created,scanned,activated,needs_review,error_code,started_at_utc,completed_at_utc,discovery_completed,
 		cursor_gallery_id,cancellation_requested,lease_owner,lease_expires_at_utc,last_heartbeat_at_utc,
-		default_content_rating,exclude_new_root_media,auto_accept_unique_entities,auto_accept_media_classification,auto_activate,
+		default_content_rating,exclude_new_root_media,auto_import_archives,auto_accept_unique_entities,auto_accept_media_classification,auto_activate,
 		(SELECT COUNT(*) FROM library_automation_run_issues issue WHERE issue.run_id=library_automation_runs.id)
 		FROM library_automation_runs WHERE id=?`, id))
 }
@@ -365,7 +369,7 @@ func (s *AutomationStore) RecentRuns(ctx context.Context, libraryID int64, limit
 	rows, err := s.db.QueryContext(ctx, `SELECT id,library_id,policy_revision,mode,status,candidates_seen,
 		drafts_created,scanned,activated,needs_review,error_code,started_at_utc,completed_at_utc,discovery_completed,
 		cursor_gallery_id,cancellation_requested,lease_owner,lease_expires_at_utc,last_heartbeat_at_utc,
-		default_content_rating,exclude_new_root_media,auto_accept_unique_entities,auto_accept_media_classification,auto_activate,
+		default_content_rating,exclude_new_root_media,auto_import_archives,auto_accept_unique_entities,auto_accept_media_classification,auto_activate,
 		(SELECT COUNT(*) FROM library_automation_run_issues issue WHERE issue.run_id=library_automation_runs.id)
 		FROM library_automation_runs WHERE library_id=? ORDER BY id DESC LIMIT ?`, libraryID, limit)
 	if err != nil {
@@ -388,12 +392,12 @@ func scanAutomationRun(row rowScanner) (AutomationRun, error) {
 	var started string
 	var completed, leaseOwner, leaseExpires, heartbeat sql.NullString
 	var rating sql.NullString
-	var discoveryCompleted, cancellationRequested, excludeRoot, acceptEntities, acceptClassification, activate int
+	var discoveryCompleted, cancellationRequested, excludeRoot, importArchives, acceptEntities, acceptClassification, activate int
 	if err := row.Scan(&result.ID, &result.LibraryID, &result.PolicyRevision, &result.Mode, &result.Status,
 		&result.CandidatesSeen, &result.DraftsCreated, &result.Scanned, &result.Activated,
 		&result.NeedsReview, &result.ErrorCode, &started, &completed, &discoveryCompleted,
 		&result.CursorGalleryID, &cancellationRequested, &leaseOwner, &leaseExpires, &heartbeat,
-		&rating, &excludeRoot, &acceptEntities, &acceptClassification, &activate, &result.IssueCount); err != nil {
+		&rating, &excludeRoot, &importArchives, &acceptEntities, &acceptClassification, &activate, &result.IssueCount); err != nil {
 		return AutomationRun{}, err
 	}
 	result.DiscoveryCompleted = discoveryCompleted == 1
@@ -401,6 +405,7 @@ func scanAutomationRun(row rowScanner) (AutomationRun, error) {
 	result.LeaseOwner = leaseOwner.String
 	result.DefaultContentRating = gallery.ContentRating(rating.String)
 	result.ExcludeNewRootMedia = excludeRoot == 1
+	result.AutoImportArchives = importArchives == 1
 	result.AutoAcceptUniqueEntities = acceptEntities == 1
 	result.AutoAcceptMediaClassification = acceptClassification == 1
 	result.AutoActivate = activate == 1

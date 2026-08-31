@@ -1679,3 +1679,16 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 2026-08-30 22:35 CST停止用户服务并确认`MainPID=0`，创建额外完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260830T142000Z-28e71a7.tar.gz`，权限0600、SHA-256为`2e2cb02cca5d2227bd1b30d74c5355418b739a4030733d7b42bd4ad29d68ff7b`。归档包含一致schema v6数据库、旧二进制、启动配置、systemd单元和Coser托管资源，不包含媒体、缓存或日志；实际解包后数据库、文件和Coser资源逐项一致。
 - 首次启动生成自动快照`product.sqlite.pre-schema-v6-1788100566661475656.bak`，权限0600、SHA-256为`bc3330368f500efe20118ba18bec3a21aca2f22e51491f73b6fcd0148a38e6f8`；独立验证保持schema v6、62张表、`integrity_check=ok`和2/5/5/322业务计数。正式库迁移到schema v7后为64张表、`integrity_check=ok`，媒体库/Gallery/来源/Item仍为2/5/5/322，新增覆盖摘要和诊断表均为空。
 - 候选文件逐字节校验后原子替换`/home/rainbowrunner/.local/bin/cgm`，旧二进制保存在`/tmp/cgm-before-archive-coverage-20260830`。服务只启动一次，保持`active/running`、`NRestarts=0`，Health/Ready为204，Root/Legal/Session为200，About精确指向`28e71a7`且`exactSourceAvailable=true`。配置SHA-256继续为`ca5c8aa1c695546cfe95689f6491ee3ef841d08098114cc27a410958b95dd82d`；部署日志未发现迁移、WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-46 Archive内置Gallery根与校核语义修复（本地开发，未部署）
+
+日期：2026-08-31
+
+- 真实媒体库排查确认两个可正常读取、分别含72和74个媒体成员的TAR被统计为支持的Archive，却因没有命中MARKER/PATH_TEMPLATE/FIXED_DEPTH而进入未分配目录诊断；自动化运行因此得到`candidates=0`，没有创建Draft。问题位于发现阶段共用了DIRECTORY根匹配器，不是TAR解析、扫描任务或前端刷新失败。
+- 安全且含受支持媒体的ZIP/CBZ、TAR、TAR.GZ/TGZ和7Z现在以内置`ARCHIVE_FILE`识别方式直接成为独立Candidate，来源根就是Archive文件本身。有效相邻Manifest继续使用`MANIFEST`优先级；PATH_TEMPLATE可继续提供待审核元数据建议，但不再决定Archive能否成为Gallery根。
+- 已绑定/忽略来源继续优先；明确的DIRECTORY Candidate拥有完整子树并删除其内部Archive Candidate，保持Gallery不嵌套。加密、损坏、不安全或不含受支持媒体的Archive保留覆盖诊断，超限Archive保留受阻Candidate；它们都不会自动导入。
+- 手工发现默认只产生可点击“创建草稿”的Archive Candidate。媒体库自动化策略新增默认关闭的`auto_import_archives`；只有已保存的ASSISTED/TRUSTED运行会冻结该授权并在发现阶段自动创建Archive Draft，MANUAL和既有策略不会因升级改变。自动化预览把已授权Archive计入可自动创建数量。
+- 产品数据库目标推进到schema v8：重建候选及建议表以增加准确的`ARCHIVE_FILE`枚举，并给策略和运行快照增加默认0字段。v7→v8集成测试实际创建、重开和校验来源准确的`pre-schema-v7`快照；历史候选模型、Gallery、来源、Item、Manifest和媒体文件均不发生业务迁移。
+- Libraries & import将“发现覆盖率待处理项”与“Gallery自动化待复核”改为不同文案；未分配列表明确只表示散装媒体目录，安全Archive在Candidate区显示。真正未分配目录可点击“准备精确目录规则”，界面只预填并启用精确PATH_TEMPLATE，默认不自动建Draft，仍需所有者检查并保存。
+- 验证通过：目标Go包`archivefile/archivecheck/discovery/productdb/productapi/productserver/cmd/cgm`；schema v7→v8、无规则Archive、显式自动导入授权和DIRECTORY嵌套优先回归；带`cgm_web_embed cgm_galleryepic`正式标签组合；TypeScript；Vitest 29文件83项；Vite生产构建680模块。主共享JS约518.74KiB并保留既有大于500KiB提示。
+- 本阶段没有提交、备份、迁移或部署正式实例；正式数据库仍为schema v7，已部署服务仍对应`28e71a7`。后续部署必须先形成清洁提交并创建额外完整回滚包，再核验自动`pre-schema-v7`快照、schema v8完整性、既有策略默认关闭、真实两个TAR进入Candidate/自动化流程及Health/Ready/About/journal。

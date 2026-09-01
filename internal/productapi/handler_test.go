@@ -443,6 +443,29 @@ func TestManageCoserNameConflictsExposeExactReviewData(t *testing.T) {
 	}
 }
 
+func TestManageCoserListAcceptsSearchCompletenessAndPageSize(t *testing.T) {
+	database := openTestDatabase(t)
+	created, err := database.CoreEntities().CreateCoser(context.Background(), productdb.CreateCoserInput{
+		CreateNamedEntityInput: productdb.CreateNamedEntityInput{Name: "Alice Portrait", Aliases: []string{"Alicia"}},
+	}, time.Date(2026, 9, 1, 0, 30, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`UPDATE cosers SET avatar_path='portrait.webp' WHERE uuid=?`, created.UUID); err != nil {
+		t.Fatal(err)
+	}
+	body := `{"query":"query { manageCoreEntities(kind:COSER,page:1,pageSize:60,query:\"lici\",coserAssetFilter:INCOMPLETE) { pageSize totalItems totalPages items { uuid name avatarURL bannerURL } } }"}`
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	NewHandler(database, func(*http.Request) bool { return true }).ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(created.UUID)) || !bytes.Contains(response.Body.Bytes(), []byte(`"pageSize":60`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(`"totalItems":1`)) || !bytes.Contains(response.Body.Bytes(), []byte(`"bannerURL":null`)) {
+		t.Fatalf("filtered Coser list response = %d %s", response.Code, response.Body.String())
+	}
+}
+
 func TestGalleryRelationMutationPersistsAndWritesTechnicalAudit(t *testing.T) {
 	database := openTestDatabase(t)
 	ctx := context.Background()

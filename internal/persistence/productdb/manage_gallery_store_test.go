@@ -81,6 +81,43 @@ func TestManageCoreEntityOptionsSearchStandaloneNamesAndAliases(t *testing.T) {
 	}
 }
 
+func TestManageCoserPageSearchAssetFiltersAndPageSize(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 1, 0, 30, 0, 0, time.UTC)
+	complete, err := db.CoreEntities().CreateCoser(ctx, CreateCoserInput{CreateNamedEntityInput: CreateNamedEntityInput{Name: "Alice Complete", Aliases: []string{"Alicia"}}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	missingBanner, err := db.CoreEntities().CreateCoser(ctx, CreateCoserInput{CreateNamedEntityInput: CreateNamedEntityInput{Name: "Alice Portrait"}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.CoreEntities().CreateCoser(ctx, CreateCoserInput{CreateNamedEntityInput: CreateNamedEntityInput{Name: "Unrelated"}}, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE cosers SET avatar_path='avatar.webp',banner_path='banner.webp' WHERE uuid=?`, complete.UUID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE cosers SET avatar_path='portrait.webp' WHERE uuid=?`, missingBanner.UUID); err != nil {
+		t.Fatal(err)
+	}
+	byAlias, err := db.CoreEntities().ManagePageWithOptions(ctx, "COSER", ManageCoreEntityPageOptions{Page: 1, PageSize: 100, Query: "lici", CoserAssetFilter: "COMPLETE"})
+	if err != nil || byAlias.PageSize != 100 || byAlias.TotalItems != 1 || len(byAlias.Items) != 1 || byAlias.Items[0].UUID != complete.UUID {
+		t.Fatalf("filtered Coser Alias page = %#v, %v", byAlias, err)
+	}
+	incomplete, err := db.CoreEntities().ManagePageWithOptions(ctx, "COSER", ManageCoreEntityPageOptions{Page: 1, PageSize: 60, Query: "Alice", CoserAssetFilter: "INCOMPLETE"})
+	if err != nil || incomplete.TotalItems != 1 || len(incomplete.Items) != 1 || incomplete.Items[0].UUID != missingBanner.UUID {
+		t.Fatalf("incomplete Coser page = %#v, %v", incomplete, err)
+	}
+	if _, err := db.CoreEntities().ManagePageWithOptions(ctx, "COSER", ManageCoreEntityPageOptions{Page: 1, PageSize: 31}); err == nil {
+		t.Fatal("Manage Coser page accepted unsupported page size")
+	}
+	if _, err := db.CoreEntities().ManagePageWithOptions(ctx, "WORK", ManageCoreEntityPageOptions{Page: 1, CoserAssetFilter: "MISSING_AVATAR"}); err == nil {
+		t.Fatal("Manage Work page accepted a Coser asset filter")
+	}
+}
+
 func TestManageCoserNameConflictsUseNormalizedExactNamesAndAliases(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

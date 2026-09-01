@@ -14,7 +14,10 @@ import type { ManageCoreEntity } from "./types";
 
 afterEach(cleanup);
 
-const emptyPage = { page: 1, pageSize: 24, totalItems: 0, totalPages: 0, items: [] };
+const emptyPage = { page: 1, pageSize: 30, totalItems: 0, totalPages: 0, items: [] };
+const listVariables = (kind: "COSER" | "WORK" | "CHARACTER" | "TAG", overrides: Record<string, unknown> = {}) => ({
+  kind, page: 1, pageSize: kind === "COSER" ? 30 : 60, query: "", coserAssetFilter: "ALL", ...overrides,
+});
 
 function renderPage(mocks: ReadonlyArray<MockedResponse>, initialEntry: string, coserOnly = false) {
   return render(<IntlProvider locale="en-GB" messages={messages["en-GB"]}>
@@ -35,7 +38,7 @@ describe("ManageCoreEntitiesPage validation", () => {
     } as ManageCoreEntity & { __typename: string };
     renderPage([
       {
-        request: { query: MANAGE_CORE_ENTITIES, variables: { kind: "COSER", page: 1 } },
+        request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("COSER") },
         result: { data: { manageCoreEntities: { ...emptyPage, totalItems: 1, totalPages: 1, items: [existing] } } },
       },
       {
@@ -68,7 +71,7 @@ describe("ManageCoreEntitiesPage validation", () => {
     } as ManageCoreEntity & { __typename: string };
     const incomplete = { ...complete, uuid: "018f4c8e-7a9b-7def-8123-456789abcde2", name: "Bob", slug: "bob", avatarURL: null, bannerURL: null };
     renderPage([{
-      request: { query: MANAGE_CORE_ENTITIES, variables: { kind: "COSER", page: 1 } },
+      request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("COSER") },
       result: { data: { manageCoreEntities: { ...emptyPage, totalItems: 2, totalPages: 1, items: [complete, incomplete] } } },
     }], "/manage/cosers", true);
 
@@ -82,9 +85,36 @@ describe("ManageCoreEntitiesPage validation", () => {
     expect(screen.getByLabelText("Bob: Banner missing")).not.toHaveClass("is-set");
   });
 
+  it("restores global search, completeness, page size, and page navigation from the URL", async () => {
+    const coser = {
+      __typename: "ManageCoreEntity", kind: "COSER", uuid: "018f4c8e-7a9b-7def-8123-456789abcde2", name: "Alice Portrait", sortName: "", aliases: ["Alicia"], slug: "alice-portrait", metadataRevision: 1,
+      workUUID: null, avatarURL: "/resource/coser/alice-portrait/1/avatar-480", bannerURL: null, avatarCrop: null, bannerFocalPoint: null,
+      profileSummary: "", biography: "", countryOrRegion: "", useInRecommendation: true, socialAccounts: [], parents: [],
+    } as ManageCoreEntity & { __typename: string };
+    renderPage([
+      {
+        request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("COSER", { page: 2, pageSize: 60, query: "Alice", coserAssetFilter: "INCOMPLETE" }) },
+        result: { data: { manageCoreEntities: { page: 2, pageSize: 60, totalItems: 125, totalPages: 3, items: [coser] } } },
+      },
+      {
+        request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("COSER", { page: 3, pageSize: 60, query: "Alice", coserAssetFilter: "INCOMPLETE" }) },
+        result: { data: { manageCoreEntities: { page: 3, pageSize: 60, totalItems: 125, totalPages: 3, items: [coser] } } },
+      },
+    ], "/manage/cosers?q=Alice&assets=INCOMPLETE&pageSize=60&page=2", true);
+
+    expect(await screen.findByRole("button", { name: /Alice Portrait/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Search all Cosers")).toHaveValue("Alice");
+    expect(screen.getByLabelText("Image completeness")).toHaveValue("INCOMPLETE");
+    expect(screen.getByLabelText("Items per page")).toHaveValue("60");
+    expect(screen.getByText("61–120 of 125")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Last page" }));
+    expect(await screen.findByText("121–125 of 125")).toBeInTheDocument();
+    expect(screen.getByLabelText("Page")).toHaveValue(3);
+  });
+
   it("keeps alias separators editable and parses aliases only for persistence", async () => {
     renderPage([{
-      request: { query: MANAGE_CORE_ENTITIES, variables: { kind: "COSER", page: 1 } },
+      request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("COSER") },
       result: { data: { manageCoreEntities: emptyPage } },
     }], "/manage/cosers", true);
 
@@ -102,7 +132,7 @@ describe("ManageCoreEntitiesPage validation", () => {
     };
     renderPage([
       {
-        request: { query: MANAGE_CORE_ENTITIES, variables: { kind: "CHARACTER", page: 1 } },
+        request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("CHARACTER") },
         result: { data: { manageCoreEntities: emptyPage } },
       },
       {
@@ -132,7 +162,7 @@ describe("ManageCoreEntitiesPage validation", () => {
     } as ManageCoreEntity & { __typename: string };
     renderPage([
       {
-        request: { query: MANAGE_CORE_ENTITIES, variables: { kind: "COSER", page: 1 } },
+        request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("COSER") },
         result: { data: { manageCoreEntities: { ...emptyPage, totalItems: 1, totalPages: 1, items: [coser] } } },
       },
       {

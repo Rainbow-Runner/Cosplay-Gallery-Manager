@@ -373,6 +373,7 @@ type ManageCoreEntity {
   socialAccounts: [ManageSocialAccount!]! parents: [ManageCoreEntityRef!]!
 }
 type ManageCoreEntityPage { items: [ManageCoreEntity!]! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
+enum ManageCoserAssetFilter { ALL MISSING_AVATAR MISSING_BANNER INCOMPLETE COMPLETE }
 type ManageCoserNameConflict { coser: ManageCoreEntity! matchedValues: [String!]! galleryCount: Int! }
 type ManageCoreEntityMergeConflict { code: String! details: String! }
 type ManageCoreEntityMergePreview {
@@ -434,7 +435,7 @@ type Query {
   manageBackups: [ManageBackupRecord!]!
   manageMaintenance: ManageMaintenanceState!
   manageAudit(page: Int! = 1): ManageAuditPage!
-  manageCoreEntities(kind: SearchEntityKind!, page: Int! = 1): ManageCoreEntityPage!
+  manageCoreEntities(kind: SearchEntityKind!, page: Int! = 1, pageSize: Int! = 0, query: String! = "", coserAssetFilter: ManageCoserAssetFilter! = ALL): ManageCoreEntityPage!
   manageCoreEntity(kind: SearchEntityKind!, uuid: ID!): ManageCoreEntity!
   manageCoreEntityOptions(kind: SearchEntityKind!, query: String! = "", limit: Int! = 20): [ManageCoreEntity!]!
   manageCoserNameConflicts(name: String!, limit: Int! = 10): [ManageCoserNameConflict!]!

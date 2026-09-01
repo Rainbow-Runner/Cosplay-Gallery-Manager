@@ -1535,8 +1535,10 @@ func (r *queryResolver) ManageAudit(ctx context.Context, page int) (*ManageAudit
 }
 
 // ManageCoreEntities is the resolver for the manageCoreEntities field.
-func (r *queryResolver) ManageCoreEntities(ctx context.Context, kind SearchEntityKind, page int) (*ManageCoreEntityPage, error) {
-	value, err := r.Database.CoreEntities().ManagePage(ctx, string(kind), page)
+func (r *queryResolver) ManageCoreEntities(ctx context.Context, kind SearchEntityKind, page int, pageSize int, query string, coserAssetFilter ManageCoserAssetFilter) (*ManageCoreEntityPage, error) {
+	value, err := r.Database.CoreEntities().ManagePageWithOptions(ctx, string(kind), productdb.ManageCoreEntityPageOptions{
+		Page: page, PageSize: pageSize, Query: query, CoserAssetFilter: string(coserAssetFilter),
+	})
 	if err != nil {
 		return nil, manageError(err)
 	}

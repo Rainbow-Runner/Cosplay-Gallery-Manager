@@ -1573,6 +1573,67 @@ func (e ImageCategory) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type ManageCoserAssetFilter string
+
+const (
+	ManageCoserAssetFilterAll           ManageCoserAssetFilter = "ALL"
+	ManageCoserAssetFilterMissingAvatar ManageCoserAssetFilter = "MISSING_AVATAR"
+	ManageCoserAssetFilterMissingBanner ManageCoserAssetFilter = "MISSING_BANNER"
+	ManageCoserAssetFilterIncomplete    ManageCoserAssetFilter = "INCOMPLETE"
+	ManageCoserAssetFilterComplete      ManageCoserAssetFilter = "COMPLETE"
+)
+
+var AllManageCoserAssetFilter = []ManageCoserAssetFilter{
+	ManageCoserAssetFilterAll,
+	ManageCoserAssetFilterMissingAvatar,
+	ManageCoserAssetFilterMissingBanner,
+	ManageCoserAssetFilterIncomplete,
+	ManageCoserAssetFilterComplete,
+}
+
+func (e ManageCoserAssetFilter) IsValid() bool {
+	switch e {
+	case ManageCoserAssetFilterAll, ManageCoserAssetFilterMissingAvatar, ManageCoserAssetFilterMissingBanner, ManageCoserAssetFilterIncomplete, ManageCoserAssetFilterComplete:
+		return true
+	}
+	return false
+}
+
+func (e ManageCoserAssetFilter) String() string {
+	return string(e)
+}
+
+func (e *ManageCoserAssetFilter) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ManageCoserAssetFilter(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ManageCoserAssetFilter", str)
+	}
+	return nil
+}
+
+func (e ManageCoserAssetFilter) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ManageCoserAssetFilter) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ManageCoserAssetFilter) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type MediaKind string
 
 const (

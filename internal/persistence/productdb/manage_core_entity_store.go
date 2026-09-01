@@ -203,20 +203,77 @@ type ManageCoreEntityPage struct {
 	TotalPages int
 }
 
+type ManageCoreEntityPageOptions struct {
+	Page             int
+	PageSize         int
+	Query            string
+	CoserAssetFilter string
+}
+
 func (s *CoreEntityStore) ManagePage(ctx context.Context, kind string, page int) (ManageCoreEntityPage, error) {
-	table, size, err := manageEntityTable(kind)
+	return s.ManagePageWithOptions(ctx, kind, ManageCoreEntityPageOptions{Page: page})
+}
+
+func (s *CoreEntityStore) ManagePageWithOptions(ctx context.Context, kind string, options ManageCoreEntityPageOptions) (ManageCoreEntityPage, error) {
+	table, defaultSize, err := manageEntityTable(kind)
 	if err != nil {
 		return ManageCoreEntityPage{}, err
 	}
-	if page < 1 || page > 1_000_000 {
+	if options.Page < 1 || options.Page > 1_000_000 {
 		return ManageCoreEntityPage{}, errors.New("core entity page is out of range")
 	}
-	result := ManageCoreEntityPage{Page: page, PageSize: size}
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM `+table).Scan(&result.TotalItems); err != nil {
+	pageSize := options.PageSize
+	if pageSize == 0 {
+		pageSize = defaultSize
+	}
+	if pageSize != 30 && pageSize != 60 && pageSize != 100 {
+		return ManageCoreEntityPage{}, errors.New("core entity page size is unsupported")
+	}
+	query := normalizedDisplay(strings.TrimSpace(options.Query))
+	if len([]rune(query)) > 300 {
+		return ManageCoreEntityPage{}, errors.New("core entity query must contain at most 300 characters")
+	}
+	assetFilter := options.CoserAssetFilter
+	if assetFilter == "" {
+		assetFilter = "ALL"
+	}
+	if kind != "COSER" && assetFilter != "ALL" {
+		return ManageCoreEntityPage{}, errors.New("Coser asset filter requires Coser kind")
+	}
+	where := "1=1"
+	var args []any
+	if query != "" {
+		aliasTable, aliasKey, aliasErr := manageEntityAliasTable(kind)
+		if aliasErr != nil {
+			return ManageCoreEntityPage{}, aliasErr
+		}
+		contains := "%" + literalLike(query) + "%"
+		where += ` AND (entity.name LIKE ? ESCAPE '\' OR entity.sort_name LIKE ? ESCAPE '\' OR EXISTS (
+			SELECT 1 FROM ` + aliasTable + ` alias WHERE alias.` + aliasKey + `=entity.uuid AND alias.alias LIKE ? ESCAPE '\'))`
+		args = append(args, contains, contains, contains)
+	}
+	if kind == "COSER" {
+		switch assetFilter {
+		case "ALL":
+		case "MISSING_AVATAR":
+			where += " AND entity.avatar_path=''"
+		case "MISSING_BANNER":
+			where += " AND entity.banner_path=''"
+		case "INCOMPLETE":
+			where += " AND (entity.avatar_path='' OR entity.banner_path='')"
+		case "COMPLETE":
+			where += " AND entity.avatar_path<>'' AND entity.banner_path<>''"
+		default:
+			return ManageCoreEntityPage{}, errors.New("unsupported Coser asset filter")
+		}
+	}
+	result := ManageCoreEntityPage{Page: options.Page, PageSize: pageSize}
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM `+table+` entity WHERE `+where, args...).Scan(&result.TotalItems); err != nil {
 		return ManageCoreEntityPage{}, err
 	}
-	result.TotalPages = int(math.Ceil(float64(result.TotalItems) / float64(size)))
-	rows, err := s.db.QueryContext(ctx, `SELECT uuid FROM `+table+` ORDER BY COALESCE(NULLIF(sort_name,''),name),uuid LIMIT ? OFFSET ?`, size, (page-1)*size)
+	result.TotalPages = int(math.Ceil(float64(result.TotalItems) / float64(pageSize)))
+	pageArgs := append(append([]any{}, args...), pageSize, (options.Page-1)*pageSize)
+	rows, err := s.db.QueryContext(ctx, `SELECT entity.uuid FROM `+table+` entity WHERE `+where+` ORDER BY COALESCE(NULLIF(entity.sort_name,''),entity.name),entity.uuid LIMIT ? OFFSET ?`, pageArgs...)
 	if err != nil {
 		return ManageCoreEntityPage{}, err
 	}

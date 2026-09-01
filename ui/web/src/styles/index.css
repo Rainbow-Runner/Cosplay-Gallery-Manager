@@ -809,6 +809,13 @@ a { color: inherit; text-decoration: none; }
 .restore-path-mapping fieldset > label:last-child { display: flex; gap: .6rem; align-items: center; color: var(--ink-muted); font-size: .7rem; }
 .entity-manage-layout { display: grid; grid-template-columns: minmax(14rem, 22rem) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
 .entity-manage-list { display: grid; max-height: calc(100vh - 13rem); overflow-y: auto; border: 1px solid var(--line); background: var(--surface); }
+.entity-list-tools { position: sticky; z-index: 2; top: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(7.5rem, .72fr); gap: .55rem; padding: .75rem; border-bottom: 1px solid var(--line); background: var(--cgm-surface); box-shadow: 0 .3rem .7rem rgb(0 0 0 / 5%); }
+.entity-list-tools label { display: grid; min-width: 0; gap: .3rem; color: var(--cgm-muted-foreground); font-size: .58rem; }
+.entity-list-tools__search { grid-column: 1 / -1; }
+.entity-list-tools input, .entity-list-tools select { width: 100%; min-width: 0; min-height: 2.25rem; padding: .45rem .55rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); outline: 0; background: var(--cgm-surface); color: var(--cgm-foreground); font: .68rem var(--cgm-font-sans); }
+.entity-list-tools input:focus, .entity-list-tools select:focus { border-color: var(--cgm-primary); box-shadow: 0 0 0 2px rgb(92 70 60 / 12%); }
+.entity-list-tools__clear { grid-column: 1 / -1; min-height: 2.1rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface-subtle); color: var(--cgm-foreground); font-size: .62rem; cursor: pointer; }
+.entity-list-state { margin: 0; padding: 1rem .8rem; border-bottom: 1px solid var(--line); color: var(--cgm-muted-foreground); font-size: .68rem; line-height: 1.5; }
 .entity-manage-list > button { display: grid; gap: .3rem; padding: .8rem; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: #fff; text-align: left; cursor: pointer; }
 .entity-manage-list > button.is-active { background: rgb(182 154 124 / 9%); }
 .entity-manage-list > button strong { font: 400 1rem Georgia, serif; }
@@ -840,7 +847,14 @@ a { color: inherit; text-decoration: none; }
 .coser-duplicate-review__list strong { font-size: .78rem; }
 .coser-duplicate-review__list small { color: var(--cgm-muted-foreground); font-size: .6rem; }
 .coser-duplicate-review__list button { min-height: 2rem; padding: .35rem .55rem; border: 1px solid var(--cgm-border); background: var(--cgm-surface); font-size: .64rem; }
-.entity-manage-list .manage-pagination { padding: .8rem; margin: 0; }
+.entity-manage-list .manage-pagination { position: sticky; z-index: 2; bottom: 0; padding: .7rem .75rem; margin: 0; border-top: 1px solid var(--cgm-border); background: var(--cgm-surface); }
+.entity-list-pagination { display: grid; gap: .5rem; }
+.entity-list-pagination__range { color: var(--cgm-muted-foreground); text-align: center; }
+.entity-list-pagination > div { display: flex; align-items: center; justify-content: center; gap: .3rem; }
+.entity-list-pagination button { min-width: 2rem; min-height: 2rem; padding: .3rem; border-radius: var(--cgm-radius-sm); }
+.entity-list-pagination form { display: flex; align-items: center; gap: .3rem; }
+.entity-list-pagination form label { display: flex; align-items: center; gap: .3rem; color: var(--cgm-muted-foreground); }
+.entity-list-pagination input { width: 3.25rem; min-height: 2rem; padding: .25rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface); color: var(--cgm-foreground); text-align: center; }
 .entity-editor { min-width: 0; }
 .entity-editor > .manage-panel + .manage-panel, .entity-editor > .metadata-form + .manage-panel { margin-top: 1rem; }
 .entity-lifecycle { border-color: rgb(162 71 86 / 45%); }

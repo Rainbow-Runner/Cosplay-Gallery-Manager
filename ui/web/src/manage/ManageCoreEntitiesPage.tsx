@@ -11,7 +11,10 @@ import { ManageCoserMetadataImport } from "./ManageCoserMetadataImport";
 import type { ManageCoreEntity, ManageCoreEntityPage, ManageCoserManifestState, ManageCoserNameConflict } from "./types";
 
 type Kind = ManageCoreEntity["kind"];
+type CoserAssetFilter = "ALL" | "MISSING_AVATAR" | "MISSING_BANNER" | "INCOMPLETE" | "COMPLETE";
 const kinds: Kind[] = ["WORK", "CHARACTER", "TAG"];
+const coserAssetFilters: CoserAssetFilter[] = ["ALL", "MISSING_AVATAR", "MISSING_BANNER", "INCOMPLETE", "COMPLETE"];
+const entityPageSizes = [30, 60, 100] as const;
 const blank = (kind: Kind): ManageCoreEntity => ({ kind, uuid: "", name: "", sortName: "", aliases: [], slug: "", metadataRevision: 0, profileSummary: "", biography: "", countryOrRegion: "", useInRecommendation: true, socialAccounts: [], parents: [] });
 export const parseAliases = (value: string) => value.split("/").map((alias) => alias.trim()).filter(Boolean);
 export const socialPlatformOptions = [
@@ -64,6 +67,34 @@ function CoserDuplicateReview({ name, checkedName, loading, error, conflicts, co
   </section>;
 }
 
+function ManageEntityPagination({ data, onPage }: { data: ManageCoreEntityPage; onPage: (page: number) => void }) {
+  const intl = useIntl();
+  const [jumpPage, setJumpPage] = useState(String(data.page));
+  useEffect(() => setJumpPage(String(data.page)), [data.page]);
+  const firstItem = data.totalItems === 0 ? 0 : (data.page - 1) * data.pageSize + 1;
+  const lastItem = Math.min(data.totalItems, data.page * data.pageSize);
+  function jump(event: FormEvent) {
+    event.preventDefault();
+    const requested = Math.floor(Number(jumpPage));
+    const target = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), Math.max(data.totalPages, 1)) : data.page;
+    setJumpPage(String(target));
+    onPage(target);
+  }
+  return <nav className="manage-pagination entity-list-pagination" aria-label={intl.formatMessage({ id: "manage.coserList.pagination" })}>
+    <span className="entity-list-pagination__range">{intl.formatMessage({ id: "manage.coserList.range" }, { first: firstItem, last: lastItem, total: data.totalItems })}</span>
+    <div>
+      <button type="button" disabled={data.page <= 1} aria-label={intl.formatMessage({ id: "manage.coserList.firstPage" })} onClick={() => onPage(1)}>«</button>
+      <button type="button" disabled={data.page <= 1} aria-label={intl.formatMessage({ id: "pagination.previous" })} onClick={() => onPage(data.page - 1)}>‹</button>
+      <form onSubmit={jump}>
+        <label>{intl.formatMessage({ id: "manage.coserList.page" })}<input type="number" min="1" max={Math.max(data.totalPages, 1)} value={jumpPage} onChange={(event) => setJumpPage(event.target.value)} /></label>
+        <span>/ {Math.max(data.totalPages, 1)}</span>
+      </form>
+      <button type="button" disabled={data.page >= data.totalPages} aria-label={intl.formatMessage({ id: "pagination.next" })} onClick={() => onPage(data.page + 1)}>›</button>
+      <button type="button" disabled={data.page >= data.totalPages} aria-label={intl.formatMessage({ id: "manage.coserList.lastPage" })} onClick={() => onPage(data.totalPages)}>»</button>
+    </div>
+  </nav>;
+}
+
 function isAbsoluteHTTPURL(value: string) {
   try {
     const parsed = new URL(value);
@@ -75,12 +106,19 @@ function isAbsoluteHTTPURL(value: string) {
 }
 
 export function ManageCoreEntitiesPage({ coserOnly = false }: { coserOnly?: boolean }) {
+  const intl = useIntl();
   const [parameters, setParameters] = useSearchParams(); const kind: Kind = coserOnly ? "COSER" : kinds.includes(parameters.get("kind") as Kind) ? parameters.get("kind") as Kind : "WORK"; const page = Math.max(1, Number(parameters.get("page")) || 1); const selected = parameters.get("uuid") || "";
+  const query = coserOnly ? (parameters.get("q") || "").trim() : "";
+  const requestedPageSize = Number(parameters.get("pageSize"));
+  const pageSize = coserOnly && entityPageSizes.includes(requestedPageSize as typeof entityPageSizes[number]) ? requestedPageSize : coserOnly ? 30 : 60;
+  const requestedAssetFilter = parameters.get("assets") as CoserAssetFilter;
+  const assetFilter: CoserAssetFilter = coserOnly && coserAssetFilters.includes(requestedAssetFilter) ? requestedAssetFilter : "ALL";
+  const [listSearch, setListSearch] = useState(query);
   const [draft, setDraft] = useState<ManageCoreEntity>(blank(kind)); const [aliasText, setAliasText] = useState(""); const [message, setMessage] = useState(""); const [coserTab, setCoserTab] = useState("profile");
   const [checkedCoserName, setCheckedCoserName] = useState(""); const [duplicateConfirmed, setDuplicateConfirmed] = useState(false);
   const [account, setAccount] = useState({ platformKey: "", label: "", handle: "", url: "https://", status: "ACTIVE", visible: true, position: "1024" });
   const [conflictChoices, setConflictChoices] = useState<Record<string, "DATABASE" | "FILE">>({});
-  const listQuery = useQuery<{ manageCoreEntities: ManageCoreEntityPage }>(MANAGE_CORE_ENTITIES, { variables: { kind, page } }); const detailQuery = useQuery<{ manageCoreEntity: ManageCoreEntity }>(MANAGE_CORE_ENTITY, { variables: { kind, uuid: selected }, skip: !selected, fetchPolicy: "network-only" });
+  const listQuery = useQuery<{ manageCoreEntities: ManageCoreEntityPage }>(MANAGE_CORE_ENTITIES, { variables: { kind, page, pageSize, query, coserAssetFilter: assetFilter } }); const detailQuery = useQuery<{ manageCoreEntity: ManageCoreEntity }>(MANAGE_CORE_ENTITY, { variables: { kind, uuid: selected }, skip: !selected, fetchPolicy: "network-only" });
   const [create, createState] = useMutation<{ createCoreEntity: ManageCoreEntity }>(CREATE_CORE_ENTITY); const [update, updateState] = useMutation<{ updateCoreEntity: ManageCoreEntity }>(UPDATE_CORE_ENTITY); const [addSocial, addSocialState] = useMutation<{ addCoserSocialAccount: ManageCoreEntity }>(ADD_COSER_SOCIAL_ACCOUNT);
   const [replaceTagParents, replaceTagParentsState] = useMutation<{ replaceTagParents: ManageCoreEntity }>(REPLACE_TAG_PARENTS);
   const newCoserName = draft.kind === "COSER" && !draft.uuid ? draft.name.trim() : "";
@@ -89,6 +127,18 @@ export function ManageCoreEntitiesPage({ coserOnly = false }: { coserOnly?: bool
   const [pushManifest, pushManifestState] = useMutation(PUSH_COSER_MANIFEST); const [pullManifest, pullManifestState] = useMutation(PULL_COSER_MANIFEST); const [resolveManifest, resolveManifestState] = useMutation(RESOLVE_COSER_MANIFEST);
   useEffect(() => { setDraft(detailQuery.data?.manageCoreEntity ?? blank(kind)); }, [detailQuery.data, kind, selected]);
   useEffect(() => { setAliasText(draft.aliases.join(" / ")); }, [draft.kind, draft.metadataRevision, draft.uuid]);
+  useEffect(() => setListSearch(query), [query]);
+  useEffect(() => {
+    if (!coserOnly || listSearch.trim() === query) return;
+    const timeout = window.setTimeout(() => setParameters((current) => {
+      const next = new URLSearchParams(current);
+      const value = listSearch.trim();
+      if (value) next.set("q", value); else next.delete("q");
+      next.set("page", "1");
+      return next;
+    }), 300);
+    return () => window.clearTimeout(timeout);
+  }, [coserOnly, listSearch, query, setParameters]);
   useEffect(() => {
     setDuplicateConfirmed(false);
     if (!newCoserName) { setCheckedCoserName(""); return; }
@@ -96,23 +146,38 @@ export function ManageCoreEntitiesPage({ coserOnly = false }: { coserOnly?: bool
     return () => window.clearTimeout(timeout);
   }, [newCoserName]);
   const data = listQuery.data?.manageCoreEntities;
+  function updateListParameters(changes: Record<string, string | number | null>) {
+    setParameters((current) => {
+      const next = new URLSearchParams(current);
+      if (coserOnly) next.delete("kind"); else next.set("kind", kind);
+      for (const [key, value] of Object.entries(changes)) {
+        if (value === null || value === "") next.delete(key); else next.set(key, String(value));
+      }
+      return next;
+    });
+  }
   function input(value = draft) { return { kind: value.kind, name: value.name, sortName: value.sortName, aliases: parseAliases(aliasText), workUUID: value.kind === "CHARACTER" ? value.workUUID || null : null, profileSummary: value.profileSummary, biography: value.biography, countryOrRegion: value.countryOrRegion, useInRecommendation: value.useInRecommendation }; }
   const conflictsCurrent = checkedCoserName === newCoserName && !duplicateQuery.loading;
   const duplicateConflicts = conflictsCurrent ? duplicateQuery.data?.manageCoserNameConflicts || [] : [];
   const duplicateReady = !newCoserName || (conflictsCurrent && !duplicateQuery.error && (duplicateConflicts.length === 0 || duplicateConfirmed)) || (conflictsCurrent && Boolean(duplicateQuery.error) && duplicateConfirmed);
   const entityValid = draft.name.trim() !== "" && (draft.kind !== "CHARACTER" || Boolean(draft.workUUID)) && duplicateReady;
   const socialAccountValid = /^[a-z0-9][a-z0-9_-]{0,63}$/.test(account.platformKey) && isAbsoluteHTTPURL(account.url);
-  async function save(event: FormEvent) { event.preventDefault(); if (!entityValid) return; setMessage(""); try { if (draft.uuid) { const result = await update({ variables: { uuid: draft.uuid, expectedMetadataRevision: draft.metadataRevision, input: input() } }); if (!result.data) throw new Error("Server did not return the saved entity"); setDraft(result.data.updateCoreEntity); } else { const result = await create({ variables: { input: input() } }); if (!result.data) throw new Error("Server did not return the created entity"); setDraft(result.data.createCoreEntity); setParameters({ ...(coserOnly ? {} : { kind }), uuid: result.data.createCoreEntity.uuid }); } await listQuery.refetch(); setMessage("Saved"); } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to save entity"); } }
+  async function save(event: FormEvent) { event.preventDefault(); if (!entityValid) return; setMessage(""); try { if (draft.uuid) { const result = await update({ variables: { uuid: draft.uuid, expectedMetadataRevision: draft.metadataRevision, input: input() } }); if (!result.data) throw new Error("Server did not return the saved entity"); setDraft(result.data.updateCoreEntity); } else { const result = await create({ variables: { input: input() } }); if (!result.data) throw new Error("Server did not return the created entity"); setDraft(result.data.createCoreEntity); updateListParameters({ uuid: result.data.createCoreEntity.uuid }); } await listQuery.refetch(); setMessage("Saved"); } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to save entity"); } }
   async function addAccount(event: FormEvent) { event.preventDefault(); if (!draft.uuid || !socialAccountValid) return; setMessage(""); try { const result = await addSocial({ variables: { coserUUID: draft.uuid, expectedMetadataRevision: draft.metadataRevision, input: account } }); if (!result.data) throw new Error("Server did not return the saved social account"); setDraft(result.data.addCoserSocialAccount); setAccount({ ...account, platformKey: "", label: "", handle: "", url: "https://", position: String((draft.socialAccounts.length + 2) * 1024) }); } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to add social account"); } }
   async function runCoserManifest(action: "PUSH" | "PULL") { if (!draft.uuid) return; setMessage(""); try { const call = action === "PUSH" ? pushManifest : pullManifest; await call({ variables: { coserUUID: draft.uuid, expectedMetadataRevision: draft.metadataRevision } }); await detailQuery.refetch(); await manifestQuery.refetch(); setMessage(`Coser Manifest ${action} completed`); } catch (error) { setMessage(error instanceof Error ? error.message : `Coser Manifest ${action} failed`); } }
   async function resolveCoserManifest() { const conflicts = manifestQuery.data?.manageCoserManifest.conflicts || []; if (!draft.uuid || conflicts.some((conflict) => !conflictChoices[conflict.path])) { setMessage("Choose Database or File for every conflict"); return; } setMessage(""); try { await resolveManifest({ variables: { coserUUID: draft.uuid, expectedMetadataRevision: draft.metadataRevision, choices: conflicts.map((conflict) => ({ path: conflict.path, choice: conflictChoices[conflict.path] })) } }); setConflictChoices({}); await detailQuery.refetch(); await manifestQuery.refetch(); setMessage("Coser Manifest conflicts resolved and pulled"); } catch (error) { setMessage(error instanceof Error ? error.message : "Coser Manifest conflict resolution failed"); } }
   async function saveTagParents() { if (draft.kind !== "TAG" || !draft.uuid) return; const expected = new Map<string, number>(); for (const parent of detailQuery.data?.manageCoreEntity.parents || []) expected.set(parent.uuid, parent.metadataRevision); for (const parent of draft.parents) expected.set(parent.uuid, parent.metadataRevision); setMessage(""); try { const result = await replaceTagParents({ variables: { childUUID: draft.uuid, expectedChildRevision: draft.metadataRevision, parents: draft.parents.map((parent, index) => ({ uuid: parent.uuid, position: String((index + 1) * 1024) })), expectedParents: Array.from(expected, ([uuid, metadataRevision]) => ({ uuid, metadataRevision })) } }); if (result.data) setDraft(result.data.replaceTagParents); await detailQuery.refetch(); await listQuery.refetch(); setMessage("Tag parent DAG saved"); } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to save Tag parents"); } }
-  async function merged(target: ManageCoreEntity, completionWarning?: string | null) { setDraft(target); setParameters({ ...(coserOnly ? {} : { kind }), uuid: target.uuid }); await listQuery.refetch(); setMessage(completionWarning ? `Merged. ${completionWarning}` : "Merged into the selected target; the source UUID is now a permanent alias."); }
-  async function deleted() { setDraft(blank(kind)); setParameters(coserOnly ? {} : { kind }); await listQuery.refetch(); setMessage("Entity deleted from the database and UUID permanently tombstoned; files were not removed."); }
-  return <main className="manage-page"><header className="manage-heading"><div><p>PORTABLE UUID ENTITIES</p><h2>{coserOnly ? "Coser" : "Core entities"}</h2></div><button type="button" onClick={() => { setParameters(coserOnly ? {} : { kind }); setDraft(blank(kind)); setAliasText(""); }}>＋ New</button></header>{!coserOnly ? <nav className="task-filters">{kinds.map((value) => <button key={value} type="button" className={kind === value ? "is-active" : ""} onClick={() => setParameters({ kind: value })}>{value}</button>)}</nav> : null}{message ? <p className="manage-message">{message}</p> : null}
-    <section className="entity-manage-layout"><aside className="entity-manage-list">{data?.items.map((item) => <button type="button" className={`${item.uuid === selected ? "is-active" : ""}${item.kind === "COSER" ? " is-coser" : ""}`} key={item.uuid} onClick={() => setParameters({ ...(coserOnly ? {} : { kind }), uuid: item.uuid, page: String(page) })}>{item.kind === "COSER" ? <ManageCoserListItem item={item} /> : <><strong>{item.name}</strong><span>{item.aliases.join(" / ") || item.uuid}</span></>}</button>)}{data && data.totalPages > 1 ? <nav className="manage-pagination"><button disabled={page <= 1} onClick={() => setParameters({ ...(coserOnly ? {} : { kind }), page: String(page - 1) })}>←</button><span>{page}/{data.totalPages}</span><button disabled={page >= data.totalPages} onClick={() => setParameters({ ...(coserOnly ? {} : { kind }), page: String(page + 1) })}>→</button></nav> : null}</aside>
+  async function merged(target: ManageCoreEntity, completionWarning?: string | null) { setDraft(target); updateListParameters({ uuid: target.uuid }); await listQuery.refetch(); setMessage(completionWarning ? `Merged. ${completionWarning}` : "Merged into the selected target; the source UUID is now a permanent alias."); }
+  async function deleted() { setDraft(blank(kind)); updateListParameters({ uuid: null }); await listQuery.refetch(); setMessage("Entity deleted from the database and UUID permanently tombstoned; files were not removed."); }
+  return <main className="manage-page"><header className="manage-heading"><div><p>PORTABLE UUID ENTITIES</p><h2>{coserOnly ? "Coser" : "Core entities"}</h2></div><button type="button" onClick={() => { updateListParameters({ uuid: null }); setDraft(blank(kind)); setAliasText(""); }}>＋ New</button></header>{!coserOnly ? <nav className="task-filters">{kinds.map((value) => <button key={value} type="button" className={kind === value ? "is-active" : ""} onClick={() => setParameters({ kind: value })}>{value}</button>)}</nav> : null}{message ? <p className="manage-message">{message}</p> : null}
+    <section className="entity-manage-layout"><aside className="entity-manage-list">{coserOnly ? <div className="entity-list-tools">
+      <label className="entity-list-tools__search">{intl.formatMessage({ id: "manage.coserList.search" })}<input type="search" maxLength={300} value={listSearch} placeholder={intl.formatMessage({ id: "manage.coserList.searchPlaceholder" })} onChange={(event) => setListSearch(event.target.value)} /></label>
+      <label>{intl.formatMessage({ id: "manage.coserList.assets" })}<select value={assetFilter} onChange={(event) => updateListParameters({ assets: event.target.value === "ALL" ? null : event.target.value, page: 1 })}>{coserAssetFilters.map((value) => <option value={value} key={value}>{intl.formatMessage({ id: `manage.coserList.assets.${value.toLowerCase()}` })}</option>)}</select></label>
+      <label>{intl.formatMessage({ id: "manage.coserList.pageSize" })}<select value={pageSize} onChange={(event) => updateListParameters({ pageSize: Number(event.target.value) === 30 ? null : event.target.value, page: 1 })}>{entityPageSizes.map((value) => <option value={value} key={value}>{value}</option>)}</select></label>
+      {query || assetFilter !== "ALL" ? <button type="button" className="entity-list-tools__clear" onClick={() => { setListSearch(""); updateListParameters({ q: null, assets: null, page: 1 }); }}>{intl.formatMessage({ id: "manage.coserList.clear" })}</button> : null}
+    </div> : null}{listQuery.loading && !data ? <p className="entity-list-state">{intl.formatMessage({ id: "manage.coserList.loading" })}</p> : listQuery.error ? <p className="entity-list-state manage-error">{intl.formatMessage({ id: "manage.coserList.failed" })}</p> : data?.items.length === 0 ? <p className="entity-list-state">{intl.formatMessage({ id: "manage.coserList.empty" })}</p> : null}{data?.items.map((item) => <button type="button" className={`${item.uuid === selected ? "is-active" : ""}${item.kind === "COSER" ? " is-coser" : ""}`} key={item.uuid} onClick={() => updateListParameters({ uuid: item.uuid, page })}>{item.kind === "COSER" ? <ManageCoserListItem item={item} /> : <><strong>{item.name}</strong><span>{item.aliases.join(" / ") || item.uuid}</span></>}</button>)}{data ? <ManageEntityPagination data={data} onPage={(value) => updateListParameters({ page: value })} /> : null}</aside>
       <div className="entity-editor">{kind === "COSER" && draft.uuid ? <nav className="editor-tabs">{["profile", "social", "galleries", "manifest"].map((tab) => <button type="button" key={tab} className={coserTab === tab ? "is-active" : ""} onClick={() => setCoserTab(tab)}>{tab}</button>)}</nav> : null}
-        {kind !== "COSER" || coserTab === "profile" || !draft.uuid ? <><EntityForm draft={draft} aliasText={aliasText} setAliasText={setAliasText} setDraft={setDraft} submit={save} saving={createState.loading || updateState.loading} valid={entityValid} coserNameReview={newCoserName ? <CoserDuplicateReview name={newCoserName} checkedName={checkedCoserName} loading={duplicateQuery.loading} error={Boolean(duplicateQuery.error)} conflicts={duplicateConflicts} confirmed={duplicateConfirmed} setConfirmed={setDuplicateConfirmed} openExisting={(coser) => setParameters({ uuid: coser.uuid })} /> : null} />{kind === "COSER" && draft.uuid ? <><ManageCoserAssetsPanel coser={draft} onUpdated={async () => { const result = await detailQuery.refetch(); if (result.data) setDraft(result.data.manageCoreEntity); await listQuery.refetch(); }} /><ManageCoserMetadataImport coser={draft} onUpdated={async () => { const result = await detailQuery.refetch(); if (result.data) setDraft(result.data.manageCoreEntity); await listQuery.refetch(); }} /></> : null}</> : null}
+        {kind !== "COSER" || coserTab === "profile" || !draft.uuid ? <><EntityForm draft={draft} aliasText={aliasText} setAliasText={setAliasText} setDraft={setDraft} submit={save} saving={createState.loading || updateState.loading} valid={entityValid} coserNameReview={newCoserName ? <CoserDuplicateReview name={newCoserName} checkedName={checkedCoserName} loading={duplicateQuery.loading} error={Boolean(duplicateQuery.error)} conflicts={duplicateConflicts} confirmed={duplicateConfirmed} setConfirmed={setDuplicateConfirmed} openExisting={(coser) => updateListParameters({ uuid: coser.uuid })} /> : null} />{kind === "COSER" && draft.uuid ? <><ManageCoserAssetsPanel coser={draft} onUpdated={async () => { const result = await detailQuery.refetch(); if (result.data) setDraft(result.data.manageCoreEntity); await listQuery.refetch(); }} /><ManageCoserMetadataImport coser={draft} onUpdated={async () => { const result = await detailQuery.refetch(); if (result.data) setDraft(result.data.manageCoreEntity); await listQuery.refetch(); }} /></> : null}</> : null}
         {kind === "TAG" && draft.uuid ? <section className="manage-panel tag-parent-editor"><h3>Direct parent DAG</h3><p>A Tag may have multiple parents. The batch save checks every affected Tag revision and the database rejects cycles.</p><div className="manage-inline-toolbar"><span>{draft.parents.length} direct parents</span><button type="button" onClick={() => setDraft({ ...draft, parents: [...draft.parents, { uuid: "", name: "", metadataRevision: 0 }] })}>Add parent</button></div>{draft.parents.map((parent, index) => <div className="manage-tag-row" key={`${parent.uuid}-${index}`}><ManageEntitySelector kind="TAG" label="Parent Tag" uuid={parent.uuid} name={parent.name} onSelect={(entity) => setDraft({ ...draft, parents: draft.parents.map((value, position) => position === index ? { uuid: entity.uuid, name: entity.name, metadataRevision: entity.metadataRevision } : value) })} /><button type="button" onClick={() => setDraft({ ...draft, parents: draft.parents.filter((_, position) => position !== index) })}>Remove</button></div>)}<div className="manage-panel-actions"><button type="button" disabled={replaceTagParentsState.loading || draft.parents.some((parent) => !parent.uuid)} onClick={saveTagParents}>{replaceTagParentsState.loading ? "Saving…" : "Save parent DAG"}</button></div></section> : null}
         {draft.uuid && (kind !== "COSER" || coserTab === "profile") ? <ManageEntityLifecyclePanel source={draft} onMerged={merged} onDeleted={deleted} /> : null}
         {kind === "COSER" && coserTab === "social" ? <section className="manage-panel"><h3>Social accounts</h3><div className="social-manage-list">{draft.socialAccounts.map((item) => <div key={item.uuid}><strong>{item.label || item.platformKey}</strong><span>{item.handle} · {item.status}</span><a href={item.url} target="_blank" rel="noreferrer">{item.url}</a></div>)}</div><form className="rule-form" onSubmit={addAccount}><label>Platform key<input required list="social-platform-keys" maxLength={64} pattern="[a-z0-9][a-z0-9_-]{0,63}" value={account.platformKey} onChange={(event) => setAccount({ ...account, platformKey: event.target.value })} /><small>Choose a common platform or type a custom lowercase key.</small></label><datalist id="social-platform-keys">{socialPlatformOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</datalist><label>Label<input maxLength={100} value={account.label} onChange={(event) => setAccount({ ...account, label: event.target.value })} /></label><label>Handle<input maxLength={200} value={account.handle} onChange={(event) => setAccount({ ...account, handle: event.target.value })} /></label><label>HTTP(S) URL<input type="url" required value={account.url} onChange={(event) => setAccount({ ...account, url: event.target.value })} /></label><label>Status<select value={account.status} onChange={(event) => setAccount({ ...account, status: event.target.value })}><option>ACTIVE</option><option>INACTIVE</option></select></label><label className="check"><input type="checkbox" checked={account.visible} onChange={(event) => setAccount({ ...account, visible: event.target.checked })} /> Visible</label><button type="submit" disabled={!socialAccountValid || addSocialState.loading}>{addSocialState.loading ? "Adding…" : "Add account"}</button></form></section> : null}

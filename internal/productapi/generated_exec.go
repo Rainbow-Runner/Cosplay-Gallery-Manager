@@ -951,7 +951,7 @@ type ComplexityRoot struct {
 		ManageAudit                          func(childComplexity int, page int) int
 		ManageBackups                        func(childComplexity int) int
 		ManageCacheStorage                   func(childComplexity int) int
-		ManageCoreEntities                   func(childComplexity int, kind SearchEntityKind, page int) int
+		ManageCoreEntities                   func(childComplexity int, kind SearchEntityKind, page int, pageSize int, query string, coserAssetFilter ManageCoserAssetFilter) int
 		ManageCoreEntity                     func(childComplexity int, kind SearchEntityKind, uuid string) int
 		ManageCoreEntityOptions              func(childComplexity int, kind SearchEntityKind, query string, limit int) int
 		ManageCoserManifest                  func(childComplexity int, coserUUID string) int
@@ -1172,7 +1172,7 @@ type QueryResolver interface {
 	ManageBackups(ctx context.Context) ([]*ManageBackupRecord, error)
 	ManageMaintenance(ctx context.Context) (*ManageMaintenanceState, error)
 	ManageAudit(ctx context.Context, page int) (*ManageAuditPage, error)
-	ManageCoreEntities(ctx context.Context, kind SearchEntityKind, page int) (*ManageCoreEntityPage, error)
+	ManageCoreEntities(ctx context.Context, kind SearchEntityKind, page int, pageSize int, query string, coserAssetFilter ManageCoserAssetFilter) (*ManageCoreEntityPage, error)
 	ManageCoreEntity(ctx context.Context, kind SearchEntityKind, uuid string) (*ManageCoreEntity, error)
 	ManageCoreEntityOptions(ctx context.Context, kind SearchEntityKind, query string, limit int) ([]*ManageCoreEntity, error)
 	ManageCoserNameConflicts(ctx context.Context, name string, limit int) ([]*ManageCoserNameConflict, error)
@@ -6134,7 +6134,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.ManageCoreEntities(childComplexity, args["kind"].(SearchEntityKind), args["page"].(int)), true
+		return e.complexity.Query.ManageCoreEntities(childComplexity, args["kind"].(SearchEntityKind), args["page"].(int), args["pageSize"].(int), args["query"].(string), args["coserAssetFilter"].(ManageCoserAssetFilter)), true
 
 	case "Query.manageCoreEntity":
 		if e.complexity.Query.ManageCoreEntity == nil {
@@ -11095,6 +11095,21 @@ func (ec *executionContext) field_Query_manageCoreEntities_args(ctx context.Cont
 		return nil, err
 	}
 	args["page"] = arg1
+	arg2, err := ec.field_Query_manageCoreEntities_argsPageSize(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["pageSize"] = arg2
+	arg3, err := ec.field_Query_manageCoreEntities_argsQuery(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["query"] = arg3
+	arg4, err := ec.field_Query_manageCoreEntities_argsCoserAssetFilter(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["coserAssetFilter"] = arg4
 	return args, nil
 }
 func (ec *executionContext) field_Query_manageCoreEntities_argsKind(
@@ -11130,6 +11145,60 @@ func (ec *executionContext) field_Query_manageCoreEntities_argsPage(
 	}
 
 	var zeroVal int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_manageCoreEntities_argsPageSize(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int, error) {
+	if _, ok := rawArgs["pageSize"]; !ok {
+		var zeroVal int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("pageSize"))
+	if tmp, ok := rawArgs["pageSize"]; ok {
+		return ec.unmarshalNInt2int(ctx, tmp)
+	}
+
+	var zeroVal int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_manageCoreEntities_argsQuery(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["query"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
+	if tmp, ok := rawArgs["query"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_manageCoreEntities_argsCoserAssetFilter(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (ManageCoserAssetFilter, error) {
+	if _, ok := rawArgs["coserAssetFilter"]; !ok {
+		var zeroVal ManageCoserAssetFilter
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("coserAssetFilter"))
+	if tmp, ok := rawArgs["coserAssetFilter"]; ok {
+		return ec.unmarshalNManageCoserAssetFilter2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoserAssetFilter(ctx, tmp)
+	}
+
+	var zeroVal ManageCoserAssetFilter
 	return zeroVal, nil
 }
 
@@ -45775,7 +45844,7 @@ func (ec *executionContext) _Query_manageCoreEntities(ctx context.Context, field
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().ManageCoreEntities(rctx, fc.Args["kind"].(SearchEntityKind), fc.Args["page"].(int))
+		return ec.resolvers.Query().ManageCoreEntities(rctx, fc.Args["kind"].(SearchEntityKind), fc.Args["page"].(int), fc.Args["pageSize"].(int), fc.Args["query"].(string), fc.Args["coserAssetFilter"].(ManageCoserAssetFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -61746,6 +61815,16 @@ func (ec *executionContext) marshalNManageCoreEntityRef2ᚖgithubᚗcomᚋstasha
 		return graphql.Null
 	}
 	return ec._ManageCoreEntityRef(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNManageCoserAssetFilter2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoserAssetFilter(ctx context.Context, v any) (ManageCoserAssetFilter, error) {
+	var res ManageCoserAssetFilter
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNManageCoserAssetFilter2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoserAssetFilter(ctx context.Context, sel ast.SelectionSet, v ManageCoserAssetFilter) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalNManageCoserManifestState2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoserManifestState(ctx context.Context, sel ast.SelectionSet, v ManageCoserManifestState) graphql.Marshaler {

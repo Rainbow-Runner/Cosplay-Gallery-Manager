@@ -844,6 +844,7 @@ SocialAccount：
 - BrowseGalleryCard只返回Scrubber可用数量/版本等轻量状态，不内嵌全部预览URL；专用认证资源接口以Gallery UUID、ordinal和不可变revision定位对应GalleryItem派生图/Poster。
 - Scrubber资源沿用Browse可见性校验，不接受物理路径，不复用旧Gallery Preview API；设置关闭时前端不得请求，后端仍不得因此绕过正常资源授权。
 - 所有索引服务端分页；默认Gallery/个人列表24、Coser30、Work/Character/Tag60；随机单页；Gallery详情成员不分页。
+- Manage Coser主从编辑列表默认30项并可切换60/100项；名称、Sort name、Alias搜索和头像/Banner完善度筛选必须在服务端分页前作用于全库，搜索、筛选、页量、页码和当前实体保留在URL。Manage不使用仅过滤当前页的前端假搜索或无限滚动。
 - Gallery业务Mutation均以Gallery为范围并带expected_metadata_revision；扫描技术Mutation独立。
 - Coser/Work/Character/Tag和Settings Mutation同样带各自revision。
 - 前后端同包发布，第一版不支持跨版本前端/后端混用。

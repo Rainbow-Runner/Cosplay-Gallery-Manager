@@ -1731,7 +1731,7 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 功能、测试和部署前记录提交为`4e1e43e9830e55c51821f8aefecd3875c12ceba1`（`Add Coser duplicate identity review`）。完整前端回归为29文件86项，TypeScript与680模块生产构建通过，仅保留既有主共享包超过500KiB提示；相关Go包和`cgm_web_embed cgm_galleryepic`正式标签组合均通过。清洁提交以Go 1.25.12构建，VCS revision一致且`modified=false`，正式二进制SHA-256为`74ffa8ca423faac040e5ca21843976734d7e3496c2ecbec7fb057c93cd52ee90`。
 - 2026-08-31完成无schema增量部署。旧二进制保存于`/tmp/cgm-before-coser-duplicate-20260831`，SHA-256为`a9163ff447fe8d64245a8f11b68e7b10d72bbbee90ffe5db5bb99fd2861e3c71`；候选逐字节校验后原子替换并只启动服务一次。服务保持`active/running`、`NRestarts=0`，Health/Ready均为204，About精确指向`4e1e43e`且`exactSourceAvailable=true`；入口资源为`index-CxHtflRY.js`与`index-CzquyQXG.css`。正式数据库保持schema v8、`integrity_check=ok`及2个媒体库、6个Gallery、6个来源、322个Item；启动journal未检出迁移、WARN、ERROR、FAILED、panic或fatal。
 
-## 1.5-50 Coser管理列表大数据量交互（本地开发，未部署）
+## 1.5-50 Coser管理列表大数据量交互
 
 日期：2026-09-01
 
@@ -1741,3 +1741,5 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - `q/assets/pageSize/page/uuid`均保存在URL；搜索和筛选变化重置到第1页，选择、新建、合并、删除以及重复身份复核的直达入口保留当前列表条件。没有新增数据表、索引、写入任务或schema迁移。
 - 定向验证通过：产品数据库覆盖Alias搜索、完整度组合、60/100页量及非法参数；GraphQL覆盖认证参数和返回总数；ManageCoreEntitiesPage 6项覆盖URL状态恢复、结果区间和末页直达；TypeScript检查通过。
 - 完整验证通过：前端29文件87项、TypeScript及680模块Vite生产构建；`productdb/productapi/productserver/cmd/cgm`普通组合和带`cgm_web_embed cgm_galleryepic`正式标签组合。主共享JS约522.95KiB，仅保留既有大于500KiB提示。
+- 功能、测试和部署前记录提交为`fb1f989ee5c29054fbbd460139f47e02b94d1cf8`（`Improve Coser management navigation`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic`标签构建，VCS revision一致且`modified=false`；正式二进制SHA-256为`851cb8b572d89502786ec1fd58452c5412c5fe311c0bd5b4f0cae40a98a74799`。
+- 2026-09-01完成无schema增量部署。旧二进制保存于`/tmp/cgm-before-coser-navigation-20260901`，SHA-256为`74ffa8ca423faac040e5ca21843976734d7e3496c2ecbec7fb057c93cd52ee90`；候选逐字节校验后原子替换并只启动服务一次。服务保持`active/running`、`NRestarts=0`，Health/Ready均为204，About精确指向`fb1f989`且`exactSourceAvailable=true`；入口资源为`index-CpiIQcmi.js`与`index-Yl_GFxuJ.css`。正式数据库保持schema v8、`integrity_check=ok`及2个媒体库、6个Gallery、6个来源、322个Item；启动journal未检出迁移、WARN、ERROR、FAILED、panic或fatal。

@@ -118,6 +118,38 @@ func TestManageCoserPageSearchAssetFiltersAndPageSize(t *testing.T) {
 	}
 }
 
+func TestManageCoserPageOrdersEnglishAndChineseByPinyin(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 1, 12, 30, 0, 0, time.UTC)
+	inputs := []CreateNamedEntityInput{
+		{Name: "张三"},
+		{Name: "bob"},
+		{Name: "李四"},
+		{Name: "Alice"},
+		{Name: "小丁"},
+		{Name: "Manual Override", SortName: "Aardvark"},
+	}
+	for _, input := range inputs {
+		if _, err := db.CoreEntities().CreateCoser(ctx, CreateCoserInput{CreateNamedEntityInput: input}, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	page, err := db.CoreEntities().ManagePage(ctx, "COSER", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := []string{"Manual Override", "Alice", "bob", "李四", "小丁", "张三"}
+	if len(page.Items) != len(wanted) {
+		t.Fatalf("Pinyin Coser page length = %d, want %d", len(page.Items), len(wanted))
+	}
+	for index, name := range wanted {
+		if page.Items[index].Name != name {
+			t.Fatalf("Pinyin Coser order[%d] = %q, want %q; page = %#v", index, page.Items[index].Name, name, page.Items)
+		}
+	}
+}
+
 func TestManageCoserNameConflictsUseNormalizedExactNamesAndAliases(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

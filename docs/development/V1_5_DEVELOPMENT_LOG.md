@@ -1743,3 +1743,14 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 完整验证通过：前端29文件87项、TypeScript及680模块Vite生产构建；`productdb/productapi/productserver/cmd/cgm`普通组合和带`cgm_web_embed cgm_galleryepic`正式标签组合。主共享JS约522.95KiB，仅保留既有大于500KiB提示。
 - 功能、测试和部署前记录提交为`fb1f989ee5c29054fbbd460139f47e02b94d1cf8`（`Improve Coser management navigation`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic`标签构建，VCS revision一致且`modified=false`；正式二进制SHA-256为`851cb8b572d89502786ec1fd58452c5412c5fe311c0bd5b4f0cae40a98a74799`。
 - 2026-09-01完成无schema增量部署。旧二进制保存于`/tmp/cgm-before-coser-navigation-20260901`，SHA-256为`74ffa8ca423faac040e5ca21843976734d7e3496c2ecbec7fb057c93cd52ee90`；候选逐字节校验后原子替换并只启动服务一次。服务保持`active/running`、`NRestarts=0`，Health/Ready均为204，About精确指向`fb1f989`且`exactSourceAvailable=true`；入口资源为`index-CpiIQcmi.js`与`index-Yl_GFxuJ.css`。正式数据库保持schema v8、`integrity_check=ok`及2个媒体库、6个Gallery、6个来源、322个Item；启动journal未检出迁移、WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-51 Manage Coser中英文与拼音排序（本地开发，未部署）
+
+日期：2026-09-01
+
+- 原Manage Coser使用SQLite默认二进制文本顺序`COALESCE(NULLIF(sort_name,''),name),uuid`，中文按UTF-8编码位置而非拼音排列，英文大小写也不属于同一自然字母序。
+- Coser专用Manage分页现先取得已通过名称/Alias搜索和图片完善度筛选的轻量`uuid/name/sort_name`集合，使用项目既有`golang.org/x/text/collate`及固定`zh-CN` Unicode Collation不区分大小写排序，再截取当前30/60/100项页面；只对页面内人物读取完整编辑DTO。
+- 英文和中文拼音进入同一字母序；验证样例为`Aardvark(Sort name覆盖) / Alice / bob / 李四 / 小丁 / 张三`。人工Sort name继续最高优先，明确用于多音字、人名特殊读音或自定义位置；同序时按显示名称、原始排序文本和UUID稳定破同序。
+- 固定语言标签使结果不依赖Linux locale或部署机器设置；不新增第三方依赖、数据列、索引、回填任务或schema迁移。Manage工具区新增中英文排序说明，Browse人物索引和其他核心实体排序保持不变。
+- 定向验证通过：产品数据库新增中英文混排、大小写、中文拼音和Sort name覆盖回归；`productdb/productapi`、ManageCoreEntitiesPage 6项和TypeScript检查均通过。
+- 完整验证通过：前端29文件87项、TypeScript及680模块Vite生产构建；`productdb/productapi/productserver/cmd/cgm`普通组合和带`cgm_web_embed cgm_galleryepic`正式标签组合。主共享JS约523.17KiB，仅保留既有大于500KiB提示。

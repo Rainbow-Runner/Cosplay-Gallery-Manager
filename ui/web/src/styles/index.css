@@ -812,6 +812,7 @@ a { color: inherit; text-decoration: none; }
 .entity-list-tools { position: sticky; z-index: 2; top: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(7.5rem, .72fr); gap: .55rem; padding: .75rem; border-bottom: 1px solid var(--line); background: var(--cgm-surface); box-shadow: 0 .3rem .7rem rgb(0 0 0 / 5%); }
 .entity-list-tools label { display: grid; min-width: 0; gap: .3rem; color: var(--cgm-muted-foreground); font-size: .58rem; }
 .entity-list-tools__search { grid-column: 1 / -1; }
+.entity-list-tools__sort-note { grid-column: 1 / -1; margin: -.1rem 0 0; color: var(--cgm-muted-foreground); font-size: .55rem; line-height: 1.45; }
 .entity-list-tools input, .entity-list-tools select { width: 100%; min-width: 0; min-height: 2.25rem; padding: .45rem .55rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); outline: 0; background: var(--cgm-surface); color: var(--cgm-foreground); font: .68rem var(--cgm-font-sans); }
 .entity-list-tools input:focus, .entity-list-tools select:focus { border-color: var(--cgm-primary); box-shadow: 0 0 0 2px rgb(92 70 60 / 12%); }
 .entity-list-tools__clear { grid-column: 1 / -1; min-height: 2.1rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface-subtle); color: var(--cgm-foreground); font-size: .62rem; cursor: pointer; }

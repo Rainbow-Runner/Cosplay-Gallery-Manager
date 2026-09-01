@@ -686,6 +686,7 @@ flowchart LR
 - Work/Character/Tag 的最小字段编辑、关系维护、Slug 历史、DAG 环检测。
 - 新建Coser前对主名与Alias进行Unicode规范化精确查重，展示可识别的已有人物摘要并提供直达入口；允许真实同名人物，但必须显式确认后继续创建。
 - Coser管理列表支持全库名称/Sort name/Alias搜索、头像与Banner完善度筛选、30/60/100页量和首页/末页/页码直达；列表状态及当前实体写入URL，保持可刷新、可返回和可深链。
+- Coser管理列表在筛选后、分页前按固定zh-CN Unicode Collation混排英文名称与中文拼音；非空Sort name保持最高优先级，供所有者覆盖多音字或人名特殊读音，不依赖宿主机locale。
 - Coser/Work/Character/Tag 合并预览、冲突处理、Alias 和 Tombstone。
 - 只有无引用实体提供删除数据库记录操作。
 

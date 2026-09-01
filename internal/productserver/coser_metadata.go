@@ -83,6 +83,9 @@ func (s *Server) metadataSearch(response http.ResponseWriter, request *http.Requ
 		http.Error(response, "Coser metadata search failed", http.StatusBadGateway)
 		return
 	}
+	if values == nil {
+		values = []cosermetadata.Candidate{}
+	}
 	writeMetadataJSON(response, map[string]any{"candidates": values})
 }
 

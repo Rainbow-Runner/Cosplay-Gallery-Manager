@@ -272,6 +272,7 @@ export const messages: Record<SupportedLocale, Record<string, string>> = {
     "manage.coserMetadata.avatar": "Import avatar", "manage.coserMetadata.banner": "Import Banner", "manage.coserMetadata.replace": "Replace existing managed image",
     "manage.coserMetadata.exists": "already saved", "manage.coserMetadata.apply": "Apply selected metadata", "manage.coserMetadata.applying": "Validating and importing…",
     "manage.coserMetadata.saved": "Selected metadata imported", "manage.coserMetadata.failed": "Coser metadata import failed",
+    "manage.coserMetadata.renderFailed": "The online metadata panel could not display this candidate. The rest of the Coser editor remains available.", "manage.coserMetadata.retry": "Retry metadata panel",
   },
   "zh-CN": {
     "shell.browse.description": "以作品集为核心的浏览端基础已经就绪。",
@@ -535,6 +536,7 @@ export const messages: Record<SupportedLocale, Record<string, string>> = {
     "manage.coserMetadata.avatar": "导入头像", "manage.coserMetadata.banner": "导入 Banner", "manage.coserMetadata.replace": "替换现有托管图片",
     "manage.coserMetadata.exists": "系统中已存在", "manage.coserMetadata.apply": "应用所选资料", "manage.coserMetadata.applying": "正在校验并导入…",
     "manage.coserMetadata.saved": "所选资料已导入", "manage.coserMetadata.failed": "Coser 网络资料导入失败",
+    "manage.coserMetadata.renderFailed": "网络资料面板无法显示该候选；Coser 的其他编辑功能仍可继续使用。", "manage.coserMetadata.retry": "重试网络资料面板",
   },
 };
 

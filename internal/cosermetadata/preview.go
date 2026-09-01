@@ -170,7 +170,7 @@ func (s *Service) InternalPreview(token string) (PreparedPreview, error) {
 	if !ok {
 		return PreparedPreview{}, ErrPreviewNotFound
 	}
-	value.Accounts = append([]SocialAccount(nil), value.Accounts...)
+	value.Accounts = append([]SocialAccount{}, value.Accounts...)
 	value.avatar = append([]byte(nil), value.avatar...)
 	value.banner = append([]byte(nil), value.banner...)
 	return value, nil
@@ -252,7 +252,7 @@ func publicPreview(value PreparedPreview) PreparedPreview {
 	value.banner = nil
 	value.avatarType = ""
 	value.bannerType = ""
-	value.Accounts = append([]SocialAccount(nil), value.Accounts...)
+	value.Accounts = append([]SocialAccount{}, value.Accounts...)
 	sort.SliceStable(value.Accounts, func(i, j int) bool {
 		if value.Accounts[i].PlatformKey == value.Accounts[j].PlatformKey {
 			return value.Accounts[i].URL < value.Accounts[j].URL

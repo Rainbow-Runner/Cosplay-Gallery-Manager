@@ -1756,3 +1756,14 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 完整验证通过：前端29文件87项、TypeScript及680模块Vite生产构建；`productdb/productapi/productserver/cmd/cgm`普通组合和带`cgm_web_embed cgm_galleryepic`正式标签组合。主共享JS约523.17KiB，仅保留既有大于500KiB提示。
 - 功能、测试和部署前记录提交为`8123ab668acfe9450120178feb5d99ca235a9159`（`Sort managed Cosers by Pinyin`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic`标签构建，VCS revision一致且`modified=false`；正式二进制SHA-256为`0e580dc662d7c21c610400dbdb7740ac8e6fee8ccf7a23b7f7466a56f7cf96c3`。
 - 2026-09-01完成无schema增量部署。旧二进制保存于`/tmp/cgm-before-coser-pinyin-20260901`，SHA-256为`851cb8b572d89502786ec1fd58452c5412c5fe311c0bd5b4f0cae40a98a74799`；候选逐字节校验后原子替换并只启动服务一次。服务保持`active/running`、`NRestarts=0`，Health/Ready均为204，About精确指向`8123ab6`且`exactSourceAvailable=true`；入口资源为`index-4FAUgmfD.js`与`index-Bb_578R2.css`。正式数据库保持schema v8、`integrity_check=ok`及2个媒体库、6个Gallery、6个来源、322个Item；启动journal未检出迁移、WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-52 GalleryEpic零账号候选黑屏修复（本地开发，未部署）
+
+日期：2026-09-01
+
+- 真实日志与只读审计确认服务始终`active/running`且Provider请求返回200。Coser`seya-狮砸`连续4次预览均成功取得头像和Banner，`account_count=0`，随后没有Apply事件；故障不是GalleryEpic超时、后端失败、GraphQL或拼音排序，也没有产生不完整资料写入。
+- 根因是`PreparedPreview.Accounts`为空时经Go nil切片复制后JSON输出`accounts:null`。前端先`setPreview(value)`，再调用`value.accounts.filter`触发被异步catch捕获的异常；已排队的Preview随后进入渲染并调用`preview.accounts.map`，由于网络资料面板没有错误边界，异常清空整个React页面。
+- `publicPreview`现使用非nil空切片，零账号稳定输出`[]`；搜索服务同样把nil候选规范为`[]`。前端搜索候选和预览账号在进入状态前均以`Array.isArray`标准化，兼容旧版本、代理缓存或异常Provider响应。
+- `ManageCoserMetadataImport`外层新增以Coser UUID重置的局部React错误边界；未预见的渲染异常只替换网络资料Panel为中英文错误和重试按钮，Coser表单、图片管理及生命周期功能不再随之黑屏。边界只写浏览器控制台技术事件，不向服务端发送候选或人物资料。
+- 定向验证通过：后端锁定空账号公开JSON为`accounts:[]`；前端新增`accounts:null`仍显示头像/Banner导入和空账号列表回归，并用畸形数据证明局部边界保留页面。`cosermetadata/productserver`、ManageCoserMetadataImport 4项和TypeScript检查通过。
+- 完整验证通过：前端29文件89项、TypeScript及680模块Vite生产构建；`cosermetadata/productdb/productapi/productserver/cmd/cgm`普通组合和带`cgm_web_embed cgm_galleryepic`正式标签组合。主共享JS约523.56KiB，仅保留既有大于500KiB提示。

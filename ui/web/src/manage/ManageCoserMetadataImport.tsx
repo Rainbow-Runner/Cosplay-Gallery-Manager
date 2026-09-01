@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Component, type ErrorInfo, type ReactNode, useEffect, useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 
 import type { ManageCoreEntity } from "./types";
@@ -11,6 +11,26 @@ interface Preview {
   accounts: SuggestedAccount[]; expires_at: string;
 }
 
+class CoserMetadataErrorBoundary extends Component<{
+  children: ReactNode; resetKey: string; failureMessage: string; retryLabel: string;
+}, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("CGM_COSER_METADATA_RENDER_FAILED", error, info.componentStack);
+  }
+  componentDidUpdate(previous: Readonly<{ resetKey: string }>) {
+    if (this.state.failed && previous.resetKey !== this.props.resetKey) this.setState({ failed: false });
+  }
+  render() {
+    if (this.state.failed) return <section className="manage-panel coser-metadata-import" role="alert">
+      <p className="manage-error">{this.props.failureMessage}</p>
+      <button type="button" onClick={() => this.setState({ failed: false })}>{this.props.retryLabel}</button>
+    </section>;
+    return this.props.children;
+  }
+}
+
 async function metadataRequest<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(`/manage/coser-metadata/${path}`, body === undefined ? { credentials: "same-origin" } : {
     method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -19,7 +39,14 @@ async function metadataRequest<T>(path: string, body?: unknown): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function ManageCoserMetadataImport({ coser, onUpdated }: { coser: ManageCoreEntity; onUpdated: () => Promise<void> }) {
+export function ManageCoserMetadataImport(props: { coser: ManageCoreEntity; onUpdated: () => Promise<void> }) {
+  const intl = useIntl();
+  return <CoserMetadataErrorBoundary resetKey={props.coser.uuid} failureMessage={intl.formatMessage({ id: "manage.coserMetadata.renderFailed" })} retryLabel={intl.formatMessage({ id: "manage.coserMetadata.retry" })}>
+    <ManageCoserMetadataImportInner {...props} />
+  </CoserMetadataErrorBoundary>;
+}
+
+function ManageCoserMetadataImportInner({ coser, onUpdated }: { coser: ManageCoreEntity; onUpdated: () => Promise<void> }) {
   const intl = useIntl(); const t = (id: string) => intl.formatMessage({ id });
   const [providers, setProviders] = useState<Provider[]>([]); const [loadingProviders, setLoadingProviders] = useState(true);
   const [providerKey, setProviderKey] = useState(""); const [query, setQuery] = useState(coser.name);
@@ -41,17 +68,18 @@ export function ManageCoserMetadataImport({ coser, onUpdated }: { coser: ManageC
 
   async function search() {
     if (!providerKey || !query.trim()) return; setBusy("search"); setMessage(""); setPreview(null);
-    try { const result = await metadataRequest<{ candidates: Candidate[] }>("search", { provider_key: providerKey, query }); setCandidates(result.candidates); }
+    try { const result = await metadataRequest<{ candidates: Candidate[] | null }>("search", { provider_key: providerKey, query }); setCandidates(Array.isArray(result.candidates) ? result.candidates : []); }
     catch (error) { setMessage(error instanceof Error ? error.message : t("manage.coserMetadata.failed")); }
     finally { setBusy(null); }
   }
   async function prepare(candidate: Candidate) {
     setBusy("prepare"); setMessage("");
     try {
-      const value = await metadataRequest<Preview>("prepare", { provider_key: providerKey, coser_uuid: coser.uuid, candidate_ref: candidate.ref });
-      setPreview(value); setImportAvatar(value.has_avatar && !coser.avatarURL); setReplaceAvatar(false);
+      const value = await metadataRequest<Preview & { accounts: SuggestedAccount[] | null }>("prepare", { provider_key: providerKey, coser_uuid: coser.uuid, candidate_ref: candidate.ref });
+      const accounts = Array.isArray(value.accounts) ? value.accounts : [];
+      setPreview({ ...value, accounts }); setImportAvatar(value.has_avatar && !coser.avatarURL); setReplaceAvatar(false);
       setImportBanner(value.has_banner && !coser.bannerURL); setReplaceBanner(false);
-      setSelectedAccounts(value.accounts.filter((account) => !existingURLs.has(account.url)).map((account) => account.url));
+      setSelectedAccounts(accounts.filter((account) => !existingURLs.has(account.url)).map((account) => account.url));
     } catch (error) { setMessage(error instanceof Error ? error.message : t("manage.coserMetadata.failed")); }
     finally { setBusy(null); }
   }

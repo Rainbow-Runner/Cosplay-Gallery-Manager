@@ -142,6 +142,7 @@ SocialAccount：
 - platform_key格式 `[a-z0-9][a-z0-9_-]{0,63}`；未知平台使用通用本地图标。
 - INACTIVE不改变顺序，只原位弱化；visible=false时Browse不返回。
 - 第一版仅定义未来检测Provider接口，不实现账号状态检测、定时任务或结果表。1.5新增的可拔除资料导入Provider只提供候选、头像、Banner和账号建议，与检测Provider分离。
+- Coser资料Provider的JSON集合字段必须稳定输出数组，零候选或零账号使用`[]`而不是`null`；前端仍需在使用外部候选数据前执行运行时标准化。网络资料面板必须有局部错误边界，单个Provider候选异常不得清空Coser编辑页或其他Manage功能。
 
 ### 6.4 Work与Character
 

@@ -40,4 +40,31 @@ describe("ManageCoserMetadataImport", () => {
     const applyCall = fetchMock.mock.calls.find(([input]) => String(input).endsWith("/apply"));
     expect(JSON.parse(String(applyCall?.[1]?.body))).toMatchObject({ token: "token", expected_metadata_revision: 2, import_avatar: true, account_urls: ["https://example.test/new"] });
   });
+
+  it("treats a legacy null account collection as empty without blanking the page", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/providers")) return new Response(JSON.stringify({ providers: [{ key: "fixture", label: "Fixture" }] }), { status: 200 });
+      if (url.endsWith("/search")) return new Response(JSON.stringify({ candidates: [{ ref: "8", display_name: "No Accounts", source_url: "https://example.test/8", match_quality: 100 }] }), { status: 200 });
+      if (url.endsWith("/prepare")) return new Response(JSON.stringify({ token: "empty-token", provider_key: "fixture", display_name: "No Accounts", source_url: "https://example.test/8", has_avatar: true, has_banner: true, expires_at: "2026-09-01T14:00:00Z", accounts: null }), { status: 200 });
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<IntlProvider locale="en-GB" messages={messages["en-GB"]}><ManageCoserMetadataImport coser={coser} onUpdated={async () => undefined} /></IntlProvider>);
+    fireEvent.click(await screen.findByRole("button", { name: "Search candidates" }));
+    fireEvent.click(await screen.findByRole("button", { name: /No Accounts/ }));
+    expect(await screen.findByRole("button", { name: "Apply selected metadata" })).toBeEnabled();
+    expect(screen.queryByText(/could not display this candidate/)).not.toBeInTheDocument();
+    expect(document.querySelectorAll(".coser-metadata-accounts label")).toHaveLength(0);
+  });
+
+  it("contains an unexpected metadata panel render failure", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const malformed = { ...coser, socialAccounts: null } as unknown as ManageCoreEntity;
+    render(<IntlProvider locale="en-GB" messages={messages["en-GB"]}><ManageCoserMetadataImport coser={malformed} onUpdated={async () => undefined} /></IntlProvider>);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/rest of the Coser editor remains available/);
+    expect(screen.getByRole("button", { name: "Retry metadata panel" })).toBeInTheDocument();
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
 });

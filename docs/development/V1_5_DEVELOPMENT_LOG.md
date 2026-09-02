@@ -1793,3 +1793,12 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 不新增GraphQL字段、数据表、索引、回填任务或数据库schema。定向验证通过：产品数据库覆盖三类实体的Alias搜索、30/100页量、英文/中文拼音和Sort name覆盖；ManageCoreEntitiesPage 7项覆盖Work工具栏、URL参数、页量、排序说明及分页，TypeScript检查通过。完整验证通过：前端29文件91项、TypeScript、680模块生产构建，以及`productdb/productapi/productserver/cmd/cgm`正式`cgm_web_embed cgm_galleryepic`标签组合；仅保留既有主共享包超过500KiB提示。
 - 功能、测试和部署前记录提交为`92209236507f51115caa81eafe44293a547f9870`（`Improve core entity list navigation`）。清洁提交使用Go 1.25.12及正式标签构建，Go VCS信息确认revision一致且`modified=false`；最终二进制SHA-256为`9f1a6b96a7c9c02a44573534fb4bb079aae30f73d37674afc35e8ff2ba3e9d30`，旧`d94a45e`二进制保存在`/tmp/cgm-before-entity-navigation-20260902`。
 - 2026-09-02完成无schema增量部署。服务保持`active/running`、`NRestarts=0`，Health/Ready均为204，Root/Legal/Session为200；About精确指向`9220923`、`buildTime=2026-09-02T13:32:22Z`且`exactSourceAvailable=true`。入口使用主资源`index-DAOrDXWT.js`、页面分块`ManageCoreEntitiesPage-UESjSQZQ.js`及`index-DaCBCKeP.css`。正式数据库保持schema v8、`integrity_check=ok`及2个媒体库、6个Gallery、6个来源、322个Item；配置、数据库、媒体、Manifest和缓存均未替换，启动journal未检出WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-55 Work与Character Alias气泡编辑器
+
+日期：2026-09-02
+
+- 现有控件并非弹窗，而是Coser、Work、Character和Tag共用的普通单行输入框；用户必须用`/`分隔，无法直接识别、编辑或删除某一个Alias。本轮按需求只修改Work与Character，Coser和Tag继续使用已确认的斜杠输入及提交解析。
+- 新控件在同一输入边框内混排Alias气泡和文本输入：输入后按Enter生成气泡；点击气泡正文会从集合移除并把原文退回输入框，编辑后再次Enter即可重建；右侧独立叉号立即删除该气泡。正文与叉号使用两个并列button而非嵌套交互元素，并提供中英文可访问名称。
+- 输入法合成阶段的Enter不触发提交；空文本不生成气泡。前端以NFC与不区分大小写检查当前集合重复，保留后端更严格的Unicode标准化最终门禁；单项沿用300字符、集合沿用100项上限。输入框仍有未回车文本时显示明确提示并禁用Create/Save，防止用户误以为该文本已进入Alias数组。
+- 气泡编辑只改变现有GraphQL `aliases: [String!]!`提交前的前端呈现，不新增接口、字段、表、迁移或回填。定向验证通过：ManageCoreEntitiesPage 8项覆盖Work的生成、待提交禁用、正文回填编辑、重新生成与叉号删除，并确认Character使用同一新控件；TypeScript检查通过。完整验证通过：前端29文件92项、TypeScript、680模块生产构建，以及`productdb/productapi/productserver/cmd/cgm`正式`cgm_web_embed cgm_galleryepic`标签组合；仅保留既有主共享包超过500KiB提示。提交与增量部署待执行。

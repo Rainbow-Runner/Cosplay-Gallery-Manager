@@ -131,6 +131,32 @@ describe("ManageCoreEntitiesPage validation", () => {
     expect(screen.getByRole("navigation", { name: "Works list pagination" })).toBeInTheDocument();
   });
 
+  it("edits Work Aliases as removable chips inside the input control", async () => {
+    renderPage([{
+      request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("WORK") },
+      result: { data: { manageCoreEntities: { ...emptyPage, pageSize: 60 } } },
+    }], "/manage/entities?kind=WORK");
+
+    const create = await screen.findByRole("button", { name: "Create" });
+    fireEvent.change(screen.getByLabelText("Name (required)"), { target: { value: "Fate" } });
+    const aliasInput = screen.getByLabelText("Aliases");
+    fireEvent.change(aliasInput, { target: { value: "FGO" } });
+    expect(create).toBeDisabled();
+    expect(screen.getByText("Press Enter to add this Alias before saving.")).toBeInTheDocument();
+    fireEvent.keyDown(aliasInput, { key: "Enter" });
+    expect(aliasInput).toHaveValue("");
+    expect(create).toBeEnabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Alias FGO" }));
+    expect(screen.queryByRole("button", { name: "Edit Alias FGO" })).not.toBeInTheDocument();
+    expect(aliasInput).toHaveValue("FGO");
+    fireEvent.change(aliasInput, { target: { value: "Fate Grand Order" } });
+    fireEvent.keyDown(aliasInput, { key: "Enter" });
+    expect(screen.getByRole("button", { name: "Edit Alias Fate Grand Order" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove Alias Fate Grand Order" }));
+    expect(screen.queryByRole("button", { name: "Edit Alias Fate Grand Order" })).not.toBeInTheDocument();
+  });
+
   it("keeps alias separators editable and parses aliases only for persistence", async () => {
     renderPage([{
       request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("COSER") },
@@ -161,6 +187,7 @@ describe("ManageCoreEntitiesPage validation", () => {
     ], "/manage/entities?kind=CHARACTER");
 
     const create = await screen.findByRole("button", { name: "Create" });
+    expect(screen.getByPlaceholderText("Type an Alias and press Enter")).toBeInTheDocument();
     expect(create).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Name (required)"), { target: { value: "Saber" } });
     expect(create).toBeDisabled();

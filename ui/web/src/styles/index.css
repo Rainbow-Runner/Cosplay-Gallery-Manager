@@ -881,6 +881,8 @@ a { color: inherit; text-decoration: none; }
 .coser-metadata-import .manage-inline-toolbar { align-items: end; flex-wrap: wrap; }
 .coser-metadata-import .manage-inline-toolbar label { min-width: 180px; flex: 1; }
 .coser-metadata-import[role="alert"] > button { justify-self: start; padding: .55rem .7rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface); color: var(--cgm-foreground); cursor: pointer; }
+.coser-metadata-search-status { margin: 12px 0 0; color: var(--cgm-muted-foreground); font-size: .75rem; }
+.coser-metadata-search-status.is-empty { padding: 10px 12px; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-muted); }
 .coser-metadata-candidates { display: grid; gap: 8px; margin: 16px 0; }
 .coser-metadata-candidates button { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--cgm-border); border-radius: 8px; background: var(--cgm-surface); text-align: left; }
 .coser-metadata-preview { display: grid; gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--cgm-border); }

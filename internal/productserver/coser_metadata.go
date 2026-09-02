@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"path"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/stashapp/stash/internal/cosermetadata"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/portableid"
+	"github.com/stashapp/stash/internal/productlog"
 )
 
 const coserMetadataPrefix = "/manage/coser-metadata/"
@@ -86,6 +88,11 @@ func (s *Server) metadataSearch(response http.ResponseWriter, request *http.Requ
 	if values == nil {
 		values = []cosermetadata.Candidate{}
 	}
+	slog.Info("CGM_COSER_METADATA_SEARCH_COMPLETED",
+		"request_id", productlog.RequestID(request.Context()),
+		"provider_key", strings.TrimSpace(input.ProviderKey),
+		"candidate_count", len(values),
+	)
 	writeMetadataJSON(response, map[string]any{"candidates": values})
 }
 

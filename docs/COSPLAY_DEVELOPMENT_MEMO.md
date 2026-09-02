@@ -143,6 +143,7 @@ SocialAccount：
 - INACTIVE不改变顺序，只原位弱化；visible=false时Browse不返回。
 - 第一版仅定义未来检测Provider接口，不实现账号状态检测、定时任务或结果表。1.5新增的可拔除资料导入Provider只提供候选、头像、Banner和账号建议，与检测Provider分离。
 - Coser资料Provider的JSON集合字段必须稳定输出数组，零候选或零账号使用`[]`而不是`null`；前端仍需在使用外部候选数据前执行运行时标准化。网络资料面板必须有局部错误边界，单个Provider候选异常不得清空Coser编辑页或其他Manage功能。
+- 每次所有者触发的Provider搜索都必须得到明确的完成反馈：有候选时显示数量，成功但零候选时显示空结果及改用完整名称、Alias或较短特征名称的建议，传输失败继续显示错误；不得以空白区域表示零候选。服务日志可记录请求ID、Provider key与候选数量用于区分“正常零结果”和“外联失败”，但不得记录人物姓名或搜索词。
 
 ### 6.4 Work与Character
 

@@ -1769,3 +1769,13 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 完整验证通过：前端29文件89项、TypeScript及680模块Vite生产构建；`cosermetadata/productdb/productapi/productserver/cmd/cgm`普通组合和带`cgm_web_embed cgm_galleryepic`正式标签组合。主共享JS约523.56KiB，仅保留既有大于500KiB提示。
 - 功能、测试和部署前记录提交为`9aee6ac2d45288e8145613155f64acda33550a6b`（`Prevent empty Coser metadata preview crashes`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic`标签构建，VCS revision一致且`modified=false`；正式二进制SHA-256为`587457b293dcf0b34c95cea54418172aad79140f940cd526b2cbef63d4e8b581`。
 - 2026-09-01完成无schema增量部署。旧二进制保存于`/tmp/cgm-before-metadata-null-fix-20260901`，SHA-256为`0e580dc662d7c21c610400dbdb7740ac8e6fee8ccf7a23b7f7466a56f7cf96c3`；候选逐字节校验后原子替换并只启动服务一次。服务保持`active/running`、`NRestarts=0`，Health/Ready均为204，About精确指向`9aee6ac`且`exactSourceAvailable=true`；入口资源为`index-Dgv8eFKL.js`与`index-CU533R9Y.css`。正式数据库保持schema v8、`integrity_check=ok`及2个媒体库、6个Gallery、6个来源、322个Item；启动journal未检出迁移、WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-53 Coser网络资料搜索完成反馈
+
+日期：2026-09-02
+
+- 对已部署服务的只读排查确认进程保持`active/running`且没有重启。20:52:14、20:52:19、20:52:27和20:52:32的四次`/manage/coser-metadata/search`均为HTTP 200，耗时343～409ms、响应18字节，对应规范的`{"candidates":[]}`；同一会话此前多次搜索和候选准备成功，证明Provider通路与解析器整体可用。日志按隐私约束不记录查询词，因此不能仅凭服务日志判断具体名称本应命中与否。
+- 根因是前端只在`candidates.length > 0`时渲染候选区；成功零候选不会设置提示，也不是异常，现有错误消息因此不出现，最终表现为点击搜索后页面毫无反馈。
+- 搜索现保存本次已规范化查询词和完成状态；成功后有结果显示候选数量，零结果显示中英文明确提示并建议尝试完整名称、Alias或更短的特征名称。修改查询词或Provider会立即清除旧候选、Preview及完成状态，防止旧结果与新条件混淆；请求期间继续使用既有`正在搜索…`状态，失败继续进入既有错误反馈。
+- 服务新增`CGM_COSER_METADATA_SEARCH_COMPLETED`结构化事件，只包含request ID、Provider key和candidate count，不记录Coser姓名、查询词、候选姓名或来源URL。该变更不改变Provider搜索算法、候选排序、人工审核/应用边界、数据库或schema。
+- 定向验证通过：ManageCoserMetadataImport 5项覆盖成功空结果可见性，`internal/productserver`及TypeScript检查通过。完整验证通过：前端29文件90项、TypeScript、680模块生产构建，以及`cosermetadata/productdb/productapi/productserver/cmd/cgm`正式`cgm_web_embed cgm_galleryepic`标签组合；仅保留既有主共享包超过500KiB提示。提交与增量部署待执行。

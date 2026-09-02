@@ -51,6 +51,7 @@ function ManageCoserMetadataImportInner({ coser, onUpdated }: { coser: ManageCor
   const [providers, setProviders] = useState<Provider[]>([]); const [loadingProviders, setLoadingProviders] = useState(true);
   const [providerKey, setProviderKey] = useState(""); const [query, setQuery] = useState(coser.name);
   const [candidates, setCandidates] = useState<Candidate[]>([]); const [preview, setPreview] = useState<Preview | null>(null);
+  const [searchedQuery, setSearchedQuery] = useState(""); const [searchCompleted, setSearchCompleted] = useState(false);
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]); const [importAvatar, setImportAvatar] = useState(false);
   const [replaceAvatar, setReplaceAvatar] = useState(false); const [importBanner, setImportBanner] = useState(false);
   const [replaceBanner, setReplaceBanner] = useState(false); const [busy, setBusy] = useState<"search" | "prepare" | "apply" | null>(null);
@@ -63,12 +64,16 @@ function ManageCoserMetadataImportInner({ coser, onUpdated }: { coser: ManageCor
     }).catch(() => { if (active) setProviders([]); }).finally(() => { if (active) setLoadingProviders(false); });
     return () => { active = false; };
   }, []);
-  useEffect(() => { setQuery(coser.name); setCandidates([]); setPreview(null); }, [coser.uuid, coser.name]);
+  useEffect(() => { setQuery(coser.name); setCandidates([]); setPreview(null); setSearchedQuery(""); setSearchCompleted(false); }, [coser.uuid, coser.name]);
   const existingURLs = useMemo(() => new Set(coser.socialAccounts.map((account) => account.url)), [coser.socialAccounts]);
 
   async function search() {
-    if (!providerKey || !query.trim()) return; setBusy("search"); setMessage(""); setPreview(null);
-    try { const result = await metadataRequest<{ candidates: Candidate[] | null }>("search", { provider_key: providerKey, query }); setCandidates(Array.isArray(result.candidates) ? result.candidates : []); }
+    const normalizedQuery = query.trim();
+    if (!providerKey || !normalizedQuery) return; setBusy("search"); setMessage(""); setPreview(null); setCandidates([]); setSearchCompleted(false);
+    try {
+      const result = await metadataRequest<{ candidates: Candidate[] | null }>("search", { provider_key: providerKey, query: normalizedQuery });
+      setCandidates(Array.isArray(result.candidates) ? result.candidates : []); setSearchedQuery(normalizedQuery); setSearchCompleted(true);
+    }
     catch (error) { setMessage(error instanceof Error ? error.message : t("manage.coserMetadata.failed")); }
     finally { setBusy(null); }
   }
@@ -89,7 +94,7 @@ function ManageCoserMetadataImportInner({ coser, onUpdated }: { coser: ManageCor
       await metadataRequest("apply", { token: preview.token, expected_metadata_revision: coser.metadataRevision,
         import_avatar: importAvatar, replace_avatar: replaceAvatar, import_banner: importBanner, replace_banner: replaceBanner,
         account_urls: selectedAccounts });
-      await onUpdated(); setPreview(null); setCandidates([]); setMessage(t("manage.coserMetadata.saved"));
+      await onUpdated(); setPreview(null); setCandidates([]); setSearchCompleted(false); setMessage(t("manage.coserMetadata.saved"));
     } catch (error) { setMessage(error instanceof Error ? error.message : t("manage.coserMetadata.failed")); }
     finally { setBusy(null); }
   }
@@ -99,10 +104,13 @@ function ManageCoserMetadataImportInner({ coser, onUpdated }: { coser: ManageCor
     <h3>{t("manage.coserMetadata.heading")}</h3><p>{t("manage.coserMetadata.summary")}</p>
     {message ? <p className="manage-message" role="status">{message}</p> : null}
     <div className="manage-inline-toolbar">
-      <label>{t("manage.coserMetadata.provider")}<select value={providerKey} disabled={loadingProviders || busy !== null} onChange={(event) => setProviderKey(event.target.value)}>{providers.map((provider) => <option key={provider.key} value={provider.key}>{provider.label}</option>)}</select></label>
-      <label>{t("manage.coserMetadata.name")}<input maxLength={300} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+      <label>{t("manage.coserMetadata.provider")}<select value={providerKey} disabled={loadingProviders || busy !== null} onChange={(event) => { setProviderKey(event.target.value); setCandidates([]); setPreview(null); setSearchCompleted(false); }}>{providers.map((provider) => <option key={provider.key} value={provider.key}>{provider.label}</option>)}</select></label>
+      <label>{t("manage.coserMetadata.name")}<input maxLength={300} value={query} onChange={(event) => { setQuery(event.target.value); setCandidates([]); setPreview(null); setSearchCompleted(false); }} /></label>
       <button type="button" disabled={!providerKey || !query.trim() || busy !== null} onClick={search}>{busy === "search" ? t("manage.coserMetadata.searching") : t("manage.coserMetadata.search")}</button>
     </div>
+    {searchCompleted ? <p className={`coser-metadata-search-status${candidates.length === 0 ? " is-empty" : ""}`} role="status" aria-live="polite">{candidates.length === 0
+      ? intl.formatMessage({ id: "manage.coserMetadata.noResults" }, { query: searchedQuery })
+      : intl.formatMessage({ id: "manage.coserMetadata.resultCount" }, { count: candidates.length })}</p> : null}
     {candidates.length ? <div className="coser-metadata-candidates">{candidates.map((candidate) => <button type="button" key={candidate.ref} disabled={busy !== null} onClick={() => prepare(candidate)}><strong>{candidate.display_name}</strong><span>{t("manage.coserMetadata.match")} {candidate.match_quality}%</span></button>)}</div> : null}
     {preview ? <div className="coser-metadata-preview"><header><div><strong>{preview.display_name}</strong><a href={preview.source_url} target="_blank" rel="noreferrer">{t("manage.coserMetadata.source")}</a></div><small>{t("manage.coserMetadata.review")}</small></header>
       <div className="coser-metadata-assets">

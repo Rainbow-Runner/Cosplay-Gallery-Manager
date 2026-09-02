@@ -37,6 +37,7 @@ describe("ManageCoserMetadataImport", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
     const apply = await screen.findByRole("button", { name: "Apply selected metadata" }); expect(apply).toBeEnabled(); fireEvent.click(apply);
     await waitFor(() => expect(onUpdated).toHaveBeenCalledOnce());
+    expect(screen.queryByText(/No candidates matched/)).not.toBeInTheDocument();
     const applyCall = fetchMock.mock.calls.find(([input]) => String(input).endsWith("/apply"));
     expect(JSON.parse(String(applyCall?.[1]?.body))).toMatchObject({ token: "token", expected_metadata_revision: 2, import_avatar: true, account_urls: ["https://example.test/new"] });
   });
@@ -56,6 +57,21 @@ describe("ManageCoserMetadataImport", () => {
     expect(await screen.findByRole("button", { name: "Apply selected metadata" })).toBeEnabled();
     expect(screen.queryByText(/could not display this candidate/)).not.toBeInTheDocument();
     expect(document.querySelectorAll(".coser-metadata-accounts label")).toHaveLength(0);
+  });
+
+  it("shows an explicit successful empty result instead of leaving the search silent", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/providers")) return new Response(JSON.stringify({ providers: [{ key: "fixture", label: "Fixture" }] }), { status: 200 });
+      if (url.endsWith("/search")) return new Response(JSON.stringify({ candidates: [] }), { status: 200 });
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<IntlProvider locale="en-GB" messages={messages["en-GB"]}><ManageCoserMetadataImport coser={coser} onUpdated={async () => undefined} /></IntlProvider>);
+    fireEvent.change(await screen.findByLabelText("Coser name"), { target: { value: "Unknown name" } });
+    fireEvent.click(screen.getByRole("button", { name: "Search candidates" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("No candidates matched “Unknown name”");
+    expect(screen.queryByText("Coser metadata import failed")).not.toBeInTheDocument();
   });
 
   it("contains an unexpected metadata panel render failure", async () => {

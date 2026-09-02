@@ -112,6 +112,25 @@ describe("ManageCoreEntitiesPage validation", () => {
     expect(screen.getByLabelText("Page")).toHaveValue(3);
   });
 
+  it("exposes search, Pinyin sort guidance, page size, and pagination for Works", async () => {
+    const work = {
+      __typename: "ManageCoreEntity", kind: "WORK", uuid: "018f4c8e-7a9b-7def-8123-456789abcdef", name: "Fate/Grand Order", sortName: "Fate Grand Order", aliases: ["FGO"], slug: "fate-grand-order", metadataRevision: 1,
+      workUUID: null, avatarURL: null, bannerURL: null, avatarCrop: null, bannerFocalPoint: null,
+      profileSummary: "", biography: "", countryOrRegion: "", useInRecommendation: true, socialAccounts: [], parents: [],
+    } as ManageCoreEntity & { __typename: string };
+    renderPage([{
+      request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("WORK", { page: 2, pageSize: 100, query: "Fate" }) },
+      result: { data: { manageCoreEntities: { page: 2, pageSize: 100, totalItems: 150, totalPages: 2, items: [work] } } },
+    }], "/manage/entities?kind=WORK&q=Fate&pageSize=100&page=2");
+
+    expect(await screen.findByRole("button", { name: /Fate\/Grand Order/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Search all Works")).toHaveValue("Fate");
+    expect(screen.getByText(/Sorted by English name and Chinese Pinyin/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Items per page")).toHaveValue("100");
+    expect(screen.getByText("101–150 of 150")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Works list pagination" })).toBeInTheDocument();
+  });
+
   it("keeps alias separators editable and parses aliases only for persistence", async () => {
     renderPage([{
       request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("COSER") },

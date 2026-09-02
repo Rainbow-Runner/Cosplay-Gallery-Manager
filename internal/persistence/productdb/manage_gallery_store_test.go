@@ -150,6 +150,67 @@ func TestManageCoserPageOrdersEnglishAndChineseByPinyin(t *testing.T) {
 	}
 }
 
+func TestManageWorkCharacterAndTagPagesSearchSizeAndPinyinOrder(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 2, 14, 0, 0, 0, time.UTC)
+	workInputs := []CreateNamedEntityInput{
+		{Name: "张三", Aliases: []string{"Work Search Alias"}}, {Name: "bob"}, {Name: "Alice"}, {Name: "Manual Work", SortName: "Aardvark"},
+	}
+	var workUUID string
+	for _, input := range workInputs {
+		created, err := db.CoreEntities().CreateWork(ctx, input, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if workUUID == "" {
+			workUUID = created.UUID
+		}
+	}
+	characterInputs := []CreateNamedEntityInput{
+		{Name: "张角", Aliases: []string{"Character Search Alias"}}, {Name: "bob"}, {Name: "Alice"}, {Name: "Manual Character", SortName: "Aardvark"},
+	}
+	for _, input := range characterInputs {
+		if _, err := db.CoreEntities().CreateCharacter(ctx, workUUID, input, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tagInputs := []CreateNamedEntityInput{
+		{Name: "张贴", Aliases: []string{"Tag Search Alias"}}, {Name: "bob"}, {Name: "Alice"}, {Name: "Manual Tag", SortName: "Aardvark"},
+	}
+	for _, input := range tagInputs {
+		if _, err := db.CoreEntities().CreateTag(ctx, CreateTagInput{CreateNamedEntityInput: input, UseInRecommendation: true}, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, test := range []struct {
+		kind       string
+		query      string
+		wantSearch string
+		wantOrder  []string
+	}{
+		{kind: "WORK", query: "Work Search", wantSearch: "张三", wantOrder: []string{"Manual Work", "Alice", "bob", "张三"}},
+		{kind: "CHARACTER", query: "Character Search", wantSearch: "张角", wantOrder: []string{"Manual Character", "Alice", "bob", "张角"}},
+		{kind: "TAG", query: "Tag Search", wantSearch: "张贴", wantOrder: []string{"Manual Tag", "Alice", "bob", "张贴"}},
+	} {
+		t.Run(test.kind, func(t *testing.T) {
+			searched, err := db.CoreEntities().ManagePageWithOptions(ctx, test.kind, ManageCoreEntityPageOptions{Page: 1, PageSize: 100, Query: test.query})
+			if err != nil || searched.PageSize != 100 || searched.TotalItems != 1 || len(searched.Items) != 1 || searched.Items[0].Name != test.wantSearch {
+				t.Fatalf("searched %s page = %#v, %v", test.kind, searched, err)
+			}
+			page, err := db.CoreEntities().ManagePageWithOptions(ctx, test.kind, ManageCoreEntityPageOptions{Page: 1, PageSize: 30})
+			if err != nil || len(page.Items) != len(test.wantOrder) {
+				t.Fatalf("ordered %s page = %#v, %v", test.kind, page, err)
+			}
+			for index, name := range test.wantOrder {
+				if page.Items[index].Name != name {
+					t.Fatalf("ordered %s page[%d] = %q, want %q", test.kind, index, page.Items[index].Name, name)
+				}
+			}
+		})
+	}
+}
+
 func TestManageCoserNameConflictsUseNormalizedExactNamesAndAliases(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

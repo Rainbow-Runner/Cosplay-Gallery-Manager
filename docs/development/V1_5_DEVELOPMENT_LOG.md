@@ -1782,3 +1782,12 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 功能、测试和部署前记录提交为`d94a45ea057df49d9590d49218170c2d4fa5b2dd`（`Show Coser metadata search outcomes`）。清洁提交使用Go 1.25.12和`cgm_web_embed cgm_galleryepic`构建，Go VCS信息确认revision一致且`modified=false`。
 - 2026-09-02完成无schema增量部署。首次候选虽功能与VCS信息正确，但未注入产品About字段，验收发现`exactSourceAvailable=false`后立即以同一清洁提交和正式ldflags重建并替换；缺元数据的临时候选保存在`/tmp/cgm-search-feedback-missing-build-metadata-20260902`，没有作为最终交付。最终正式二进制SHA-256为`1b6ef274d1576a095eb88a615592bb81715f529a80195bf525a0c54434498d34`，原`9aee6ac`二进制保存在`/tmp/cgm-before-search-feedback-20260902`。
 - 最终服务保持`active/running`、`NRestarts=0`，Health/Ready均为204，Root/Legal/Session为200；About精确指向`d94a45e`、`buildTime=2026-09-02T13:10:04Z`且`exactSourceAvailable=true`。入口资源为`index-ByfZSH2f.js`与`index-DaCBCKeP.css`。正式数据库保持schema v8、`integrity_check=ok`及2个媒体库、6个Gallery、6个来源、322个Item；配置、数据库、媒体、Manifest和缓存均未替换，最终启动journal未检出WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-54 Work、Character与Tag管理列表交互
+
+日期：2026-09-02
+
+- 排查确认`manageCoreEntities`及产品数据库早已支持所有核心实体按主名称、Sort name和Alias执行全库包含搜索，也统一接受30/60/100页量；但React页面用`coserOnly`把查询词、页量选择和工具栏全部限制在Coser，Work、Character和Tag只能固定60项翻页。
+- 三类列表现与Coser共用双语工具栏：300ms防抖搜索、名称/Sort name/Alias提示、排序规则说明、30/60/100项页量和清除条件；底部分页统一显示结果区间、首页、前页、页码输入、后页和末页。`kind/q/pageSize/page/uuid`保存在URL，切换实体类别重置旧类别条件，选择和编辑实体不丢失当前列表上下文。头像/Banner完善度继续只显示在Coser。
+- 原Work、Character与Tag使用SQLite二进制`ORDER BY`后分页，中文不按拼音。管理查询现对四类实体统一读取轻量`uuid/name/sort_name`候选，以固定zh-CN Unicode Collation不区分大小写排序后再分页；人工Sort name优先，名称、原始键和UUID稳定破同序。这样保证跨页顺序正确且不依赖宿主机locale，不改变Browse索引。
+- 不新增GraphQL字段、数据表、索引、回填任务或数据库schema。定向验证通过：产品数据库覆盖三类实体的Alias搜索、30/100页量、英文/中文拼音和Sort name覆盖；ManageCoreEntitiesPage 7项覆盖Work工具栏、URL参数、页量、排序说明及分页，TypeScript检查通过。完整验证通过：前端29文件91项、TypeScript、680模块生产构建，以及`productdb/productapi/productserver/cmd/cgm`正式`cgm_web_embed cgm_galleryepic`标签组合；仅保留既有主共享包超过500KiB提示。提交与增量部署待执行。

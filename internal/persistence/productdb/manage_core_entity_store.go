@@ -271,98 +271,67 @@ func (s *CoreEntityStore) ManagePageWithOptions(ctx context.Context, kind string
 		}
 	}
 	result := ManageCoreEntityPage{Page: options.Page, PageSize: pageSize}
-	if kind == "COSER" {
-		rows, queryErr := s.db.QueryContext(ctx, `SELECT entity.uuid,entity.name,entity.sort_name FROM cosers entity WHERE `+where, args...)
-		if queryErr != nil {
-			return ManageCoreEntityPage{}, queryErr
-		}
-		type orderedCoser struct {
-			uuid     string
-			name     string
-			sortName string
-		}
-		var candidates []orderedCoser
-		for rows.Next() {
-			var candidate orderedCoser
-			if err := rows.Scan(&candidate.uuid, &candidate.name, &candidate.sortName); err != nil {
-				rows.Close()
-				return ManageCoreEntityPage{}, err
-			}
-			candidates = append(candidates, candidate)
-		}
-		if err := rows.Err(); err != nil {
-			rows.Close()
-			return ManageCoreEntityPage{}, err
-		}
-		if err := rows.Close(); err != nil {
-			return ManageCoreEntityPage{}, err
-		}
-		pinyin := collate.New(language.SimplifiedChinese, collate.IgnoreCase)
-		sort.Slice(candidates, func(i, j int) bool {
-			left, right := candidates[i], candidates[j]
-			leftKey, rightKey := left.sortName, right.sortName
-			if leftKey == "" {
-				leftKey = left.name
-			}
-			if rightKey == "" {
-				rightKey = right.name
-			}
-			if comparison := pinyin.CompareString(leftKey, rightKey); comparison != 0 {
-				return comparison < 0
-			}
-			if comparison := pinyin.CompareString(left.name, right.name); comparison != 0 {
-				return comparison < 0
-			}
-			if leftKey != rightKey {
-				return leftKey < rightKey
-			}
-			if left.name != right.name {
-				return left.name < right.name
-			}
-			return left.uuid < right.uuid
-		})
-		result.TotalItems = len(candidates)
-		result.TotalPages = int(math.Ceil(float64(result.TotalItems) / float64(pageSize)))
-		start := (options.Page - 1) * pageSize
-		if start < len(candidates) {
-			end := min(start+pageSize, len(candidates))
-			for _, candidate := range candidates[start:end] {
-				value, findErr := s.ManageFind(ctx, kind, candidate.uuid)
-				if findErr != nil {
-					return ManageCoreEntityPage{}, findErr
-				}
-				result.Items = append(result.Items, value)
-			}
-		}
-		return result, nil
+	type orderedEntity struct {
+		uuid     string
+		name     string
+		sortName string
 	}
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM `+table+` entity WHERE `+where, args...).Scan(&result.TotalItems); err != nil {
-		return ManageCoreEntityPage{}, err
-	}
-	result.TotalPages = int(math.Ceil(float64(result.TotalItems) / float64(pageSize)))
-	pageArgs := append(append([]any{}, args...), pageSize, (options.Page-1)*pageSize)
-	rows, err := s.db.QueryContext(ctx, `SELECT entity.uuid FROM `+table+` entity WHERE `+where+` ORDER BY COALESCE(NULLIF(entity.sort_name,''),entity.name),entity.uuid LIMIT ? OFFSET ?`, pageArgs...)
+	rows, err := s.db.QueryContext(ctx, `SELECT entity.uuid,entity.name,entity.sort_name FROM `+table+` entity WHERE `+where, args...)
 	if err != nil {
 		return ManageCoreEntityPage{}, err
 	}
-	defer rows.Close()
-	var uuids []string
+	var candidates []orderedEntity
 	for rows.Next() {
-		var uuid string
-		if err := rows.Scan(&uuid); err != nil {
+		var candidate orderedEntity
+		if err := rows.Scan(&candidate.uuid, &candidate.name, &candidate.sortName); err != nil {
+			rows.Close()
 			return ManageCoreEntityPage{}, err
 		}
-		uuids = append(uuids, uuid)
+		candidates = append(candidates, candidate)
 	}
 	if err := rows.Err(); err != nil {
+		rows.Close()
 		return ManageCoreEntityPage{}, err
 	}
-	for _, uuid := range uuids {
-		value, err := s.ManageFind(ctx, kind, uuid)
-		if err != nil {
-			return ManageCoreEntityPage{}, err
+	if err := rows.Close(); err != nil {
+		return ManageCoreEntityPage{}, err
+	}
+	pinyin := collate.New(language.SimplifiedChinese, collate.IgnoreCase)
+	sort.Slice(candidates, func(i, j int) bool {
+		left, right := candidates[i], candidates[j]
+		leftKey, rightKey := left.sortName, right.sortName
+		if leftKey == "" {
+			leftKey = left.name
 		}
-		result.Items = append(result.Items, value)
+		if rightKey == "" {
+			rightKey = right.name
+		}
+		if comparison := pinyin.CompareString(leftKey, rightKey); comparison != 0 {
+			return comparison < 0
+		}
+		if comparison := pinyin.CompareString(left.name, right.name); comparison != 0 {
+			return comparison < 0
+		}
+		if leftKey != rightKey {
+			return leftKey < rightKey
+		}
+		if left.name != right.name {
+			return left.name < right.name
+		}
+		return left.uuid < right.uuid
+	})
+	result.TotalItems = len(candidates)
+	result.TotalPages = int(math.Ceil(float64(result.TotalItems) / float64(pageSize)))
+	start := (options.Page - 1) * pageSize
+	if start < len(candidates) {
+		end := min(start+pageSize, len(candidates))
+		for _, candidate := range candidates[start:end] {
+			value, findErr := s.ManageFind(ctx, kind, candidate.uuid)
+			if findErr != nil {
+				return ManageCoreEntityPage{}, findErr
+			}
+			result.Items = append(result.Items, value)
+		}
 	}
 	return result, nil
 }

@@ -146,15 +146,20 @@ describe("ManageCoreEntitiesPage validation", () => {
     fireEvent.keyDown(aliasInput, { key: "Enter" });
     expect(aliasInput).toHaveValue("");
     expect(create).toBeEnabled();
+    fireEvent.change(aliasInput, { target: { value: "Fate Series" } });
+    fireEvent.keyDown(aliasInput, { key: "Enter" });
 
     fireEvent.click(screen.getByRole("button", { name: "Edit Alias FGO" }));
     expect(screen.queryByRole("button", { name: "Edit Alias FGO" })).not.toBeInTheDocument();
     expect(aliasInput).toHaveValue("FGO");
     fireEvent.change(aliasInput, { target: { value: "Fate Grand Order" } });
-    fireEvent.keyDown(aliasInput, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "Edit Alias Fate Series" }));
     expect(screen.getByRole("button", { name: "Edit Alias Fate Grand Order" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Remove Alias Fate Grand Order" }));
-    expect(screen.queryByRole("button", { name: "Edit Alias Fate Grand Order" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit Alias Fate Series" })).not.toBeInTheDocument();
+    expect(aliasInput).toHaveValue("Fate Series");
+    fireEvent.keyDown(aliasInput, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "Remove Alias Fate Series" }));
+    expect(screen.queryByRole("button", { name: "Edit Alias Fate Series" })).not.toBeInTheDocument();
   });
 
   it("keeps alias separators editable and parses aliases only for persistence", async () => {

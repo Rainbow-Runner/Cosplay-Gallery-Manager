@@ -52,8 +52,20 @@ function AliasChipInput({ value, onChange, draft, setDraft }: { value: string; o
     setDraft("");
   }
   function edit(alias: string, index: number) {
-    if (hasDraft) { inputRef.current?.focus(); return; }
-    replaceAliases(aliases.filter((_, position) => position !== index));
+    const remaining = aliases.filter((_, position) => position !== index);
+    const pending = draft.trim();
+    if (pending && normalized(pending) === normalized(alias)) {
+      replaceAliases(remaining);
+      setDraft(pending);
+      inputRef.current?.focus();
+      return;
+    }
+    if (pending && remaining.some((value) => normalized(value) === normalized(pending))) {
+      setError(intl.formatMessage({ id: "manage.aliasChips.duplicate" }));
+      inputRef.current?.focus();
+      return;
+    }
+    replaceAliases(pending ? [...remaining, pending] : remaining);
     setDraft(alias);
     inputRef.current?.focus();
   }
@@ -61,7 +73,7 @@ function AliasChipInput({ value, onChange, draft, setDraft }: { value: string; o
     <label htmlFor={inputID}>{intl.formatMessage({ id: "manage.aliasChips.label" })}</label>
     <div className="alias-chip-input" role="group" aria-describedby={helpID}>
       {aliases.map((alias, index) => <span className="alias-chip" key={`${alias}-${index}`}>
-        <button type="button" className="alias-chip__text" disabled={hasDraft} aria-label={intl.formatMessage({ id: "manage.aliasChips.edit" }, { alias })} onClick={() => edit(alias, index)}>{alias}</button>
+        <button type="button" className="alias-chip__text" aria-label={intl.formatMessage({ id: "manage.aliasChips.edit" }, { alias })} onClick={() => edit(alias, index)}>{alias}</button>
         <button type="button" className="alias-chip__remove" aria-label={intl.formatMessage({ id: "manage.aliasChips.remove" }, { alias })} onClick={() => replaceAliases(aliases.filter((_, position) => position !== index))}>×</button>
       </span>)}
       <input ref={inputRef} id={inputID} maxLength={300} value={draft} placeholder={aliases.length ? "" : intl.formatMessage({ id: "manage.aliasChips.placeholder" })} onChange={(event) => { setDraft(event.target.value); setError(""); }} onKeyDown={commit} />

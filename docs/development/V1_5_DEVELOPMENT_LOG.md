@@ -1804,3 +1804,12 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 气泡编辑只改变现有GraphQL `aliases: [String!]!`提交前的前端呈现，不新增接口、字段、表、迁移或回填。定向验证通过：ManageCoreEntitiesPage 8项覆盖Work的生成、待提交禁用、正文回填编辑、重新生成与叉号删除，并确认Character使用同一新控件；TypeScript检查通过。完整验证通过：前端29文件92项、TypeScript、680模块生产构建，以及`productdb/productapi/productserver/cmd/cgm`正式`cgm_web_embed cgm_galleryepic`标签组合；仅保留既有主共享包超过500KiB提示。
 - 功能、测试和部署前记录提交为`a29eaaa61ccfcc5d3a8ad394753370c62196e33f`（`Add Alias chips for Works and Characters`）。清洁提交使用Go 1.25.12及正式标签构建，VCS revision一致且`modified=false`；最终二进制SHA-256为`6dc671c3872fd29fdc14e5a4686f7a199c5382d8d35e86f0c3721a182fe7f071`，旧`9220923`二进制保存在`/tmp/cgm-before-alias-chips-20260902`。
 - 2026-09-02完成无schema增量部署。服务保持`active/running`、`NRestarts=0`，Health/Ready为204，Root/Session为200；About精确指向`a29eaaa`、`buildTime=2026-09-02T14:07:21Z`且`exactSourceAvailable=true`。入口使用主资源`index-DVo45rwQ.js`、页面分块`ManageCoreEntitiesPage-BJ-Xl0qs.js`与`index-CCgdgV2C.css`。正式数据库保持schema v8、`integrity_check=ok`及2个媒体库、6个Gallery、6个来源、322个Item；配置、数据库、媒体、Manifest和缓存均未替换，启动journal未检出WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-56 Alias气泡连续编辑切换
+
+日期：2026-09-02
+
+- 业务复测发现输入框已有待提交文本时，上一版将所有气泡正文按钮设为disabled，以防编辑文本被覆盖；这保护了数据但阻断了用户直接切换编辑对象的预期交互，叉号仍可用但正文无法点击。
+- 气泡正文不再因输入框非空而禁用。点击目标气泡时，控件在一次状态变更中移除目标、把当前待提交文本生成新气泡，再将目标原文放入输入框并保持焦点；因此可连续编辑多个Alias而不必每次手工按Enter。
+- 切换前仍执行NFC/大小写重复检查：若当前文本与其他未点击气泡重复，集合和输入框均保持不变并显示错误；若当前文本只与被点击目标等价，则删除目标气泡并保留单一输入副本，避免制造重复。100项上限在一进一出的切换中保持不变。
+- 定向ManageCoreEntitiesPage 8项已覆盖“编辑FGO期间点击Fate Series，自动生成Fate Grand Order并把Fate Series退回输入框”的完整链路，TypeScript和diff检查通过。完整验证通过：前端29文件92项、TypeScript、680模块生产构建，以及`productdb/productapi/productserver/cmd/cgm`正式标签组合；仅保留既有主共享包超过500KiB提示。提交与增量部署待执行。

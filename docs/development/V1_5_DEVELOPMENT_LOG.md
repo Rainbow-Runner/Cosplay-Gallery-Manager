@@ -1815,3 +1815,16 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 定向ManageCoreEntitiesPage 8项已覆盖“编辑FGO期间点击Fate Series，自动生成Fate Grand Order并把Fate Series退回输入框”的完整链路，TypeScript和diff检查通过。完整验证通过：前端29文件92项、TypeScript、680模块生产构建，以及`productdb/productapi/productserver/cmd/cgm`正式标签组合；仅保留既有主共享包超过500KiB提示。
 - 功能、测试和部署前记录提交为`ffcc25540c454c56f4481dc552b2c1e27f9d24c0`（`Allow continuous Alias chip editing`）。清洁提交使用Go 1.25.12及正式标签构建，VCS revision一致且`modified=false`；正式二进制SHA-256为`e15785dbf1281038e69e42eb937ba498ddd8123eb20962e1d07fc50bc6f89c0a`，旧`a29eaaa`二进制保存在`/tmp/cgm-before-alias-switch-20260902`。
 - 2026-09-02完成无schema增量部署。服务保持`active/running`、`NRestarts=0`，Health/Ready为204，Root/Session为200；About精确指向`ffcc255`、`buildTime=2026-09-02T14:20:19Z`且`exactSourceAvailable=true`。入口使用主资源`index-I48NmJXz.js`、页面分块`ManageCoreEntitiesPage-CwXv8K-z.js`与`index-1hXP2LRJ.css`。正式数据库保持schema v8、`integrity_check=ok`及2个媒体库、6个Gallery、6个来源、322个Item；配置、数据库、媒体、Manifest和缓存均未替换，启动journal未检出WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-57 Work与Character可拔除名称资料Provider
+
+日期：2026-09-03
+
+- 本轮按已确认范围为Work和Character增加人工网络名称导入，不建设通用运行时插件系统。`internal/entitymetadata`只定义实体类型、候选、Alias建议、Provider注册表和15分钟预览令牌；令牌绑定Provider、实体类型、目标UUID和候选引用，公开响应不暴露绑定字段。Provider不能访问数据库、Manifest或产品Server。
+- 首个`internal/entitymetadata/moegirl`适配器只知道`zh.moegirl.org.cn`、公开搜索路由和HTML结构。安全客户端禁用环境代理，只允许固定HTTPS主机与公共解析地址，并限制超时、重定向、Content-Type和8MiB响应。提取按“原名/官方译名/本名/外文名/别名/别号”等字段语义兼容flex信息框和表格，排除删除线、黑幕/隐藏、脚注与ruby注音；适配当前页面正文位于`MOE_SKIN_TEMPLATE_BODYCONTENT`的结构。
+- 主程序仅在`cgm_moegirl`标签下注册适配器，默认核心构建不导入该包；完整CGM、Docker、Linux双架构脚本、发布校验与SBOM枚举已加入该标签。独立配置`entity_metadata_scraping_enabled`默认`false`；禁用时Manage路由不存在，启用但未编译Provider时返回`providers: []`。删除适配器不需要数据库迁移，既有Alias仍是普通本地数据。
+- Work/Character管理页提供双语Provider、名称、Character可选作品上下文、候选数量/零结果、来源链接和字段级复核。已有名称不可重复选择；官方/原名类可默认勾选，常用名/别号默认不勾选。本地实体表单存在未保存修改时禁止应用，避免外部revision更新覆盖正在编辑的文本；面板有独立错误边界。
+- 集成复核发现旧气泡组件仍把Work/Character Alias数组临时拼成`/`分隔文本，合法名称`Fate/stay night`会在下一次保存时被错误拆分。本轮把两类气泡的编辑状态改为真实`string[]`并增加斜杠名称回归；Coser/Tag仍保留已确认的斜杠分隔普通输入框，后端Alias数组契约不变。
+- 应用API再次校验实体类型/UUID、当前revision、令牌绑定以及每个选中值属于预览；数据库层只把新值合并进Alias并复用`UpdateWork`/`UpdateCharacter`，因此保留300字符/100项/NFC重复规则、revision递增和关联Gallery Manifest dirty传播，不改主名称、Sort name或Character所属Work。本轮不新增表、字段、Schema版本或回填任务。审计不记录查询、名称、Alias、URL或页面正文。
+- 定向Go测试覆盖空Provider数组、预览绑定/过期、非法选项注入、旧revision、规范化重复、Work Alias合并和站点安全解析；合成HTML覆盖flex/table/隐藏与ruby结构。另用只存于`/tmp`的当前公开“鸣潮”、搜索结果和“碧蓝航线:大凤”页面完成只读兼容校核，均通过，页面正文未加入仓库。
+- 完整前端测试30文件95项、TypeScript和681模块生产构建通过；产品Go包在`cgm_web_embed cgm_galleryepic cgm_moegirl`正式标签组合下通过并成功生成验证二进制，Provider构建边界检查通过。`go test ./...`中CGM相关包通过；旧Stash目标仍因未生成的`ui/v2.5/build`失败，旧`scraper`测试在受限沙箱中因禁止监听IPv6 loopback失败，均与本轮CGM变更无关。本轮尚未提交、启用正式配置或部署。

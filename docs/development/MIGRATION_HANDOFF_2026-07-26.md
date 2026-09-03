@@ -356,3 +356,5 @@ GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
 2026-07-27开始本机实际业务应用测试：基于提交`3dc86fb6be38216349fb039a6b3253fb392ae422`安装Linux amd64原生单文件和用户级systemd服务，仅监听`127.0.0.1:9999`。健康、就绪、Setup、Legal、精确源码信息和服务重启持久化均已验证；按照产品流程没有在部署阶段预置媒体库、所有者密码或扫描任务，当前等待所有者从Setup进入系统后再在Manage → Libraries配置真实绝对路径。本机dcraw可用，FFmpeg/FFprobe因交互式sudo门禁尚未安装，故Video真实业务验收仍明确未通过。安装路径、操作命令与第一轮业务验收清单见`docs/development/LOCAL_BUSINESS_TEST_DEPLOYMENT_2026-07-27.md`。
 
 2026-08-30后续开发把归档来源扩展到TAR/TAR.GZ/TGZ/7Z，并新增schema v7媒体库覆盖摘要和遗漏诊断。提交`28e71a7`已在额外完整回滚包和自动`pre-schema-v6`快照双重保护下部署；正式库现为schema v7、`integrity_check=ok`且2/5/5/322业务计数不变，新表为空。服务保持active、Health/Ready为204且About精确对应提交。下一步由所有者在Manage → Libraries对真实媒体库执行发现，人工核对覆盖摘要、漏标记目录、不支持/加密存档和等待扫描来源；发现操作会更新覆盖快照，部署过程本身没有替用户扫描媒体库。
+
+2026-09-03继续1.5本地开发：已在不新增Schema的前提下完成Work/Character人工名称资料Provider源码。站点无关边界、受控预览/应用API、revision Alias合并、双语候选审核UI及编译期可拔除萌娘百科适配器均已实现；独立配置`entity_metadata_scraping_enabled`仍默认关闭，正式本机配置和运行服务未变。合成/当前公开HTML兼容校核、前端30文件95项、TypeScript、生产构建、产品Go包、正式三标签构建和Provider依赖边界通过。下一步在用户明确要求提交/部署前，先保持该功能为未部署源码状态；若部署，需先提交清洁工作树、创建额外完整备份，然后明确决定是否在私有配置中启用新开关并完成真实Work/Character人工候选验收。

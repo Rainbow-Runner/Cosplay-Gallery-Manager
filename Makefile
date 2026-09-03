@@ -150,7 +150,7 @@ phasher: build-flags
 	go build $(PHASHER_OUTPUT) $(BUILD_FLAGS) ./cmd/phasher
 
 .PHONY: cgm
-cgm: GO_BUILD_TAGS += cgm_web_embed cgm_galleryepic
+cgm: GO_BUILD_TAGS += cgm_web_embed cgm_galleryepic cgm_moegirl
 cgm: web-ui build-flags
 	$(CGM_GO) build $(CGM_OUTPUT) $(BUILD_FLAGS) ./cmd/cgm
 
@@ -462,6 +462,8 @@ verify-cgm-ui-boundary:
 verify-cgm-metadata-provider-boundary:
 	@! $(CGM_GO) list -deps ./cmd/cgm | grep -Fxq "github.com/stashapp/stash/internal/cosermetadata/galleryepic"
 	@$(CGM_GO) list -deps -tags cgm_galleryepic ./cmd/cgm | grep -Fxq "github.com/stashapp/stash/internal/cosermetadata/galleryepic"
+	@! $(CGM_GO) list -deps ./cmd/cgm | grep -Fxq "github.com/stashapp/stash/internal/entitymetadata/moegirl"
+	@$(CGM_GO) list -deps -tags cgm_moegirl ./cmd/cgm | grep -Fxq "github.com/stashapp/stash/internal/entitymetadata/moegirl"
 
 # these targets run the same steps as fmt-ui and validate-ui, but only on files that have changed
 fmt-ui-quick:

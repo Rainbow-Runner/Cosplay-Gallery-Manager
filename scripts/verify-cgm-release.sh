@@ -23,7 +23,7 @@ trap 'rm -rf "${cgm_release_root}"' EXIT
   cd ui/web
   corepack pnpm run build
 )
-GOTOOLCHAIN=local CGO_ENABLED=1 "${cgm_go}" build -trimpath -tags "cgm_web_embed cgm_galleryepic" \
+GOTOOLCHAIN=local CGO_ENABLED=1 "${cgm_go}" build -trimpath -tags "cgm_web_embed cgm_galleryepic cgm_moegirl" \
   -ldflags "-X github.com/stashapp/stash/internal/build.version=${cgm_version} -X github.com/stashapp/stash/internal/build.githash=${cgm_commit}" \
   -o "${cgm_release_root}/cgm" ./cmd/cgm
 

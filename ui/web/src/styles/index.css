@@ -906,6 +906,23 @@ a { color: inherit; text-decoration: none; }
 .coser-metadata-accounts { display: grid; gap: 6px; }
 .coser-metadata-accounts label { display: flex; align-items: center; gap: 8px; }
 @media (max-width: 720px) { .coser-metadata-assets { grid-template-columns: 1fr; } }
+.entity-metadata-import { margin-top: 1rem; }
+.entity-metadata-import .manage-inline-toolbar { align-items: end; flex-wrap: wrap; }
+.entity-metadata-import .manage-inline-toolbar label { min-width: 160px; flex: 1; }
+.entity-metadata-import[role="alert"] > button { justify-self: start; padding: .55rem .7rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface); color: var(--cgm-foreground); cursor: pointer; }
+.entity-metadata-search-status { margin: 12px 0 0; color: var(--cgm-muted-foreground); font-size: .75rem; }
+.entity-metadata-search-status.is-empty { padding: 10px 12px; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-muted); }
+.entity-metadata-candidates { display: grid; gap: 8px; margin: 16px 0; }
+.entity-metadata-candidates button { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 12px; border: 1px solid var(--cgm-border); border-radius: 8px; background: var(--cgm-surface); color: var(--cgm-foreground); text-align: left; cursor: pointer; }
+.entity-metadata-candidates button > span:first-child { display: grid; gap: 3px; }
+.entity-metadata-candidates small { color: var(--cgm-muted-foreground); }
+.entity-metadata-preview { display: grid; gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--cgm-border); }
+.entity-metadata-preview > header { display: flex; justify-content: space-between; gap: 16px; }
+.entity-metadata-preview > header div { display: grid; gap: 4px; }
+.entity-metadata-suggestions { display: grid; gap: 6px; }
+.entity-metadata-suggestions label { display: flex; align-items: start; gap: 8px; padding: 8px 10px; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); }
+.entity-metadata-suggestions label > span { display: grid; gap: 2px; }
+.entity-metadata-suggestions small { color: var(--cgm-muted-foreground); }
 .coser-assets__banner { display: grid; aspect-ratio: 3 / 1; place-items: center; overflow: hidden; background: #211b20; color: var(--ink-muted); font-size: .6rem; }
 .coser-assets__framing { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
 .entity-index--coser > a { grid-template-columns: 2.25rem minmax(0, 1fr); grid-template-rows: 2.25rem; align-items: center; gap: .5rem; min-height: 2.25rem; }

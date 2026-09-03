@@ -119,13 +119,14 @@ make build-cgm CGM_GO="$(command -v go)" CGM_OUTPUT=./cgm
   "libraw_path": "/usr/bin/dcraw",
   "worker_count": 2,
   "log_level": "INFO",
-  "metadata_scraping_enabled": false
+  "metadata_scraping_enabled": false,
+  "entity_metadata_scraping_enabled": false
 }
 ```
 
 `ffprobe_path`可省略；CGM会优先使用`ffmpeg_path`同目录中的FFprobe，避免静默混用不同版本。Manage → Settings会显示两项依赖的解析来源、版本和稳定错误码。视频扫描先探测技术元数据并生成960px BASE Poster；只有用户在Lightbox或媒体详情实际打开视频时，才会直接Range读取兼容原视频，或按需生成可回收的H.264/AAC MP4代理。
 
-`metadata_scraping_enabled`默认关闭。开启后，只有已登录所有者在Coser管理页主动执行时才会访问已编译进产品的资料源；浏览、扫描和后台计划仍不会联网。GalleryEpic适配器是可拔除构建模块，不承载CGM核心业务数据。
+两个网络资料开关都默认关闭。`metadata_scraping_enabled`只控制Coser资料导入，`entity_metadata_scraping_enabled`只控制Work/Character名称导入。开启后也只有已登录所有者在对应管理页主动操作时才会访问已编译进产品的资料源；浏览、扫描、启动和后台计划仍不会联网。GalleryEpic与萌娘百科适配器都是可拔除的编译期模块，不承载CGM核心业务数据。
 
 启动应用：
 

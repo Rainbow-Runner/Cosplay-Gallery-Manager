@@ -46,7 +46,7 @@ func main() {
 	if err := productlog.Configure(config.LogLevel, os.Stderr); err != nil {
 		fatal("CGM_LOG_CONFIG_INVALID")
 	}
-	server, err := productserver.OpenWithMetadata(config, configuredCoserMetadataProviders()...)
+	server, err := productserver.OpenWithProviders(config, configuredCoserMetadataProviders(), configuredEntityMetadataProviders())
 	if err != nil {
 		fatal("CGM_DATABASE_OPEN_FAILED")
 	}

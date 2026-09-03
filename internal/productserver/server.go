@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/stashapp/stash/internal/cosermetadata"
+	"github.com/stashapp/stash/internal/entitymetadata"
 	"github.com/stashapp/stash/internal/imageresource"
 	"github.com/stashapp/stash/internal/mediaaccess"
 	"github.com/stashapp/stash/internal/mediaprocessing"
@@ -33,16 +34,17 @@ import (
 )
 
 type Config struct {
-	Listen                  string `json:"listen"`
-	DatabasePath            string `json:"database_path"`
-	CachePath               string `json:"cache_path"`
-	WebRoot                 string `json:"web_root"`
-	FFmpegPath              string `json:"ffmpeg_path"`
-	FFprobePath             string `json:"ffprobe_path"`
-	LibRawPath              string `json:"libraw_path"`
-	WorkerCount             int    `json:"worker_count"`
-	LogLevel                string `json:"log_level"`
-	MetadataScrapingEnabled bool   `json:"metadata_scraping_enabled"`
+	Listen                        string `json:"listen"`
+	DatabasePath                  string `json:"database_path"`
+	CachePath                     string `json:"cache_path"`
+	WebRoot                       string `json:"web_root"`
+	FFmpegPath                    string `json:"ffmpeg_path"`
+	FFprobePath                   string `json:"ffprobe_path"`
+	LibRawPath                    string `json:"libraw_path"`
+	WorkerCount                   int    `json:"worker_count"`
+	LogLevel                      string `json:"log_level"`
+	MetadataScrapingEnabled       bool   `json:"metadata_scraping_enabled"`
+	EntityMetadataScrapingEnabled bool   `json:"entity_metadata_scraping_enabled"`
 }
 
 func DefaultConfig() Config {
@@ -89,12 +91,13 @@ func (c Config) Validate() error {
 }
 
 type Server struct {
-	Config        Config
-	Database      *productdb.Database
-	Auth          *productauth.Service
-	Handler       http.Handler
-	CoserMetadata *cosermetadata.Service
-	VideoTools    mediaprocessing.VideoToolchain
+	Config         Config
+	Database       *productdb.Database
+	Auth           *productauth.Service
+	Handler        http.Handler
+	CoserMetadata  *cosermetadata.Service
+	EntityMetadata *entitymetadata.Service
+	VideoTools     mediaprocessing.VideoToolchain
 
 	handlerSwitch      *switchHandler
 	operationMu        sync.Mutex
@@ -113,6 +116,10 @@ func Open(config Config) (*Server, error) {
 }
 
 func OpenWithMetadata(config Config, providers ...cosermetadata.Provider) (*Server, error) {
+	return OpenWithProviders(config, providers, nil)
+}
+
+func OpenWithProviders(config Config, coserProviders []cosermetadata.Provider, entityProviders []entitymetadata.Provider) (*Server, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
@@ -120,7 +127,7 @@ func OpenWithMetadata(config Config, providers ...cosermetadata.Provider) (*Serv
 	if err != nil {
 		return nil, err
 	}
-	server, err := NewWithMetadata(config, database, productauth.New(database), providers...)
+	server, err := NewWithProviders(config, database, productauth.New(database), coserProviders, entityProviders)
 	if err != nil {
 		_ = database.Close()
 		return nil, err
@@ -137,15 +144,25 @@ func New(config Config, database *productdb.Database, auth *productauth.Service)
 }
 
 func NewWithMetadata(config Config, database *productdb.Database, auth *productauth.Service, providers ...cosermetadata.Provider) (*Server, error) {
+	return NewWithProviders(config, database, auth, providers, nil)
+}
+
+func NewWithProviders(config Config, database *productdb.Database, auth *productauth.Service, coserProviders []cosermetadata.Provider, entityProviders []entitymetadata.Provider) (*Server, error) {
 	if err := os.MkdirAll(filepath.Join(config.CachePath, "tmp"), 0o700); err != nil {
 		return nil, err
 	}
-	registry, err := cosermetadata.NewRegistry(providers...)
+	registry, err := cosermetadata.NewRegistry(coserProviders...)
+	if err != nil {
+		return nil, err
+	}
+	entityRegistry, err := entitymetadata.NewRegistry(entityProviders...)
 	if err != nil {
 		return nil, err
 	}
 	tools := mediaprocessing.ResolveVideoToolchain(context.Background(), config.FFmpegPath, config.FFprobePath)
-	server := &Server{Config: config, Database: database, Auth: auth, CoserMetadata: &cosermetadata.Service{Registry: registry}, VideoTools: tools, handlerSwitch: &switchHandler{}}
+	server := &Server{Config: config, Database: database, Auth: auth,
+		CoserMetadata: &cosermetadata.Service{Registry: registry}, EntityMetadata: &entitymetadata.Service{Registry: entityRegistry},
+		VideoTools: tools, handlerSwitch: &switchHandler{}}
 	server.Handler = server.handlerSwitch
 	server.rebuildHandler()
 	return server, nil
@@ -176,6 +193,7 @@ func (s *Server) rebuildHandler() {
 	mux.Handle(coserAssetUploadPrefix, sameOrigin(s.coserAssetUploadHandler(database)))
 	mux.Handle(coserAssetResourcePrefix, s.coserAssetResourceHandler(database))
 	mux.Handle(coserMetadataPrefix, sameOrigin(s.coserMetadataHandler(database)))
+	mux.Handle(entityMetadataPrefix, sameOrigin(s.entityMetadataHandler(database)))
 	mux.Handle("/maintenance/status", s.maintenanceStatusHandler(database, auth))
 	mux.Handle("/maintenance/path-mappings", sameOrigin(s.maintenancePathMappingsHandler()))
 	mux.Handle("/maintenance/resume", sameOrigin(s.maintenanceResumeHandler()))

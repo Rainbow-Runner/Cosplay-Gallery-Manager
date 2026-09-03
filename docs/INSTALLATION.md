@@ -37,7 +37,8 @@ Linux example:
   "libraw_path": "/usr/bin/dcraw",
   "worker_count": 2,
   "log_level": "INFO",
-  "metadata_scraping_enabled": false
+  "metadata_scraping_enabled": false,
+  "entity_metadata_scraping_enabled": false
 }
 ```
 
@@ -55,11 +56,13 @@ strings, GraphQL variables, media paths, or business metadata. A native
 first-time Setup reached through a literal loopback bind does not require a
 ticket.
 
-`metadata_scraping_enabled` defaults to `false`. When enabled, only an
-authenticated owner's explicit Coser metadata import action may contact a
-provider compiled into that build. Browse, source scans, startup, and scheduled
-jobs remain offline. Removing a provider adapter does not require a database
-migration and does not disable ordinary Coser editing.
+`metadata_scraping_enabled` and `entity_metadata_scraping_enabled` both default
+to `false`. The first controls Coser profile imports; the second controls Work
+and Character name imports. When enabled, only an authenticated owner's
+explicit action in the corresponding editor may contact a provider compiled
+into that build. Browse, source scans, startup, and scheduled jobs remain
+offline. Removing either provider adapter requires no database migration and
+does not disable ordinary entity editing.
 
 ## Docker Compose
 

@@ -160,6 +160,9 @@ describe("ManageCoreEntitiesPage validation", () => {
     fireEvent.keyDown(aliasInput, { key: "Enter" });
     fireEvent.click(screen.getByRole("button", { name: "Remove Alias Fate Series" }));
     expect(screen.queryByRole("button", { name: "Edit Alias Fate Series" })).not.toBeInTheDocument();
+    fireEvent.change(aliasInput, { target: { value: "Fate/stay night" } });
+    fireEvent.keyDown(aliasInput, { key: "Enter" });
+    expect(screen.getByRole("button", { name: "Edit Alias Fate/stay night" })).toBeInTheDocument();
   });
 
   it("keeps alias separators editable and parses aliases only for persistence", async () => {

@@ -279,6 +279,12 @@ export const messages: Record<SupportedLocale, Record<string, string>> = {
     "manage.coserMetadata.exists": "already saved", "manage.coserMetadata.apply": "Apply selected metadata", "manage.coserMetadata.applying": "Validating and importing…",
     "manage.coserMetadata.saved": "Selected metadata imported", "manage.coserMetadata.failed": "Coser metadata import failed",
     "manage.coserMetadata.renderFailed": "The online metadata panel could not display this candidate. The rest of the Coser editor remains available.", "manage.coserMetadata.retry": "Retry metadata panel",
+    "manage.entityMetadata.heading": "Import online names", "manage.entityMetadata.summary": "This optional, owner-triggered tool searches an enabled source for Work or Character names. Review the exact page and every Alias; browsing, scanning and scheduled tasks never contact the source.",
+    "manage.entityMetadata.provider": "Provider", "manage.entityMetadata.name": "Entity name", "manage.entityMetadata.context": "Work context (optional)", "manage.entityMetadata.contextPlaceholder": "Helps distinguish Characters with the same name",
+    "manage.entityMetadata.search": "Search candidates", "manage.entityMetadata.searching": "Searching…", "manage.entityMetadata.noResults": "No candidates matched “{query}”. Try the official name, an Alias, or a shorter distinctive name.", "manage.entityMetadata.resultCount": "Found {count} candidate(s).",
+    "manage.entityMetadata.match": "Name match", "manage.entityMetadata.source": "Open source page", "manage.entityMetadata.review": "Only checked Alias suggestions will be appended.", "manage.entityMetadata.noAliases": "This page contains no supported name fields.",
+    "manage.entityMetadata.exists": "already saved", "manage.entityMetadata.saveFirst": "Save or discard the current entity edits before applying online Alias suggestions.", "manage.entityMetadata.apply": "Apply selected Aliases", "manage.entityMetadata.applying": "Validating and applying…",
+    "manage.entityMetadata.saved": "Selected Aliases appended", "manage.entityMetadata.failed": "Online name import failed", "manage.entityMetadata.renderFailed": "The online name panel could not display this candidate. The rest of the entity editor remains available.", "manage.entityMetadata.retry": "Retry online name panel",
   },
   "zh-CN": {
     "shell.browse.description": "以作品集为核心的浏览端基础已经就绪。",
@@ -549,6 +555,12 @@ export const messages: Record<SupportedLocale, Record<string, string>> = {
     "manage.coserMetadata.exists": "系统中已存在", "manage.coserMetadata.apply": "应用所选资料", "manage.coserMetadata.applying": "正在校验并导入…",
     "manage.coserMetadata.saved": "所选资料已导入", "manage.coserMetadata.failed": "Coser 网络资料导入失败",
     "manage.coserMetadata.renderFailed": "网络资料面板无法显示该候选；Coser 的其他编辑功能仍可继续使用。", "manage.coserMetadata.retry": "重试网络资料面板",
+    "manage.entityMetadata.heading": "导入网络名称", "manage.entityMetadata.summary": "此可选工具只在所有者主动操作时查询已启用资料源中的作品或角色名称。请确认具体页面并逐项审核 Alias；普通浏览、扫描和定时任务绝不会联系资料源。",
+    "manage.entityMetadata.provider": "资料源", "manage.entityMetadata.name": "实体名称", "manage.entityMetadata.context": "作品上下文（可选）", "manage.entityMetadata.contextPlaceholder": "用于区分同名角色",
+    "manage.entityMetadata.search": "搜索候选页面", "manage.entityMetadata.searching": "正在搜索…", "manage.entityMetadata.noResults": "没有找到与“{query}”匹配的候选页面。可尝试官方名称、Alias 或更短的特征名称。", "manage.entityMetadata.resultCount": "找到 {count} 个候选页面。",
+    "manage.entityMetadata.match": "名称匹配", "manage.entityMetadata.source": "打开来源页面", "manage.entityMetadata.review": "系统只会追加已勾选的 Alias 建议。", "manage.entityMetadata.noAliases": "该页面没有可支持的名称字段。",
+    "manage.entityMetadata.exists": "系统中已存在", "manage.entityMetadata.saveFirst": "应用网络 Alias 建议前，请先保存或放弃当前实体编辑。", "manage.entityMetadata.apply": "应用所选 Alias", "manage.entityMetadata.applying": "正在校验并应用…",
+    "manage.entityMetadata.saved": "所选 Alias 已追加", "manage.entityMetadata.failed": "网络名称导入失败", "manage.entityMetadata.renderFailed": "网络名称面板无法显示该候选；实体的其他编辑功能仍可继续使用。", "manage.entityMetadata.retry": "重试网络名称面板",
   },
 };
 

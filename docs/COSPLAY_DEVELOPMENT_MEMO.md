@@ -21,7 +21,7 @@
 - 一个 Gallery 对应一个物理来源，包含图片、动态图和视频，并统一管理 Coser、Character、Work、Tag、日期、分级和成员顺序。
 - 保留并重构 Stash 的底层文件扫描、图片处理、FFmpeg、GraphQL、SQLite和任务能力。
 - 新建 GalleryEpic 风格的浏览前台，同时重建适用于作品集聚合编辑的管理后台。
-- 元数据仍以人工数据库编辑和本地 Manifest 为核心；1.5允许默认关闭、所有者显式触发、人工逐项确认且可完全拆除的Coser网络资料Provider，只导入托管头像、Banner和SocialAccount，不参与核心业务正确性。
+- 元数据仍以人工数据库编辑和本地 Manifest 为核心；1.5允许默认关闭、所有者显式触发、人工逐项确认且可完全拆除的网络资料Provider。Coser Provider只导入托管头像、Banner和SocialAccount；Work/Character名称Provider只向现有Alias提出候选，不改主名称或Character所属Work。两者均不参与核心业务正确性。
 
 ### 2.2 明确非目标
 
@@ -29,8 +29,8 @@
 - 不支持原 Stash 数据库、旧 Tag、NFO、插件或 GraphQL 兼容迁移。
 - 不保留独立 Image/Scene 业务页面、单媒体网络刮削或单文件物理删除。
 - 不支持跨 Gallery 共享媒体身份。
-- 第一版不实现自动网络刮削、社交账号联网检测、定时Provider任务、AI视觉推荐或向量数据库；1.5的Coser资料导入是用户确认后的可选外联例外。
-- 除1.5已确认的所有者显式Coser资料导入外，不实现服务端主动外联、遥测、更新检查、CDN资源或运行时插件市场。
+- 第一版不实现自动网络刮削、社交账号联网检测、定时Provider任务、AI视觉推荐或向量数据库；1.5的Coser资料导入和Work/Character人工名称导入是用户确认后的可选外联例外。
+- 除1.5已确认的所有者显式资料导入外，不实现服务端主动外联、遥测、更新检查、CDN资源或运行时插件市场。
 - 不实现应用内静态加密、内置HTTPS、外部数据库或实时文件监听。
 
 ## 3. 原 Stash Code View 结论
@@ -812,7 +812,7 @@ SocialAccount：
 
 ### 25.4 离线与插件
 
-- 服务端核心流程零主动外联；前端资产全部本地；核心功能断网可用。1.5 Coser资料导入默认关闭，只在所有者显式操作时外联，移除全部Provider后产品仍可完整编译和使用。
+- 服务端核心流程零主动外联；前端资产全部本地；核心功能断网可用。1.5 Coser资料导入与Work/Character名称导入分别默认关闭，只在所有者显式操作时外联；移除全部Provider后产品仍可完整编译和使用。
 - 第一版彻底移除原Stash插件市场、执行入口、旧Hook、Scraper和主题兼容。
 - 只保留内部代码级Recommendation、Account Check和Derivative Generator接口。
 - Manifest `extensions`只保存JSON，不执行代码。
@@ -903,7 +903,7 @@ SocialAccount：
 - 最终产品名称、Logo和完整品牌系统。
 - AI/视觉向量相似推荐、Embedding模型和向量存储。
 - Coser社交账号联网检测Provider和结果建议表。
-- 自动网络Scraper、在线更新、遥测或后台远程素材获取；1.5已确认的人工Coser资料导入例外不得扩展到扫描、Browse或定时任务。
+- 自动网络Scraper、在线更新、遥测或后台远程素材获取；1.5已确认的人工Coser资料导入与Work/Character名称导入例外不得扩展到扫描、Browse或定时任务。
 - Coser真实姓名、出生日期、身高、体重、三围等结构化字段；第一版写Biography。
 - 字幕/多音轨UI、视频进度、硬件转码、360°/VR、Dolby Vision专用处理。
 - 应用内加密备份、SQLCipher、内置TLS、外部数据库和多用户。

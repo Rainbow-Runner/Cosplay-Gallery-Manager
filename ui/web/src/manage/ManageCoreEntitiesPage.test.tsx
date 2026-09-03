@@ -7,7 +7,7 @@ import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { MANAGE_CORE_ENTITIES, MANAGE_CORE_ENTITY, MANAGE_CORE_ENTITY_OPTIONS, MANAGE_COSER_NAME_CONFLICTS } from "../api/manage";
+import { MANAGE_CORE_ENTITIES, MANAGE_CORE_ENTITY, MANAGE_CORE_ENTITY_NAME_CONFLICTS, MANAGE_CORE_ENTITY_OPTIONS, MANAGE_COSER_NAME_CONFLICTS } from "../api/manage";
 import { messages } from "../i18n/messages";
 import { ManageCoreEntitiesPage, parseAliases, socialPlatformOptions } from "./ManageCoreEntitiesPage";
 import type { ManageCoreEntity } from "./types";
@@ -57,7 +57,7 @@ describe("ManageCoreEntitiesPage validation", () => {
     expect(await screen.findByText(/Found 1 exact identity match/)).toBeInTheDocument();
     expect(screen.getByText(/UUID …89abcdea · 4 Gallery/)).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText(/confirm this is a different person/));
-    expect(create).toBeEnabled();
+    await waitFor(() => expect(create).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Open existing" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Save revision 3" })).toBeInTheDocument());
     expect(screen.getByLabelText("Name (required)")).toHaveValue("Alice");
@@ -135,6 +135,9 @@ describe("ManageCoreEntitiesPage validation", () => {
     renderPage([{
       request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("WORK") },
       result: { data: { manageCoreEntities: { ...emptyPage, pageSize: 60 } } },
+    }, {
+      request: { query: MANAGE_CORE_ENTITY_NAME_CONFLICTS, variables: { kind: "WORK", name: "Fate", limit: 10 } },
+      result: { data: { manageCoreEntityNameConflicts: [] } },
     }], "/manage/entities?kind=WORK");
 
     const create = await screen.findByRole("button", { name: "Create" });
@@ -145,7 +148,7 @@ describe("ManageCoreEntitiesPage validation", () => {
     expect(screen.getByText("Press Enter to add this Alias before saving.")).toBeInTheDocument();
     fireEvent.keyDown(aliasInput, { key: "Enter" });
     expect(aliasInput).toHaveValue("");
-    expect(create).toBeEnabled();
+    await waitFor(() => expect(create).toBeEnabled());
     fireEvent.change(aliasInput, { target: { value: "Fate Series" } });
     fireEvent.keyDown(aliasInput, { key: "Enter" });
 
@@ -192,6 +195,10 @@ describe("ManageCoreEntitiesPage validation", () => {
         request: { query: MANAGE_CORE_ENTITY_OPTIONS, variables: { kind: "WORK", query: "", limit: 20 } },
         result: { data: { manageCoreEntityOptions: [work] } },
       },
+      {
+        request: { query: MANAGE_CORE_ENTITY_NAME_CONFLICTS, variables: { kind: "CHARACTER", name: "Saber", limit: 10 } },
+        result: { data: { manageCoreEntityNameConflicts: [] } },
+      },
     ], "/manage/entities?kind=CHARACTER");
 
     const create = await screen.findByRole("button", { name: "Create" });
@@ -203,6 +210,57 @@ describe("ManageCoreEntitiesPage validation", () => {
     fireEvent.click(await screen.findByRole("option", { name: /Fate/ }));
     await waitFor(() => expect(create).toBeEnabled());
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("requires review of exact Work matches before creating another Work", async () => {
+    const existing = {
+      __typename: "ManageCoreEntity", kind: "WORK", uuid: "018f4c8e-7a9b-7def-8123-456789abcd11", name: "Fate/stay night", sortName: "", aliases: ["Fate SN"], slug: "fate-stay-night", metadataRevision: 2,
+      workUUID: null, avatarURL: null, bannerURL: null, avatarCrop: null, bannerFocalPoint: null,
+      profileSummary: "", biography: "", countryOrRegion: "", useInRecommendation: true, socialAccounts: [], parents: [],
+    } as ManageCoreEntity & { __typename: string };
+    renderPage([{
+      request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("WORK") },
+      result: { data: { manageCoreEntities: { ...emptyPage, pageSize: 60, totalItems: 1, totalPages: 1, items: [existing] } } },
+    }, {
+      request: { query: MANAGE_CORE_ENTITY_NAME_CONFLICTS, variables: { kind: "WORK", name: "Fate SN", limit: 10 } },
+      result: { data: { manageCoreEntityNameConflicts: [{ __typename: "ManageCoreEntityNameConflict", entity: existing, matchedValues: ["Fate SN"], galleryCount: 3, workName: "", primaryNameMatch: false }] } },
+    }], "/manage/entities?kind=WORK");
+
+    const create = await screen.findByRole("button", { name: "Create" });
+    fireEvent.change(screen.getByLabelText("Name (required)"), { target: { value: "Fate SN" } });
+    expect(create).toBeDisabled();
+    expect(await screen.findByText(/Found 1 exact match/)).toBeInTheDocument();
+    expect(screen.getByText(/UUID …89abcd11 · 3 Gallery/)).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/confirm this is a different Work/));
+    expect(create).toBeEnabled();
+  });
+
+  it("blocks a duplicate Character primary Name inside the selected Work", async () => {
+    const work = { kind: "WORK", uuid: "018f4c8e-7a9b-7def-8123-456789abcd22", name: "Fate", aliases: [], workUUID: null, metadataRevision: 1 };
+    const existing = {
+      __typename: "ManageCoreEntity", kind: "CHARACTER", uuid: "018f4c8e-7a9b-7def-8123-456789abcd33", name: "Saber", sortName: "", aliases: ["Artoria"], slug: "saber", metadataRevision: 1,
+      workUUID: work.uuid, avatarURL: null, bannerURL: null, avatarCrop: null, bannerFocalPoint: null,
+      profileSummary: "", biography: "", countryOrRegion: "", useInRecommendation: true, socialAccounts: [], parents: [],
+    } as ManageCoreEntity & { __typename: string };
+    renderPage([{
+      request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("CHARACTER") },
+      result: { data: { manageCoreEntities: emptyPage } },
+    }, {
+      request: { query: MANAGE_CORE_ENTITY_OPTIONS, variables: { kind: "WORK", query: "", limit: 20 } },
+      result: { data: { manageCoreEntityOptions: [work] } },
+    }, {
+      request: { query: MANAGE_CORE_ENTITY_NAME_CONFLICTS, variables: { kind: "CHARACTER", name: "Saber", limit: 10 } },
+      result: { data: { manageCoreEntityNameConflicts: [{ __typename: "ManageCoreEntityNameConflict", entity: existing, matchedValues: ["Saber"], galleryCount: 2, workName: "Fate", primaryNameMatch: true }] } },
+    }], "/manage/entities?kind=CHARACTER");
+
+    const create = await screen.findByRole("button", { name: "Create" });
+    fireEvent.change(screen.getByLabelText("Name (required)"), { target: { value: "Saber" } });
+    expect(await screen.findByText("Primary Work: Fate")).toBeInTheDocument();
+    fireEvent.focus(screen.getByLabelText("Search Primary Work"));
+    fireEvent.click(await screen.findByRole("option", { name: /Fate/ }));
+    expect(await screen.findByText(/already exists in the selected Work/)).toBeInTheDocument();
+    expect(create).toBeDisabled();
+    expect(screen.queryByLabelText(/confirm this is a different Character/)).not.toBeInTheDocument();
   });
 
   it("offers common platform keys while retaining a valid custom key", async () => {

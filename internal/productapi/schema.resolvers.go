@@ -1580,6 +1580,19 @@ func (r *queryResolver) ManageCoserNameConflicts(ctx context.Context, name strin
 	return result, nil
 }
 
+// ManageCoreEntityNameConflicts is the resolver for the manageCoreEntityNameConflicts field.
+func (r *queryResolver) ManageCoreEntityNameConflicts(ctx context.Context, kind SearchEntityKind, name string, limit int) ([]*ManageCoreEntityNameConflict, error) {
+	values, err := r.Database.CoreEntities().ManageCoreEntityNameConflicts(ctx, string(kind), name, limit)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	result := make([]*ManageCoreEntityNameConflict, 0, len(values))
+	for _, value := range values {
+		result = append(result, manageCoreEntityNameConflict(value))
+	}
+	return result, nil
+}
+
 // PreviewCoreEntityMerge is the resolver for the previewCoreEntityMerge field.
 func (r *queryResolver) PreviewCoreEntityMerge(ctx context.Context, kind SearchEntityKind, sourceUUID string, targetUUID string) (*ManageCoreEntityMergePreview, error) {
 	portableKind, err := portableCoreKind(kind)

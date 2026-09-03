@@ -46,6 +46,14 @@ type ManageCoserNameConflict struct {
 	GalleryCount  int
 }
 
+type ManageCoreEntityNameConflict struct {
+	Entity           ManageCoreEntity
+	MatchedValues    []string
+	GalleryCount     int
+	WorkName         string
+	PrimaryNameMatch bool
+}
+
 // ManageCoserNameConflicts returns normalized exact primary-name and Alias
 // matches. Coser names intentionally remain non-unique, so this is a review
 // aid rather than a creation constraint.
@@ -116,6 +124,115 @@ func (s *CoreEntityStore) ManageCoserNameConflicts(ctx context.Context, name str
 			return nil, err
 		}
 		result = append(result, ManageCoserNameConflict{Coser: coser, MatchedValues: candidate.values, GalleryCount: galleryCount})
+	}
+	return result, nil
+}
+
+// ManageCoreEntityNameConflicts returns normalized exact primary-name and
+// Alias matches for Work and Character creation review. Work names remain
+// non-unique. Character results intentionally span Works so the owner can
+// decide whether an existing identity should be reused; the database remains
+// authoritative for the same-Work primary-name uniqueness constraint.
+func (s *CoreEntityStore) ManageCoreEntityNameConflicts(ctx context.Context, kind, name string, limit int) ([]ManageCoreEntityNameConflict, error) {
+	if kind != "WORK" && kind != "CHARACTER" {
+		return nil, errors.New("name conflict review only supports Work and Character")
+	}
+	wanted := normalizedKey(name)
+	if wanted == "" || runeLength(name) > 300 || limit < 1 || limit > 20 {
+		return nil, errors.New("invalid core entity name conflict check")
+	}
+	table, _, err := manageEntityTable(kind)
+	if err != nil {
+		return nil, err
+	}
+	aliasTable, aliasKey, err := manageEntityAliasTable(kind)
+	if err != nil {
+		return nil, err
+	}
+	primaryWhere := ""
+	queryArguments := []any{wanted}
+	if kind == "CHARACTER" {
+		primaryWhere = " WHERE entity.normalized_name=?"
+		queryArguments = []any{wanted, wanted}
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT uuid,name,alias,primary_match FROM (
+		SELECT entity.uuid,entity.name,NULL alias,1 primary_match,COALESCE(NULLIF(entity.sort_name,''),entity.name) sort_value,0 position
+		FROM `+table+` entity`+primaryWhere+`
+		UNION ALL
+		SELECT entity.uuid,entity.name,alias.alias,0,COALESCE(NULLIF(entity.sort_name,''),entity.name),alias.position
+		FROM `+aliasTable+` alias JOIN `+table+` entity ON entity.uuid=alias.`+aliasKey+` WHERE alias.normalized_alias=?
+	) exact_matches ORDER BY sort_value,uuid,primary_match DESC,position`, queryArguments...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	type match struct {
+		uuid             string
+		values           []string
+		primaryNameMatch bool
+	}
+	var matches []match
+	positions := map[string]int{}
+	for rows.Next() {
+		var uuid, primary string
+		var alias sql.NullString
+		var primaryMatch int
+		if err := rows.Scan(&uuid, &primary, &alias, &primaryMatch); err != nil {
+			return nil, err
+		}
+		primaryMatches := primaryMatch == 1 && normalizedKey(primary) == wanted
+		var values []string
+		if primaryMatches {
+			values = append(values, primary)
+		}
+		if alias.Valid && normalizedKey(alias.String) == wanted {
+			values = append(values, alias.String)
+		}
+		if len(values) == 0 {
+			continue
+		}
+		position, found := positions[uuid]
+		if !found {
+			if len(matches) >= limit {
+				continue
+			}
+			position = len(matches)
+			positions[uuid] = position
+			matches = append(matches, match{uuid: uuid})
+		}
+		matches[position].primaryNameMatch = matches[position].primaryNameMatch || primaryMatches
+		for _, value := range values {
+			duplicate := false
+			for _, existing := range matches[position].values {
+				duplicate = duplicate || normalizedKey(existing) == normalizedKey(value)
+			}
+			if !duplicate {
+				matches[position].values = append(matches[position].values, value)
+			}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	result := make([]ManageCoreEntityNameConflict, 0, len(matches))
+	for _, candidate := range matches {
+		entity, err := s.ManageFind(ctx, kind, candidate.uuid)
+		if err != nil {
+			return nil, err
+		}
+		conflict := ManageCoreEntityNameConflict{Entity: entity, MatchedValues: candidate.values, PrimaryNameMatch: candidate.primaryNameMatch}
+		if kind == "WORK" {
+			err = s.db.QueryRowContext(ctx, `SELECT COUNT(DISTINCT relation.gallery_id)
+				FROM gallery_cast relation JOIN characters character ON character.uuid=relation.character_uuid
+				WHERE character.work_uuid=?`, candidate.uuid).Scan(&conflict.GalleryCount)
+		} else {
+			err = s.db.QueryRowContext(ctx, `SELECT work.name,(SELECT COUNT(DISTINCT gallery_id) FROM gallery_cast WHERE character_uuid=character.uuid)
+				FROM characters character JOIN works work ON work.uuid=character.work_uuid WHERE character.uuid=?`, candidate.uuid).Scan(&conflict.WorkName, &conflict.GalleryCount)
+		}
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, conflict)
 	}
 	return result, nil
 }

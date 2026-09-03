@@ -375,6 +375,7 @@ type ManageCoreEntity {
 type ManageCoreEntityPage { items: [ManageCoreEntity!]! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
 enum ManageCoserAssetFilter { ALL MISSING_AVATAR MISSING_BANNER INCOMPLETE COMPLETE }
 type ManageCoserNameConflict { coser: ManageCoreEntity! matchedValues: [String!]! galleryCount: Int! }
+type ManageCoreEntityNameConflict { entity: ManageCoreEntity! matchedValues: [String!]! galleryCount: Int! workName: String! primaryNameMatch: Boolean! }
 type ManageCoreEntityMergeConflict { code: String! details: String! }
 type ManageCoreEntityMergePreview {
   kind: SearchEntityKind! sourceUUID: ID! targetUUID: ID! sourceRevision: Int64! targetRevision: Int64!
@@ -439,6 +440,7 @@ type Query {
   manageCoreEntity(kind: SearchEntityKind!, uuid: ID!): ManageCoreEntity!
   manageCoreEntityOptions(kind: SearchEntityKind!, query: String! = "", limit: Int! = 20): [ManageCoreEntity!]!
   manageCoserNameConflicts(name: String!, limit: Int! = 10): [ManageCoserNameConflict!]!
+  manageCoreEntityNameConflicts(kind: SearchEntityKind!, name: String!, limit: Int! = 10): [ManageCoreEntityNameConflict!]!
   previewCoreEntityMerge(kind: SearchEntityKind!, sourceUUID: ID!, targetUUID: ID!): ManageCoreEntityMergePreview!
   previewCoreEntityDelete(kind: SearchEntityKind!, uuid: ID!): ManageCoreEntityDeletePreview!
   previewGalleryDelete(setID: ID!): ManageGalleryDeletePreview!

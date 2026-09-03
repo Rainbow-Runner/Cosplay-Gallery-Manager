@@ -330,6 +330,14 @@ type ManageCoreEntityMergeResult struct {
 	CompletionWarning *string                       `json:"completionWarning,omitempty"`
 }
 
+type ManageCoreEntityNameConflict struct {
+	Entity           *ManageCoreEntity `json:"entity"`
+	MatchedValues    []string          `json:"matchedValues"`
+	GalleryCount     int               `json:"galleryCount"`
+	WorkName         string            `json:"workName"`
+	PrimaryNameMatch bool              `json:"primaryNameMatch"`
+}
+
 type ManageCoreEntityPage struct {
 	Items      []*ManageCoreEntity `json:"items"`
 	Page       int                 `json:"page"`

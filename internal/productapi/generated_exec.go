@@ -314,6 +314,14 @@ type ComplexityRoot struct {
 		Target            func(childComplexity int) int
 	}
 
+	ManageCoreEntityNameConflict struct {
+		Entity           func(childComplexity int) int
+		GalleryCount     func(childComplexity int) int
+		MatchedValues    func(childComplexity int) int
+		PrimaryNameMatch func(childComplexity int) int
+		WorkName         func(childComplexity int) int
+	}
+
 	ManageCoreEntityPage struct {
 		Items      func(childComplexity int) int
 		Page       func(childComplexity int) int
@@ -953,6 +961,7 @@ type ComplexityRoot struct {
 		ManageCacheStorage                   func(childComplexity int) int
 		ManageCoreEntities                   func(childComplexity int, kind SearchEntityKind, page int, pageSize int, query string, coserAssetFilter ManageCoserAssetFilter) int
 		ManageCoreEntity                     func(childComplexity int, kind SearchEntityKind, uuid string) int
+		ManageCoreEntityNameConflicts        func(childComplexity int, kind SearchEntityKind, name string, limit int) int
 		ManageCoreEntityOptions              func(childComplexity int, kind SearchEntityKind, query string, limit int) int
 		ManageCoserManifest                  func(childComplexity int, coserUUID string) int
 		ManageCoserNameConflicts             func(childComplexity int, name string, limit int) int
@@ -1176,6 +1185,7 @@ type QueryResolver interface {
 	ManageCoreEntity(ctx context.Context, kind SearchEntityKind, uuid string) (*ManageCoreEntity, error)
 	ManageCoreEntityOptions(ctx context.Context, kind SearchEntityKind, query string, limit int) ([]*ManageCoreEntity, error)
 	ManageCoserNameConflicts(ctx context.Context, name string, limit int) ([]*ManageCoserNameConflict, error)
+	ManageCoreEntityNameConflicts(ctx context.Context, kind SearchEntityKind, name string, limit int) ([]*ManageCoreEntityNameConflict, error)
 	PreviewCoreEntityMerge(ctx context.Context, kind SearchEntityKind, sourceUUID string, targetUUID string) (*ManageCoreEntityMergePreview, error)
 	PreviewCoreEntityDelete(ctx context.Context, kind SearchEntityKind, uuid string) (*ManageCoreEntityDeletePreview, error)
 	PreviewGalleryDelete(ctx context.Context, setID string) (*ManageGalleryDeletePreview, error)
@@ -2488,6 +2498,41 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageCoreEntityMergeResult.Target(childComplexity), true
+
+	case "ManageCoreEntityNameConflict.entity":
+		if e.complexity.ManageCoreEntityNameConflict.Entity == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityNameConflict.Entity(childComplexity), true
+
+	case "ManageCoreEntityNameConflict.galleryCount":
+		if e.complexity.ManageCoreEntityNameConflict.GalleryCount == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityNameConflict.GalleryCount(childComplexity), true
+
+	case "ManageCoreEntityNameConflict.matchedValues":
+		if e.complexity.ManageCoreEntityNameConflict.MatchedValues == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityNameConflict.MatchedValues(childComplexity), true
+
+	case "ManageCoreEntityNameConflict.primaryNameMatch":
+		if e.complexity.ManageCoreEntityNameConflict.PrimaryNameMatch == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityNameConflict.PrimaryNameMatch(childComplexity), true
+
+	case "ManageCoreEntityNameConflict.workName":
+		if e.complexity.ManageCoreEntityNameConflict.WorkName == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntityNameConflict.WorkName(childComplexity), true
 
 	case "ManageCoreEntityPage.items":
 		if e.complexity.ManageCoreEntityPage.Items == nil {
@@ -6147,6 +6192,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.ManageCoreEntity(childComplexity, args["kind"].(SearchEntityKind), args["uuid"].(string)), true
+
+	case "Query.manageCoreEntityNameConflicts":
+		if e.complexity.Query.ManageCoreEntityNameConflicts == nil {
+			break
+		}
+
+		args, err := ec.field_Query_manageCoreEntityNameConflicts_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ManageCoreEntityNameConflicts(childComplexity, args["kind"].(SearchEntityKind), args["name"].(string), args["limit"].(int)), true
 
 	case "Query.manageCoreEntityOptions":
 		if e.complexity.Query.ManageCoreEntityOptions == nil {
@@ -11199,6 +11256,80 @@ func (ec *executionContext) field_Query_manageCoreEntities_argsCoserAssetFilter(
 	}
 
 	var zeroVal ManageCoserAssetFilter
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_manageCoreEntityNameConflicts_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_manageCoreEntityNameConflicts_argsKind(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["kind"] = arg0
+	arg1, err := ec.field_Query_manageCoreEntityNameConflicts_argsName(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["name"] = arg1
+	arg2, err := ec.field_Query_manageCoreEntityNameConflicts_argsLimit(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg2
+	return args, nil
+}
+func (ec *executionContext) field_Query_manageCoreEntityNameConflicts_argsKind(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (SearchEntityKind, error) {
+	if _, ok := rawArgs["kind"]; !ok {
+		var zeroVal SearchEntityKind
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("kind"))
+	if tmp, ok := rawArgs["kind"]; ok {
+		return ec.unmarshalNSearchEntityKind2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSearchEntityKind(ctx, tmp)
+	}
+
+	var zeroVal SearchEntityKind
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_manageCoreEntityNameConflicts_argsName(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["name"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+	if tmp, ok := rawArgs["name"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_manageCoreEntityNameConflicts_argsLimit(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int, error) {
+	if _, ok := rawArgs["limit"]; !ok {
+		var zeroVal int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+	if tmp, ok := rawArgs["limit"]; ok {
+		return ec.unmarshalNInt2int(ctx, tmp)
+	}
+
+	var zeroVal int
 	return zeroVal, nil
 }
 
@@ -21014,6 +21145,264 @@ func (ec *executionContext) fieldContext_ManageCoreEntityMergeResult_completionW
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityNameConflict_entity(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityNameConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityNameConflict_entity(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Entity, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageCoreEntity)
+	fc.Result = res
+	return ec.marshalNManageCoreEntity2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntity(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityNameConflict_entity(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityNameConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "kind":
+				return ec.fieldContext_ManageCoreEntity_kind(ctx, field)
+			case "uuid":
+				return ec.fieldContext_ManageCoreEntity_uuid(ctx, field)
+			case "name":
+				return ec.fieldContext_ManageCoreEntity_name(ctx, field)
+			case "sortName":
+				return ec.fieldContext_ManageCoreEntity_sortName(ctx, field)
+			case "aliases":
+				return ec.fieldContext_ManageCoreEntity_aliases(ctx, field)
+			case "slug":
+				return ec.fieldContext_ManageCoreEntity_slug(ctx, field)
+			case "metadataRevision":
+				return ec.fieldContext_ManageCoreEntity_metadataRevision(ctx, field)
+			case "workUUID":
+				return ec.fieldContext_ManageCoreEntity_workUUID(ctx, field)
+			case "profileSummary":
+				return ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
+			case "biography":
+				return ec.fieldContext_ManageCoreEntity_biography(ctx, field)
+			case "countryOrRegion":
+				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
+			case "useInRecommendation":
+				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
+			case "bannerURL":
+				return ec.fieldContext_ManageCoreEntity_bannerURL(ctx, field)
+			case "avatarCrop":
+				return ec.fieldContext_ManageCoreEntity_avatarCrop(ctx, field)
+			case "bannerFocalPoint":
+				return ec.fieldContext_ManageCoreEntity_bannerFocalPoint(ctx, field)
+			case "socialAccounts":
+				return ec.fieldContext_ManageCoreEntity_socialAccounts(ctx, field)
+			case "parents":
+				return ec.fieldContext_ManageCoreEntity_parents(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageCoreEntity", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityNameConflict_matchedValues(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityNameConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityNameConflict_matchedValues(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MatchedValues, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityNameConflict_matchedValues(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityNameConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityNameConflict_galleryCount(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityNameConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityNameConflict_galleryCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityNameConflict_galleryCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityNameConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityNameConflict_workName(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityNameConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityNameConflict_workName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.WorkName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityNameConflict_workName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityNameConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageCoreEntityNameConflict_primaryNameMatch(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntityNameConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntityNameConflict_primaryNameMatch(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PrimaryNameMatch, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntityNameConflict_primaryNameMatch(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntityNameConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -46146,6 +46535,73 @@ func (ec *executionContext) fieldContext_Query_manageCoserNameConflicts(ctx cont
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_manageCoreEntityNameConflicts(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_manageCoreEntityNameConflicts(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ManageCoreEntityNameConflicts(rctx, fc.Args["kind"].(SearchEntityKind), fc.Args["name"].(string), fc.Args["limit"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageCoreEntityNameConflict)
+	fc.Result = res
+	return ec.marshalNManageCoreEntityNameConflict2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityNameConflictᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_manageCoreEntityNameConflicts(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "entity":
+				return ec.fieldContext_ManageCoreEntityNameConflict_entity(ctx, field)
+			case "matchedValues":
+				return ec.fieldContext_ManageCoreEntityNameConflict_matchedValues(ctx, field)
+			case "galleryCount":
+				return ec.fieldContext_ManageCoreEntityNameConflict_galleryCount(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageCoreEntityNameConflict_workName(ctx, field)
+			case "primaryNameMatch":
+				return ec.fieldContext_ManageCoreEntityNameConflict_primaryNameMatch(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageCoreEntityNameConflict", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_manageCoreEntityNameConflicts_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_previewCoreEntityMerge(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_previewCoreEntityMerge(ctx, field)
 	if err != nil {
@@ -54319,6 +54775,65 @@ func (ec *executionContext) _ManageCoreEntityMergeResult(ctx context.Context, se
 	return out
 }
 
+var manageCoreEntityNameConflictImplementors = []string{"ManageCoreEntityNameConflict"}
+
+func (ec *executionContext) _ManageCoreEntityNameConflict(ctx context.Context, sel ast.SelectionSet, obj *ManageCoreEntityNameConflict) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageCoreEntityNameConflictImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageCoreEntityNameConflict")
+		case "entity":
+			out.Values[i] = ec._ManageCoreEntityNameConflict_entity(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "matchedValues":
+			out.Values[i] = ec._ManageCoreEntityNameConflict_matchedValues(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryCount":
+			out.Values[i] = ec._ManageCoreEntityNameConflict_galleryCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "workName":
+			out.Values[i] = ec._ManageCoreEntityNameConflict_workName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "primaryNameMatch":
+			out.Values[i] = ec._ManageCoreEntityNameConflict_primaryNameMatch(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var manageCoreEntityPageImplementors = []string{"ManageCoreEntityPage"}
 
 func (ec *executionContext) _ManageCoreEntityPage(ctx context.Context, sel ast.SelectionSet, obj *ManageCoreEntityPage) graphql.Marshaler {
@@ -59556,6 +60071,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "manageCoreEntityNameConflicts":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_manageCoreEntityNameConflicts(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "previewCoreEntityMerge":
 			field := field
 
@@ -61747,6 +62284,60 @@ func (ec *executionContext) marshalNManageCoreEntityMergeResult2ᚖgithubᚗcom�
 		return graphql.Null
 	}
 	return ec._ManageCoreEntityMergeResult(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageCoreEntityNameConflict2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityNameConflictᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageCoreEntityNameConflict) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageCoreEntityNameConflict2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityNameConflict(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageCoreEntityNameConflict2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityNameConflict(ctx context.Context, sel ast.SelectionSet, v *ManageCoreEntityNameConflict) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageCoreEntityNameConflict(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNManageCoreEntityPage2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityPage(ctx context.Context, sel ast.SelectionSet, v ManageCoreEntityPage) graphql.Marshaler {

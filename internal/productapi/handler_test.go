@@ -443,6 +443,30 @@ func TestManageCoserNameConflictsExposeExactReviewData(t *testing.T) {
 	}
 }
 
+func TestManageCoreEntityNameConflictsExposeCharacterWorkContext(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 3, 20, 15, 0, 0, time.UTC)
+	work, err := database.CoreEntities().CreateWork(ctx, productdb.CreateNamedEntityInput{Name: "Fate"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	character, err := database.CoreEntities().CreateCharacter(ctx, work.UUID, productdb.CreateNamedEntityInput{Name: "Saber", Aliases: []string{"Artoria"}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := `{"query":"query { manageCoreEntityNameConflicts(kind:CHARACTER,name:\"ARTORIA\",limit:10) { entity { uuid name workUUID } matchedValues galleryCount workName primaryNameMatch } }"}`
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	NewHandler(database, func(*http.Request) bool { return true }).ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(character.UUID)) || !bytes.Contains(response.Body.Bytes(), []byte(`"matchedValues":["Artoria"]`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(`"workName":"Fate"`)) || !bytes.Contains(response.Body.Bytes(), []byte(`"primaryNameMatch":false`)) {
+		t.Fatalf("core entity name conflict response = %d %s", response.Code, response.Body.String())
+	}
+}
+
 func TestManageCoserListAcceptsSearchCompletenessAndPageSize(t *testing.T) {
 	database := openTestDatabase(t)
 	created, err := database.CoreEntities().CreateCoser(context.Background(), productdb.CreateCoserInput{

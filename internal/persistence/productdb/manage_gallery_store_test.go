@@ -246,6 +246,53 @@ func TestManageCoserNameConflictsUseNormalizedExactNamesAndAliases(t *testing.T)
 	}
 }
 
+func TestManageCoreEntityNameConflictsIncludeWorkContextAndExactMatches(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 3, 20, 0, 0, 0, time.UTC)
+	workA, err := db.CoreEntities().CreateWork(ctx, CreateNamedEntityInput{Name: "Fate/stay night", Aliases: []string{"Fate SN"}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workB, err := db.CoreEntities().CreateWork(ctx, CreateNamedEntityInput{Name: "Fate Grand Order"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	characterA, err := db.CoreEntities().CreateCharacter(ctx, workA.UUID, CreateNamedEntityInput{Name: "Saber", Aliases: []string{"Artoria"}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	characterB, err := db.CoreEntities().CreateCharacter(ctx, workB.UUID, CreateNamedEntityInput{Name: "Artoria"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	works, err := db.CoreEntities().ManageCoreEntityNameConflicts(ctx, "WORK", " fate sn ", 10)
+	if err != nil || len(works) != 1 || works[0].Entity.UUID != workA.UUID || works[0].PrimaryNameMatch || len(works[0].MatchedValues) != 1 || works[0].MatchedValues[0] != "Fate SN" {
+		t.Fatalf("Work name conflicts = %#v, %v", works, err)
+	}
+	characters, err := db.CoreEntities().ManageCoreEntityNameConflicts(ctx, "CHARACTER", "ARTORIA", 10)
+	if err != nil || len(characters) != 2 {
+		t.Fatalf("Character name conflicts = %#v, %v", characters, err)
+	}
+	byUUID := map[string]ManageCoreEntityNameConflict{}
+	for _, conflict := range characters {
+		byUUID[conflict.Entity.UUID] = conflict
+	}
+	if byUUID[characterA.UUID].WorkName != workA.Name || byUUID[characterA.UUID].PrimaryNameMatch || byUUID[characterA.UUID].MatchedValues[0] != "Artoria" {
+		t.Fatalf("Alias Character conflict = %#v", byUUID[characterA.UUID])
+	}
+	if byUUID[characterB.UUID].WorkName != workB.Name || !byUUID[characterB.UUID].PrimaryNameMatch || byUUID[characterB.UUID].MatchedValues[0] != "Artoria" {
+		t.Fatalf("primary Character conflict = %#v", byUUID[characterB.UUID])
+	}
+	if _, err := db.CoreEntities().ManageCoreEntityNameConflicts(ctx, "COSER", "Alice", 10); err == nil {
+		t.Fatal("generic conflict review accepted unsupported Coser kind")
+	}
+	if partial, err := db.CoreEntities().ManageCoreEntityNameConflicts(ctx, "WORK", "Fate", 10); err != nil || len(partial) != 0 {
+		t.Fatalf("partial Work conflicts = %#v, %v", partial, err)
+	}
+}
+
 func TestReplaceGalleryRelationsIsAtomicAndRevisionGuarded(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

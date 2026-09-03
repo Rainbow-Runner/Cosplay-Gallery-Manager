@@ -852,8 +852,9 @@ a { color: inherit; text-decoration: none; }
 .coser-duplicate-review__clear { color: #28704a !important; }
 .coser-duplicate-review__list { display: grid; gap: .45rem; }
 .coser-duplicate-review__list article { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr) auto; align-items: center; gap: .65rem; padding: .6rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface); }
-.coser-duplicate-review__avatar { display: block; width: 2.5rem; height: 2.5rem; overflow: hidden; border: 1px solid var(--cgm-border); border-radius: 50%; background: var(--cgm-muted); }
+.coser-duplicate-review__avatar { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; overflow: hidden; border: 1px solid var(--cgm-border); border-radius: 50%; background: var(--cgm-muted); }
 .coser-duplicate-review__avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.coser-duplicate-review__avatar .cgm-icon { width: 1.15rem; height: 1.15rem; color: var(--cgm-muted-foreground); }
 .coser-duplicate-review__list article > div { display: grid; min-width: 0; gap: .18rem; }
 .coser-duplicate-review__list strong, .coser-duplicate-review__list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .coser-duplicate-review__list strong { font-size: .78rem; }

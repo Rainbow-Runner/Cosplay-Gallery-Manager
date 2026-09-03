@@ -82,6 +82,7 @@ export interface ManageCoserAssetCleanupResult {
 }
 export interface ManageCoreEntity { kind: "COSER" | "WORK" | "CHARACTER" | "TAG"; uuid: string; name: string; sortName: string; aliases: string[]; slug: string; metadataRevision: number; workUUID?: string | null; profileSummary: string; biography: string; countryOrRegion: string; useInRecommendation: boolean; avatarURL?: string | null; bannerURL?: string | null; avatarCrop?: { x: number; y: number; size: number } | null; bannerFocalPoint?: { x: number; y: number } | null; socialAccounts: { uuid: string; platformKey: string; label: string; handle: string; url: string; status: string; visible: boolean; position: string }[]; parents: { uuid: string; name: string; metadataRevision: number }[] }
 export interface ManageCoserNameConflict { coser: ManageCoreEntity; matchedValues: string[]; galleryCount: number }
+export interface ManageCoreEntityNameConflict { entity: ManageCoreEntity; matchedValues: string[]; galleryCount: number; workName: string; primaryNameMatch: boolean }
 export interface ManageCoreEntityPage { items: ManageCoreEntity[]; page: number; pageSize: number; totalItems: number; totalPages: number }
 export interface ManageCoreEntityMergePreview {
   kind: ManageCoreEntity["kind"]; sourceUUID: string; targetUUID: string; sourceRevision: number; targetRevision: number;

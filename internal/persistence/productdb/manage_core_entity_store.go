@@ -22,6 +22,7 @@ type ManageCoreEntity struct {
 	Slug                string
 	MetadataRevision    int64
 	WorkUUID            string
+	WorkName            string
 	UseInRecommendation bool
 	ProfileSummary      string
 	Biography           string
@@ -475,7 +476,11 @@ func (s *CoreEntityStore) ManageFind(ctx context.Context, kind, uuid string) (Ma
 		if err != nil {
 			return ManageCoreEntity{}, err
 		}
-		return ManageCoreEntity{Kind: kind, UUID: value.UUID, Name: value.Name, SortName: value.SortName, Aliases: value.Aliases, Slug: value.Slug, MetadataRevision: value.MetadataRevision, WorkUUID: value.WorkUUID}, nil
+		var workName string
+		if err := s.db.QueryRowContext(ctx, `SELECT name FROM works WHERE uuid=?`, value.WorkUUID).Scan(&workName); err != nil {
+			return ManageCoreEntity{}, err
+		}
+		return ManageCoreEntity{Kind: kind, UUID: value.UUID, Name: value.Name, SortName: value.SortName, Aliases: value.Aliases, Slug: value.Slug, MetadataRevision: value.MetadataRevision, WorkUUID: value.WorkUUID, WorkName: workName}, nil
 	case "TAG":
 		value, err := findTag(ctx, s.db, uuid)
 		if err != nil {

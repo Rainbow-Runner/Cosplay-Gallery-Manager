@@ -209,7 +209,26 @@ describe("ManageCoreEntitiesPage validation", () => {
     fireEvent.focus(screen.getByLabelText("Search Primary Work"));
     fireEvent.click(await screen.findByRole("option", { name: /Fate/ }));
     await waitFor(() => expect(create).toBeEnabled());
+    expect(screen.getByText("Fate")).toBeInTheDocument();
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("restores the Primary Work name when an existing Character is opened", async () => {
+    const character = {
+      __typename: "ManageCoreEntity", kind: "CHARACTER", uuid: "018f4c8e-7a9b-7def-8123-456789abcd44", name: "Saber", sortName: "", aliases: ["Artoria"], slug: "saber", metadataRevision: 2,
+      workUUID: "018f4c8e-7a9b-7def-8123-456789abcd22", workName: "Fate", avatarURL: null, bannerURL: null, avatarCrop: null, bannerFocalPoint: null,
+      profileSummary: "", biography: "", countryOrRegion: "", useInRecommendation: true, socialAccounts: [], parents: [],
+    } as ManageCoreEntity & { __typename: string };
+    renderPage([{
+      request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("CHARACTER") },
+      result: { data: { manageCoreEntities: { ...emptyPage, pageSize: 60, totalItems: 1, totalPages: 1, items: [character] } } },
+    }, {
+      request: { query: MANAGE_CORE_ENTITY, variables: { kind: "CHARACTER", uuid: character.uuid } },
+      result: { data: { manageCoreEntity: character } },
+    }], `/manage/entities?kind=CHARACTER&uuid=${character.uuid}`);
+
+    expect(await screen.findByText("Fate")).toBeInTheDocument();
+    expect(screen.getByLabelText("Primary Work UUID")).toHaveValue(character.workUUID);
   });
 
   it("requires review of exact Work matches before creating another Work", async () => {

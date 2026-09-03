@@ -275,6 +275,7 @@ type ComplexityRoot struct {
 		SortName            func(childComplexity int) int
 		UUID                func(childComplexity int) int
 		UseInRecommendation func(childComplexity int) int
+		WorkName            func(childComplexity int) int
 		WorkUUID            func(childComplexity int) int
 	}
 
@@ -2344,6 +2345,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageCoreEntity.UseInRecommendation(childComplexity), true
+
+	case "ManageCoreEntity.workName":
+		if e.complexity.ManageCoreEntity.WorkName == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntity.WorkName(childComplexity), true
 
 	case "ManageCoreEntity.workUUID":
 		if e.complexity.ManageCoreEntity.WorkUUID == nil {
@@ -19693,6 +19701,50 @@ func (ec *executionContext) fieldContext_ManageCoreEntity_workUUID(_ context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageCoreEntity_workName(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntity) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntity_workName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.WorkName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntity_workName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageCoreEntity_profileSummary(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntity) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
 	if err != nil {
@@ -21020,6 +21072,8 @@ func (ec *executionContext) fieldContext_ManageCoreEntityMergeResult_target(_ co
 				return ec.fieldContext_ManageCoreEntity_metadataRevision(ctx, field)
 			case "workUUID":
 				return ec.fieldContext_ManageCoreEntity_workUUID(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageCoreEntity_workName(ctx, field)
 			case "profileSummary":
 				return ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
 			case "biography":
@@ -21205,6 +21259,8 @@ func (ec *executionContext) fieldContext_ManageCoreEntityNameConflict_entity(_ c
 				return ec.fieldContext_ManageCoreEntity_metadataRevision(ctx, field)
 			case "workUUID":
 				return ec.fieldContext_ManageCoreEntity_workUUID(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageCoreEntity_workName(ctx, field)
 			case "profileSummary":
 				return ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
 			case "biography":
@@ -21463,6 +21519,8 @@ func (ec *executionContext) fieldContext_ManageCoreEntityPage_items(_ context.Co
 				return ec.fieldContext_ManageCoreEntity_metadataRevision(ctx, field)
 			case "workUUID":
 				return ec.fieldContext_ManageCoreEntity_workUUID(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageCoreEntity_workName(ctx, field)
 			case "profileSummary":
 				return ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
 			case "biography":
@@ -22083,6 +22141,8 @@ func (ec *executionContext) fieldContext_ManageCoserNameConflict_coser(_ context
 				return ec.fieldContext_ManageCoreEntity_metadataRevision(ctx, field)
 			case "workUUID":
 				return ec.fieldContext_ManageCoreEntity_workUUID(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageCoreEntity_workName(ctx, field)
 			case "profileSummary":
 				return ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
 			case "biography":
@@ -42150,6 +42210,8 @@ func (ec *executionContext) fieldContext_Mutation_createCoreEntity(ctx context.C
 				return ec.fieldContext_ManageCoreEntity_metadataRevision(ctx, field)
 			case "workUUID":
 				return ec.fieldContext_ManageCoreEntity_workUUID(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageCoreEntity_workName(ctx, field)
 			case "profileSummary":
 				return ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
 			case "biography":
@@ -42243,6 +42305,8 @@ func (ec *executionContext) fieldContext_Mutation_updateCoreEntity(ctx context.C
 				return ec.fieldContext_ManageCoreEntity_metadataRevision(ctx, field)
 			case "workUUID":
 				return ec.fieldContext_ManageCoreEntity_workUUID(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageCoreEntity_workName(ctx, field)
 			case "profileSummary":
 				return ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
 			case "biography":
@@ -42336,6 +42400,8 @@ func (ec *executionContext) fieldContext_Mutation_addCoserSocialAccount(ctx cont
 				return ec.fieldContext_ManageCoreEntity_metadataRevision(ctx, field)
 			case "workUUID":
 				return ec.fieldContext_ManageCoreEntity_workUUID(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageCoreEntity_workName(ctx, field)
 			case "profileSummary":
 				return ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
 			case "biography":
@@ -42429,6 +42495,8 @@ func (ec *executionContext) fieldContext_Mutation_replaceTagParents(ctx context.
 				return ec.fieldContext_ManageCoreEntity_metadataRevision(ctx, field)
 			case "workUUID":
 				return ec.fieldContext_ManageCoreEntity_workUUID(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageCoreEntity_workName(ctx, field)
 			case "profileSummary":
 				return ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
 			case "biography":
@@ -46341,6 +46409,8 @@ func (ec *executionContext) fieldContext_Query_manageCoreEntity(ctx context.Cont
 				return ec.fieldContext_ManageCoreEntity_metadataRevision(ctx, field)
 			case "workUUID":
 				return ec.fieldContext_ManageCoreEntity_workUUID(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageCoreEntity_workName(ctx, field)
 			case "profileSummary":
 				return ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
 			case "biography":
@@ -46434,6 +46504,8 @@ func (ec *executionContext) fieldContext_Query_manageCoreEntityOptions(ctx conte
 				return ec.fieldContext_ManageCoreEntity_metadataRevision(ctx, field)
 			case "workUUID":
 				return ec.fieldContext_ManageCoreEntity_workUUID(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageCoreEntity_workName(ctx, field)
 			case "profileSummary":
 				return ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
 			case "biography":
@@ -54442,6 +54514,11 @@ func (ec *executionContext) _ManageCoreEntity(ctx context.Context, sel ast.Selec
 			}
 		case "workUUID":
 			out.Values[i] = ec._ManageCoreEntity_workUUID(ctx, field, obj)
+		case "workName":
+			out.Values[i] = ec._ManageCoreEntity_workName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "profileSummary":
 			out.Values[i] = ec._ManageCoreEntity_profileSummary(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

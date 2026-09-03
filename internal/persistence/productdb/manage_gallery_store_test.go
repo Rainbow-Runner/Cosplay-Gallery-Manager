@@ -279,7 +279,7 @@ func TestManageCoreEntityNameConflictsIncludeWorkContextAndExactMatches(t *testi
 	for _, conflict := range characters {
 		byUUID[conflict.Entity.UUID] = conflict
 	}
-	if byUUID[characterA.UUID].WorkName != workA.Name || byUUID[characterA.UUID].PrimaryNameMatch || byUUID[characterA.UUID].MatchedValues[0] != "Artoria" {
+	if byUUID[characterA.UUID].WorkName != workA.Name || byUUID[characterA.UUID].Entity.WorkName != workA.Name || byUUID[characterA.UUID].PrimaryNameMatch || byUUID[characterA.UUID].MatchedValues[0] != "Artoria" {
 		t.Fatalf("Alias Character conflict = %#v", byUUID[characterA.UUID])
 	}
 	if byUUID[characterB.UUID].WorkName != workB.Name || !byUUID[characterB.UUID].PrimaryNameMatch || byUUID[characterB.UUID].MatchedValues[0] != "Artoria" {

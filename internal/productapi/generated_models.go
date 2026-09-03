@@ -282,6 +282,7 @@ type ManageCoreEntity struct {
 	Slug                string                 `json:"slug"`
 	MetadataRevision    int64                  `json:"metadataRevision"`
 	WorkUUID            *string                `json:"workUUID,omitempty"`
+	WorkName            string                 `json:"workName"`
 	ProfileSummary      string                 `json:"profileSummary"`
 	Biography           string                 `json:"biography"`
 	CountryOrRegion     string                 `json:"countryOrRegion"`

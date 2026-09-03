@@ -455,13 +455,13 @@ func TestManageCoreEntityNameConflictsExposeCharacterWorkContext(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	body := `{"query":"query { manageCoreEntityNameConflicts(kind:CHARACTER,name:\"ARTORIA\",limit:10) { entity { uuid name workUUID } matchedValues galleryCount workName primaryNameMatch } }"}`
+	body := `{"query":"query { manageCoreEntityNameConflicts(kind:CHARACTER,name:\"ARTORIA\",limit:10) { entity { uuid name workUUID workName } matchedValues galleryCount workName primaryNameMatch } }"}`
 	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
 	NewHandler(database, func(*http.Request) bool { return true }).ServeHTTP(response, request)
 	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) ||
-		!bytes.Contains(response.Body.Bytes(), []byte(character.UUID)) || !bytes.Contains(response.Body.Bytes(), []byte(`"matchedValues":["Artoria"]`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(character.UUID)) || bytes.Count(response.Body.Bytes(), []byte(`"workName":"Fate"`)) != 2 || !bytes.Contains(response.Body.Bytes(), []byte(`"matchedValues":["Artoria"]`)) ||
 		!bytes.Contains(response.Body.Bytes(), []byte(`"workName":"Fate"`)) || !bytes.Contains(response.Body.Bytes(), []byte(`"primaryNameMatch":false`)) {
 		t.Fatalf("core entity name conflict response = %d %s", response.Code, response.Body.String())
 	}

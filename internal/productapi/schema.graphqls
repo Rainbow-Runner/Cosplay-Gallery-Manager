@@ -368,7 +368,7 @@ type ManageAvatarCrop { x: Float! y: Float! size: Float! }
 type ManageFocalPoint { x: Float! y: Float! }
 type ManageCoreEntity {
   kind: SearchEntityKind! uuid: ID! name: String! sortName: String! aliases: [String!]! slug: String! metadataRevision: Int64!
-  workUUID: ID profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean!
+  workUUID: ID workName: String! profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean!
   avatarURL: String bannerURL: String avatarCrop: ManageAvatarCrop bannerFocalPoint: ManageFocalPoint
   socialAccounts: [ManageSocialAccount!]! parents: [ManageCoreEntityRef!]!
 }

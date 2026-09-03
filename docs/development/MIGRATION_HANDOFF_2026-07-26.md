@@ -361,4 +361,4 @@ GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
 
 同日继续完成并部署Work/Character创建前重复名称复核：新增只接受WORK/CHARACTER的认证精确冲突查询，复用NFC、trim和Unicode大小写折叠规则，同时检查主名称与Alias。Work命中须明确确认后才能继续；Character跨Work命中可确认，同一Primary Work的主名称硬冲突不能绕过，并显示各候选所属Work、UUID尾号和Gallery数。查询失败也要求显式承认。功能提交`1c71ad8`在完整回滚包保护下完成无schema增量部署；服务、About、数据库完整性、业务计数和日志复核均通过。下一步为所有者在Work和Character新建表单中用真实同名/别名数据进行人工交互验收。
 
-同日修复Character关联Work只显示UUID的问题：根因是Manage实体响应缺少Work名称且表单固定传空名称，并非关系数据丢失。现由Character外键实时解析并只读返回`workName`，选择后立即显示、重新打开后恢复，Gallery Cast选择Character也保留Work名称；不增加数据库字段或schema。后端、前端30文件98项、TypeScript、生产构建和正式三标签测试已通过，当前尚未提交或部署。
+同日修复并部署Character关联Work只显示UUID的问题：根因是Manage实体响应缺少Work名称且表单固定传空名称，并非关系数据丢失。现由Character外键实时解析并只读返回`workName`，选择后立即显示、重新打开后恢复，Gallery Cast选择Character也保留Work名称；不增加数据库字段或schema。功能提交`6e76fad`在完整回滚包保护下完成无schema增量部署，服务、About、数据库完整性、99个Work/6个Character业务计数和日志复核均通过。

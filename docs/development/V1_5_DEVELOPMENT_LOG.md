@@ -1852,4 +1852,7 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 排查确认数据库关系仍完整，问题位于Manage展示链路：`ManageCoreEntity`对Character只暴露`workUUID`，没有可显示的Work名称；`EntityForm`又把`ManageEntitySelector.name`固定传为空字符串，并在选择后只保存UUID。因此已有关联重新打开后和新选择后都无法稳定显示名称，只能看到UUID输入框。
 - 产品数据库Manage读取现按Character的外键实时取得当前Work名称，并通过认证GraphQL `ManageCoreEntity.workName`只读返回；没有复制或持久化冗余名称，不新增表、字段、schema或回填。Work重命名后下一次读取自然显示新名称。
 - Character表单把`workName`传给选择器，并在选择Work时同时更新本地UUID与名称；Gallery关系编辑器选择Character时也使用选项随附的`workName`，避免保存前短暂退化为仅角色名。手工UUID编辑仍清空无法验证的旧名称，防止显示与UUID不一致。
-- 回归覆盖选择Work后立即显示名称、打开既有Character后恢复名称，以及API/数据库返回当前所属Work。后端定向测试、前端30文件98项、TypeScript、681模块生产构建和正式三标签产品测试通过；仅保留既有主共享包超过500KiB提示。当前源码尚未提交或部署。
+- 回归覆盖选择Work后立即显示名称、打开既有Character后恢复名称，以及API/数据库返回当前所属Work。后端定向测试、前端30文件98项、TypeScript、681模块生产构建和正式三标签产品测试通过；仅保留既有主共享包超过500KiB提示。
+- 功能与部署前记录提交为`6e76fad5dc071598cf7a2e65d01199f2560783a2`（`Restore Character Work names in management`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，`go version -m`确认revision一致且`vcs.modified=false`；正式二进制SHA-256为`e863633ea480a631613be7e4cfeaae05c3f46935387331dfe3159a799c5ad642`。
+- 停服后创建并实际解包复验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260903T131441Z-6e76fad.tar.gz`，SHA-256为`4524a05337a170859b62bd5d55ac2ce7d1f0a7641deef475dd71948380527a1c`。包内schema v8数据库、旧二进制、配置、systemd单元和Coser托管资源均与正式来源一致，不含媒体、缓存或日志。
+- 2026-09-03完成无schema增量部署，只原子替换正式二进制；配置SHA-256继续为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，数据库inode保持`19679716`。服务只启动一次并保持`active/running`、`NRestarts=0`；Health/Ready为204，Root/Legal/Session为200，About精确对应源码。正式库`integrity_check=ok`并保持2个媒体库、6个Gallery、6个来源、322个Item、135个Coser、99个Work和6个Character；启动journal无WARN、ERROR、FAILED、panic或fatal。

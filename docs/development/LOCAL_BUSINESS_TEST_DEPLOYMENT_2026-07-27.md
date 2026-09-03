@@ -1,5 +1,12 @@
 # 本机实际业务应用测试部署
 
+### 2026-09-03 Work/Character名称资料Provider正式部署
+
+- 从清洁提交`1de0b952d746d45bdf6f0656aacebcd0e49c91ee`以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建正式Linux amd64单文件；VCS元数据为`modified=false`，二进制SHA-256为`723d93361cb8098e443aaf3249d07573380d6fc9c00bbc5a4363a38735574db6`，About精确对应源码。
+- 停服后创建并实际解包核验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260903T114606Z-1de0b95.tar.gz`，SHA-256为`1c14863f779c9ece9cbc9b53cde5318fa7d167932af08c4922330a683b4ef296`；包内schema v8数据库、旧二进制、旧配置、systemd单元和Coser托管资源逐项一致，不包含媒体、缓存或日志。
+- 正式私有配置显式启用`entity_metadata_scraping_enabled`并保留`metadata_scraping_enabled`，新配置SHA-256为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`。本功能无schema迁移；数据库inode保持`19679716`，启动后`integrity_check=ok`且2/6/6/322业务计数不变。
+- 服务只启动一次并保持`active/running`、`NRestarts=0`；Health/Ready为204，Root/Legal/Session为200。启动确认2个工作器及FFmpeg/FFprobe/LibRaw可用，journal未出现WARN、ERROR、FAILED、panic或fatal。真实萌娘百科候选选择及Alias写入仍需所有者在Manage → Core entities的Work/Character页面中进行人工业务验收。
+
 ### 2026-08-31 Archive内置Gallery根与schema v8部署
 
 - 从清洁提交`2c4bd3a24da56365d180682501966ddb17a629d3`构建并部署`cgm_web_embed cgm_galleryepic` Linux amd64单文件，SHA-256为`1f5addf1b1b30c7538d8eabd61a4c88fcd773aa956af775394987a77f9e53b9d`；VCS元数据为`modified=false`，About精确对应源码。

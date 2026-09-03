@@ -1,5 +1,12 @@
 # 本机实际业务应用测试部署
 
+### 2026-09-03 Work/Character重复名称复核增量部署
+
+- 从清洁提交`1c71ad84bcaa552c2efb2030e795203db62552c3`以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建正式Linux amd64单文件；VCS元数据为`modified=false`，二进制SHA-256为`7f5a8ef6a602aa249276d90d753488a24c314640c410bb9b850f365ddc92fa56`，About精确对应源码。
+- 停服后创建并实际解包核验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260903T122433Z-1c71ad8.tar.gz`，SHA-256为`234814d52733d33ed244a9ebc6e586204e8c5c6a3365905a6de9a97120a14775`；包内schema v8数据库、旧二进制、配置、systemd单元和Coser托管资源逐项一致，不包含媒体、缓存或日志。
+- 本次没有schema迁移，只原子替换二进制；正式配置SHA-256保持`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，数据库inode保持`19679716`。部署后`integrity_check=ok`且2个媒体库、6个Gallery、6个来源、322个Item、135个Coser、16个Work和5个Character计数不变。
+- 服务只启动一次并保持`active/running`、`NRestarts=0`；Health/Ready为204，Root/Legal/Session为200，2个工作器及FFmpeg/FFprobe/LibRaw正常启用，journal未出现WARN、ERROR、FAILED、panic或fatal。
+
 ### 2026-09-03 Work/Character名称资料Provider正式部署
 
 - 从清洁提交`1de0b952d746d45bdf6f0656aacebcd0e49c91ee`以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建正式Linux amd64单文件；VCS元数据为`modified=false`，二进制SHA-256为`723d93361cb8098e443aaf3249d07573380d6fc9c00bbc5a4363a38735574db6`，About精确对应源码。

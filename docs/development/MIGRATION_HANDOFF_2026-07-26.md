@@ -359,4 +359,4 @@ GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
 
 2026-09-03完成Work/Character人工名称资料Provider正式部署：功能源码提交为`1de0b952d746d45bdf6f0656aacebcd0e49c91ee`，正式构建包含`cgm_web_embed cgm_galleryepic cgm_moegirl`且`vcs.modified=false`。停服完整回滚包已逐项比对并解包复验；私有正式配置显式启用`entity_metadata_scraping_enabled`，没有schema迁移。服务只启动一次并保持active、Health/Ready为204、About精确对应源码；正式库仍为schema v8、`integrity_check=ok`及2/6/6/322业务计数。下一步由所有者在Manage → Core entities中对真实Work/Character执行候选搜索、字段勾选与Alias写入业务验收；该人工操作之外，扫描、Browse、自动化、启动和计划任务仍不会调用Provider。
 
-同日继续完成Work/Character创建前重复名称复核源码：新增只接受WORK/CHARACTER的认证精确冲突查询，复用NFC、trim和Unicode大小写折叠规则，同时检查主名称与Alias。Work命中须明确确认后才能继续；Character跨Work命中可确认，同一Primary Work的主名称硬冲突不能绕过，并显示各候选所属Work、UUID尾号和Gallery数。查询失败也要求显式承认。该改动没有schema或数据迁移；数据库/API、前端30文件97项、TypeScript、生产构建和正式三标签测试均通过，当前尚未提交或部署。
+同日继续完成并部署Work/Character创建前重复名称复核：新增只接受WORK/CHARACTER的认证精确冲突查询，复用NFC、trim和Unicode大小写折叠规则，同时检查主名称与Alias。Work命中须明确确认后才能继续；Character跨Work命中可确认，同一Primary Work的主名称硬冲突不能绕过，并显示各候选所属Work、UUID尾号和Gallery数。查询失败也要求显式承认。功能提交`1c71ad8`在完整回滚包保护下完成无schema增量部署；服务、About、数据库完整性、业务计数和日志复核均通过。下一步为所有者在Work和Character新建表单中用真实同名/别名数据进行人工交互验收。

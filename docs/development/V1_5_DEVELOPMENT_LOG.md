@@ -1889,4 +1889,7 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 业务复核发现所属Work作为第三层文本使每个Character列表项由原有两行增至三行，降低长列表的信息密度；本轮保持功能目标但修正信息排布，不改变已经确认的实体关系。
 - Character列表项改为左右两区：左侧仍是主名称与Aliases/UUID两行，右侧与其垂直居中，仅显示Work名称本身，不再渲染“Work:”或“所属作品：”前缀。作品名和左侧文本均保持单行省略，列表项继续使用原有padding和两行内容高度。
 - 变更仅涉及独立Character列表的React标记与CSS；Work内嵌Character气泡、编辑表单Primary Work、Coser/Work/Tag列表、查询接口、数据库和schema均不变。
-- 回归新增Character列表专属布局类及无前缀断言；完整前端30文件99项、TypeScript和681模块生产构建通过，仅保留既有主共享包超过500KiB提示。当前尚未提交或部署，正式服务继续运行`7de86e7`。
+- 回归新增Character列表专属布局类及无前缀断言；完整前端30文件99项、TypeScript和681模块生产构建通过，仅保留既有主共享包超过500KiB提示。
+- 功能与部署前记录提交为`7d15ed32fc59e70b6f8fc95af1a9fe48fea9d435`（`Keep Character list rows compact`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，`go version -m`确认revision一致且`vcs.modified=false`；正式二进制SHA-256为`72761317a7a908c3e9539dd02c8e477f90b17f4c3b50c8358522d4e61a8b6c81`，构建时间为`2026-09-04T17:25:32Z`。
+- 停服后创建并实际解包复验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260904T172737Z-7d15ed3.tar.gz`，SHA-256为`c943e760eb23124180e4bcb7ca119e814a6b524ee0382d8eda5cd09314a9323a`。包内schema v8数据库、旧二进制、配置、systemd单元和Coser托管资源与正式来源逐项一致，不含媒体、缓存或日志；正式、暂存和解包数据库均为`integrity_check=ok`并保持业务计数一致。
+- 2026-09-05完成无schema增量部署，只原子替换正式二进制；配置SHA-256继续为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，数据库inode保持`19679716`。服务只启动一次并保持`active/running`、`NRestarts=0`；Health/Ready为204，Root/Legal/Session、本轮Character管理分块和样式资源均为200，About精确对应源码且`exactSourceAvailable=true`。正式库保持2个媒体库、6个Gallery、6个来源、322个Item、135个Coser、99个Work和42个Character；2个工作器及LibRaw、FFmpeg、FFprobe正常启用，启动journal无WARN、ERROR、FAILED、panic或fatal。

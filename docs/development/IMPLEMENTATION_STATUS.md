@@ -2,7 +2,7 @@
 
 > 当前里程碑：1.5 本机业务迭代与可诊断性增强
 > 状态：进行中
-> 更新日期：2026-09-03
+> 更新日期：2026-09-04
 
 ## 已规划、尚未实现
 
@@ -10,6 +10,7 @@
 
 ## 已完成
 
+- 1.5（Work内嵌Character管理，待提交/未部署）：保留Character独立管理页，在已保存Work编辑区新增“作品属性/关联角色”双语页签；关联角色页固定显示当前Work名称，以固定高度滚动气泡区列出全部直属Character，点击气泡编辑并可随时新建。该入口锁定Primary Work，新建时自动提交当前Work UUID，继续复用既有Character查重、Alias气泡、revision、网络名称导入及合并/删除能力。新增认证只读`manageWorkCharacters`关系查询，严格按Work隔离并沿用英文名称/中文拼音与Sort name覆盖排序；不新增数据库字段、表、schema或另一套Character模型。产品数据库/API测试、前端30文件99项、TypeScript、681模块生产构建及正式三标签产品测试通过。
 - 1.5（Character关联Work名称恢复，已部署）：修复Manage Character数据只返回`workUUID`且表单把选择器名称固定传空，导致已有关联及新选择的Work只能辨认UUID的问题。认证Manage实体模型新增只读`workName`，由当前Work表实时解析，不新增数据库字段；Character详情重载后显示Work名称，选择Work后立即更新名称，Gallery Cast选择Character时也保留其Work名称。后端定向测试、前端30文件98项、TypeScript、681模块生产构建及正式三标签产品测试通过；2026-09-03从清洁提交`6e76fad`完成无schema增量部署。
 - 1.5（Work/Character创建前重复名称复核，已部署）：将Coser已有的350ms防抖精确查重扩展到Work与Character；后端按NFC、去首尾空格和Unicode大小写折叠匹配主名称及Alias，只返回精确命中，不把包含关系误报为重复。Work命中显示名称、Aliases、UUID尾号和关联Gallery数；Character额外显示所属Work，并跨Work提供身份复核。同一Work内Character主名称硬冲突不能通过确认绕过，Create保持禁用；跨Work同名或Alias命中可在明确确认是不同实体后继续。查询失败同样要求显式确认，不新增字段、表或schema。产品数据库/API测试、前端30文件97项、TypeScript、681模块生产构建及正式三标签产品测试均通过；2026-09-03从清洁提交`1c71ad8`完成无schema增量部署。
 - 1.5（可拔除Work/Character名称资料Provider，已部署）：新增站点无关`entitymetadata`契约、短期绑定预览和受控REST流程；萌娘百科适配器只在`cgm_moegirl`构建标签下注册，按公开搜索页与语义信息框提取Work/Character其他名称。启动配置`entity_metadata_scraping_enabled`默认关闭，只有认证所有者在对应Manage实体页的显式搜索、候选预览和逐项勾选应用会外联；扫描、Browse、启动、自动化及计划任务不调用Provider。应用仅追加Alias，不改主名称、Sort name或Character所属Work，继续复用revision、NFC/重复/数量门禁和Manifest dirty传播；无数据库字段、表、Schema或回填变化。Work/Character气泡状态同时改为真实字符串数组，`Fate/stay night`一类合法斜杠名称不再被UI分隔符拆开；Coser/Tag既有输入规则不变。管理页有未保存编辑时禁止应用，Provider移除/零结果/旧`null`集合/局部渲染失败均有隔离行为。合成结构、当前公开Work/Character/搜索HTML兼容校核、后端安全选择、前端30文件95项、TypeScript、681模块生产构建、正式三标签产品测试与构建均通过。2026-09-03从清洁提交`1de0b95`完成无schema正式部署，并在私有正式配置中显式启用该功能。

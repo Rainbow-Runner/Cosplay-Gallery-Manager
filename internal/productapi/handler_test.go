@@ -467,6 +467,37 @@ func TestManageCoreEntityNameConflictsExposeCharacterWorkContext(t *testing.T) {
 	}
 }
 
+func TestManageWorkCharactersReturnsOnlyTheSelectedWorksCharacters(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 4, 9, 30, 0, 0, time.UTC)
+	work, err := database.CoreEntities().CreateWork(ctx, productdb.CreateNamedEntityInput{Name: "Fate"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherWork, err := database.CoreEntities().CreateWork(ctx, productdb.CreateNamedEntityInput{Name: "Other"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	character, err := database.CoreEntities().CreateCharacter(ctx, work.UUID, productdb.CreateNamedEntityInput{Name: "Saber"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.CoreEntities().CreateCharacter(ctx, otherWork.UUID, productdb.CreateNamedEntityInput{Name: "Hidden"}, now); err != nil {
+		t.Fatal(err)
+	}
+	body := fmt.Sprintf(`{"query":"query { manageWorkCharacters(workUUID:\"%s\") { uuid name workUUID workName } }"}`, work.UUID)
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	NewHandler(database, func(*http.Request) bool { return true }).ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(character.UUID)) || !bytes.Contains(response.Body.Bytes(), []byte(`"workName":"Fate"`)) ||
+		bytes.Contains(response.Body.Bytes(), []byte(`"name":"Hidden"`)) {
+		t.Fatalf("Work Character response = %d %s", response.Code, response.Body.String())
+	}
+}
+
 func TestManageCoserListAcceptsSearchCompletenessAndPageSize(t *testing.T) {
 	database := openTestDatabase(t)
 	created, err := database.CoreEntities().CreateCoser(context.Background(), productdb.CreateCoserInput{

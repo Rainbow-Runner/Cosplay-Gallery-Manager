@@ -1856,3 +1856,14 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 功能与部署前记录提交为`6e76fad5dc071598cf7a2e65d01199f2560783a2`（`Restore Character Work names in management`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，`go version -m`确认revision一致且`vcs.modified=false`；正式二进制SHA-256为`e863633ea480a631613be7e4cfeaae05c3f46935387331dfe3159a799c5ad642`。
 - 停服后创建并实际解包复验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260903T131441Z-6e76fad.tar.gz`，SHA-256为`4524a05337a170859b62bd5d55ac2ce7d1f0a7641deef475dd71948380527a1c`。包内schema v8数据库、旧二进制、配置、systemd单元和Coser托管资源均与正式来源一致，不含媒体、缓存或日志。
 - 2026-09-03完成无schema增量部署，只原子替换正式二进制；配置SHA-256继续为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，数据库inode保持`19679716`。服务只启动一次并保持`active/running`、`NRestarts=0`；Health/Ready为204，Root/Legal/Session为200，About精确对应源码。正式库`integrity_check=ok`并保持2个媒体库、6个Gallery、6个来源、322个Item、135个Coser、99个Work和6个Character；启动journal无WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-60 Work内嵌Character管理
+
+日期：2026-09-04
+
+- 保留现有Character独立管理入口、URL与Primary Work选择流程，不改变已经确认的实体模型。已保存Work的原编辑区域新增“作品属性/关联角色”顶部页签；未保存Work必须先创建，因此不会产生缺少Work身份的临时Character。
+- 关联角色页顶部持续显示当前Work主名称；其下以固定7.5rem高度、可纵向滚动的气泡区展示全部直属Character和总数，避免角色数量增加时挤占表单空间。点击气泡进入该Character编辑，活动项有明确状态；“新建角色”恢复空白表单。
+- Work内入口将Primary Work显示为锁定值而非选择器，创建Mutation始终从当前Work注入UUID，省去逐个搜索和选择Work的重复操作，也不能意外关联到其他Work。名称、Sort name、Alias气泡、350ms精确查重、同Work主名称硬阻断、revision保存、可拔除网络名称导入、合并与删除仍复用原Character能力。
+- 后端新增认证只读查询`manageWorkCharacters(workUUID)`。产品数据库先确认Work存在，再只读取`characters.work_uuid`匹配项；返回当前Work名称，并复用管理列表的英文名称/中文拼音排序和Sort name人工覆盖。该查询没有写入能力，不向Browse开放，不新增数据库字段、表、索引、schema版本、回填任务或第二套Character所有权关系。
+- 回归覆盖不同Work不能串项、Work名称/UUID恢复、拼音排序与不存在Work错误；GraphQL覆盖认证关系响应。前端覆盖页签切换、固定名称、关联气泡、锁定Work、查重就绪、自动注入Work UUID、创建及列表刷新。定向`productdb/productapi`、ManageCoreEntitiesPage 12项和TypeScript通过；完整前端30文件99项、681模块生产构建及`cgm_web_embed cgm_galleryepic cgm_moegirl`正式标签产品测试通过，仅保留既有主共享包超过500KiB提示。
+- 当前阶段完成代码与开发记录，尚未提交或部署；正式服务仍运行上一版`6e76fad`。

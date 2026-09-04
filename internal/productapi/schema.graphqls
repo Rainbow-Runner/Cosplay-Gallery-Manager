@@ -438,6 +438,7 @@ type Query {
   manageAudit(page: Int! = 1): ManageAuditPage!
   manageCoreEntities(kind: SearchEntityKind!, page: Int! = 1, pageSize: Int! = 0, query: String! = "", coserAssetFilter: ManageCoserAssetFilter! = ALL): ManageCoreEntityPage!
   manageCoreEntity(kind: SearchEntityKind!, uuid: ID!): ManageCoreEntity!
+  manageWorkCharacters(workUUID: ID!): [ManageCoreEntity!]!
   manageCoreEntityOptions(kind: SearchEntityKind!, query: String! = "", limit: Int! = 20): [ManageCoreEntity!]!
   manageCoserNameConflicts(name: String!, limit: Int! = 10): [ManageCoserNameConflict!]!
   manageCoreEntityNameConflicts(kind: SearchEntityKind!, name: String!, limit: Int! = 10): [ManageCoreEntityNameConflict!]!

@@ -7,7 +7,7 @@ import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { MANAGE_CORE_ENTITIES, MANAGE_CORE_ENTITY, MANAGE_CORE_ENTITY_NAME_CONFLICTS, MANAGE_CORE_ENTITY_OPTIONS, MANAGE_COSER_NAME_CONFLICTS } from "../api/manage";
+import { CREATE_CORE_ENTITY, MANAGE_CORE_ENTITIES, MANAGE_CORE_ENTITY, MANAGE_CORE_ENTITY_NAME_CONFLICTS, MANAGE_CORE_ENTITY_OPTIONS, MANAGE_COSER_NAME_CONFLICTS, MANAGE_WORK_CHARACTERS, PREVIEW_CORE_ENTITY_DELETE } from "../api/manage";
 import { messages } from "../i18n/messages";
 import { ManageCoreEntitiesPage, parseAliases, socialPlatformOptions } from "./ManageCoreEntitiesPage";
 import type { ManageCoreEntity } from "./types";
@@ -229,6 +229,48 @@ describe("ManageCoreEntitiesPage validation", () => {
 
     expect(await screen.findByText("Fate")).toBeInTheDocument();
     expect(screen.getByLabelText("Primary Work UUID")).toHaveValue(character.workUUID);
+  });
+
+  it("creates and edits Characters inside a Work with the Work association locked", async () => {
+    const work = {
+      __typename: "ManageCoreEntity", kind: "WORK", uuid: "018f4c8e-7a9b-7def-8123-456789abcd22", name: "Fate", sortName: "", aliases: [], slug: "fate", metadataRevision: 2,
+      workUUID: null, workName: "", avatarURL: null, bannerURL: null, avatarCrop: null, bannerFocalPoint: null,
+      profileSummary: "", biography: "", countryOrRegion: "", useInRecommendation: true, socialAccounts: [], parents: [],
+    } as ManageCoreEntity & { __typename: string };
+    const saber = {
+      ...work, kind: "CHARACTER", uuid: "018f4c8e-7a9b-7def-8123-456789abcd33", name: "Saber", slug: "saber", metadataRevision: 1,
+      workUUID: work.uuid, workName: work.name,
+    } as ManageCoreEntity & { __typename: string };
+    const rin = {
+      ...saber, uuid: "018f4c8e-7a9b-7def-8123-456789abcd44", name: "Rin", slug: "rin",
+    } as ManageCoreEntity & { __typename: string };
+    const characterInput = { kind: "CHARACTER", name: "Rin", sortName: "", aliases: [], workUUID: work.uuid, profileSummary: "", biography: "", countryOrRegion: "", useInRecommendation: true };
+    renderPage([
+      {
+        request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("WORK") },
+        result: { data: { manageCoreEntities: { ...emptyPage, pageSize: 60, totalItems: 1, totalPages: 1, items: [work] } } },
+      },
+      { request: { query: MANAGE_CORE_ENTITY, variables: { kind: "WORK", uuid: work.uuid } }, result: { data: { manageCoreEntity: work } } },
+      { request: { query: PREVIEW_CORE_ENTITY_DELETE, variables: { kind: "WORK", uuid: work.uuid } }, result: { data: { previewCoreEntityDelete: { kind: "WORK", uuid: work.uuid, metadataRevision: 2, referenceCount: 1, blockers: [{ code: "CHARACTER_REFERENCE", referenceCount: 1 }], canDelete: false } } } },
+      { request: { query: MANAGE_WORK_CHARACTERS, variables: { workUUID: work.uuid } }, result: { data: { manageWorkCharacters: [saber] } } },
+      { request: { query: MANAGE_CORE_ENTITY_NAME_CONFLICTS, variables: { kind: "CHARACTER", name: "Rin", limit: 10 } }, result: { data: { manageCoreEntityNameConflicts: [] } } },
+      { request: { query: CREATE_CORE_ENTITY, variables: { input: characterInput } }, result: { data: { createCoreEntity: rin } } },
+      { request: { query: MANAGE_WORK_CHARACTERS, variables: { workUUID: work.uuid } }, result: { data: { manageWorkCharacters: [saber, rin] } } },
+      { request: { query: PREVIEW_CORE_ENTITY_DELETE, variables: { kind: "CHARACTER", uuid: rin.uuid } }, result: { data: { previewCoreEntityDelete: { kind: "CHARACTER", uuid: rin.uuid, metadataRevision: 1, referenceCount: 0, blockers: [], canDelete: true } } } },
+    ], `/manage/entities?kind=WORK&uuid=${work.uuid}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Characters" }));
+    expect(screen.getByRole("heading", { name: "Fate" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Saber" })).toBeInTheDocument();
+    expect(screen.getByText("1 total")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Search Primary Work")).not.toBeInTheDocument();
+    expect(screen.getByText("Fate", { selector: ".fixed-character-work" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Name (required)"), { target: { value: "Rin" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Create" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    expect(await screen.findByText("Character saved and associated with this Work.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save revision 1" })).toBeInTheDocument();
   });
 
   it("requires review of exact Work matches before creating another Work", async () => {

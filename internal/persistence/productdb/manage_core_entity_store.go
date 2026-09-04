@@ -331,6 +331,93 @@ type ManageCoreEntityPageOptions struct {
 	CoserAssetFilter string
 }
 
+type manageOrderedEntity struct {
+	uuid     string
+	name     string
+	sortName string
+}
+
+func sortManageEntities(candidates []manageOrderedEntity) {
+	pinyin := collate.New(language.SimplifiedChinese, collate.IgnoreCase)
+	sort.Slice(candidates, func(i, j int) bool {
+		left, right := candidates[i], candidates[j]
+		leftKey, rightKey := left.sortName, right.sortName
+		if leftKey == "" {
+			leftKey = left.name
+		}
+		if rightKey == "" {
+			rightKey = right.name
+		}
+		if comparison := pinyin.CompareString(leftKey, rightKey); comparison != 0 {
+			return comparison < 0
+		}
+		if comparison := pinyin.CompareString(left.name, right.name); comparison != 0 {
+			return comparison < 0
+		}
+		if leftKey != rightKey {
+			return leftKey < rightKey
+		}
+		if left.name != right.name {
+			return left.name < right.name
+		}
+		return left.uuid < right.uuid
+	})
+}
+
+// ManageCharactersForWork returns every Character owned by one Work using the
+// same deterministic English-name/Chinese-Pinyin ordering as the management
+// index. It is deliberately a relationship read, not a second persistence
+// model for Work-owned Character editing.
+func (s *CoreEntityStore) ManageCharactersForWork(ctx context.Context, workUUID string) ([]ManageCoreEntity, error) {
+	var workName string
+	if err := s.db.QueryRowContext(ctx, `SELECT name FROM works WHERE uuid=?`, workUUID).Scan(&workName); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT character.uuid,character.name,character.sort_name,character.slug,character.metadata_revision,alias.alias
+		FROM characters character
+		LEFT JOIN character_aliases alias ON alias.character_uuid=character.uuid
+		WHERE character.work_uuid=?
+		ORDER BY character.uuid,alias.position
+	`, workUUID)
+	if err != nil {
+		return nil, err
+	}
+	var candidates []manageOrderedEntity
+	entities := make(map[string]*ManageCoreEntity)
+	for rows.Next() {
+		var uuid, name, sortName, slug string
+		var metadataRevision int64
+		var alias sql.NullString
+		if err := rows.Scan(&uuid, &name, &sortName, &slug, &metadataRevision, &alias); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		entity := entities[uuid]
+		if entity == nil {
+			entity = &ManageCoreEntity{Kind: "CHARACTER", UUID: uuid, Name: name, SortName: sortName, Slug: slug, MetadataRevision: metadataRevision, WorkUUID: workUUID, WorkName: workName}
+			entities[uuid] = entity
+			candidates = append(candidates, manageOrderedEntity{uuid: uuid, name: name, sortName: sortName})
+		}
+		if alias.Valid {
+			entity.Aliases = append(entity.Aliases, alias.String)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	sortManageEntities(candidates)
+	result := make([]ManageCoreEntity, 0, len(candidates))
+	for _, candidate := range candidates {
+		result = append(result, *entities[candidate.uuid])
+	}
+	return result, nil
+}
+
 func (s *CoreEntityStore) ManagePage(ctx context.Context, kind string, page int) (ManageCoreEntityPage, error) {
 	return s.ManagePageWithOptions(ctx, kind, ManageCoreEntityPageOptions{Page: page})
 }
@@ -389,18 +476,13 @@ func (s *CoreEntityStore) ManagePageWithOptions(ctx context.Context, kind string
 		}
 	}
 	result := ManageCoreEntityPage{Page: options.Page, PageSize: pageSize}
-	type orderedEntity struct {
-		uuid     string
-		name     string
-		sortName string
-	}
 	rows, err := s.db.QueryContext(ctx, `SELECT entity.uuid,entity.name,entity.sort_name FROM `+table+` entity WHERE `+where, args...)
 	if err != nil {
 		return ManageCoreEntityPage{}, err
 	}
-	var candidates []orderedEntity
+	var candidates []manageOrderedEntity
 	for rows.Next() {
-		var candidate orderedEntity
+		var candidate manageOrderedEntity
 		if err := rows.Scan(&candidate.uuid, &candidate.name, &candidate.sortName); err != nil {
 			rows.Close()
 			return ManageCoreEntityPage{}, err
@@ -414,30 +496,7 @@ func (s *CoreEntityStore) ManagePageWithOptions(ctx context.Context, kind string
 	if err := rows.Close(); err != nil {
 		return ManageCoreEntityPage{}, err
 	}
-	pinyin := collate.New(language.SimplifiedChinese, collate.IgnoreCase)
-	sort.Slice(candidates, func(i, j int) bool {
-		left, right := candidates[i], candidates[j]
-		leftKey, rightKey := left.sortName, right.sortName
-		if leftKey == "" {
-			leftKey = left.name
-		}
-		if rightKey == "" {
-			rightKey = right.name
-		}
-		if comparison := pinyin.CompareString(leftKey, rightKey); comparison != 0 {
-			return comparison < 0
-		}
-		if comparison := pinyin.CompareString(left.name, right.name); comparison != 0 {
-			return comparison < 0
-		}
-		if leftKey != rightKey {
-			return leftKey < rightKey
-		}
-		if left.name != right.name {
-			return left.name < right.name
-		}
-		return left.uuid < right.uuid
-	})
+	sortManageEntities(candidates)
 	result.TotalItems = len(candidates)
 	result.TotalPages = int(math.Ceil(float64(result.TotalItems) / float64(pageSize)))
 	start := (options.Page - 1) * pageSize

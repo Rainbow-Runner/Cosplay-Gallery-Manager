@@ -980,6 +980,7 @@ type ComplexityRoot struct {
 		ManageProcessingJobs                 func(childComplexity int, status string, page int) int
 		ManageRuntimeSettings                func(childComplexity int) int
 		ManageVideoDependencyStatus          func(childComplexity int) int
+		ManageWorkCharacters                 func(childComplexity int, workUUID string) int
 		MediaDetail                          func(childComplexity int, itemUUID string) int
 		MediaEmbeddedMetadata                func(childComplexity int, itemUUID string, visibleFields []string) int
 		PreviewCoreEntityDelete              func(childComplexity int, kind SearchEntityKind, uuid string) int
@@ -1184,6 +1185,7 @@ type QueryResolver interface {
 	ManageAudit(ctx context.Context, page int) (*ManageAuditPage, error)
 	ManageCoreEntities(ctx context.Context, kind SearchEntityKind, page int, pageSize int, query string, coserAssetFilter ManageCoserAssetFilter) (*ManageCoreEntityPage, error)
 	ManageCoreEntity(ctx context.Context, kind SearchEntityKind, uuid string) (*ManageCoreEntity, error)
+	ManageWorkCharacters(ctx context.Context, workUUID string) ([]*ManageCoreEntity, error)
 	ManageCoreEntityOptions(ctx context.Context, kind SearchEntityKind, query string, limit int) ([]*ManageCoreEntity, error)
 	ManageCoserNameConflicts(ctx context.Context, name string, limit int) ([]*ManageCoserNameConflict, error)
 	ManageCoreEntityNameConflicts(ctx context.Context, kind SearchEntityKind, name string, limit int) ([]*ManageCoreEntityNameConflict, error)
@@ -6396,6 +6398,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.ManageVideoDependencyStatus(childComplexity), true
+
+	case "Query.manageWorkCharacters":
+		if e.complexity.Query.ManageWorkCharacters == nil {
+			break
+		}
+
+		args, err := ec.field_Query_manageWorkCharacters_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ManageWorkCharacters(childComplexity, args["workUUID"].(string)), true
 
 	case "Query.mediaDetail":
 		if e.complexity.Query.MediaDetail == nil {
@@ -11891,6 +11905,34 @@ func (ec *executionContext) field_Query_manageProcessingJobs_argsPage(
 	}
 
 	var zeroVal int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_manageWorkCharacters_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_manageWorkCharacters_argsWorkUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["workUUID"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Query_manageWorkCharacters_argsWorkUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["workUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("workUUID"))
+	if tmp, ok := rawArgs["workUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
 	return zeroVal, nil
 }
 
@@ -46449,6 +46491,101 @@ func (ec *executionContext) fieldContext_Query_manageCoreEntity(ctx context.Cont
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_manageWorkCharacters(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_manageWorkCharacters(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ManageWorkCharacters(rctx, fc.Args["workUUID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageCoreEntity)
+	fc.Result = res
+	return ec.marshalNManageCoreEntity2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageCoreEntityᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_manageWorkCharacters(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "kind":
+				return ec.fieldContext_ManageCoreEntity_kind(ctx, field)
+			case "uuid":
+				return ec.fieldContext_ManageCoreEntity_uuid(ctx, field)
+			case "name":
+				return ec.fieldContext_ManageCoreEntity_name(ctx, field)
+			case "sortName":
+				return ec.fieldContext_ManageCoreEntity_sortName(ctx, field)
+			case "aliases":
+				return ec.fieldContext_ManageCoreEntity_aliases(ctx, field)
+			case "slug":
+				return ec.fieldContext_ManageCoreEntity_slug(ctx, field)
+			case "metadataRevision":
+				return ec.fieldContext_ManageCoreEntity_metadataRevision(ctx, field)
+			case "workUUID":
+				return ec.fieldContext_ManageCoreEntity_workUUID(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageCoreEntity_workName(ctx, field)
+			case "profileSummary":
+				return ec.fieldContext_ManageCoreEntity_profileSummary(ctx, field)
+			case "biography":
+				return ec.fieldContext_ManageCoreEntity_biography(ctx, field)
+			case "countryOrRegion":
+				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
+			case "useInRecommendation":
+				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "avatarURL":
+				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
+			case "bannerURL":
+				return ec.fieldContext_ManageCoreEntity_bannerURL(ctx, field)
+			case "avatarCrop":
+				return ec.fieldContext_ManageCoreEntity_avatarCrop(ctx, field)
+			case "bannerFocalPoint":
+				return ec.fieldContext_ManageCoreEntity_bannerFocalPoint(ctx, field)
+			case "socialAccounts":
+				return ec.fieldContext_ManageCoreEntity_socialAccounts(ctx, field)
+			case "parents":
+				return ec.fieldContext_ManageCoreEntity_parents(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageCoreEntity", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_manageWorkCharacters_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_manageCoreEntityOptions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_manageCoreEntityOptions(ctx, field)
 	if err != nil {
@@ -60092,6 +60229,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_manageCoreEntity(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "manageWorkCharacters":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_manageWorkCharacters(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

@@ -211,6 +211,47 @@ func TestManageWorkCharacterAndTagPagesSearchSizeAndPinyinOrder(t *testing.T) {
 	}
 }
 
+func TestManageCharactersForWorkIsScopedAndUsesManagementOrder(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)
+	work, err := db.CoreEntities().CreateWork(ctx, CreateNamedEntityInput{Name: "Fate"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherWork, err := db.CoreEntities().CreateWork(ctx, CreateNamedEntityInput{Name: "Other"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, input := range []CreateNamedEntityInput{{Name: "张三"}, {Name: "Alice"}, {Name: "Manual", SortName: "Aardvark", Aliases: []string{"Manual Alias"}}} {
+		if _, err := db.CoreEntities().CreateCharacter(ctx, work.UUID, input, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := db.CoreEntities().CreateCharacter(ctx, otherWork.UUID, CreateNamedEntityInput{Name: "Must not leak"}, now); err != nil {
+		t.Fatal(err)
+	}
+	characters, err := db.CoreEntities().ManageCharactersForWork(ctx, work.UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := []string{"Manual", "Alice", "张三"}
+	if len(characters) != len(wanted) {
+		t.Fatalf("Work Characters = %#v", characters)
+	}
+	for index, name := range wanted {
+		if characters[index].Name != name || characters[index].WorkUUID != work.UUID || characters[index].WorkName != work.Name {
+			t.Fatalf("Work Character[%d] = %#v, want name %q bound to %q", index, characters[index], name, work.Name)
+		}
+	}
+	if len(characters[0].Aliases) != 1 || characters[0].Aliases[0] != "Manual Alias" {
+		t.Fatalf("Work Character Aliases = %#v", characters[0].Aliases)
+	}
+	if _, err := db.CoreEntities().ManageCharactersForWork(ctx, "missing-work"); err == nil {
+		t.Fatal("missing Work unexpectedly returned a Character collection")
+	}
+}
+
 func TestManageCoserNameConflictsUseNormalizedExactNamesAndAliases(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

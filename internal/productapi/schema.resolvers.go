@@ -1554,6 +1554,19 @@ func (r *queryResolver) ManageCoreEntity(ctx context.Context, kind SearchEntityK
 	return manageCoreEntity(value), nil
 }
 
+// ManageWorkCharacters is the resolver for the manageWorkCharacters field.
+func (r *queryResolver) ManageWorkCharacters(ctx context.Context, workUUID string) ([]*ManageCoreEntity, error) {
+	values, err := r.Database.CoreEntities().ManageCharactersForWork(ctx, workUUID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	result := make([]*ManageCoreEntity, 0, len(values))
+	for _, value := range values {
+		result = append(result, manageCoreEntity(value))
+	}
+	return result, nil
+}
+
 // ManageCoreEntityOptions is the resolver for the manageCoreEntityOptions field.
 func (r *queryResolver) ManageCoreEntityOptions(ctx context.Context, kind SearchEntityKind, query string, limit int) ([]*ManageCoreEntity, error) {
 	values, err := r.Database.CoreEntities().ManageOptions(ctx, string(kind), query, limit)

@@ -1869,3 +1869,12 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 功能与部署前记录提交为`949c3208d72340d76d0b1433516a51f45cc4464e`（`Add Work-scoped Character management`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，`go version -m`确认revision一致且`vcs.modified=false`；正式二进制SHA-256为`3366a0ebd40bc96a7661bab3c879b03686ddc5c9fb2de50c872a7ed077687250`，构建时间为`2026-09-04T01:05:43Z`。
 - 停服后创建并实际解包复验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260904T010841Z-949c320.tar.gz`，SHA-256为`37867b75809e58d0de5a45665ecba064beaf32da85ac105d16108977f6139dab`。包内schema v8数据库、旧二进制、配置、systemd单元和Coser托管资源均与正式来源一致，不含媒体、缓存或日志；正式、暂存和解包数据库均为`integrity_check=ok`且计数一致。
 - 2026-09-04完成无schema增量部署，只原子替换正式二进制；配置SHA-256继续为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，数据库inode保持`19679716`。服务只启动一次并保持`active/running`、`NRestarts=0`；Health/Ready为204，Root/Legal/Session为200，About精确对应源码且`exactSourceAvailable=true`。正式库保持2个媒体库、6个Gallery、6个来源、322个Item、135个Coser、99个Work和12个Character；2个工作器及FFmpeg/FFprobe/LibRaw正常启用，启动journal无WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-61 独立Character列表显示所属Work
+
+日期：2026-09-05
+
+- 独立Character管理列表原先只显示角色主名称和Aliases（无Alias时为UUID），虽然编辑表单已经能恢复Primary Work名称，但用户必须逐项打开才能区分不同作品中的同名或近似角色。
+- Character列表行现增加第三层“Work/所属作品”文本并提高到正文对比度；名称和Aliases/UUID的既有层级、点击选择、分页、搜索及英文/中文拼音排序均不改变。显示值直接使用现有Manage实体响应的`workName`，若连接旧响应则回退`workUUID`，最终才显示占位符。
+- 变更只作用于独立Character列表；Work、Coser、Tag列表以及上一阶段Work内嵌Character气泡区不变。不新增GraphQL字段、数据库字段、表、schema版本或回填任务。
+- 定向ManageCoreEntitiesPage 12项回归确认列表和编辑表单同时显示Work名称；完整前端30文件99项、TypeScript及681模块生产构建通过，仅保留既有主共享包超过500KiB提示。当前尚未提交或部署，正式服务仍运行`949c320`。

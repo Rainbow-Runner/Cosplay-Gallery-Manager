@@ -227,7 +227,8 @@ describe("ManageCoreEntitiesPage validation", () => {
       result: { data: { manageCoreEntity: character } },
     }], `/manage/entities?kind=CHARACTER&uuid=${character.uuid}`);
 
-    expect(await screen.findByText("Fate")).toBeInTheDocument();
+    expect(await screen.findByText("Work: Fate")).toHaveClass("entity-manage-list__work");
+    expect(screen.getByText("Fate", { selector: ".manage-entity-selector > span" })).toBeInTheDocument();
     expect(screen.getByLabelText("Primary Work UUID")).toHaveValue(character.workUUID);
   });
 

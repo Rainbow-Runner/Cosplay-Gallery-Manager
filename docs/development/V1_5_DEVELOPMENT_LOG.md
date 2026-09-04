@@ -1877,4 +1877,7 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 独立Character管理列表原先只显示角色主名称和Aliases（无Alias时为UUID），虽然编辑表单已经能恢复Primary Work名称，但用户必须逐项打开才能区分不同作品中的同名或近似角色。
 - Character列表行现增加第三层“Work/所属作品”文本并提高到正文对比度；名称和Aliases/UUID的既有层级、点击选择、分页、搜索及英文/中文拼音排序均不改变。显示值直接使用现有Manage实体响应的`workName`，若连接旧响应则回退`workUUID`，最终才显示占位符。
 - 变更只作用于独立Character列表；Work、Coser、Tag列表以及上一阶段Work内嵌Character气泡区不变。不新增GraphQL字段、数据库字段、表、schema版本或回填任务。
-- 定向ManageCoreEntitiesPage 12项回归确认列表和编辑表单同时显示Work名称；完整前端30文件99项、TypeScript及681模块生产构建通过，仅保留既有主共享包超过500KiB提示。当前尚未提交或部署，正式服务仍运行`949c320`。
+- 定向ManageCoreEntitiesPage 12项回归确认列表和编辑表单同时显示Work名称；完整前端30文件99项、TypeScript及681模块生产构建通过，仅保留既有主共享包超过500KiB提示。
+- 功能与部署前记录提交为`7de86e78c568b8779d4ae07519a3ec7efdcfec71`（`Show Work names in Character list`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，`go version -m`确认revision一致且`vcs.modified=false`；正式二进制SHA-256为`8ef94cb55ea3f51c69f03b1858313177758281d0782df9e832b336216eb9ead1`，构建时间为`2026-09-04T17:09:35Z`。
+- 停服后创建并实际解包复验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260904T171031Z-7de86e7.tar.gz`，SHA-256为`94e8b119b6be6ac3703e0990969371aefbfdfcdffd902e48ca56a28991565bd2`。包内schema v8数据库、旧二进制、配置、systemd单元和Coser托管资源逐项一致，不含媒体、缓存或日志；正式、暂存与解包数据库均为`integrity_check=ok`并保留42个Character。
+- 2026-09-05完成无schema增量部署，只原子替换正式二进制；配置SHA-256继续为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，数据库inode保持`19679716`。服务只启动一次并保持`active/running`、`NRestarts=0`；Health/Ready为204，Root/Legal/Session及本轮Character管理分块和样式资源均为200，About精确对应源码且`exactSourceAvailable=true`。正式库保持2个媒体库、6个Gallery、6个来源、322个Item、135个Coser、99个Work和42个Character；启动journal无WARN、ERROR、FAILED、panic或fatal。

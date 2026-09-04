@@ -364,3 +364,5 @@ GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
 同日修复并部署Character关联Work只显示UUID的问题：根因是Manage实体响应缺少Work名称且表单固定传空名称，并非关系数据丢失。现由Character外键实时解析并只读返回`workName`，选择后立即显示、重新打开后恢复，Gallery Cast选择Character也保留Work名称；不增加数据库字段或schema。功能提交`6e76fad`在完整回滚包保护下完成无schema增量部署，服务、About、数据库完整性、99个Work/6个Character业务计数和日志复核均通过。
 
 2026-09-04完成Work内嵌Character管理并正式部署：Character独立入口保持不变，已保存Work编辑区增加作品属性/关联角色页签、固定高度角色气泡区和锁定当前Work的创建/编辑表单；新建自动注入当前Work UUID，并继续复用查重、Alias、revision、网络名称导入及生命周期能力。认证只读`manageWorkCharacters`查询严格按Work隔离并沿用英文/中文拼音排序，不新增数据库schema。功能提交`949c320`在已解包复验完整回滚包保护下只替换二进制；服务、About、数据库完整性、99个Work/12个Character计数和启动日志均通过。下一步由所有者在Manage → Core entities → Work中选取真实Work，对页签切换、角色气泡、自动关联创建和既有Character编辑进行业务验收。
+
+2026-09-05补齐独立Character列表所属Work并正式部署：列表行在名称和Aliases/UUID后显示高对比度的所属Work名称，直接复用现有`workName`并对旧响应回退`workUUID`；其他实体列表和Work内嵌角色气泡不变，无接口或数据库schema变化。功能提交`7de86e7`在完整回滚包保护下只替换二进制；服务、前端资源、About、数据库完整性及99个Work/42个Character计数均通过。下一步由所有者在Manage → Core entities → Character中用同名或近似角色进行快速辨认业务验收。

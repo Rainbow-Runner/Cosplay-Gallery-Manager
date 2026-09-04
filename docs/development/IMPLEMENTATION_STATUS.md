@@ -10,6 +10,7 @@
 
 ## 已完成
 
+- 1.5（独立Character列表紧凑布局修正，待提交/未部署）：撤销所属Work占用第三行造成的行高增长；Character列表项恢复原有两行高度，左侧保留名称与Aliases/UUID，右侧仅显示所属Work名称并省略“Work:/所属作品：”前缀。长文本保持单行截断，Work内嵌Character区域及其他实体列表不变，无接口、数据或schema变化。前端30文件99项、TypeScript和681模块生产构建通过。
 - 1.5（独立Character列表显示所属Work，已部署）：独立Character管理列表在名称和Aliases/UUID之后增加所属Work名称，使用略高对比度的中英文标签，便于同名或近似角色快速辨认；数据直接复用现有`workName`，旧响应缺少名称时防御性回退到`workUUID`。Work、Coser、Tag列表以及Work内嵌Character气泡区保持原样，无接口、数据库或schema变化。ManageCoreEntitiesPage 12项、前端30文件99项、TypeScript和681模块生产构建通过；2026-09-05从清洁提交`7de86e7`完成无schema增量部署。
 - 1.5（Work内嵌Character管理，已部署）：保留Character独立管理页，在已保存Work编辑区新增“作品属性/关联角色”双语页签；关联角色页固定显示当前Work名称，以固定高度滚动气泡区列出全部直属Character，点击气泡编辑并可随时新建。该入口锁定Primary Work，新建时自动提交当前Work UUID，继续复用既有Character查重、Alias气泡、revision、网络名称导入及合并/删除能力。新增认证只读`manageWorkCharacters`关系查询，严格按Work隔离并沿用英文名称/中文拼音与Sort name覆盖排序；不新增数据库字段、表、schema或另一套Character模型。产品数据库/API测试、前端30文件99项、TypeScript、681模块生产构建及正式三标签产品测试通过；2026-09-04从清洁提交`949c320`完成无schema增量部署。
 - 1.5（Character关联Work名称恢复，已部署）：修复Manage Character数据只返回`workUUID`且表单把选择器名称固定传空，导致已有关联及新选择的Work只能辨认UUID的问题。认证Manage实体模型新增只读`workName`，由当前Work表实时解析，不新增数据库字段；Character详情重载后显示Work名称，选择Work后立即更新名称，Gallery Cast选择Character时也保留其Work名称。后端定向测试、前端30文件98项、TypeScript、681模块生产构建及正式三标签产品测试通过；2026-09-03从清洁提交`6e76fad`完成无schema增量部署。

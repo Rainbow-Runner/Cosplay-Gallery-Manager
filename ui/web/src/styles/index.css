@@ -832,7 +832,8 @@ a { color: inherit; text-decoration: none; }
 .entity-manage-list > button.is-active { background: rgb(182 154 124 / 9%); }
 .entity-manage-list > button strong { font: 400 1rem Georgia, serif; }
 .entity-manage-list > button > span { overflow: hidden; color: var(--ink-muted); font-size: .55rem; text-overflow: ellipsis; white-space: nowrap; }
-.entity-manage-list > button > .entity-manage-list__work { color: var(--cgm-foreground); font-size: .6rem; font-weight: 550; }
+.entity-manage-list > button.is-character { grid-template-columns: minmax(0, 1fr) minmax(4rem, .65fr); align-items: center; column-gap: .75rem; }
+.entity-manage-list > button > .entity-manage-list__work { max-width: 100%; justify-self: end; color: var(--cgm-foreground); font-size: .6rem; font-weight: 550; text-align: right; }
 .entity-manage-list > button.is-coser { grid-template-columns: 2.5rem minmax(0, 1fr) auto; align-items: center; gap: .65rem; min-height: 4rem; }
 .entity-manage-list__avatar { display: block; width: 2.5rem; height: 2.5rem; overflow: hidden; border: 1px solid var(--line); border-radius: 50%; background: var(--cgm-muted); }
 .entity-manage-list__avatar.is-error { border-color: #b45309; }

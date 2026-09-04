@@ -1,5 +1,12 @@
 # 本机实际业务应用测试部署
 
+### 2026-09-04 Work内嵌Character管理增量部署
+
+- 从清洁提交`949c3208d72340d76d0b1433516a51f45cc4464e`以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建正式Linux amd64单文件；VCS元数据为`modified=false`，二进制SHA-256为`3366a0ebd40bc96a7661bab3c879b03686ddc5c9fb2de50c872a7ed077687250`，About精确对应源码。
+- 停服后创建并实际解包核验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260904T010841Z-949c320.tar.gz`，SHA-256为`37867b75809e58d0de5a45665ecba064beaf32da85ac105d16108977f6139dab`；包内schema v8数据库、旧二进制、配置、systemd单元和Coser托管资源逐项一致，不包含媒体、缓存或日志。
+- 本次没有schema迁移，只原子替换二进制；正式配置SHA-256保持`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，数据库inode保持`19679716`。部署后`integrity_check=ok`且2个媒体库、6个Gallery、6个来源、322个Item、135个Coser、99个Work和12个Character计数不变。
+- 服务只启动一次并保持`active/running`、`NRestarts=0`；Health/Ready为204，Root/Legal/Session为200，2个工作器及FFmpeg/FFprobe/LibRaw正常启用，journal未出现WARN、ERROR、FAILED、panic或fatal。
+
 ### 2026-09-03 Character关联Work名称恢复增量部署
 
 - 从清洁提交`6e76fad5dc071598cf7a2e65d01199f2560783a2`以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建正式Linux amd64单文件；VCS元数据为`modified=false`，二进制SHA-256为`e863633ea480a631613be7e4cfeaae05c3f46935387331dfe3159a799c5ad642`，About精确对应源码。

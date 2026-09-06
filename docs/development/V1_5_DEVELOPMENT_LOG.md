@@ -1893,3 +1893,14 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 功能与部署前记录提交为`7d15ed32fc59e70b6f8fc95af1a9fe48fea9d435`（`Keep Character list rows compact`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，`go version -m`确认revision一致且`vcs.modified=false`；正式二进制SHA-256为`72761317a7a908c3e9539dd02c8e477f90b17f4c3b50c8358522d4e61a8b6c81`，构建时间为`2026-09-04T17:25:32Z`。
 - 停服后创建并实际解包复验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260904T172737Z-7d15ed3.tar.gz`，SHA-256为`c943e760eb23124180e4bcb7ca119e814a6b524ee0382d8eda5cd09314a9323a`。包内schema v8数据库、旧二进制、配置、systemd单元和Coser托管资源与正式来源逐项一致，不含媒体、缓存或日志；正式、暂存和解包数据库均为`integrity_check=ok`并保持业务计数一致。
 - 2026-09-05完成无schema增量部署，只原子替换正式二进制；配置SHA-256继续为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，数据库inode保持`19679716`。服务只启动一次并保持`active/running`、`NRestarts=0`；Health/Ready为204，Root/Legal/Session、本轮Character管理分块和样式资源均为200，About精确对应源码且`exactSourceAvailable=true`。正式库保持2个媒体库、6个Gallery、6个来源、322个Item、135个Coser、99个Work和42个Character；2个工作器及LibRaw、FFmpeg、FFprobe正常启用，启动journal无WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-63 Character跨Work迁移与合并归属
+
+日期：2026-09-05
+
+- 此前独立Character表单允许选择其他Primary Work，但`updateCoreEntity`会以`Character Work cannot be changed by this update`拒绝；这既缺少实际迁移能力，也使UI与后端行为不一致。Work内嵌Character编辑继续锁定当前Work，避免该快捷入口意外跨边界。
+- 独立Character编辑现将Primary Work变化视为受保护迁移：首次Save只打开双语确认窗口，明确显示原Work→目标Work、UUID/Slug身份保持、Gallery Cast保留、Manifest待同步和目标同名阻断规则；必须输入`MOVE`才提交。名称、Sort name、Alias与Work变更在同一个现有`updateCoreEntity`请求内原子保存，不会先写一半。
+- 数据库`UpdateCharacter`现接收目标Work UUID，在事务内先检查Character revision、目标Work的active便携UUID身份，以及目标Work内规范化主名称唯一性；随后同时更新`work_uuid`与名称字段、重建Alias、递增revision，并按Character UUID把有关Gallery Manifest从`CLEAN`置为`DB_DIRTY`。失败回滚全部内容；冲突返回可操作的`Character name already exists in target Work`，不再退化为Internal Server Error。
+- 成功迁移使用独立审计事件`CHARACTER_WORK_MOVE`，摘要持久化previous/target Work UUID；普通Character元数据更新仍记为`CORE_ENTITY_UPDATE`。没有新增GraphQL字段、数据库字段、表、索引、schema版本或回填任务。
+- Character跨Work合并沿用既有安全合并事务并明确语义：目标Character及其Work始终为最终权威，源Gallery Cast改指目标Character，源名称/Alias合入目标，源UUID与Slug成为永久重定向；重复Gallery Cast仍是必须先处理的阻断项。合并审计新增`target_work_uuid`，Character目标搜索结果、预览和永久确认窗口均展示最终Work。
+- 数据库回归覆盖成功迁移、UUID/Slug稳定、revision门禁、目标Work同名冲突全量回滚，以及跨Work合并后Gallery Cast经目标Character解析到目标Work并保留源UUID重定向；GraphQL回归覆盖迁移响应和审计路径。前端覆盖`MOVE`确认门禁、迁移提交、目标Work显示与跨Work合并说明。产品数据库/API测试、完整前端30文件101项、TypeScript、681模块生产构建和`cgm_web_embed cgm_galleryepic cgm_moegirl`正式标签编译测试通过，仅保留既有主共享包超过500KiB提示。当前尚未提交或部署，正式服务继续运行`7d15ed3`。

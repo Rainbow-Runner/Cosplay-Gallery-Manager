@@ -12,7 +12,9 @@ import type {
   ManageCoreEntityMergeResult,
 } from "./types";
 
-type Target = Pick<ManageCoreEntity, "uuid" | "name" | "metadataRevision">;
+type Target = Pick<ManageCoreEntity, "uuid" | "name" | "metadataRevision" | "workUUID" | "workName">;
+
+const emptyTarget = (): Target => ({ uuid: "", name: "", metadataRevision: 0, workUUID: "", workName: "" });
 
 export function ManageEntityLifecyclePanel({
   source,
@@ -25,7 +27,7 @@ export function ManageEntityLifecyclePanel({
 }) {
   const intl = useIntl();
   const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
-  const [target, setTarget] = useState<Target>({ uuid: "", name: "", metadataRevision: 0 });
+  const [target, setTarget] = useState<Target>(emptyTarget);
   const [confirmation, setConfirmation] = useState<"MERGE" | "DELETE" | null>(null);
   const [confirmationText, setConfirmationText] = useState("");
   const [message, setMessage] = useState("");
@@ -41,14 +43,14 @@ export function ManageEntityLifecyclePanel({
   const deletePreview = deletePreviewState.data?.previewCoreEntityDelete;
 
   useEffect(() => {
-    setTarget({ uuid: "", name: "", metadataRevision: 0 });
+    setTarget(emptyTarget());
     setConfirmation(null);
     setConfirmationText("");
     setMessage("");
   }, [source.kind, source.uuid]);
 
   function selectTarget(entity: Target) {
-    setTarget(entity.uuid === source.uuid ? { uuid: "", name: "", metadataRevision: 0 } : entity);
+    setTarget(entity.uuid === source.uuid ? emptyTarget() : entity);
     setMessage(entity.uuid === source.uuid ? t("manage.lifecycle.sameSource") : "");
   }
 
@@ -115,6 +117,7 @@ export function ManageEntityLifecyclePanel({
       <div className="manage-panel-actions"><button type="button" disabled={!target.uuid || mergePreviewState.loading} onClick={previewMerge}>{mergePreviewState.loading ? t("manage.lifecycle.checking") : t("manage.lifecycle.previewMerge")}</button></div>
       {mergePreview ? <div className="entity-lifecycle__preview" aria-live="polite">
         <dl><dt>{t("manage.lifecycle.sourceRevision")}</dt><dd>{mergePreview.sourceRevision}</dd><dt>{t("manage.lifecycle.targetRevision")}</dt><dd>{mergePreview.targetRevision}</dd><dt>{t("manage.lifecycle.affectedGalleries")}</dt><dd>{mergePreview.affectedGalleryIDs.length ? mergePreview.affectedGalleryIDs.join(", ") : t("manage.lifecycle.none")}</dd></dl>
+        {source.kind === "CHARACTER" ? <p>{t("manage.lifecycle.characterMergeWork", { source: source.workName || source.workUUID || t("manage.lifecycle.none"), target: target.workName || target.workUUID || t("manage.lifecycle.none") })}</p> : null}
         {mergePreview.conflicts.length ? <><strong>{t("manage.lifecycle.resolveBlockers")}</strong><ul>{mergePreview.conflicts.map((conflict) => <li key={`${conflict.code}-${conflict.details}`}><code>{conflict.code}</code> — {conflict.details}</li>)}</ul></> : <p>{t("manage.lifecycle.noMergeConflicts")}</p>}
         <button className="danger" type="button" disabled={!mergePreview.canMerge} onClick={() => { setConfirmationText(""); setConfirmation("MERGE"); }}>{t("manage.lifecycle.mergePermanently")}</button>
       </div> : null}
@@ -128,7 +131,7 @@ export function ManageEntityLifecyclePanel({
     </article>
     {confirmation ? <Dialog titleID="entity-lifecycle-confirm-title" dismissible={!mergeState.loading && !deleteState.loading} onClose={() => setConfirmation(null)}>
       <p>{t("manage.lifecycle.permanentChange")}</p><h3 id="entity-lifecycle-confirm-title">{confirmation === "MERGE" ? t("manage.lifecycle.mergeConfirm", { source: source.name, target: target.name }) : t("manage.lifecycle.deleteConfirm", { source: source.name })}</h3>
-      <ul>{confirmation === "MERGE" ? <><li>{t("manage.lifecycle.mergeEffectTarget")}</li><li>{t("manage.lifecycle.mergeEffectAlias")}</li><li>{t("manage.lifecycle.noMediaChange")}</li></> : <><li>{t("manage.lifecycle.deleteEffectReferences")}</li><li>{t("manage.lifecycle.deleteEffectTombstone")}</li><li>{t("manage.lifecycle.deleteEffectAssets")}</li></>}</ul>
+      <ul>{confirmation === "MERGE" ? <><li>{t("manage.lifecycle.mergeEffectTarget")}</li>{source.kind === "CHARACTER" ? <li>{t("manage.lifecycle.characterMergeEffectWork", { work: target.workName || target.workUUID || t("manage.lifecycle.none") })}</li> : null}<li>{t("manage.lifecycle.mergeEffectAlias")}</li><li>{t("manage.lifecycle.noMediaChange")}</li></> : <><li>{t("manage.lifecycle.deleteEffectReferences")}</li><li>{t("manage.lifecycle.deleteEffectTombstone")}</li><li>{t("manage.lifecycle.deleteEffectAssets")}</li></>}</ul>
       <label>{t("manage.lifecycle.typeToContinue", { phrase: confirmation })}<input autoFocus value={confirmationText} onChange={(event) => setConfirmationText(event.target.value)} /></label>
       <footer><button type="button" onClick={() => setConfirmation(null)}>{t("manage.lifecycle.cancel")}</button><button className="danger" type="button" disabled={confirmationText !== confirmation || mergeState.loading || deleteState.loading} onClick={confirmation === "MERGE" ? merge : remove}>{mergeState.loading || deleteState.loading ? t("manage.lifecycle.committing") : confirmation === "MERGE" ? t("manage.lifecycle.mergeCommit") : t("manage.lifecycle.deleteCommit")}</button></footer>
     </Dialog> : null}

@@ -60,7 +60,7 @@ func (s *CoreEntityStore) ApplyEntityMetadataAliases(
 		if _, err := s.UpdateWork(ctx, uuid, expectedRevision, input, now); err != nil {
 			return ManageCoreEntity{}, err
 		}
-	} else if _, err := s.UpdateCharacter(ctx, uuid, expectedRevision, input, now); err != nil {
+	} else if _, err := s.UpdateCharacter(ctx, uuid, current.WorkUUID, expectedRevision, input, now); err != nil {
 		return ManageCoreEntity{}, err
 	}
 	return s.ManageFind(ctx, kind, uuid)

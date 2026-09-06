@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -495,6 +496,41 @@ func TestManageWorkCharactersReturnsOnlyTheSelectedWorksCharacters(t *testing.T)
 		!bytes.Contains(response.Body.Bytes(), []byte(character.UUID)) || !bytes.Contains(response.Body.Bytes(), []byte(`"workName":"Fate"`)) ||
 		bytes.Contains(response.Body.Bytes(), []byte(`"name":"Hidden"`)) {
 		t.Fatalf("Work Character response = %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestCharacterUpdateMovesPrimaryWorkAndAuditsRoute(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 5, 2, 45, 0, 0, time.UTC)
+	sourceWork, err := database.CoreEntities().CreateWork(ctx, productdb.CreateNamedEntityInput{Name: "Source Work"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetWork, err := database.CoreEntities().CreateWork(ctx, productdb.CreateNamedEntityInput{Name: "Target Work"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	character, err := database.CoreEntities().CreateCharacter(ctx, sourceWork.UUID, productdb.CreateNamedEntityInput{Name: "Hero", Aliases: []string{"Alias"}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := fmt.Sprintf(`{"query":"mutation { updateCoreEntity(uuid:\"%s\",expectedMetadataRevision:1,input:{kind:CHARACTER,name:\"Hero\",sortName:\"\",aliases:[\"Alias\"],workUUID:\"%s\",profileSummary:\"\",biography:\"\",countryOrRegion:\"\",useInRecommendation:true}) { uuid workUUID workName metadataRevision } }"}`, character.UUID, targetWork.UUID)
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	NewHandler(database, func(*http.Request) bool { return true }).ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(`"workUUID":"`+targetWork.UUID+`"`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(`"workName":"Target Work"`)) || !bytes.Contains(response.Body.Bytes(), []byte(`"metadataRevision":2`)) {
+		t.Fatalf("Character Work move response = %d %s", response.Code, response.Body.String())
+	}
+	var auditSummary string
+	if err := database.QueryRowContext(ctx, `SELECT summary_json FROM management_audit_events WHERE event_code='CHARACTER_WORK_MOVE' AND target_id=? AND outcome='SUCCESS'`, character.UUID).Scan(&auditSummary); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(auditSummary, sourceWork.UUID) || !strings.Contains(auditSummary, targetWork.UUID) {
+		t.Fatalf("Character Work move audit summary = %s", auditSummary)
 	}
 }
 

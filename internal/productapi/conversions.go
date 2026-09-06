@@ -262,6 +262,9 @@ func manageError(err error) error {
 	if errors.Is(err, productdb.ErrCoreMetadataRevisionConflict) {
 		return errors.New("core entity metadata revision conflict")
 	}
+	if errors.Is(err, productdb.ErrCharacterWorkNameConflict) {
+		return errors.New("Character name already exists in target Work")
+	}
 	if errors.Is(err, productdb.ErrCoreEntityMergeConflict) {
 		return errors.New("core entity merge has unresolved conflicts")
 	}

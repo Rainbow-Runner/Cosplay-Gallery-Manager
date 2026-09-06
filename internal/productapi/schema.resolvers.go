@@ -728,6 +728,8 @@ func (r *mutationResolver) CreateCoreEntity(ctx context.Context, input CoreEntit
 func (r *mutationResolver) UpdateCoreEntity(ctx context.Context, uuid string, expectedMetadataRevision int64, input CoreEntityInput) (*ManageCoreEntity, error) {
 	named := productdb.UpdateNamedEntityInput{Name: input.Name, SortName: input.SortName, Aliases: input.Aliases}
 	var err error
+	auditEvent := "CORE_ENTITY_UPDATE"
+	var auditSummary map[string]any
 	switch input.Kind {
 	case SearchEntityKindCoser:
 		current, findErr := r.Database.CoreEntities().FindCoser(ctx, uuid)
@@ -742,25 +744,29 @@ func (r *mutationResolver) UpdateCoreEntity(ctx context.Context, uuid string, ex
 		if findErr != nil {
 			return nil, manageError(findErr)
 		}
-		if input.WorkUUID == nil || *input.WorkUUID != current.WorkUUID {
-			return nil, manageError(errors.New("Character Work cannot be changed by this update"))
+		if input.WorkUUID == nil {
+			return nil, manageError(errors.New("Character requires a primary Work"))
 		}
-		_, err = r.Database.CoreEntities().UpdateCharacter(ctx, uuid, expectedMetadataRevision, named, time.Now())
+		if *input.WorkUUID != current.WorkUUID {
+			auditEvent = "CHARACTER_WORK_MOVE"
+			auditSummary = map[string]any{"previous_work_uuid": current.WorkUUID, "target_work_uuid": *input.WorkUUID}
+		}
+		_, err = r.Database.CoreEntities().UpdateCharacter(ctx, uuid, *input.WorkUUID, expectedMetadataRevision, named, time.Now())
 	case SearchEntityKindTag:
 		_, err = r.Database.CoreEntities().UpdateTag(ctx, uuid, expectedMetadataRevision, productdb.UpdateTagInput{UpdateNamedEntityInput: named, UseInRecommendation: input.UseInRecommendation}, time.Now())
 	default:
 		return nil, manageError(errors.New("unsupported core entity kind"))
 	}
 	if err != nil {
-		r.auditManage(ctx, "CORE_ENTITY_UPDATE", string(input.Kind), uuid, "CORE_ENTITY_UPDATE_FAILED", err, nil)
+		r.auditManage(ctx, auditEvent, string(input.Kind), uuid, auditEvent+"_FAILED", err, auditSummary)
 		return nil, manageError(err)
 	}
 	value, err := r.Database.CoreEntities().ManageFind(ctx, string(input.Kind), uuid)
 	if err != nil {
-		r.auditManage(ctx, "CORE_ENTITY_UPDATE", string(input.Kind), uuid, "CORE_ENTITY_UPDATE_FAILED", err, nil)
+		r.auditManage(ctx, auditEvent, string(input.Kind), uuid, auditEvent+"_FAILED", err, auditSummary)
 		return nil, manageError(err)
 	}
-	r.auditManage(ctx, "CORE_ENTITY_UPDATE", string(input.Kind), uuid, "", nil, nil)
+	r.auditManage(ctx, auditEvent, string(input.Kind), uuid, "", nil, auditSummary)
 	return manageCoreEntity(value), nil
 }
 
@@ -843,9 +849,13 @@ func (r *mutationResolver) MergeCoreEntities(ctx context.Context, kind SearchEnt
 	if err != nil {
 		return nil, manageError(err)
 	}
-	r.auditManage(ctx, "CORE_ENTITY_MERGE", string(kind), sourceUUID, "", nil, map[string]any{
+	auditSummary := map[string]any{
 		"target_uuid": targetUUID, "affected_gallery_count": len(preview.AffectedGalleryIDs), "coser_redirect_status": redirectStatus,
-	})
+	}
+	if portableKind == portableid.KindCharacter {
+		auditSummary["target_work_uuid"] = target.WorkUUID
+	}
+	r.auditManage(ctx, "CORE_ENTITY_MERGE", string(kind), sourceUUID, "", nil, auditSummary)
 	return &ManageCoreEntityMergeResult{Target: manageCoreEntity(target), Preview: manageCoreEntityMergePreview(preview), CompletionWarning: completionWarning}, nil
 }
 

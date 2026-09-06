@@ -6,7 +6,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { DELETE_CORE_ENTITY, PREVIEW_CORE_ENTITY_DELETE, PREVIEW_CORE_ENTITY_MERGE } from "../api/manage";
+import { DELETE_CORE_ENTITY, MANAGE_CORE_ENTITY_OPTIONS, PREVIEW_CORE_ENTITY_DELETE, PREVIEW_CORE_ENTITY_MERGE } from "../api/manage";
 import { messages } from "../i18n/messages";
 import { ManageEntityLifecyclePanel } from "./ManageEntityLifecyclePanel";
 import type { ManageCoreEntity } from "./types";
@@ -29,8 +29,8 @@ const source: ManageCoreEntity = {
 
 afterEach(cleanup);
 
-function renderPanel(mocks: ReadonlyArray<MockedResponse>, onDeleted = vi.fn()) {
-  return render(<IntlProvider locale="en-GB" messages={messages["en-GB"]}><MockedProvider mocks={mocks}><ManageEntityLifecyclePanel source={source} onMerged={vi.fn()} onDeleted={onDeleted} /></MockedProvider></IntlProvider>);
+function renderPanel(mocks: ReadonlyArray<MockedResponse>, onDeleted = vi.fn(), entity = source) {
+  return render(<IntlProvider locale="en-GB" messages={messages["en-GB"]}><MockedProvider mocks={mocks}><ManageEntityLifecyclePanel source={entity} onMerged={vi.fn()} onDeleted={onDeleted} /></MockedProvider></IntlProvider>);
 }
 
 describe("ManageEntityLifecyclePanel", () => {
@@ -79,5 +79,32 @@ describe("ManageEntityLifecyclePanel", () => {
     fireEvent.change(screen.getByLabelText(/Type DELETE to continue/), { target: { value: "DELETE" } });
     fireEvent.click(commit);
     await waitFor(() => expect(onDeleted).toHaveBeenCalledOnce());
+  });
+
+  it("shows that a cross-Work Character merge uses the target Character Work", async () => {
+    const characterSource = { ...source, kind: "CHARACTER" as const, name: "Source Hero", workUUID: "work-source", workName: "Source Work" };
+    const target = { ...characterSource, uuid: "9d85ad3e-8f54-47a9-83ef-ca5b2da7c329", name: "Target Hero", metadataRevision: 5, workUUID: "work-target", workName: "Target Work", aliases: [] };
+    const mocks = [
+      {
+        request: { query: PREVIEW_CORE_ENTITY_DELETE, variables: { kind: "CHARACTER", uuid: characterSource.uuid } },
+        result: { data: { previewCoreEntityDelete: { kind: "CHARACTER", uuid: characterSource.uuid, metadataRevision: 3, referenceCount: 1, blockers: [{ code: "GALLERY_CAST", referenceCount: 1 }], canDelete: false } } },
+      },
+      {
+        request: { query: MANAGE_CORE_ENTITY_OPTIONS, variables: { kind: "CHARACTER", query: "", limit: 20 } },
+        result: { data: { manageCoreEntityOptions: [target] } },
+      },
+      {
+        request: { query: PREVIEW_CORE_ENTITY_MERGE, variables: { kind: "CHARACTER", sourceUUID: characterSource.uuid, targetUUID: target.uuid } },
+        result: { data: { previewCoreEntityMerge: { __typename: "ManageCoreEntityMergePreview", kind: "CHARACTER", sourceUUID: characterSource.uuid, targetUUID: target.uuid, sourceRevision: 3, targetRevision: 5, affectedGalleryIDs: [12], conflicts: [], canMerge: true } } },
+      },
+    ];
+    renderPanel(mocks, vi.fn(), characterSource);
+
+    fireEvent.focus(await screen.findByLabelText("Search Target CHARACTER"));
+    fireEvent.click(await screen.findByRole("option", { name: /Target Hero/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Preview merge" }));
+    expect(await screen.findByText("Character Work route: Source Work → Target Work. The target Character's Work is final.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Merge permanently…" }));
+    expect(screen.getByText("All merged Character references resolve under the target Work: Target Work.")).toBeInTheDocument();
   });
 });

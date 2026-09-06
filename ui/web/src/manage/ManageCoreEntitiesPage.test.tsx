@@ -7,7 +7,7 @@ import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CREATE_CORE_ENTITY, MANAGE_CORE_ENTITIES, MANAGE_CORE_ENTITY, MANAGE_CORE_ENTITY_NAME_CONFLICTS, MANAGE_CORE_ENTITY_OPTIONS, MANAGE_COSER_NAME_CONFLICTS, MANAGE_WORK_CHARACTERS, PREVIEW_CORE_ENTITY_DELETE } from "../api/manage";
+import { CREATE_CORE_ENTITY, MANAGE_CORE_ENTITIES, MANAGE_CORE_ENTITY, MANAGE_CORE_ENTITY_NAME_CONFLICTS, MANAGE_CORE_ENTITY_OPTIONS, MANAGE_COSER_NAME_CONFLICTS, MANAGE_WORK_CHARACTERS, PREVIEW_CORE_ENTITY_DELETE, UPDATE_CORE_ENTITY } from "../api/manage";
 import { messages } from "../i18n/messages";
 import { ManageCoreEntitiesPage, parseAliases, socialPlatformOptions } from "./ManageCoreEntitiesPage";
 import type { ManageCoreEntity } from "./types";
@@ -231,8 +231,41 @@ describe("ManageCoreEntitiesPage validation", () => {
     expect(listedWork).toBeInTheDocument();
     expect(listedWork.closest("button")).toHaveClass("is-character");
     expect(screen.queryByText("Work: Fate")).not.toBeInTheDocument();
+    await screen.findByRole("button", { name: "Save revision 2" });
     expect(screen.getByText("Fate", { selector: ".manage-entity-selector > span" })).toBeInTheDocument();
     expect(screen.getByLabelText("Primary Work UUID")).toHaveValue(character.workUUID);
+  });
+
+  it("requires explicit confirmation before moving an existing Character to another Work", async () => {
+    const character = {
+      __typename: "ManageCoreEntity", kind: "CHARACTER", uuid: "018f4c8e-7a9b-7def-8123-456789abcd44", name: "Saber", sortName: "", aliases: ["Artoria"], slug: "saber", metadataRevision: 2,
+      workUUID: "018f4c8e-7a9b-7def-8123-456789abcd22", workName: "Fate", avatarURL: null, bannerURL: null, avatarCrop: null, bannerFocalPoint: null,
+      profileSummary: "", biography: "", countryOrRegion: "", useInRecommendation: true, socialAccounts: [], parents: [],
+    } as ManageCoreEntity & { __typename: string };
+    const targetWork = { kind: "WORK", uuid: "018f4c8e-7a9b-7def-8123-456789abcd55", name: "Fate/Grand Order", aliases: ["FGO"], workUUID: null, workName: "", metadataRevision: 4 };
+    const moved = { ...character, metadataRevision: 3, workUUID: targetWork.uuid, workName: targetWork.name };
+    const updateInput = { kind: "CHARACTER", name: "Saber", sortName: "", aliases: ["Artoria"], workUUID: targetWork.uuid, profileSummary: "", biography: "", countryOrRegion: "", useInRecommendation: true };
+    renderPage([
+      { request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("CHARACTER") }, result: { data: { manageCoreEntities: { ...emptyPage, pageSize: 60, totalItems: 1, totalPages: 1, items: [character] } } } },
+      { request: { query: MANAGE_CORE_ENTITY, variables: { kind: "CHARACTER", uuid: character.uuid } }, result: { data: { manageCoreEntity: character } } },
+      { request: { query: PREVIEW_CORE_ENTITY_DELETE, variables: { kind: "CHARACTER", uuid: character.uuid } }, result: { data: { previewCoreEntityDelete: { kind: "CHARACTER", uuid: character.uuid, metadataRevision: 2, referenceCount: 0, blockers: [], canDelete: true } } } },
+      { request: { query: MANAGE_CORE_ENTITY_OPTIONS, variables: { kind: "WORK", query: "", limit: 20 } }, result: { data: { manageCoreEntityOptions: [targetWork] } } },
+      { request: { query: UPDATE_CORE_ENTITY, variables: { uuid: character.uuid, expectedMetadataRevision: 2, input: updateInput } }, result: { data: { updateCoreEntity: moved } } },
+      { request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("CHARACTER") }, result: { data: { manageCoreEntities: { ...emptyPage, pageSize: 60, totalItems: 1, totalPages: 1, items: [moved] } } } },
+    ], `/manage/entities?kind=CHARACTER&uuid=${character.uuid}`);
+
+    await screen.findByRole("button", { name: "Save revision 2" });
+    fireEvent.focus(screen.getByLabelText("Search Primary Work"));
+    fireEvent.click(await screen.findByRole("option", { name: /Fate\/Grand Order/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Save revision 2" }));
+    expect(await screen.findByRole("heading", { name: "Move Saber to another Work?" })).toBeInTheDocument();
+    expect(screen.getByText("Primary Work will change: Fate → Fate/Grand Order.")).toBeInTheDocument();
+    const commit = screen.getByRole("button", { name: "Move Character and save" });
+    expect(commit).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Type MOVE to continue"), { target: { value: "MOVE" } });
+    fireEvent.click(commit);
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save revision 3" })).toBeInTheDocument();
   });
 
   it("creates and edits Characters inside a Work with the Work association locked", async () => {

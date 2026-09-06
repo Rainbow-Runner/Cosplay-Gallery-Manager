@@ -19,6 +19,7 @@ import (
 
 var (
 	ErrCoreMetadataRevisionConflict = errors.New("core entity metadata revision conflict")
+	ErrCharacterWorkNameConflict    = errors.New("Character name already exists in target Work")
 	ErrTagNameAmbiguous             = errors.New("Tag name or alias is already occupied")
 	ErrCoreEntityReferenced         = errors.New("core entity is still referenced")
 )
@@ -301,7 +302,7 @@ func (s *CoreEntityStore) CreateCharacter(
 	return result, nil
 }
 
-func (s *CoreEntityStore) UpdateCharacter(ctx context.Context, uuid string, expectedRevision int64, input UpdateNamedEntityInput, now time.Time) (coreentity.Character, error) {
+func (s *CoreEntityStore) UpdateCharacter(ctx context.Context, uuid, workUUID string, expectedRevision int64, input UpdateNamedEntityInput, now time.Time) (coreentity.Character, error) {
 	if err := validateNamedInput(CreateNamedEntityInput{Name: input.Name, SortName: input.SortName, Aliases: input.Aliases}); err != nil {
 		return coreentity.Character{}, err
 	}
@@ -310,7 +311,41 @@ func (s *CoreEntityStore) UpdateCharacter(ctx context.Context, uuid string, expe
 		return coreentity.Character{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
-	if err := updateNamedEntity(ctx, tx, "characters", "character_aliases", "character_uuid", uuid, expectedRevision, input, now, true); err != nil {
+	var currentRevision int64
+	if err := tx.QueryRowContext(ctx, `SELECT metadata_revision FROM characters WHERE uuid=?`, uuid).Scan(&currentRevision); err != nil {
+		return coreentity.Character{}, err
+	}
+	if currentRevision != expectedRevision {
+		return coreentity.Character{}, ErrCoreMetadataRevisionConflict
+	}
+	if err := requireActivePortableKind(ctx, tx, workUUID, portableid.KindWork); err != nil {
+		return coreentity.Character{}, err
+	}
+	var occupied bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM characters WHERE work_uuid=? AND normalized_name=? AND uuid<>?)`, workUUID, normalizedKey(input.Name), uuid).Scan(&occupied); err != nil {
+		return coreentity.Character{}, err
+	}
+	if occupied {
+		return coreentity.Character{}, ErrCharacterWorkNameConflict
+	}
+	result, err := tx.ExecContext(ctx, `
+		UPDATE characters SET work_uuid=?, name=?, normalized_name=?, sort_name=?,
+			metadata_revision=metadata_revision+1, updated_at_utc=?
+		WHERE uuid=? AND metadata_revision=?
+	`, workUUID, normalizedDisplay(input.Name), normalizedKey(input.Name), normalizedDisplay(input.SortName), formatTime(normalisedTime(now)), uuid, expectedRevision)
+	if err != nil {
+		return coreentity.Character{}, err
+	}
+	if rows, err := result.RowsAffected(); err != nil || rows != 1 {
+		return coreentity.Character{}, ErrCoreMetadataRevisionConflict
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM character_aliases WHERE character_uuid=?`, uuid); err != nil {
+		return coreentity.Character{}, err
+	}
+	if err := insertAliases(ctx, tx, "character_aliases", "character_uuid", uuid, input.Aliases); err != nil {
+		return coreentity.Character{}, err
+	}
+	if err := markEntityGalleriesManifestDirty(ctx, tx, portableid.KindCharacter, uuid); err != nil {
 		return coreentity.Character{}, err
 	}
 	updated, err := findCharacter(ctx, tx, uuid)

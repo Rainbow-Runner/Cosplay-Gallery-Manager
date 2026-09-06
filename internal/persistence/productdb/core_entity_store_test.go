@@ -88,6 +88,50 @@ func TestCoreEntityUpdatesKeepSlugStableAndExplicitSlugChangeRedirects(t *testin
 	}
 }
 
+func TestCharacterUpdateMovesWorkAtomicallyAndRejectsTargetNameConflict(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	store := db.CoreEntities()
+	now := time.Date(2026, 9, 5, 2, 0, 0, 0, time.UTC)
+	sourceWork, err := store.CreateWork(ctx, CreateNamedEntityInput{Name: "Source Work"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetWork, err := store.CreateWork(ctx, CreateNamedEntityInput{Name: "Target Work"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	character, err := store.CreateCharacter(ctx, sourceWork.UUID, CreateNamedEntityInput{Name: "Hero", Aliases: []string{"Old Hero"}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	originalSlug := character.Slug
+	moved, err := store.UpdateCharacter(ctx, character.UUID, targetWork.UUID, character.MetadataRevision, UpdateNamedEntityInput{Name: "Hero", Aliases: []string{"Old Hero"}}, now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if moved.WorkUUID != targetWork.UUID || moved.MetadataRevision != character.MetadataRevision+1 || moved.Slug != originalSlug {
+		t.Fatalf("moved Character = %#v", moved)
+	}
+	if _, err := store.UpdateCharacter(ctx, character.UUID, sourceWork.UUID, character.MetadataRevision, UpdateNamedEntityInput{Name: "Hero"}, now.Add(2*time.Minute)); !errors.Is(err, ErrCoreMetadataRevisionConflict) {
+		t.Fatalf("stale move error = %v", err)
+	}
+	if _, err := store.CreateCharacter(ctx, sourceWork.UUID, CreateNamedEntityInput{Name: "Occupied"}, now); err != nil {
+		t.Fatal(err)
+	}
+	occupied, err := store.CreateCharacter(ctx, targetWork.UUID, CreateNamedEntityInput{Name: "Occupied"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.UpdateCharacter(ctx, occupied.UUID, sourceWork.UUID, occupied.MetadataRevision, UpdateNamedEntityInput{Name: occupied.Name}, now.Add(3*time.Minute)); !errors.Is(err, ErrCharacterWorkNameConflict) {
+		t.Fatalf("target name conflict error = %v", err)
+	}
+	unchanged, err := findCharacter(ctx, db.DB, occupied.UUID)
+	if err != nil || unchanged.WorkUUID != targetWork.UUID || unchanged.MetadataRevision != occupied.MetadataRevision {
+		t.Fatalf("conflicting move changed Character = %#v, %v", unchanged, err)
+	}
+}
+
 func TestCoreEntityDeleteRequiresNoReferencesAndPermanentlyTombstones(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)
@@ -177,6 +221,58 @@ func TestCoreEntityMergeMovesRelationshipsAndKeepsPermanentAliases(t *testing.T)
 	}
 	if len(mergedTarget.Aliases) != 2 || mergedTarget.Aliases[0] != "Source Work" || mergedTarget.Aliases[1] != "Source Alias" {
 		t.Fatalf("merged aliases = %#v", mergedTarget.Aliases)
+	}
+}
+
+func TestCharacterMergeAcrossWorksUsesTargetWorkAndMovesGalleryCast(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	store := db.CoreEntities()
+	now := time.Date(2026, 9, 5, 2, 30, 0, 0, time.UTC)
+	sourceWork, err := store.CreateWork(ctx, CreateNamedEntityInput{Name: "Source Work"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetWork, err := store.CreateWork(ctx, CreateNamedEntityInput{Name: "Target Work"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := store.CreateCharacter(ctx, sourceWork.UUID, CreateNamedEntityInput{Name: "Source Hero"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := store.CreateCharacter(ctx, targetWork.UUID, CreateNamedEntityInput{Name: "Target Hero"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	galleryValue, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "Cross-Work merge"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coser, err := store.CreateCoser(ctx, CreateCoserInput{CreateNamedEntityInput: CreateNamedEntityInput{Name: "Coser"}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Galleries().ReplaceRelations(ctx, galleryValue.ID, galleryValue.MetadataRevision, ReplaceGalleryRelationsInput{Credits: []ReplaceGalleryCreditInput{{CoserUUID: coser.UUID, Position: 1024, Cast: []ReplaceGalleryCastInput{{CharacterUUID: source.UUID, Position: 1024}}}}}, now); err != nil {
+		t.Fatal(err)
+	}
+	preview, err := store.PreviewMerge(ctx, portableid.KindCharacter, source.UUID, target.UUID)
+	if err != nil || len(preview.Conflicts) != 0 || len(preview.AffectedGalleryIDs) != 1 || preview.AffectedGalleryIDs[0] != galleryValue.ID {
+		t.Fatalf("cross-Work Character preview = %#v, %v", preview, err)
+	}
+	if _, err := store.Merge(ctx, portableid.KindCharacter, source.UUID, target.UUID, source.MetadataRevision, target.MetadataRevision, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	var castCharacter, castWork string
+	if err := db.QueryRowContext(ctx, `SELECT gc.character_uuid,c.work_uuid FROM gallery_cast gc JOIN characters c ON c.uuid=gc.character_uuid WHERE gc.gallery_id=?`, galleryValue.ID).Scan(&castCharacter, &castWork); err != nil {
+		t.Fatal(err)
+	}
+	if castCharacter != target.UUID || castWork != targetWork.UUID {
+		t.Fatalf("merged cast Character/Work = %q/%q", castCharacter, castWork)
+	}
+	resolved, err := db.UUIDRegistry().Resolve(ctx, source.UUID)
+	if err != nil || resolved.UUID != target.UUID {
+		t.Fatalf("source Character UUID resolution = %#v, %v", resolved, err)
 	}
 }
 

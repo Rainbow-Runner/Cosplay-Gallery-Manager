@@ -368,3 +368,5 @@ GOTOOLCHAIN=local GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
 2026-09-05补齐独立Character列表所属Work并正式部署：列表行在名称和Aliases/UUID后显示高对比度的所属Work名称，直接复用现有`workName`并对旧响应回退`workUUID`；其他实体列表和Work内嵌角色气泡不变，无接口或数据库schema变化。功能提交`7de86e7`在完整回滚包保护下只替换二进制；服务、前端资源、About、数据库完整性及99个Work/42个Character计数均通过。下一步由所有者在Manage → Core entities → Character中用同名或近似角色进行快速辨认业务验收。
 
 2026-09-05根据业务视觉复核修正独立Character列表布局并正式部署：所属Work不再形成第三行，而是在原两行信息右侧垂直居中，仅显示作品名并移除中英文标签前缀；原padding、Work内嵌角色区及其他实体列表保持不变，无接口或数据库schema变化。功能提交`7d15ed3`在已解包复验完整回滚包保护下只替换二进制；服务、前端资源、About、数据库完整性及99个Work/42个Character计数均通过。下一步由所有者在Manage → Core entities → Character中验收长短作品名下的紧凑行高与右侧截断效果。
+
+2026-09-06完成Character跨Work迁移与合并归属并正式部署：独立Character编辑通过受保护`MOVE`确认将Work、名称字段和Alias原子更新，保留UUID/Slug及Gallery Cast，并将关联Gallery Manifest标记为`DB_DIRTY`；跨Work Character合并以目标Character的Work为最终归属，迁移Cast并保留源UUID/Slug永久重定向，重复Cast继续阻断。无新字段或schema。功能提交`82cd53b`在已解包复验完整回滚包保护下只替换二进制；正式库保持schema v8、`integrity_check=ok`及2/6/6/322/135/99/403计数，服务、前端资源、About和启动日志复核通过。下一步由所有者在Manage → Core entities → Character用真实数据验收迁移确认、目标Work同名阻断、跨Work合并和关联Gallery显示；Manifest文件仍须显式Push，不会由实体操作自动写回。

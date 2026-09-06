@@ -1,5 +1,12 @@
 # 本机实际业务应用测试部署
 
+### 2026-09-06 Character跨Work迁移与合并归属增量部署
+
+- 从清洁提交`82cd53b8f26e8ef27f70a877bd8b7c09211fa378`以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建正式Linux amd64单文件；VCS元数据为`modified=false`，二进制SHA-256为`dfb191477f20b63b7a83d6cbb91c2219fa67742d3c6bc8fb01519cfa43888661`，About精确对应源码，构建时间为`2026-09-06T07:16:41Z`。
+- 停服后创建并实际解包核验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260906T071811Z-82cd53b.tar.gz`，SHA-256为`fa9b2c5304b47f6e3cad3c3d535694336f71c76fb503d21913d8cbd1d2d59c15`；包内schema v8数据库、旧二进制、配置、systemd单元和Coser托管资源逐项一致，不包含媒体、缓存或日志。
+- 本次没有schema迁移，只原子替换二进制；正式配置SHA-256保持`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`、inode保持`19679670`，数据库inode保持`19679716`。停服一致快照与部署后数据库均为`integrity_check=ok`，且保持2个媒体库、6个Gallery、6个来源、322个Item、135个Coser、99个Work和403个Character。
+- 服务只启动一次并保持`active/running`、`NRestarts=0`；Health/Ready为204，Root/Legal/Session、主JS/CSS资源均为200，About报告`exactSourceAvailable=true`，本次启动journal仅有正常启动和验证请求，没有WARN、ERROR、FAILED、panic或fatal。
+
 ### 2026-09-05 独立Character列表紧凑布局增量部署
 
 - 从清洁提交`7d15ed32fc59e70b6f8fc95af1a9fe48fea9d435`以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建正式Linux amd64单文件；VCS元数据为`modified=false`，二进制SHA-256为`72761317a7a908c3e9539dd02c8e477f90b17f4c3b50c8358522d4e61a8b6c81`，About精确对应源码。

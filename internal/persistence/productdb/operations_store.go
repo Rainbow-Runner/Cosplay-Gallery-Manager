@@ -18,6 +18,8 @@ type MaintenanceMode string
 const (
 	MaintenanceNormal            MaintenanceMode = "NORMAL"
 	MaintenanceRestoring         MaintenanceMode = "RESTORING"
+	MaintenancePortableImporting MaintenanceMode = "PORTABLE_IMPORTING"
+	MaintenancePortableMerging   MaintenanceMode = "PORTABLE_MERGING"
 	MaintenanceWaitingValidation MaintenanceMode = "WAITING_VALIDATION"
 	RestorePathMappingRequired                   = "RESTORE_PATH_MAPPING_REQUIRED"
 )
@@ -87,7 +89,7 @@ func (s *OperationsStore) Maintenance(ctx context.Context) (MaintenanceState, er
 }
 
 func (s *OperationsStore) SetMaintenance(ctx context.Context, mode MaintenanceMode, restoreBackupID, errorCode string, now time.Time) error {
-	if mode != MaintenanceNormal && mode != MaintenanceRestoring && mode != MaintenanceWaitingValidation || len(errorCode) > 100 {
+	if mode != MaintenanceNormal && mode != MaintenanceRestoring && mode != MaintenancePortableImporting && mode != MaintenancePortableMerging && mode != MaintenanceWaitingValidation || len(errorCode) > 100 {
 		return errors.New("invalid maintenance state")
 	}
 	if mode == MaintenanceNormal {

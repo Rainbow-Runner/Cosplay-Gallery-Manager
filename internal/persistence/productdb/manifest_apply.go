@@ -24,6 +24,7 @@ func (s *ManifestStore) applyGalleryBusinessSnapshot(
 	expectedRevision int64,
 	snapshot map[string]any,
 	firstImport bool,
+	portableImportID string,
 	now time.Time,
 ) (int64, error) {
 	title := stringValue(snapshot["title"])
@@ -72,7 +73,7 @@ func (s *ManifestStore) applyGalleryBusinessSnapshot(
 	if err := applyManifestTags(ctx, tx, galleryID, objectValue(snapshot["tags"]), now); err != nil {
 		return 0, err
 	}
-	if err := applyManifestLinks(ctx, tx, galleryID, objectValue(snapshot["external_links"]), now); err != nil {
+	if err := applyManifestLinks(ctx, tx, galleryID, objectValue(snapshot["external_links"]), portableImportID, now); err != nil {
 		return 0, err
 	}
 	if err := applyManifestItems(ctx, tx, galleryID, objectValue(snapshot["items"]), firstImport, now); err != nil {
@@ -253,7 +254,7 @@ func applyManifestTags(ctx context.Context, tx *sql.Tx, galleryID int64, tags ma
 	return nil
 }
 
-func applyManifestLinks(ctx context.Context, tx *sql.Tx, galleryID int64, links map[string]any, now time.Time) error {
+func applyManifestLinks(ctx context.Context, tx *sql.Tx, galleryID int64, links map[string]any, portableImportID string, now time.Time) error {
 	if len(links) > 50 {
 		return errors.New("Gallery Manifest ExternalLinks exceeds 50")
 	}
@@ -283,8 +284,14 @@ func applyManifestLinks(ctx context.Context, tx *sql.Tx, galleryID int64, links 
 		desired[uuid] = struct{}{}
 		record, err := lookupPortableUUID(ctx, tx, uuid)
 		if errors.Is(err, ErrPortableUUIDNotFound) {
-			if _, err := registerPortableUUID(ctx, tx, uuid, portableid.KindExternalLink, normalisedTime(now)); err != nil {
-				return err
+			if portableImportID != "" {
+				if err := claimPortableUUID(ctx, tx, portableImportID, uuid, portableid.KindExternalLink, now); err != nil {
+					return err
+				}
+			} else {
+				if _, err := registerPortableUUID(ctx, tx, uuid, portableid.KindExternalLink, normalisedTime(now)); err != nil {
+					return err
+				}
 			}
 		} else if err != nil {
 			return err

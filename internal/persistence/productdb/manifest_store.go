@@ -235,7 +235,14 @@ func (s *ManifestStore) PullGallery(
 	expectedMetadataRevision int64,
 	now time.Time,
 ) (GalleryManifestState, error) {
-	return s.pullGallery(ctx, galleryID, expectedMetadataRevision, nil, false, now)
+	return s.pullGallery(ctx, galleryID, expectedMetadataRevision, nil, false, "", now)
+}
+
+func (s *ManifestStore) PullPortableGallery(ctx context.Context, galleryID int64, expectedMetadataRevision int64, importID string, now time.Time) (GalleryManifestState, error) {
+	if _, err := portableid.Parse(importID); err != nil {
+		return GalleryManifestState{}, err
+	}
+	return s.pullGallery(ctx, galleryID, expectedMetadataRevision, nil, false, importID, now)
 }
 
 func (s *ManifestStore) ResolveGalleryConflicts(
@@ -245,7 +252,7 @@ func (s *ManifestStore) ResolveGalleryConflicts(
 	choices map[string]manifest.ConflictChoice,
 	now time.Time,
 ) (GalleryManifestState, error) {
-	return s.pullGallery(ctx, galleryID, expectedMetadataRevision, choices, true, now)
+	return s.pullGallery(ctx, galleryID, expectedMetadataRevision, choices, true, "", now)
 }
 
 func (s *ManifestStore) pullGallery(
@@ -254,6 +261,7 @@ func (s *ManifestStore) pullGallery(
 	expectedMetadataRevision int64,
 	choices map[string]manifest.ConflictChoice,
 	resolve bool,
+	portableImportID string,
 	now time.Time,
 ) (GalleryManifestState, error) {
 	current, err := findGallery(ctx, s.db, galleryID)
@@ -327,7 +335,7 @@ func (s *ManifestStore) pullGallery(
 		return GalleryManifestState{}, errors.New("merged Gallery Manifest snapshot is not an object")
 	}
 	newMetadataRevision, err := s.applyGalleryBusinessSnapshot(
-		ctx, galleryID, expectedMetadataRevision, merged, !found, now,
+		ctx, galleryID, expectedMetadataRevision, merged, !found, portableImportID, now,
 	)
 	if err != nil {
 		return GalleryManifestState{}, err

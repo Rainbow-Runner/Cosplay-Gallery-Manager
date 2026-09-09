@@ -1,16 +1,20 @@
 package productdb
 
 import (
+	"archive/zip"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"testing"
 	"time"
 
 	"github.com/stashapp/stash/internal/browse"
+	"github.com/stashapp/stash/internal/portablecatalog"
+	"github.com/stashapp/stash/internal/product"
 )
 
 const (
@@ -47,6 +51,115 @@ func TestPerformanceReleaseGate(t *testing.T) {
 	}
 	t.Logf("fixture galleries=%d items=%d database=%d bytes build=%s",
 		performanceGalleryCount, performanceItemCount, info.Size(), time.Since(started).Round(time.Millisecond))
+
+	runtime.GC()
+	var memoryBefore, memoryAfter runtime.MemStats
+	runtime.ReadMemStats(&memoryBefore)
+	preflightStarted := time.Now()
+	preflight, err := database.PortableCatalogPreflight(ctx)
+	preflightDuration := time.Since(preflightStarted)
+	runtime.ReadMemStats(&memoryAfter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedIdentities := performanceItemCount + performanceGalleryCount + 400
+	if preflight.IdentityCount != expectedIdentities || preflight.GalleryCount != performanceGalleryCount {
+		t.Fatalf("portable preflight counts = %d identities/%d galleries", preflight.IdentityCount, preflight.GalleryCount)
+	}
+	if preflight.BlockingCount() != 0 {
+		t.Fatalf("portable preflight blocking findings = %d", preflight.BlockingCount())
+	}
+	allocated := memoryAfter.TotalAlloc - memoryBefore.TotalAlloc
+	if preflightDuration > 5*time.Second {
+		t.Fatalf("portable preflight = %s, target <= 5s", preflightDuration)
+	}
+	if allocated > 64*1024*1024 {
+		t.Fatalf("portable preflight allocated %d bytes, target <= 64 MiB", allocated)
+	}
+	t.Logf("portable-preflight=%s allocated=%d bytes target<=5s/64MiB", preflightDuration.Round(time.Millisecond), allocated)
+
+	type portableRoundTripResult struct {
+		count               int
+		identityPayloadSize uint64
+		err                 error
+	}
+	runtime.GC()
+	runtime.ReadMemStats(&memoryBefore)
+	peakHeap := memoryBefore.HeapAlloc
+	roundTripStarted := time.Now()
+	roundTripDone := make(chan portableRoundTripResult, 1)
+	go func() {
+		manifest := portablecatalog.PackageManifest{Format: portablecatalog.Format, FormatVersion: portablecatalog.FormatVersion, ProductID: product.ID, ExportID: "90000000-0000-4000-8000-000000000001", CreatedAt: "2026-09-08T00:00:00Z", Versions: portablecatalog.Versions(product.CurrentVersions("1.5.0-test"))}
+		reader, readErr := database.BeginPortableCatalogRead(ctx, manifest)
+		if readErr != nil {
+			roundTripDone <- portableRoundTripResult{err: readErr}
+			return
+		}
+		defer reader.Close()
+		target := filepath.Join(root, "million-identities.cgm-portable.zip")
+		source := portablecatalog.IdentitySource{Count: reader.IdentityCount(), Stream: func(yield func(portablecatalog.IdentityRecord) error) error {
+			return reader.StreamIdentities(ctx, yield)
+		}}
+		if writeErr := portablecatalog.WriteFileAtomicStreaming(target, reader.Snapshot().Bundle, nil, source); writeErr != nil {
+			roundTripDone <- portableRoundTripResult{err: writeErr}
+			return
+		}
+		if commitErr := reader.Commit(); commitErr != nil {
+			roundTripDone <- portableRoundTripResult{err: commitErr}
+			return
+		}
+		inspection, inspectErr := portablecatalog.InspectFile(ctx, target)
+		if inspectErr != nil {
+			roundTripDone <- portableRoundTripResult{err: inspectErr}
+			return
+		}
+		archive, openErr := zip.OpenReader(target)
+		if openErr != nil {
+			roundTripDone <- portableRoundTripResult{err: openErr}
+			return
+		}
+		var identityPayloadSize uint64
+		for _, entry := range archive.File {
+			if entry.Name == "identity-ledger.json" {
+				identityPayloadSize = entry.UncompressedSize64
+				break
+			}
+		}
+		_ = archive.Close()
+		roundTripDone <- portableRoundTripResult{count: inspection.Manifest.IdentityCount, identityPayloadSize: identityPayloadSize}
+	}()
+	ticker := time.NewTicker(20 * time.Millisecond)
+	var roundTrip portableRoundTripResult
+	for waiting := true; waiting; {
+		select {
+		case roundTrip = <-roundTripDone:
+			waiting = false
+		case <-ticker.C:
+			runtime.ReadMemStats(&memoryAfter)
+			if memoryAfter.HeapAlloc > peakHeap {
+				peakHeap = memoryAfter.HeapAlloc
+			}
+		}
+	}
+	ticker.Stop()
+	if roundTrip.err != nil {
+		t.Fatal(roundTrip.err)
+	}
+	if roundTrip.count != expectedIdentities {
+		t.Fatalf("portable round trip identities = %d", roundTrip.count)
+	}
+	if roundTrip.identityPayloadSize <= 120*1024*1024 {
+		t.Fatalf("portable identity payload = %d bytes; expected a release-scale payload above 120 MiB", roundTrip.identityPayloadSize)
+	}
+	roundTripDuration := time.Since(roundTripStarted)
+	peakGrowth := peakHeap - memoryBefore.HeapAlloc
+	if roundTripDuration > 90*time.Second {
+		t.Fatalf("portable million-identity round trip = %s, target <= 90s", roundTripDuration)
+	}
+	if peakGrowth > 128*1024*1024 {
+		t.Fatalf("portable million-identity peak Go heap growth = %d bytes, target <= 128 MiB", peakGrowth)
+	}
+	t.Logf("portable-million-round-trip=%s identity-payload=%d bytes peak-go-heap-growth=%d bytes target<=90s/128MiB", roundTripDuration.Round(time.Millisecond), roundTrip.identityPayloadSize, peakGrowth)
 
 	store := database.Browse()
 	setID := performanceUUID("00000000", 1)
@@ -195,52 +308,52 @@ func populatePerformanceFixture(t *testing.T, database *Database) {
 	statements := []string{
 		`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<10000)
 		 INSERT INTO portable_uuid_registry(uuid,entity_kind,created_at_utc)
-		 SELECT printf('00000000-0000-4000-8000-%012d',value),'GALLERY','2026-01-01T00:00:00.000Z' FROM n`,
+		 SELECT printf('00000000-0000-4000-8000-%012d',value),'GALLERY','2026-01-01T00:00:00Z' FROM n`,
 		`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<100)
 		 INSERT INTO portable_uuid_registry(uuid,entity_kind,created_at_utc)
-		 SELECT printf('20000000-0000-4000-8000-%012d',value),'COSER','2026-01-01T00:00:00.000Z' FROM n`,
+		 SELECT printf('20000000-0000-4000-8000-%012d',value),'COSER','2026-01-01T00:00:00Z' FROM n`,
 		`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<100)
 		 INSERT INTO portable_uuid_registry(uuid,entity_kind,created_at_utc)
-		 SELECT printf('30000000-0000-4000-8000-%012d',value),'TAG','2026-01-01T00:00:00.000Z' FROM n`,
+		 SELECT printf('30000000-0000-4000-8000-%012d',value),'TAG','2026-01-01T00:00:00Z' FROM n`,
 		`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<100)
 		 INSERT INTO portable_uuid_registry(uuid,entity_kind,created_at_utc)
-		 SELECT printf('40000000-0000-4000-8000-%012d',value),'WORK','2026-01-01T00:00:00.000Z' FROM n`,
+		 SELECT printf('40000000-0000-4000-8000-%012d',value),'WORK','2026-01-01T00:00:00Z' FROM n`,
 		`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<100)
 		 INSERT INTO portable_uuid_registry(uuid,entity_kind,created_at_utc)
-		 SELECT printf('50000000-0000-4000-8000-%012d',value),'CHARACTER','2026-01-01T00:00:00.000Z' FROM n`,
+		 SELECT printf('50000000-0000-4000-8000-%012d',value),'CHARACTER','2026-01-01T00:00:00Z' FROM n`,
 		`WITH RECURSIVE d(value) AS (SELECT 0 UNION ALL SELECT value+1 FROM d WHERE value<999),
 		 n(value) AS (SELECT left_digit.value*1000+right_digit.value+1 FROM d left_digit CROSS JOIN d right_digit)
 		 INSERT INTO portable_uuid_registry(uuid,entity_kind,created_at_utc)
-		 SELECT printf('10000000-0000-4000-8000-%012d',value),'GALLERY_ITEM','2026-01-01T00:00:00.000Z' FROM n`,
+		 SELECT printf('10000000-0000-4000-8000-%012d',value),'GALLERY_ITEM','2026-01-01T00:00:00Z' FROM n`,
 		`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<100)
 		 INSERT INTO cosers(uuid,name,sort_name,slug,created_at_utc,updated_at_utc)
 		 SELECT printf('20000000-0000-4000-8000-%012d',value),printf('Coser %03d',value),
-		 printf('Coser %03d',value),printf('coser-%d',value),'2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z' FROM n`,
+		 printf('Coser %03d',value),printf('coser-%d',value),'2026-01-01T00:00:00Z','2026-01-01T00:00:00Z' FROM n`,
 		`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<100)
 		 INSERT INTO tags(uuid,name,normalized_name,sort_name,slug,created_at_utc,updated_at_utc)
 		 SELECT printf('30000000-0000-4000-8000-%012d',value),printf('Tag %03d',value),
 		 printf('tag %03d',value),printf('Tag %03d',value),printf('tag-%d',value),
-		 '2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z' FROM n`,
+		 '2026-01-01T00:00:00Z','2026-01-01T00:00:00Z' FROM n`,
 		`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<100)
 		 INSERT INTO works(uuid,name,sort_name,slug,created_at_utc,updated_at_utc)
 		 SELECT printf('40000000-0000-4000-8000-%012d',value),printf('Work %03d',value),
-		 printf('Work %03d',value),printf('work-%d',value),'2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z' FROM n`,
+		 printf('Work %03d',value),printf('work-%d',value),'2026-01-01T00:00:00Z','2026-01-01T00:00:00Z' FROM n`,
 		`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<100)
 		 INSERT INTO characters(uuid,work_uuid,name,normalized_name,sort_name,slug,created_at_utc,updated_at_utc)
 		 SELECT printf('50000000-0000-4000-8000-%012d',value),printf('40000000-0000-4000-8000-%012d',value),
 		 printf('Character %03d',value),printf('character %03d',value),printf('Character %03d',value),printf('character-%d',value),
-		 '2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z' FROM n`,
+		 '2026-01-01T00:00:00Z','2026-01-01T00:00:00Z' FROM n`,
 		`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<10000)
 		 INSERT INTO galleries(id,set_id,slug,state,title,shoot_date,shoot_date_precision,content_rating,
 		 created_at_utc,updated_at_utc,added_at_utc)
 		 SELECT value,printf('00000000-0000-4000-8000-%012d',value),printf('gallery-%d',value),'ACTIVE',
 		 printf('Gallery %05d Needle',value),printf('2025-%02d-%02d',1+(value%12),1+(value%27)),'DAY','NON_ADULT',
-		 '2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z',
-		 printf('2026-01-%02dT00:00:00.000Z',1+(value%27)) FROM n`,
+		 '2026-01-01T00:00:00Z','2026-01-01T00:00:00Z',
+		 printf('2026-01-%02dT00:00:00Z',1+(value%27)) FROM n`,
 		`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<10000)
 		 INSERT INTO gallery_sources(id,gallery_id,source_type,source_path,availability_state,reconcile_state,created_at_utc,updated_at_utc)
 		 SELECT value,value,'DIRECTORY',printf('/synthetic/library/gallery-%d',value),'AVAILABLE','IN_SYNC',
-		 '2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z' FROM n`,
+		 '2026-01-01T00:00:00Z','2026-01-01T00:00:00Z' FROM n`,
 		`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<10000)
 		 INSERT INTO gallery_credits(id,gallery_id,coser_uuid,position)
 		 SELECT value,value,printf('20000000-0000-4000-8000-%012d',1+((value-1)%100)),1024 FROM n`,
@@ -261,13 +374,13 @@ func populatePerformanceFixture(t *testing.T, database *Database) {
 		 SELECT value,printf('10000000-0000-4000-8000-%012d',value),1+((value-1)/100),1+((value-1)/100),
 		 printf('photo-%03d.jpg',1+((value-1)%100)),'STATIC_IMAGE','IMAGE','PHOTO',(1+((value-1)%100))*1024,
 		 'AVAILABLE','READY',1048576,printf('quick-%d',value),printf('full-%d',value),
-		 '2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z' FROM n`,
+		 '2026-01-01T00:00:00Z','2026-01-01T00:00:00Z' FROM n`,
 		`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<10000)
 		 INSERT INTO media_derivatives(id,item_uuid,variant,cache_tier,content_revision,profile_hash,state,is_current,
 		 cache_relative_path,mime_type,byte_size,width,height,created_at_utc,last_accessed_at_utc)
 		 SELECT value,printf('10000000-0000-4000-8000-%012d',(value-1)*100+1),'CARD_480','BASE',1,'performance-profile',
 		 'READY',1,printf('items/%d/card.jpg',value),'image/jpeg',4096,480,320,
-		 '2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z' FROM n`,
+		 '2026-01-01T00:00:00Z','2026-01-01T00:00:00Z' FROM n`,
 	}
 	tx, err := database.BeginTx(ctx, nil)
 	if err != nil {

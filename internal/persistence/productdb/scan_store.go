@@ -35,6 +35,10 @@ type ScanStore struct {
 // an Item matched by path or rebound by fingerprint keeps its durable choice.
 type ScanOptions struct {
 	ExcludeNewRootMedia bool
+	// PortableItemUUIDByPath is used only by the explicit portable rebuild
+	// workflow after an exact exported Manifest hash has been verified.
+	PortableImportID       string
+	PortableItemUUIDByPath map[string]string
 }
 
 func (db *Database) Scans() *ScanStore {
@@ -256,8 +260,15 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 		return media.NaturalLess(observations[i].RelativePath, observations[j].RelativePath)
 	})
 	seenItemIDs := make(map[int64]struct{}, len(observations))
+	claimedPortablePaths := make(map[string]bool, len(options.PortableItemUUIDByPath))
 	for _, observation := range observations {
 		if item := byPath[observation.RelativePath]; item != nil {
+			if desired := options.PortableItemUUIDByPath[observation.RelativePath]; desired != "" {
+				if item.UUID != desired {
+					return errors.New("portable Manifest Item path is occupied by another UUID")
+				}
+				claimedPortablePaths[observation.RelativePath] = true
+			}
 			if err := updateObservedItem(ctx, tx, item, observation, scanRunID, now); err != nil {
 				return err
 			}
@@ -283,7 +294,8 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 		excluded := rootExcluded || ruleExcluded
 		itemID, itemUUID, err := insertObservedItem(
 			ctx, tx, galleryID, sourceID, observation, maxPosition,
-			excluded, scanRunID, now,
+			excluded, scanRunID, options.PortableImportID,
+			options.PortableItemUUIDByPath[observation.RelativePath], now,
 		)
 		if err != nil {
 			return err
@@ -294,6 +306,12 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 			}
 		}
 		seenItemIDs[itemID] = struct{}{}
+		if options.PortableItemUUIDByPath[observation.RelativePath] != "" {
+			claimedPortablePaths[observation.RelativePath] = true
+		}
+	}
+	if len(options.PortableItemUUIDByPath) != len(claimedPortablePaths) {
+		return errors.New("portable Manifest Item path did not match exactly one scanned member")
 	}
 
 	for index := range existing {
@@ -606,11 +624,20 @@ func insertObservedItem(
 	position int64,
 	excluded bool,
 	scanRunID int64,
+	portableImportID string,
+	portableItemUUID string,
 	now time.Time,
 ) (int64, string, error) {
 	timestamp := normalisedTime(now)
-	itemUUID := portableid.New()
-	if _, err := registerPortableUUID(ctx, tx, itemUUID, portableid.KindGalleryItem, timestamp); err != nil {
+	itemUUID := portableItemUUID
+	if itemUUID == "" {
+		itemUUID = portableid.New()
+		if _, err := registerPortableUUID(ctx, tx, itemUUID, portableid.KindGalleryItem, timestamp); err != nil {
+			return 0, "", err
+		}
+	} else if portableImportID == "" {
+		return 0, "", errors.New("portable GalleryItem UUID requires an import ID")
+	} else if err := claimPortableUUID(ctx, tx, portableImportID, itemUUID, portableid.KindGalleryItem, timestamp); err != nil {
 		return 0, "", err
 	}
 	result, err := tx.ExecContext(ctx, `

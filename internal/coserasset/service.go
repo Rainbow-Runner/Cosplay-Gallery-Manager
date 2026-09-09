@@ -226,6 +226,54 @@ func DerivativeRelative(originalRelative, variant string) (string, error) {
 	}
 }
 
+// RebuildDerivatives recreates only disposable presentation files from
+// already-validated managed originals. It does not read or update the product
+// database and is therefore safe to use while a portable import is staged.
+func RebuildDerivatives(root, coserUUID, avatarRelative string, avatarCrop *coreentity.AvatarCrop, bannerRelative string, bannerFocal *coreentity.FocalPoint) error {
+	for _, value := range []struct {
+		relative string
+		kind     productdb.CoserAssetKind
+	}{
+		{relative: avatarRelative, kind: productdb.CoserAssetAvatar},
+		{relative: bannerRelative, kind: productdb.CoserAssetBanner},
+	} {
+		if value.relative == "" {
+			continue
+		}
+		file, _, err := OpenManaged(root, coserUUID, value.relative)
+		if err != nil {
+			return err
+		}
+		decoded, decodeErr := imaging.Decode(file, imaging.AutoOrientation(true))
+		closeErr := file.Close()
+		if decodeErr != nil || closeErr != nil {
+			return errors.New("Coser managed asset could not be decoded")
+		}
+		assets := filepath.Join(root, coserUUID, "assets")
+		base := derivativeBase(filepath.Base(value.relative))
+		switch value.kind {
+		case productdb.CoserAssetAvatar:
+			if err := writeJPEGAtomic(filepath.Join(assets, base+"-480.jpg"), avatarDerivative(decoded, avatarCrop, 480)); err != nil {
+				return err
+			}
+		case productdb.CoserAssetBanner:
+			focal := bannerFocal
+			if focal == nil {
+				focal = &coreentity.FocalPoint{X: 0.5, Y: 0.5}
+			}
+			for _, width := range []int{960, 1600} {
+				if err := writeJPEGAtomic(filepath.Join(assets, fmt.Sprintf("%s-%d.jpg", base, width)), bannerDerivative(decoded, focal, width)); err != nil {
+					return err
+				}
+			}
+		}
+		if err := syncDirectory(assets); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func OpenManaged(root, coserUUID, relative string) (*os.File, os.FileInfo, error) {
 	if _, err := portableid.Parse(coserUUID); err != nil {
 		return nil, nil, err

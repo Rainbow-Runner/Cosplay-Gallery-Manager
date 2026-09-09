@@ -587,10 +587,16 @@ func TestOpenMigratesSchemaV7ArchiveDiscoveryOptInDefaultsOff(t *testing.T) {
 		t.Fatalf("migrating schema v7: %v", err)
 	}
 	defer db.Close()
-	if db.Identity().DatabaseSchemaVersion != 8 {
+	if db.Identity().DatabaseSchemaVersion != product.DatabaseSchemaVersion {
 		t.Fatalf("schema version = %d", db.Identity().DatabaseSchemaVersion)
 	}
 	if err := validateArchiveDiscoverySchemaV8(ctx, db.DB); err != nil {
+		t.Fatal(err)
+	}
+	if err := validatePortableImportSchemaV9(ctx, db.DB); err != nil {
+		t.Fatal(err)
+	}
+	if err := validatePortableMergeSchemaV10(ctx, db.DB); err != nil {
 		t.Fatal(err)
 	}
 	entries, err := os.ReadDir(directory)
@@ -616,6 +622,78 @@ func TestOpenMigratesSchemaV7ArchiveDiscoveryOptInDefaultsOff(t *testing.T) {
 		return
 	}
 	t.Fatal("schema v7 pre-migration snapshot was not created")
+}
+
+func TestOpenMigratesSchemaV8PortableImportState(t *testing.T) {
+	ctx := context.Background()
+	directory := t.TempDir()
+	path := filepath.Join(directory, "library.sqlite")
+	connection, err := sql.Open(sqliteDriver, sqliteDSN(path, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := connection.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ExecContext(ctx, `CREATE TABLE cgm_product_identity(singleton_id INTEGER NOT NULL PRIMARY KEY CHECK(singleton_id=1),product_id TEXT NOT NULL,database_schema_version INTEGER NOT NULL,created_at_utc TEXT NOT NULL)`); err != nil {
+		t.Fatal(err)
+	}
+	for _, create := range []func(context.Context, *sql.Tx) error{
+		createSchemaV1, createMediaProcessingSchemaV2, createSettingsSchemaV3,
+		createMediaClassificationSchemaV4, createMediaExclusionSchemaV5, createAutomationSchemaV6,
+		createCoverageSchemaV7, createArchiveDiscoverySchemaV8,
+	} {
+		if err := create(ctx, tx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO cgm_product_identity VALUES(1,?,8,'2026-09-08T00:00:00Z')`, product.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if err := connection.Close(); err != nil {
+		t.Fatal(err)
+	}
+	db, err := Open(ctx, path)
+	if err != nil {
+		t.Fatalf("migrating schema v8: %v", err)
+	}
+	defer db.Close()
+	if db.Identity().DatabaseSchemaVersion != product.DatabaseSchemaVersion {
+		t.Fatalf("schema version=%d", db.Identity().DatabaseSchemaVersion)
+	}
+	if err := validatePortableImportSchemaV9(ctx, db.DB); err != nil {
+		t.Fatal(err)
+	}
+	if err := validatePortableMergeSchemaV10(ctx, db.DB); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if !strings.Contains(entry.Name(), ".pre-schema-v8-") {
+			continue
+		}
+		backup, err := sql.Open(sqliteDriver, sqliteDSN(filepath.Join(directory, entry.Name()), true))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer backup.Close()
+		identity, err := readIdentity(ctx, backup)
+		if err != nil || identity.DatabaseSchemaVersion != 8 {
+			t.Fatalf("snapshot identity=%#v err=%v", identity, err)
+		}
+		if err := validatePortableImportSchemaV9(ctx, backup); err == nil {
+			t.Fatal("schema v8 snapshot unexpectedly validates as v9")
+		}
+		return
+	}
+	t.Fatal("schema v8 pre-migration snapshot was not created")
 }
 
 func TestOpenExistingProductDatabase(t *testing.T) {

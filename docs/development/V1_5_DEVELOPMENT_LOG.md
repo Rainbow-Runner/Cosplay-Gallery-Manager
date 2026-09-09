@@ -1907,3 +1907,138 @@ PASS（1项；计算样式验证计数、四档列数、16px间距及鼠标/键�
 - 功能与部署前记录提交为`82cd53b8f26e8ef27f70a877bd8b7c09211fa378`（`Add Character Work migration`）。清洁提交以Go 1.25.12和正式三标签构建，`go version -m`确认revision一致且`vcs.modified=false`；正式二进制SHA-256为`dfb191477f20b63b7a83d6cbb91c2219fa67742d3c6bc8fb01519cfa43888661`，构建时间为`2026-09-06T07:16:41Z`。
 - 2026-09-06 15:18 CST停服并确认`MainPID=0`后创建、列举、解包复验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260906T071811Z-82cd53b.tar.gz`，SHA-256为`fa9b2c5304b47f6e3cad3c3d535694336f71c76fb503d21913d8cbd1d2d59c15`。包内schema v8数据库、旧二进制、配置、systemd单元和Coser托管资源与正式来源逐项一致，不含媒体、缓存或日志；暂存及解包数据库均为`integrity_check=ok`且计数一致。
 - 本次无schema迁移，只原子替换正式二进制并只启动服务一次。正式配置SHA-256和inode保持`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`/`19679670`，数据库inode保持`19679716`；停服一致快照与部署后数据库均为schema v8、`integrity_check=ok`及2个媒体库、6个Gallery、6个来源、322个Item、135个Coser、99个Work、403个Character。服务保持`active/running`、`NRestarts=0`，Health/Ready为204，Root/Legal/Session及新JS/CSS资源为200，About精确对应源码且`exactSourceAvailable=true`；启动journal无WARN、ERROR、FAILED、panic或fatal。
+
+## 1.5-64 可移植核心目录与Gallery重建长期方案
+
+日期：2026-09-07
+
+- 完整复核开发备忘录、第一版计划、当前实施状态和迁移交接记录后，确认长期异机迁移不应继续把核心实体、媒体根绝对路径和Gallery运行状态绑定为一个不可拆分数据库恢复动作；同时现有完整备份必须保留，继续承担同机回滚与整套灾难恢复。
+- 新增长期专项方案`PORTABLE_CATALOG_AND_GALLERY_REBUILD_PLAN_2026-09-07.md`。方案把数据划分为全局Portable UUID身份账本、Coser/Work/Character/Tag核心目录、媒体侧Gallery Manifest、可选所有者连续性状态和机器本地绑定五层；核心目录包不保存媒体绝对路径、Session、任务、缓存、日志或凭据。
+- 明确Gallery Manifest v1已经保存`set_id`、核心实体引用以及可选`item_uuid/link_uuid`，但旧Manifest缺UUID、目标UUID跨kind占用、同名异UUID、Character所属Work冲突、重复set_id和首次Item UUID接管仍需专门的预检/冲突流程，不能按名称自动合并或重生成UUID掩盖问题。
+- 全种类身份账本中的Gallery/Item/Link在业务行重建前只进入受包摘要约束的待接管声明；所有UUID分配必须检查声明，Manifest验证通过后再原子注册业务身份，避免预写Registry形成孤儿ACTIVE记录。
+- 规划按确定性只读导出与inspector、空库核心目录导入、媒体映射与Gallery重建、非空库Merge冲突工作台、可选所有者连续性状态、产品化恢复演练六个实施阶段推进；第一切片不导入正式数据库、不新增schema、不部署、不改变Gallery Manifest。
+- 本轮仅修改开发文档，没有业务代码、数据库、配置、媒体、Manifest、构建产物或正式服务变化；因此只执行文档结构、链接和Git差异检查，不宣称产品测试或部署通过。
+
+## 1.5-65 可移植元数据阶段1只读导出与离线检查
+
+日期：2026-09-07
+
+- 按长期方案完成阶段0数据边界与阶段1首个纵向切片。新增站点无关`internal/portablecatalog`，格式`cgm-portable-metadata`与数据库schema、Gallery/Coser Manifest和媒体处理版本独立；固定包含`package.json`、`checksums.json`、`identity-ledger.json`、`core-catalog.json`、`gallery-index.json`及可选`coser-assets/`。
+- 数据库层在单一只读事务中导出全部Portable UUID Registry、Alias和Tombstone，以及Coser/Work/Character/Tag/SocialAccount、Alias、核心Slug重定向、Character→Work、Tag DAG；Gallery索引只保存导出内逻辑媒体库key、名称、库内相对来源、set_id和已有Manifest同步摘要，不保存媒体库根、来源路径或Manifest绝对路径。
+- Coser帐号Link作为结构化目录数据导出；当前头像/Banner只记录包内引用，并由Server通过既有`coserasset.OpenManaged`逐级拒绝符号链接、复核普通文件和inode后持有文件描述符写入包。原始资源每项限制20MiB，派生480/960/1600图、已替换未引用资源和Coser Manifest同步文件不进入此切片。
+- 写包按UUID和稳定关系顺序规范化NFC并生成确定性JSON；每个有效载荷文件记录大小、种类及SHA-256，`package.json`绑定`checksums.json`摘要，完成后再次运行离线Inspector并计算整包SHA-256。目标使用同目录0600临时文件原子发布且拒绝覆盖已有文件。
+- 离线Inspector不加载启动配置或打开数据库，严格拒绝未知/缺失Entry、路径穿越、绝对/反斜杠路径、非NFC、大小写碰撞、控制/平台保留字符、Windows保留名、符号链接/目录、异常总量/单项/压缩比、摘要或计数不符、JSON未知字段/多值、UUID kind冲突、Alias断链/环、孤儿ACTIVE核心身份、Character Work错误、Tag环及缺失/未引用Coser资源。
+- Server默认发现任一Gallery Manifest不是`CLEAN`或来源为`UNBOUND/OUTSIDE_LIBRARY`时阻断导出；CLI只有显式`-allow-incomplete-portable`才生成带计数警告的包。`-export-portable`要求交互式所有者重新认证，`-inspect-portable`可完全离线使用；成功/失败审计不记录目标路径、实体名称、帐号URL或业务正文。
+- 本切片不增加数据库表、字段或schema版本，不提供导入/身份声明，不修改Gallery/Coser Manifest、媒体、缓存、配置或正式服务，也没有增量部署。后续应先完成真实正式库的只读导出预检与大规模流式内存门禁，再进入空业务数据库导入。
+- 单元/集成回归覆盖相同快照字节级确定性、帐号与头像引用、Payload篡改、平台保留名、未知UUID kind、核心关系与Slug历史、数据库/根路径排除、安全原图导出、不生成派生图、默认Gallery警告阻断及显式覆盖。以下正式构建标签组合测试通过：
+
+```bash
+GOMAXPROCS=2 GOTOOLCHAIN=local \
+  GOCACHE=/tmp/cgm-go-cache GOMODCACHE=/tmp/cgm-go-mod \
+  /tmp/cgm-go1.25.12/bin/go test \
+  -tags 'cgm_web_embed cgm_galleryepic cgm_moegirl' \
+  ./internal/portablecatalog ./internal/persistence/productdb \
+  ./internal/productapi ./internal/productserver ./cmd/cgm
+```
+
+- 同一正式标签组合的`go build -o /tmp/cgm-portable-stage1-check ./cmd/cgm`通过，验证二进制可执行且报告`Cosplay Gallery Manager 1.5.0-dev`。未运行前端测试，因为本切片没有前端代码或GraphQL schema变更；未执行正式业务库导出、部署、导入、百万Item身份账本内存门禁或真实跨机重建，不得据此标记这些项目通过。
+
+## 1.5-66 可移植导出只读预检与大库安全门禁
+
+日期：2026-09-07
+
+- 阶段1继续补齐正式导出前的独立只读预检。新增需所有者交互式重新认证的CLI入口`-preflight-portable`；它检查当前数据库及Coser托管原件，但不创建ZIP、不修改数据库业务状态、Manifest、媒体、资源或缓存。只输出身份kind/state、核心目录、Gallery覆盖、资源数量/字节及稳定问题码，不输出姓名、帐号URL、媒体标题或绝对路径。
+- 数据库预检在一个只读事务内使用聚合SQL统计全部Portable UUID，并验证ACTIVE核心/Gallery/SocialAccount身份和业务对象双向对应、Alias端点与kind、Tombstone kind、Character→Work、SocialAccount→Coser、Tag边与DAG、核心Slug重定向。Gallery只按库内相对路径判定`CLEAN/UNBOUND/OUTSIDE_LIBRARY`，按问题类别计数；资源引用沿用既有Manifest相对路径规则。
+- Server通过`coserasset.OpenManaged`逐级拒绝符号链接并锁定当前文件描述符，再复用离线Inspector的静态JPEG/PNG/WebP、20MiB、50MP和动画拒绝规则。预检结果及成功/失败审计只含计数和稳定码。正式导出先复用同一预检，阻断项永远不能由`-allow-incomplete-portable`绕过；完成一致性快照后仍二次核对Gallery警告，避免预检与快照间变化被静默放过。
+- 现有Writer/Inspector仍会把身份账本JSON载入内存，且单JSON上限128MiB。为防止尚未完成的百万身份导出导致OOM或生成中途失败，当前身份总数超过400,000时返回`PORTABLE_IDENTITY_LEDGER_REQUIRES_STREAMING`硬阻断；该门禁是临时安全边界，不代表删除百万身份，也不改变包格式。下一阶段必须实现流式Writer/Inspector后才能解除。
+- 扩展已有可选百万Item门禁：10,000 Gallery、1,000,000 Item、合计1,010,400身份的503,365,632字节合成数据库构建后，完整预检耗时1.704秒、累计分配1,245,080字节，低于5秒/64MiB门禁，并正确返回流式能力阻断；原有Browse/Manifest全部性能子门禁同期通过。
+- 常规`portablecatalog/productdb/productserver/cmd`定向测试通过；正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签下的`portablecatalog/productdb/productapi/productserver/cmd`测试、相关Go Vet及`/tmp/cgm-portable-preflight-check`二进制构建通过，二进制报告`Cosplay Gallery Manager 1.5.0-dev`。本轮没有前端或GraphQL变化，因此不重复运行前端测试。尚未在正式业务数据库执行预检/导出，未提交、未部署、未进入空库导入。
+
+## 1.5-67 百万身份账本流式导出与检查
+
+日期：2026-09-08
+
+- 阶段1解除上一切片为内存型JSON设置的临时400,000身份阻断。产品数据库新增显式生命周期的`PortableCatalogReader`：在同一只读事务中先读取受控规模的核心目录、关系和Gallery索引，再按UUID顺序逐条读取Registry/Alias/Tombstone；导出完成后提交只读事务，失败或取消统一Rollback。原有小规模快照API保留为兼容包装，但正式Server导出不再调用它加载全量身份。
+- `cgm-portable-metadata`格式版本和`identity-ledger.json`对象/数组结构不变。流式Writer逐条校验UUID、kind、state、时间和严格顺序，直接编码到ZIP Entry并同步累计SHA-256、未压缩字节及记录数；核心目录、Gallery索引、Coser资源、确定性顺序、原子目标发布和完成后整包复验规则不变。
+- 离线Inspector不再以128MiB内存读取身份JSON，而是使用`json.Decoder`逐条解析并写入当前用户临时目录中的0600短期SQLite索引。索引校验全局UUID唯一性、kind/state、Alias目标、跨kind/退休目标、链终点和环；只把Coser/Work/Character/Tag/SocialAccount/Gallery对象身份保留在Go内存供既有对象关系验证，百万Item/ExternalLink身份不驻留。临时索引在成功、格式失败、摘要失败、取消或数据库错误路径均关闭删除，不写产品数据库。
+- 身份Payload独立上限调整为最多20,000,000条，并继续受10GiB整包未压缩大小、逐Entry摘要、压缩比和ZIP安全边界约束；核心目录与Gallery JSON仍保留128MiB限制，Coser资源门禁不变。`-allow-incomplete-portable`依然只能覆盖Gallery清单警告，不能覆盖身份、关系、资源或安全错误。
+- 新增20,006身份流式回归，确认Inspector只返回6条核心/Gallery对象身份而不保留20,000条Item；新增恶意Item Alias环回归，确认磁盘索引拒绝循环。既有内存Writer、确定性包、篡改、路径及资源测试继续兼容。百万性能Fixture中的旧`.000Z`测试时间改为与正式数据库一致的规范RFC3339表示，避免测试数据本身被新流式校验正确拒绝。
+- 重新运行10,000 Gallery、1,000,000 Item、1,010,400身份门禁：493,797,376字节合成数据库的只读预检耗时1.768秒、分配1,242,576字节；完整“同一事务读取→ZIP写入→离线Inspector”耗时12.227秒，`identity-ledger.json`未压缩129,278,548字节，采样峰值Go堆增长20,311,192字节，低于90秒/128MiB门禁；原有全部Browse与Manifest性能子门禁继续通过。
+- 本轮不新增产品表、字段、索引或schema版本，不实现导入、声明或Web界面，不修改Manifest、媒体、缓存、配置或正式服务。正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签下`portablecatalog/productdb/productapi/productserver/cmd`测试、相关Go Vet及`/tmp/cgm-portable-stream-check`构建通过，二进制报告`Cosplay Gallery Manager 1.5.0-dev`；没有前端/GraphQL变化，未重复前端测试。尚未提交、部署或在正式业务库执行导出。
+
+## 1.5-68 可移植元数据阶段2空库核心目录导入
+
+日期：2026-09-08
+
+- 按长期迁移方案进入阶段2。产品数据库schema由v8前向升级至v9；迁移前沿用现有自动一致性快照，新增`portable_import_sessions`和`portable_identity_claims`，并让维护状态识别`PORTABLE_IMPORTING`。会话绑定导入ID、导出ID、隔离包相对位置、整包SHA-256、格式版本和对象计数；Gallery、GalleryItem及ExternalLink在业务来源尚未重建时只保存生命周期声明，不写入普通Registry。
+- 待接管UUID具有`PENDING→CLAIMING→CLAIMED`单向状态机，源kind/state/目标/时间字段不可变；Registry触发器阻止任何普通创建流程抢占`PENDING` UUID，后续Gallery重建必须先在同一事务进入`CLAIMING`，再注册Registry及业务行并完成`CLAIMED`。这避免导入后出现没有Gallery/Item/Link业务对象的伪ACTIVE身份。
+- 新增需所有者重新认证并输入确认词`IMPORT`的`-import-portable <absolute.zip>`。Server只接受正常维护状态和空业务数据库，先把源包复制到Backup根下0600隔离目录，复用完整离线Inspector并再次流式读取身份；随后自动创建并登记完整`SAFETY_SNAPSHOT`，确保schema迁移后的空目标环境仍有可恢复基线。非空目标返回明确拒绝，不进入Merge语义。
+- 核心Registry、Coser/Work/Character/Tag/SocialAccount、Alias、Character→Work、Tag DAG、帐号关系、Slug重定向、revision及Alias/Tombstone依赖在一个数据库事务内按外键顺序恢复。Coser当前头像/Banner原件先写入同一托管根下的导入专属暂存目录，逐项复核大小和SHA-256，并从原件重建avatar-480及banner-960/1600派生图；数据库提交前才原子移动UUID目录。
+- 每个待发布Coser目录包含导入专属所有权标记。普通错误会回滚数据库并只删除本轮已移动目录；若进程在文件发布与SQLite提交边界被强制终止，需所有者认证的`-recover-portable-import`会复验保留包：未提交会仅删除带匹配标记的目录并把会话记为`FAILED`，已提交则逐项复验落盘原件摘要、清理标记并恢复`NORMAL`。无标记或标记不匹配的既有目录绝不自动删除。
+- 数据库回归覆盖v8快照后迁至v9、声明抢占阻断及强制两步接管、完整核心事务和资源发布失败回滚；Server真实ZIP闭环覆盖自动安全备份、UUID/revision保持、原图相同、派生重建、Gallery声明、重复导入拒绝、隔离包保留、已提交中断恢复和无所有权目录保护。正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签下`portablecatalog/productdb/productapi/productserver/cmd`测试、相关Go Vet、`git diff --check`和`/tmp/cgm-portable-stage2-check`构建通过，版本为`Cosplay Gallery Manager 1.5.0-dev`。
+- 本阶段没有修改前端或GraphQL，因此未重复运行前端测试；没有修改Gallery Manifest、媒体、缓存或机器本地媒体库映射，也未实现Gallery业务行重建、Item/Link正式接管、非空库Merge及Web工作台。所有变更尚未提交、未部署，正式业务数据库仍为schema v8；未来部署本累计变更必须按schema升级流程先做并复验额外完整备份，不能按普通热替换执行。
+
+## 1.5-69 可移植元数据阶段3媒体映射与Gallery重建
+
+日期：2026-09-09
+
+- 在既有schema v9导入会话中补齐`portable_library_mappings`与`portable_gallery_rebuilds`：前者只保存来源逻辑key/name、本机目标库ID和明确跳过决定，旧机器绝对根不会进入目标数据库；后者保存set_id、库内相对来源、目录/存档类型、导出时Manifest状态/版本/revision/BLAKE3摘要、稳定问题码及逐Gallery可重试游标。映射必须一次覆盖全部逻辑库，且只能指向当前已启用媒体库。
+- 新增所有者CLI三段式入口：`-map-portable-libraries <import-id>`交互选择本机目标；`-preflight-portable-rebuild <import-id>`只读输出READY/BLOCKED/SKIPPED/REBUILT及稳定问题码；`-rebuild-portable-galleries <import-id>`先重复预检，再要求输入`REBUILD`才写入。除映射交互中供所有者辨认本机目标外，报告不输出旧机器绝对路径或业务正文。
+- 只读预检逐项重建目标路径并确认不逃逸映射根，拒绝路径任一级符号链接、来源类型变化、缺失/非CLEAN/摘要变化或身份不符的sidecar；随后复用当前目录或存档安全扫描限制，要求扫描完整且不超过1,000项、每个带UUID的Manifest Item路径恰好对应一个观察项，并核验Gallery/Item/Link声明仍属于当前导入。所有预检状态持久化错误现会向上返回，不再被吞掉。
+- 正式重建按Gallery建立DRAFT及本机Source，在扫描事务中按精确相对路径执行Item声明`PENDING→CLAIMING→CLAIMED`，再由Manifest应用事务接管ExternalLink并恢复标题、分级、说明、Credit/Cast/Tag、Item排序/排除和封面。普通扫描仍生成本机新UUID，不受可移植参数影响。目录和存档媒体本体均只读，存档不重新打包，sidecar也不被Push覆盖。
+- 重试安全边界补强：已经CLAIMED的Gallery/Item/Link除了kind和Registry状态，还必须实际归属于当前重建Gallery；错误归属会阻断而不是继续。扫描或Manifest应用中途失败保留`REBUILDING`游标，后续相同输入可核对已有Item再继续。扫描要求的Manifest路径有重复时明确阻断，避免map覆盖后遗漏声明。
+- 会话只有在全部非跳过重建完成且所有ACTIVE声明已接管时才进入`GALLERIES_REBUILT`；Gallery类Alias/Tombstone随后在同一完成事务中按约束注册并发布。跳过或不完整来源的ACTIVE声明保持保留和可见，会话不会错误宣称完整。声明状态变更和重建游标状态变更均检查实际影响行数。
+- 新增目录异机根端到端测试：源库真实扫描PNG、创建ExternalLink和CLEAN sidecar并导出，目标空库导入后映射到完全不同根；先篡改sidecar验证`PORTABLE_MANIFEST_CHANGED`且数据库仍无Gallery，再恢复并重建，确认set/item/link UUID、标题和新Source路径正确且状态为DRAFT。新增ZIP相邻sidecar异机重建测试，确认存档不改写并保持Item UUID；另覆盖映射完整决定、禁用目标拒绝和延迟Alias/Tombstone发布。
+- 正式标签组合`cgm_web_embed cgm_galleryepic cgm_moegirl`下`portablecatalog/productdb/productapi/productserver/cmd/cgm`测试通过（productdb约13.9秒、productserver约6.3秒），同范围Go Vet和`/tmp/cgm-portable-stage3-check`构建通过，二进制报告`Cosplay Gallery Manager 1.5.0-dev`。本阶段无前端或GraphQL变更，因此未运行前端测试。
+- 本轮累计工作区仍未提交、未部署，未打开或迁移正式业务数据库，未读取或修改正式媒体、Manifest、配置、缓存和服务。真实TAR/TGZ/7Z跨机演练、Web管理入口、非空库Merge冲突工作台和可选所有者连续性状态仍属于后续阶段。
+
+## 1.5-70 可移植元数据阶段4非空库Merge只读预检
+
+日期：2026-09-09
+
+- 阶段4先实现不具有业务写入能力的纵向切片，没有放宽阶段2空库导入门禁。新增需所有者重新认证的`-preflight-portable-merge <absolute.zip>`；Server只接受绝对ZIP普通文件，完整运行离线Inspector，并在检查前后复核文件inode、非符号链接属性与整包SHA-256，避免检查结果与后续报告绑定到不同字节。
+- 当前数据库使用单一只读事务取得核心目录快照；本机Registry和包内身份账本分别保持UUID顺序，通过两个受Context取消控制的流生产器做归并比较。实现不会把百万GalleryItem/ExternalLink身份整体载入Go内存，也不会对每条输入身份执行一次数据库随机查询。身份报告区分ADD、精确REUSE和UUID kind/state/target/history硬冲突。
+- 核心目录比较覆盖Coser、Work、Character、Tag和SocialAccount。相同UUID且全部可移植字段一致才计为复用；字段不同形成`PORTABLE_CORE_ENTITY_CONTENT_CONFLICT`人工复核。不同UUID但规范化主名称或Alias相同只形成`PORTABLE_CORE_NAME_MATCH_REVIEW`，绝不自动认定同一实体；Character名称仍以其Work UUID为作用域。另报告同kind Slug占用、SocialAccount URL候选、Tag父子边位置差异和Slug重定向目标冲突。
+- CLI与审计只输出计数、稳定问题码、entity kind及incoming/local UUID，不输出名称、Alias、URL、媒体路径、字段正文或包路径。硬冲突返回专门阻断码；REVIEW明确表示后续必须做显式决策，但本切片没有实际Merge按钮或“全部接受”行为。
+- 集成回归使用真实导出包和非空目标库同时覆盖：新UUID可新增、完全一致UUID/实体可复用、同UUID字段差异、不同UUID大小写规范化同名候选以及同UUID跨kind硬冲突；并确认预检前后Registry、核心实体和导入会话计数不变。正式三标签`portablecatalog/productdb/productapi/productserver/cmd/cgm`测试、同范围Go Vet、`git diff --check`及`/tmp/cgm-portable-stage4-preflight-check`构建通过，版本为`Cosplay Gallery Manager 1.5.0-dev`。
+- 本切片没有新增schema版本、持久化Merge会话或决策，没有复制/隔离包、创建安全备份、导入资产、注册UUID、修改Gallery/Manifest/媒体或部署服务。下一切片必须先冻结`KEEP_LOCAL/USE_INCOMING/MAP_TO_LOCAL/SKIP`等决策对每种冲突的合法性，再以包SHA-256绑定持久化决策；在此之前不会开放非空库写入Merge。
+
+## 1.5-71 可移植元数据阶段4持久化Merge决策
+
+日期：2026-09-09
+
+- 数据库schema由v9升至v10，新增只承载技术工作流的`portable_merge_sessions`和`portable_merge_conflicts`。会话不可变绑定merge/export UUID、Backup根内受控包相对路径、包SHA-256、目标指纹、格式版本和预检计数；冲突不可删除且其issue key/code、severity、kind、双方UUID与field key不可修改，只允许受控更新decision。没有把名称、Alias、URL、字段值或旧机器路径复制进数据库。
+- 目标指纹由当前全部Portable Registry身份记录和规范化核心目录JSON按稳定顺序计算；Gallery/Item/Link数量也通过Registry参与，因此决策期间任何相关UUID分配都会使指纹变化。冲突issue key由稳定码、severity、kind和双方UUID确定性SHA-256生成，重复预检不依赖扫描顺序或随机ID。
+- 新增`-prepare-portable-merge <zip>`：先执行纯预检并要求输入`PREPARE`，再用安全普通文件复制逻辑把包保留到`portable-merges/<merge-id>/package.zip`，校验复制摘要后对受控副本和当前目标重新完整预检，最后原子写入会话与冲突。硬冲突会话直接为`BLOCKED`；无冲突为`READY`；只有人工项时为`DECISIONS_PENDING`。此阶段不为仅保存技术状态创建完整安全备份，实际写入前仍必须创建。
+- 新增`-decide-portable-merge <merge-id>`：逐项显示稳定码、kind和双方UUID，内容/Tag边位置差异仅允许`KEEP_LOCAL`或`USE_INCOMING`，同名/SocialAccount URL候选仅允许`KEEP_SEPARATE`或`MAP_TO_LOCAL`；硬冲突没有可接受决定。必须一次覆盖全部REVIEW并输入最终确认词`DECIDE`，任一遗漏、重复、类型不兼容或已处理项都会使整个事务回滚。
+- 决策提交前再次从受控Backup根打开保留包并执行完整Merge预检。包摘要或目标指纹与会话不一致时拒绝全部决定，并把尚待决定或READY的会话标为`STALE`；已有冲突仍保持原始`UNRESOLVED`/决策值，不能把旧判断套到新数据库状态。
+- schema回归覆盖新库初始化及v8连续迁至v10；Store测试覆盖完整决策、缺项、错误决策类型、硬冲突不可决策、冲突不可删除/改写。Server真实包回归覆盖BLOCKED包保留字节一致、稳定冲突持久化，以及纯REVIEW会话在目标新增实体后因指纹变化转为STALE且不保存决定。
+- 正式标签组合`cgm_web_embed cgm_galleryepic cgm_moegirl`下`portablecatalog/productdb/productapi/productserver/cmd/cgm`测试通过（productdb约14.6秒、productserver约6.8秒），同范围Go Vet及`/tmp/cgm-portable-stage4-decisions-check`构建通过，版本为`Cosplay Gallery Manager 1.5.0-dev`。无前端/GraphQL变化，未运行前端测试。
+- 当前READY只表示无硬冲突且人工决策完整，尚无执行Merge的业务写入入口；没有导入身份/实体/资源、创建写入前安全备份、修改Gallery/Manifest/媒体、提交或部署。正式库仍为schema v8，未来部署累计schema v9/v10必须走停服、额外完整备份、迁移及完整性复验流程。
+
+## 1.5-72 可移植元数据阶段4无冲突核心Merge写入
+
+日期：2026-09-09
+
+- schema v10补齐`portable_merge_identity_claims`，为Merge包中新出现但尚未重建业务行的Gallery、GalleryItem和ExternalLink保存不可删除、源字段不可变、`PENDING→CLAIMING→CLAIMED`单向声明。Registry分配触发器现同时检查空库Import声明和Merge声明；Merge声明写入也拒绝已被Import保留的UUID。
+- Merge只读占用流现由正式Registry、未CLAIMED Import声明及未CLAIMED Merge声明按UUID共同组成；声明使用本机内部`RESERVED_*`状态参与比较，因此另一个包即使kind和来源生命周期相同也会得到硬冲突，不能把其他会话的保留误判为精确复用。空库Import门禁也计入Merge会话/声明，不能在准备中的非空Merge状态上并行启动空库导入。
+- 新增`-apply-portable-merge <merge-id>`及最终确认词`MERGE`。Server仅接受`READY`、零硬冲突、零REVIEW的会话，重新检查受控包摘要、目标指纹和Issue仍为空；当前明确拒绝任何带Coser头像/Banner资源的包，也拒绝已经做过人工决策的会话，不会把未实现的资产替换或`USE_INCOMING/MAP_TO_LOCAL`语义伪装成可执行。
+- 实际写入前使用现有Full Backup服务创建并登记完整`SAFETY_SNAPSHOT`。随后单一SQLite事务按依赖顺序新增缺失核心Registry、Work、Coser、Tag、Character、SocialAccount、Alias、Tombstone、Tag边及Slug重定向；包与本机完全相同的身份/实体只计为复用、不更新revision或时间。Gallery类新身份只写Merge声明，不创建Gallery/Item/Link或伪ACTIVE Registry。
+- Merge事务再次逐条核对复用身份的kind/state/target/created/retired/reason以及预检ADD/REUSE总数；后段关系唯一约束、生命周期或计数出现变化时，Registry、核心实体、关系、Gallery声明和会话`APPLIED`状态整体回滚。成功会话记录安全备份UUID并永久进入APPLIED，重复Apply明确拒绝。
+- 预检补充跨库合并关系边界：SocialAccount同Coser位置占用、Tag同Child位置占用进入REVIEW；把本机和输入Tag边合并后形成的环作为硬阻断，避免两个各自合法DAG合并成循环。
+- Server端到端回归从真实非空目标准备零冲突包，执行自动完整备份和核心Merge，确认Work/Character/Coser/SocialAccount/Tag UUID保留、Gallery声明为PENDING、普通UUID分配被阻止、安全备份READY、会话APPLIED及重复执行拒绝；再次预检同包可观察到声明冲突。数据库回归人为制造后段Slug唯一约束失败，确认所有输入Registry与会话状态完整回滚。
+- 正式标签组合`cgm_web_embed cgm_galleryepic cgm_moegirl`下`portablecatalog/productdb/productapi/productserver/cmd/cgm`测试通过（productdb约14.3秒、productserver约7.2秒），同范围Go Vet和`/tmp/cgm-portable-stage4-apply-check`构建通过，版本为`Cosplay Gallery Manager 1.5.0-dev`。
+- 本切片无前端/GraphQL变化，未运行前端测试；没有执行人工冲突决策、Coser资产Merge或Merge来源的Gallery业务重建，没有修改正式数据库/媒体/Manifest、提交或部署。正式库仍为schema v8，累计v9/v10部署必须使用停服、额外完整备份、迁移和完整性复验流程。
+
+## 1.5-73 可移植元数据迁移关键闭环
+
+日期：2026-09-09
+
+- Merge Apply不再只接受零REVIEW包。每次应用重新校验受控包SHA-256、目标指纹及全部Issue身份，并读取不可变的完整决定集合；`MAP_TO_LOCAL`将传入UUID注册为同kind永久Alias，核心关系随后解析到本地目标；`KEEP_LOCAL/USE_INCOMING`实际控制同UUID实体、SocialAccount排序冲突和Tag边冲突，硬冲突仍没有绕过入口。新增字段key进入Issue摘要，避免同一实体多条关系问题键碰撞。
+- Gallery/Item/ExternalLink不再使用无法接入后续流程的Merge专属声明。核心Merge事务原子创建阶段3兼容的技术重建会话、逻辑媒体库映射、逐Gallery游标及统一待接管声明；已存在Gallery清单记为SKIPPED，新Gallery保持PENDING。因此应用后可直接以Merge UUID运行映射、只读预检和DRAFT重建，统一UUID分配触发器继续阻止抢占。
+- Coser资源Merge已覆盖新增和显式`USE_INCOMING`替换。包内原图先隔离复验并重建派生图；新增Coser使用UUID目录原子发布，既有Coser只替换assets子目录并把旧目录暂存于该Merge隔离根，保留Coser Manifest边界。数据库事务或发布失败按相反顺序恢复；成功后清除所有权标记和回滚目录。
+- schema v10把维护状态扩展为`PORTABLE_MERGING`。Apply创建完整安全备份后进入维护态，成功才恢复NORMAL；`-recover-portable-merge`只处理与当前Merge UUID标记一致的资源，READY会话恢复旧资源/删除本轮新目录，APPLIED会话复验包内资源摘要后完成清理。`-abort-portable-merge`只允许在业务写入前关闭会话，保留包及冲突审计；重复Apply继续拒绝。
+- 新增真实包端到端回归：人工同名映射产生Alias、同UUID Work采用传入内容；新Coser头像原图和480派生图发布；同UUID既有Coser头像替换；非空目标库映射完全不同媒体根后重建Gallery并保持set/item UUID及DRAFT状态；应用后恢复和应用前取消。数据库后段约束失败测试继续证明Registry、实体、声明、会话和文件发布无部分结果。
+- 新增[可移植元数据迁移操作手册](PORTABLE_MIGRATION_RUNBOOK.md)，明确完整恢复/空库导入/非空Merge的选择、确认词、恢复命令、媒体映射与验收顺序。当前基础闭环为CLI；双语Web工作台及可选owner continuity明确保留为后续增强。
+- 正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签下`portablecatalog/productdb/productapi/productserver/cmd/cgm`测试通过（productdb约15.3秒、productserver约10.1秒），同范围Go Vet、`git diff --check`及`/tmp/cgm-portable-migration-closure`构建通过，版本为`Cosplay Gallery Manager 1.5.0-dev`。没有前端或GraphQL变化，因此未重复前端测试。
+- 本轮累计工作区仍未提交、未部署，正式产品数据库仍为schema v8；部署必须先停服，创建并实际解包复验额外完整备份，再让清洁提交构建执行v8→v9→v10迁移，复核`integrity_check`、业务计数、维护状态及服务日志。

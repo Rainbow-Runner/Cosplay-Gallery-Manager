@@ -6,12 +6,12 @@
 
 ## 已规划、尚未实现
 
-- 长期迁移后续产品化：可移植核心目录、空库导入、非空库Merge、Coser资源和Gallery UUID重建的CLI基础闭环已完成，待本轮提交、备份和schema v8→v10正式部署。双语Web冲突工作台、可选owner continuity分区、真实Linux→Docker演练仍是后续增强；现有完整备份继续承担无损灾难恢复。操作顺序见[可移植元数据迁移操作手册](PORTABLE_MIGRATION_RUNBOOK.md)。
+- 长期迁移后续产品化：可移植核心目录、空库导入、非空库Merge、Coser资源和Gallery UUID重建的CLI基础闭环已完成并部署，正式库已安全升级到schema v10。双语Web冲突工作台、可选owner continuity分区、真实Linux→Docker演练仍是后续增强；现有完整备份继续承担无损灾难恢复。操作顺序见[可移植元数据迁移操作手册](PORTABLE_MIGRATION_RUNBOOK.md)。
 - 后续（视频处理第三阶段）：已持久化[第三阶段条件式功能规划](VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)。第三阶段A规划按需Storyboard Sprite/WebVTT和可访问辅助时间轴；第三阶段B仅在第二阶段真实大视频冷启动指标证明必要并完成ADR后，才规划单清晰度渐进HLS、会话治理和完整bundle缓存。该阶段不属于当前第一版/1.5门禁，尚未实现或部署。
 
 ## 已完成
 
-- 1.5（可移植元数据迁移基础闭环，源码完成、未部署）：非空库Merge现可实际执行全部持久化REVIEW决定；`MAP_TO_LOCAL`把传入UUID登记为永久Alias并重映射关系，`KEEP_LOCAL/USE_INCOMING`控制实体、帐号位置及Tag边写入，硬冲突仍不可绕过。新增或明确采用传入内容的Coser资源在维护模式中暂存发布；替换既有资源时在Merge隔离目录保留旧assets，数据库失败恢复旧目录，提交后复验并清理，进程中断可用`-recover-portable-merge`按所有权标记恢复。Merge应用同时建立兼容阶段3的重建工作流，后续直接使用Merge UUID映射新媒体根并接管set/item/link UUID；非空库目录来源端到端已验证保持Item身份和DRAFT门禁。应用前可`-abort-portable-merge`，包/目标变化使决定失效，重复Apply拒绝；每次Apply先创建完整安全备份并进入`PORTABLE_MERGING`。完整CLI运行手册已持久化；正式三标签测试、Go Vet、构建和差异检查通过，无前端/GraphQL变化。正式数据库仍为schema v8，本轮尚未提交或部署。
+- 1.5（可移植元数据迁移基础闭环，已部署）：非空库Merge现可实际执行全部持久化REVIEW决定；`MAP_TO_LOCAL`把传入UUID登记为永久Alias并重映射关系，`KEEP_LOCAL/USE_INCOMING`控制实体、帐号位置及Tag边写入，硬冲突仍不可绕过。新增或明确采用传入内容的Coser资源在维护模式中暂存发布；替换既有资源时在Merge隔离目录保留旧assets，数据库失败恢复旧目录，提交后复验并清理，进程中断可用`-recover-portable-merge`按所有权标记恢复。Merge应用同时建立兼容阶段3的重建工作流，后续直接使用Merge UUID映射新媒体根并接管set/item/link UUID；非空库目录来源端到端已验证保持Item身份和DRAFT门禁。应用前可`-abort-portable-merge`，包/目标变化使决定失效，重复Apply拒绝；每次Apply先创建完整安全备份并进入`PORTABLE_MERGING`。完整CLI运行手册已持久化；正式三标签测试、Go Vet、构建和差异检查通过，无前端/GraphQL变化。2026-09-09从清洁提交`b477ddc`完成停服备份和schema v8→v10部署，迁移前后业务计数一致，数据库完整性、维护状态、健康探针及日志门禁通过。
 
 - 1.5（可移植元数据阶段2空库核心导入，源码完成、未部署）：数据库升级至schema v9，新增受包摘要绑定的导入会话和Gallery/GalleryItem/ExternalLink待接管身份声明；普通UUID分配不能抢占`PENDING`声明，正式重建须按`PENDING→CLAIMING→CLAIMED`推进。需所有者重新认证并输入`IMPORT`的CLI只接受绝对ZIP路径和空业务数据库，先保留隔离包并自动创建完整安全备份，再原子导入核心Registry、Alias/Tombstone、Coser/Work/Character/Tag/SocialAccount、关系、Slug历史和revision；Coser当前原件在同一托管根暂存、复验摘要、重建480/960/1600派生资源后发布。进程内失败回滚数据库和本轮已发布目录；专属所有权标记及`-recover-portable-import`可在强制中断后安全回滚未提交资源，或复验已提交资源并完成维护状态。未重建Gallery身份不会成为孤儿ACTIVE Registry行，非空库明确拒绝。本阶段不修改Gallery Manifest、媒体、缓存、机器路径，不提供媒体映射、Gallery重建、Merge或Web UI；正式三标签测试、Go Vet与二进制构建通过，尚未迁移正式数据库或部署。
 - 1.5（可移植元数据阶段4非空库Merge预检首切片，源码完成、未部署）：新增需所有者重新认证的`-preflight-portable-merge <zip>`，独立Inspector通过后复核来源inode与前后SHA-256，并把包身份账本和当前Registry按UUID顺序流式归并；报告可新增/一致复用以及kind/state/target/history硬冲突，不把百万Item/Link载入内存。核心实体进一步报告同UUID内容差异、不同UUID规范化主名/Alias候选、Slug占用、SocialAccount URL候选、Tag边位置与Slug重定向冲突；只输出稳定码、kind和UUID，同名绝不自动合并。预检不复制包、不创建会话/声明、不修改业务对象、Manifest、媒体或资源，仅写无正文审计。持久化决策schema、实际Merge写入、字段级工作台与Gallery合并仍未实现。

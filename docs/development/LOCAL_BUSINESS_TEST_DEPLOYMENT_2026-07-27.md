@@ -1,5 +1,7 @@
 # 本机实际业务应用测试部署
 
+- 2026-09-09从清洁提交`b477ddc`部署可移植元数据迁移基础闭环。停服后创建并实际解包复验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260909T120810Z-b477ddc.tar.gz`，SHA-256为`aeda830f024c7aba2a1b4e72cd4918e9e2288acb959211cc4f79d143c3419c00`；包内schema v8数据库、旧二进制、配置、systemd单元和Coser托管资源逐项一致，不含媒体、缓存或日志。新构建SHA-256为`3365d282fd9b69a35169b446b3f4736bc471fad24c715e44cd87644488db40fd`，正式库自动升级到schema v10，自动v8快照和新库均`integrity_check=ok`，迁移前后业务计数一致。服务一次启动后保持`active/running`、`NRestarts=0`，Health/Ready为204，Root/Legal/Session为200，启动日志无错误。
+
 ### 2026-09-06 Character跨Work迁移与合并归属增量部署
 
 - 从清洁提交`82cd53b8f26e8ef27f70a877bd8b7c09211fa378`以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建正式Linux amd64单文件；VCS元数据为`modified=false`，二进制SHA-256为`dfb191477f20b63b7a83d6cbb91c2219fa67742d3c6bc8fb01519cfa43888661`，About精确对应源码，构建时间为`2026-09-06T07:16:41Z`。

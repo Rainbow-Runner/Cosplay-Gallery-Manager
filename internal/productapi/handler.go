@@ -23,6 +23,58 @@ type OperationsService interface {
 	MediaEmbeddedMetadata(context.Context, string, []string) (browse.MediaInformationSummary, error)
 }
 
+type PortableOperationsService interface {
+	PortableMigrationSnapshot(context.Context, string, string) (PortableMigrationSnapshot, error)
+	RunPortableMigration(context.Context, PortableMigrationRequest) (PortableMigrationRunResult, error)
+}
+
+type PortableMigrationSnapshot struct {
+	Imports   []productdb.PortableImportSession
+	Merges    []productdb.PortableMergeSession
+	Conflicts []productdb.PortableMergeConflict
+	Mappings  []productdb.PortableLibraryMapping
+	Rebuilds  []productdb.PortableGalleryRebuild
+	Owner     *PortableOwnerContinuitySummary
+}
+
+type PortableOwnerContinuitySummary struct {
+	Available        bool
+	GalleryLifecycle bool
+	PersonalFlags    bool
+	GalleryCount     int
+	ItemCount        int
+}
+
+type PortablePreflightSummary struct {
+	IdentityCount, CoreEntityCount, GalleryCount, IncompleteGalleryCount int
+	AssetCount, WarningCount, BlockingCount                              int
+	Issues                                                               []productdb.PortablePreflightIssue
+}
+
+type PortableMigrationRequest struct {
+	Action                  string
+	Path                    string
+	ImportID                string
+	MergeID                 string
+	Confirmation            string
+	AllowIncompleteGallery  bool
+	IncludeGalleryLifecycle bool
+	IncludePersonalFlags    bool
+	MergeDecisions          []productdb.PortableMergeDecision
+	LibraryDecisions        []productdb.PortableLibraryDecision
+}
+
+type PortableMigrationRunResult struct {
+	Code      string
+	ImportID  string
+	MergeID   string
+	ExportID  string
+	FileName  string
+	Count     int
+	Snapshot  PortableMigrationSnapshot
+	Preflight *PortablePreflightSummary
+}
+
 type VideoDependencyStatus struct {
 	FFmpegAvailable                                 bool
 	FFmpegSource, FFmpegVersion, FFmpegErrorCode    string

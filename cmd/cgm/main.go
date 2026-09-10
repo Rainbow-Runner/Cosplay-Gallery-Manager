@@ -45,6 +45,9 @@ func main() {
 	recoverPortable := flag.Bool("recover-portable-import", false, "recover an interrupted portable metadata import and exit")
 	preflightPortable := flag.Bool("preflight-portable", false, "validate portable export readiness without creating a package")
 	allowIncompletePortable := flag.Bool("allow-incomplete-portable", false, "allow a portable export whose Gallery manifest index has warnings")
+	includeOwnerLifecycle := flag.Bool("include-owner-lifecycle", false, "include Gallery lifecycle and added-at continuity in a portable export")
+	includeOwnerFlags := flag.Bool("include-owner-flags", false, "include Gallery/Item favourites and Gallery hidden state in a portable export")
+	applyOwnerContinuity := flag.String("apply-owner-continuity", "", "apply the optional owner continuity partition for a rebuilt portable import UUID")
 	inspectPortable := flag.String("inspect-portable", "", "verify a portable metadata .zip without opening the product database")
 	flag.Parse()
 	if *showVersion {
@@ -57,7 +60,7 @@ func main() {
 		return
 	}
 	if *inspectPortable != "" {
-		if *setupTicket || *createBackup || *restoreBackup != "" || *mapRestoredPaths || *resumeMaintenance || *exportPortable != "" || *importPortable != "" || *mapPortableLibrariesFlag != "" || *preflightPortableRebuild != "" || *rebuildPortableGalleries != "" || *preflightPortableMerge != "" || *preparePortableMerge != "" || *decidePortableMerge != "" || *applyPortableMerge != "" || *abortPortableMerge != "" || *recoverPortableMerge != "" || *recoverPortable || *preflightPortable || *allowIncompletePortable {
+		if *setupTicket || *createBackup || *restoreBackup != "" || *mapRestoredPaths || *resumeMaintenance || *exportPortable != "" || *importPortable != "" || *mapPortableLibrariesFlag != "" || *preflightPortableRebuild != "" || *rebuildPortableGalleries != "" || *preflightPortableMerge != "" || *preparePortableMerge != "" || *decidePortableMerge != "" || *applyPortableMerge != "" || *abortPortableMerge != "" || *recoverPortableMerge != "" || *recoverPortable || *preflightPortable || *allowIncompletePortable || *includeOwnerLifecycle || *includeOwnerFlags || *applyOwnerContinuity != "" {
 			fatal("CGM_CLI_ACTION_CONFLICT")
 		}
 		inspection, err := portablecatalog.InspectFile(context.Background(), *inspectPortable)
@@ -67,9 +70,12 @@ func main() {
 		manifest := inspection.Manifest
 		fmt.Printf("portable export %s verified: %d identities, %d cosers, %d works, %d characters, %d tags, %d accounts, %d galleries, %d assets\n",
 			manifest.ExportID, manifest.IdentityCount, manifest.CoserCount, manifest.WorkCount, manifest.CharacterCount, manifest.TagCount, manifest.AccountCount, manifest.GalleryCount, manifest.AssetCount)
+		if manifest.OwnerContinuity {
+			fmt.Printf("optional owner continuity: %d galleries, %d favourite items\n", manifest.OwnerGalleryCount, manifest.OwnerItemCount)
+		}
 		return
 	}
-	if *allowIncompletePortable && *exportPortable == "" {
+	if (*allowIncompletePortable || *includeOwnerLifecycle || *includeOwnerFlags) && *exportPortable == "" {
 		fatal("CGM_CLI_ACTION_CONFLICT")
 	}
 	config, err := productserver.LoadConfig(*configPath)
@@ -85,7 +91,7 @@ func main() {
 	}
 	defer server.Close()
 	actionCount := 0
-	for _, selected := range []bool{*setupTicket, *createBackup, *restoreBackup != "", *mapRestoredPaths, *resumeMaintenance, *exportPortable != "", *importPortable != "", *mapPortableLibrariesFlag != "", *preflightPortableRebuild != "", *rebuildPortableGalleries != "", *preflightPortableMerge != "", *preparePortableMerge != "", *decidePortableMerge != "", *applyPortableMerge != "", *abortPortableMerge != "", *recoverPortableMerge != "", *recoverPortable, *preflightPortable} {
+	for _, selected := range []bool{*setupTicket, *createBackup, *restoreBackup != "", *mapRestoredPaths, *resumeMaintenance, *exportPortable != "", *importPortable != "", *mapPortableLibrariesFlag != "", *preflightPortableRebuild != "", *rebuildPortableGalleries != "", *preflightPortableMerge != "", *preparePortableMerge != "", *decidePortableMerge != "", *applyPortableMerge != "", *abortPortableMerge != "", *recoverPortableMerge != "", *recoverPortable, *preflightPortable, *applyOwnerContinuity != ""} {
 		if selected {
 			actionCount++
 		}
@@ -101,7 +107,7 @@ func main() {
 		fmt.Printf("%s\nexpires %s\n", ticket, expires.Local().Format(time.RFC3339))
 		return
 	}
-	if *createBackup || *restoreBackup != "" || *mapRestoredPaths || *resumeMaintenance || *exportPortable != "" || *importPortable != "" || *mapPortableLibrariesFlag != "" || *preflightPortableRebuild != "" || *rebuildPortableGalleries != "" || *preflightPortableMerge != "" || *preparePortableMerge != "" || *decidePortableMerge != "" || *applyPortableMerge != "" || *abortPortableMerge != "" || *recoverPortableMerge != "" || *recoverPortable || *preflightPortable {
+	if *createBackup || *restoreBackup != "" || *mapRestoredPaths || *resumeMaintenance || *exportPortable != "" || *importPortable != "" || *mapPortableLibrariesFlag != "" || *preflightPortableRebuild != "" || *rebuildPortableGalleries != "" || *preflightPortableMerge != "" || *preparePortableMerge != "" || *decidePortableMerge != "" || *applyPortableMerge != "" || *abortPortableMerge != "" || *recoverPortableMerge != "" || *recoverPortable || *preflightPortable || *applyOwnerContinuity != "" {
 		if err := authenticateOwner(server); err != nil {
 			fatal("CGM_OWNER_REAUTH_FAILED")
 		}
@@ -144,11 +150,24 @@ func main() {
 		if err != nil {
 			fatal("CGM_PORTABLE_EXPORT_TARGET_INVALID")
 		}
-		result, err := server.ExportPortableMetadata(context.Background(), productserver.PortableExportOptions{TargetPath: target, AllowIncompleteGallery: *allowIncompletePortable})
+		result, err := server.ExportPortableMetadata(context.Background(), productserver.PortableExportOptions{TargetPath: target, AllowIncompleteGallery: *allowIncompletePortable, IncludeGalleryLifecycle: *includeOwnerLifecycle, IncludePersonalFlags: *includeOwnerFlags})
 		if err != nil {
 			fatal("CGM_PORTABLE_EXPORT_FAILED")
 		}
 		fmt.Printf("portable export %s ready (%s, %d bytes, %d warnings)\n", result.ExportID, result.FileName, result.ByteSize, result.WarningCount)
+		return
+	}
+	if *applyOwnerContinuity != "" {
+		fmt.Fprint(os.Stderr, "Type CONTINUITY to apply the selected Gallery lifecycle and personal flags: ")
+		confirmation, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+		if strings.TrimSpace(confirmation) != "CONTINUITY" {
+			fatal("CGM_PORTABLE_OWNER_CONTINUITY_NOT_CONFIRMED")
+		}
+		result, err := server.ApplyPortableOwnerContinuity(context.Background(), *applyOwnerContinuity)
+		if err != nil {
+			fatal("CGM_PORTABLE_OWNER_CONTINUITY_FAILED")
+		}
+		fmt.Printf("portable owner continuity applied: %d galleries, %d item favourites, %d active requests, %d archived\n", result.GalleryCount, result.ItemCount, result.ActiveCount, result.ArchivedCount)
 		return
 	}
 	if *importPortable != "" {

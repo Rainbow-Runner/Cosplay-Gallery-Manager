@@ -49,17 +49,44 @@ type PortableImportSession struct {
 	PackageSHA256       string
 	PackageRelativePath string
 	State               string
+	FormatVersion       int
+	IdentityCount       int
+	CoreEntityCount     int
+	GalleryClaimCount   int
+	ItemClaimCount      int
+	LinkClaimCount      int
+	AssetCount          int
+	ErrorCode           string
+	CreatedAt           string
+	UpdatedAt           string
 }
 
 func (db *Database) FindPortableImportSession(ctx context.Context, importID string) (PortableImportSession, error) {
 	var result PortableImportSession
-	err := db.QueryRowContext(ctx, `SELECT import_id,export_id,package_sha256,package_relative_path,state
+	err := db.QueryRowContext(ctx, `SELECT import_id,export_id,package_sha256,package_relative_path,state,format_version,identity_count,core_entity_count,gallery_claim_count,item_claim_count,link_claim_count,asset_count,error_code,created_at_utc,updated_at_utc
 		FROM portable_import_sessions WHERE import_id=?`, importID).Scan(
-		&result.ImportID, &result.ExportID, &result.PackageSHA256, &result.PackageRelativePath, &result.State)
+		&result.ImportID, &result.ExportID, &result.PackageSHA256, &result.PackageRelativePath, &result.State, &result.FormatVersion, &result.IdentityCount, &result.CoreEntityCount, &result.GalleryClaimCount, &result.ItemClaimCount, &result.LinkClaimCount, &result.AssetCount, &result.ErrorCode, &result.CreatedAt, &result.UpdatedAt)
 	if err != nil {
 		return PortableImportSession{}, err
 	}
 	return result, nil
+}
+
+func (db *Database) ListPortableImportSessions(ctx context.Context) ([]PortableImportSession, error) {
+	rows, err := db.QueryContext(ctx, `SELECT import_id,export_id,package_sha256,package_relative_path,state,format_version,identity_count,core_entity_count,gallery_claim_count,item_claim_count,link_claim_count,asset_count,error_code,created_at_utc,updated_at_utc FROM portable_import_sessions ORDER BY created_at_utc DESC,import_id DESC LIMIT 200`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := []PortableImportSession{}
+	for rows.Next() {
+		var value PortableImportSession
+		if err := rows.Scan(&value.ImportID, &value.ExportID, &value.PackageSHA256, &value.PackageRelativePath, &value.State, &value.FormatVersion, &value.IdentityCount, &value.CoreEntityCount, &value.GalleryClaimCount, &value.ItemClaimCount, &value.LinkClaimCount, &value.AssetCount, &value.ErrorCode, &value.CreatedAt, &value.UpdatedAt); err != nil {
+			return nil, err
+		}
+		result = append(result, value)
+	}
+	return result, rows.Err()
 }
 
 func (db *Database) PortableImportTargetEmpty(ctx context.Context) (bool, error) {

@@ -40,6 +40,8 @@ const (
 
 var requiredPayload = []string{"identity-ledger.json", "core-catalog.json", "gallery-index.json"}
 
+const ownerContinuityEntry = "owner-continuity.json"
+
 type AssetSource struct {
 	Path string
 	Kind string
@@ -96,7 +98,11 @@ func writePackage(writer io.Writer, bundle Bundle, assets []AssetSource, identit
 			return fmt.Errorf("invalid streaming portable export ID: %w", err)
 		}
 	}
-	if len(assets)+len(requiredPayload)+2 > maxEntries {
+	optionalEntries := 0
+	if bundle.Owner != nil {
+		optionalEntries = 1
+	}
+	if len(assets)+len(requiredPayload)+optionalEntries+2 > maxEntries {
 		return errors.New("portable metadata package has too many entries")
 	}
 	sort.Slice(assets, func(i, j int) bool { return assets[i].Path < assets[j].Path })
@@ -161,6 +167,19 @@ func writePackage(writer io.Writer, bundle Bundle, assets []AssetSource, identit
 		}
 		checksums.Files = append(checksums.Files, checksumEntry(item.name, item.kind, data))
 	}
+	if bundle.Owner != nil {
+		data, err := canonicalJSON(bundle.Owner)
+		if err != nil {
+			return err
+		}
+		if uint64(len(data)) > maxJSONSize {
+			return errors.New("owner-continuity.json exceeds portable JSON limit")
+		}
+		if err := writeBytes(archive, ownerContinuityEntry, data, createdAt); err != nil {
+			return err
+		}
+		checksums.Files = append(checksums.Files, checksumEntry(ownerContinuityEntry, "OWNER_CONTINUITY", data))
+	}
 	for _, asset := range assets {
 		entry, err := writeAsset(archive, asset, createdAt)
 		if err != nil {
@@ -185,6 +204,19 @@ func writePackage(writer io.Writer, bundle Bundle, assets []AssetSource, identit
 	bundle.Manifest.AccountCount = len(bundle.Catalog.Accounts)
 	bundle.Manifest.GalleryCount = len(bundle.Gallery.Galleries)
 	bundle.Manifest.AssetCount = len(assets)
+	bundle.Manifest.OwnerContinuity = bundle.Owner != nil
+	bundle.Manifest.OwnerGalleryLifecycle = false
+	bundle.Manifest.OwnerPersonalFlags = false
+	bundle.Manifest.OwnerGalleryCount = 0
+	bundle.Manifest.OwnerItemCount = 0
+	if bundle.Owner != nil {
+		bundle.Manifest.OwnerGalleryLifecycle = bundle.Owner.IncludesGalleryLifecycle
+		bundle.Manifest.OwnerPersonalFlags = bundle.Owner.IncludesPersonalFlags
+		bundle.Manifest.OwnerGalleryCount = len(bundle.Owner.Galleries)
+		for _, value := range bundle.Owner.Galleries {
+			bundle.Manifest.OwnerItemCount += len(value.Items)
+		}
+	}
 	manifestData, err := canonicalJSON(bundle.Manifest)
 	if err != nil {
 		return err
@@ -230,7 +262,7 @@ func InspectFile(ctx context.Context, filename string) (Inspection, error) {
 		if entry.UncompressedSize64 > 1024*1024 && (entry.CompressedSize64 == 0 || entry.UncompressedSize64/entry.CompressedSize64 > maxCompressionRatio) {
 			return Inspection{}, fmt.Errorf("portable metadata entry %q has unsafe compression ratio", entry.Name)
 		}
-		if entry.Name != "package.json" && entry.Name != "checksums.json" && !contains(requiredPayload, entry.Name) && !strings.HasPrefix(entry.Name, "coser-assets/") {
+		if entry.Name != "package.json" && entry.Name != "checksums.json" && entry.Name != ownerContinuityEntry && !contains(requiredPayload, entry.Name) && !strings.HasPrefix(entry.Name, "coser-assets/") {
 			return Inspection{}, fmt.Errorf("unknown portable metadata entry %q", entry.Name)
 		}
 		entries[entry.Name] = entry
@@ -306,14 +338,53 @@ func InspectFile(ctx context.Context, filename string) (Inspection, error) {
 	if err := strictJSON(galleryData, &result.Bundle.Gallery); err != nil {
 		return Inspection{}, fmt.Errorf("decoding Gallery index: %w", err)
 	}
+	if entry := entries[ownerContinuityEntry]; entry != nil {
+		ownerData, readErr := readEntry(entry, maxJSONSize)
+		if readErr != nil {
+			return Inspection{}, readErr
+		}
+		var owner OwnerContinuity
+		if err := strictJSON(ownerData, &owner); err != nil {
+			return Inspection{}, fmt.Errorf("decoding owner continuity: %w", err)
+		}
+		result.Bundle.Owner = &owner
+	}
 	identityCount := 0
-	result.Bundle.Identity, identityCount, err = inspectIdentityLedger(ctx, entries["identity-ledger.json"], nil)
+	ownerItemIDs := map[string]bool{}
+	if result.Bundle.Owner != nil {
+		for _, value := range result.Bundle.Owner.Galleries {
+			for _, item := range value.Items {
+				ownerItemIDs[item.ItemUUID] = true
+			}
+		}
+	}
+	retainedOwnerItems := []IdentityRecord{}
+	result.Bundle.Identity, identityCount, err = inspectIdentityLedger(ctx, entries["identity-ledger.json"], func(identity IdentityRecord) error {
+		if ownerItemIDs[identity.UUID] {
+			retainedOwnerItems = append(retainedOwnerItems, identity)
+		}
+		return nil
+	})
 	if err != nil {
 		return Inspection{}, fmt.Errorf("decoding identity ledger: %w", err)
 	}
+	result.Bundle.Identity.Identities = append(result.Bundle.Identity.Identities, retainedOwnerItems...)
+	sort.Slice(result.Bundle.Identity.Identities, func(i, j int) bool {
+		return result.Bundle.Identity.Identities[i].UUID < result.Bundle.Identity.Identities[j].UUID
+	})
 	result.Bundle.Manifest = result.Manifest
 	if err := result.Bundle.Validate(); err != nil {
 		return Inspection{}, err
+	}
+	ownerGalleries, ownerItems := 0, 0
+	if result.Bundle.Owner != nil {
+		ownerGalleries = len(result.Bundle.Owner.Galleries)
+		for _, value := range result.Bundle.Owner.Galleries {
+			ownerItems += len(value.Items)
+		}
+	}
+	if result.Manifest.OwnerContinuity != (result.Bundle.Owner != nil) || result.Manifest.OwnerGalleryCount != ownerGalleries || result.Manifest.OwnerItemCount != ownerItems || result.Bundle.Owner != nil && (result.Manifest.OwnerGalleryLifecycle != result.Bundle.Owner.IncludesGalleryLifecycle || result.Manifest.OwnerPersonalFlags != result.Bundle.Owner.IncludesPersonalFlags) {
+		return Inspection{}, errors.New("portable owner continuity count mismatch")
 	}
 	assetChecksums := map[string]string{}
 	for _, value := range result.Checksums.Files {
@@ -340,8 +411,56 @@ func InspectFile(ctx context.Context, filename string) (Inspection, error) {
 	if len(referencedAssets) != len(assetChecksums) {
 		return Inspection{}, errors.New("portable metadata package contains an unreferenced Coser asset")
 	}
-	if result.Manifest.IdentityCount != identityCount || result.Manifest.CoserCount != len(result.Bundle.Catalog.Cosers) || result.Manifest.WorkCount != len(result.Bundle.Catalog.Works) || result.Manifest.CharacterCount != len(result.Bundle.Catalog.Characters) || result.Manifest.TagCount != len(result.Bundle.Catalog.Tags) || result.Manifest.AccountCount != len(result.Bundle.Catalog.Accounts) || result.Manifest.GalleryCount != len(result.Bundle.Gallery.Galleries) || result.Manifest.AssetCount != len(result.Checksums.Files)-len(requiredPayload) {
+	ownerEntries := 0
+	if result.Bundle.Owner != nil {
+		ownerEntries = 1
+	}
+	if result.Manifest.IdentityCount != identityCount || result.Manifest.CoserCount != len(result.Bundle.Catalog.Cosers) || result.Manifest.WorkCount != len(result.Bundle.Catalog.Works) || result.Manifest.CharacterCount != len(result.Bundle.Catalog.Characters) || result.Manifest.TagCount != len(result.Bundle.Catalog.Tags) || result.Manifest.AccountCount != len(result.Bundle.Catalog.Accounts) || result.Manifest.GalleryCount != len(result.Bundle.Gallery.Galleries) || result.Manifest.AssetCount != len(result.Checksums.Files)-len(requiredPayload)-ownerEntries {
 		return Inspection{}, errors.New("portable metadata package count mismatch")
+	}
+	return result, nil
+}
+
+// ReadPackageManifest reads only the small package envelope for management
+// summaries. It is not a substitute for InspectFile; every importing or
+// applying operation still performs full checksum and payload validation.
+func ReadPackageManifest(ctx context.Context, filename string) (PackageManifest, error) {
+	archive, err := zip.OpenReader(filename)
+	if err != nil {
+		return PackageManifest{}, fmt.Errorf("opening portable metadata package: %w", err)
+	}
+	defer archive.Close()
+	var entry *zip.File
+	for _, value := range archive.File {
+		if err := ctx.Err(); err != nil {
+			return PackageManifest{}, err
+		}
+		if value.Name == "package.json" {
+			if entry != nil || value.Mode()&os.ModeSymlink != 0 || !value.Mode().IsRegular() {
+				return PackageManifest{}, errors.New("portable package manifest entry is invalid")
+			}
+			entry = value
+		}
+	}
+	if entry == nil {
+		return PackageManifest{}, errors.New("portable metadata package is missing package.json")
+	}
+	data, err := readEntry(entry, maxJSONSize)
+	if err != nil {
+		return PackageManifest{}, err
+	}
+	var result PackageManifest
+	if err := strictJSON(data, &result); err != nil {
+		return PackageManifest{}, fmt.Errorf("decoding package.json: %w", err)
+	}
+	if result.Format != Format || result.FormatVersion != 1 && result.FormatVersion != FormatVersion || result.ProductID != product.ID {
+		return PackageManifest{}, errors.New("unsupported portable metadata package")
+	}
+	if _, err := portableid.Parse(result.ExportID); err != nil || !canonicalTime(result.CreatedAt) {
+		return PackageManifest{}, errors.New("portable package manifest identity is invalid")
+	}
+	if result.OwnerGalleryCount < 0 || result.OwnerItemCount < 0 || !result.OwnerContinuity && (result.OwnerGalleryLifecycle || result.OwnerPersonalFlags || result.OwnerGalleryCount != 0 || result.OwnerItemCount != 0) || result.OwnerContinuity && !result.OwnerGalleryLifecycle && !result.OwnerPersonalFlags || result.FormatVersion == 1 && result.OwnerContinuity {
+		return PackageManifest{}, errors.New("portable owner continuity summary is invalid")
 	}
 	return result, nil
 }

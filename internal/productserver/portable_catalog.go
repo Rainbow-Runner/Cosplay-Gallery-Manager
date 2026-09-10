@@ -21,8 +21,10 @@ import (
 )
 
 type PortableExportOptions struct {
-	TargetPath             string
-	AllowIncompleteGallery bool
+	TargetPath              string
+	AllowIncompleteGallery  bool
+	IncludeGalleryLifecycle bool
+	IncludePersonalFlags    bool
 }
 
 type PortableExportResult struct {
@@ -166,7 +168,7 @@ func (s *Server) ExportPortableMetadata(ctx context.Context, options PortableExp
 	}()
 	version, _, _ := build.Version()
 	manifest := portablecatalog.PackageManifest{Format: portablecatalog.Format, FormatVersion: portablecatalog.FormatVersion, ProductID: product.ID, ExportID: exportID, CreatedAt: now.Format(time.RFC3339), Versions: portablecatalog.Versions(product.CurrentVersions(version))}
-	reader, err := s.Database.BeginPortableCatalogRead(ctx, manifest)
+	reader, err := s.Database.BeginPortableCatalogReadWithOwner(ctx, manifest, productdb.PortableOwnerContinuityOptions{GalleryLifecycle: options.IncludeGalleryLifecycle, PersonalFlags: options.IncludePersonalFlags})
 	if err != nil {
 		return result, err
 	}

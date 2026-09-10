@@ -679,6 +679,44 @@ func TestOperationsContractUsesServerServiceWithoutExposingRoots(t *testing.T) {
 	}
 }
 
+func TestPortableMigrationGraphQLRequiresOwnerReauthenticationAndUsesSharedService(t *testing.T) {
+	database := openTestDatabase(t)
+	service := &fakePortableOperationsService{snapshot: PortableMigrationSnapshot{Imports: []productdb.PortableImportSession{{
+		ImportID: "11111111-1111-4111-8111-111111111111", ExportID: "22222222-2222-4222-8222-222222222222", State: "CORE_IMPORTED", GalleryClaimCount: 3,
+	}}}}
+	verifier := &fakeOwnerPasswordVerifier{password: "owner secret"}
+	handler := NewHandlerWithServices(database, func(*http.Request) bool { return true }, service, verifier)
+	call := func(body string) []byte {
+		t.Helper()
+		request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
+		request.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK {
+			t.Fatalf("portable GraphQL response = %d %s", response.Code, response.Body.String())
+		}
+		return response.Body.Bytes()
+	}
+
+	listed := call(`{"query":"query { managePortableMigration { imports { importID state galleryClaimCount } } }"}`)
+	if !bytes.Contains(listed, []byte(`"galleryClaimCount":3`)) {
+		t.Fatalf("portable query response = %s", listed)
+	}
+	bad := call(`{"query":"mutation { runPortableMigration(input:{action:EXPORT,path:\"/tmp/catalog.zip\",importID:\"\",mergeID:\"\",password:\"wrong\",confirmation:\"EXPORT\",allowIncompleteGallery:false,includeGalleryLifecycle:false,includePersonalFlags:true,mergeDecisions:[],libraryDecisions:[]}) { code } }"}`)
+	if !bytes.Contains(bad, []byte("internal server error")) || service.calls != 0 {
+		t.Fatalf("bad portable mutation = %s, calls=%d", bad, service.calls)
+	}
+	good := call(`{"query":"mutation { runPortableMigration(input:{action:EXPORT,path:\"/tmp/catalog.zip\",importID:\"\",mergeID:\"\",password:\"owner secret\",confirmation:\"EXPORT\",allowIncompleteGallery:false,includeGalleryLifecycle:false,includePersonalFlags:true,mergeDecisions:[],libraryDecisions:[]}) { code count snapshot { imports { state } } } }"}`)
+	if bytes.Contains(good, []byte(`"errors"`)) || !bytes.Contains(good, []byte(`"code":"PORTABLE_EXPORT_COMPLETED"`)) || service.calls != 1 || !service.lastRequest.IncludePersonalFlags {
+		t.Fatalf("portable mutation response = %s, calls=%d request=%+v", good, service.calls, service.lastRequest)
+	}
+	service.runError = errors.New("sensitive filesystem detail")
+	failed := call(`{"query":"mutation { runPortableMigration(input:{action:PREFLIGHT_EXPORT,path:\"\",importID:\"\",mergeID:\"\",password:\"owner secret\",confirmation:\"PREFLIGHT\",allowIncompleteGallery:false,includeGalleryLifecycle:false,includePersonalFlags:false,mergeDecisions:[],libraryDecisions:[]}) { code } }"}`)
+	if !bytes.Contains(failed, []byte("PORTABLE_PREFLIGHT_EXPORT_FAILED")) || bytes.Contains(failed, []byte("sensitive filesystem detail")) {
+		t.Fatalf("portable failure response = %s", failed)
+	}
+}
+
 func TestGalleryDeleteGraphQLRequiresArchivePasswordAndConfirmation(t *testing.T) {
 	database := openTestDatabase(t)
 	ctx := context.Background()
@@ -797,6 +835,24 @@ func TestCoreEntityLifecycleGraphQLRequiresPreviewAndPreservesPermanentUUIDHisto
 type fakeOperationsService struct {
 	backup      productdb.BackupRecord
 	maintenance productdb.MaintenanceState
+}
+
+type fakePortableOperationsService struct {
+	fakeOperationsService
+	snapshot    PortableMigrationSnapshot
+	calls       int
+	lastRequest PortableMigrationRequest
+	runError    error
+}
+
+func (s *fakePortableOperationsService) PortableMigrationSnapshot(context.Context, string, string) (PortableMigrationSnapshot, error) {
+	return s.snapshot, nil
+}
+
+func (s *fakePortableOperationsService) RunPortableMigration(_ context.Context, request PortableMigrationRequest) (PortableMigrationRunResult, error) {
+	s.calls++
+	s.lastRequest = request
+	return PortableMigrationRunResult{Code: "PORTABLE_EXPORT_COMPLETED", Count: 3, Snapshot: s.snapshot}, s.runError
 }
 
 func (s fakeOperationsService) MediaEmbeddedMetadata(context.Context, string, []string) (browse.MediaInformationSummary, error) {

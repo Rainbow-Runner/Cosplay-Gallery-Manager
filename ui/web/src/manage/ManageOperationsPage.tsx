@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { CREATE_FULL_BACKUP, MANAGE_OPERATIONS, RESTORE_BACKUP } from "../api/manage";
 import { Dialog } from "../ui/Patterns";
 import { ManageCoserAssetReviewPanel } from "./ManageCoserAssetReviewPanel";
+import { ManagePortableMigrationPanel } from "./ManagePortableMigrationPanel";
 import type { ManageAuditPage, ManageBackupRecord, ManageMaintenanceState } from "./types";
 
 interface OperationsData {
@@ -63,6 +64,8 @@ export function ManageOperationsPage() {
     </section>
 
     <ManageCoserAssetReviewPanel />
+
+    <ManagePortableMigrationPanel />
 
     <section className="operation-panel"><header><div><h3>Management audit</h3><p>Only high-impact operations and task summaries are recorded. Browsing, search, favourites and ratings are intentionally absent.</p></div></header>
       <div className="manage-table-wrap"><table className="manage-table audit-table"><thead><tr><th>Outcome</th><th>Event</th><th>Technical target</th><th>Summary</th><th>Time</th></tr></thead><tbody>

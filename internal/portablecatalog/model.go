@@ -17,7 +17,7 @@ import (
 
 const (
 	Format        = "cgm-portable-metadata"
-	FormatVersion = 1
+	FormatVersion = 2
 )
 
 type VersionSet struct {
@@ -32,21 +32,26 @@ func Versions(value product.Versions) VersionSet {
 }
 
 type PackageManifest struct {
-	Format          string     `json:"format"`
-	FormatVersion   int        `json:"format_version"`
-	ProductID       string     `json:"product_id"`
-	ExportID        string     `json:"export_id"`
-	CreatedAt       string     `json:"created_at"`
-	Versions        VersionSet `json:"versions"`
-	ChecksumsSHA256 string     `json:"checksums_sha256"`
-	IdentityCount   int        `json:"identity_count"`
-	CoserCount      int        `json:"coser_count"`
-	WorkCount       int        `json:"work_count"`
-	CharacterCount  int        `json:"character_count"`
-	TagCount        int        `json:"tag_count"`
-	AccountCount    int        `json:"account_count"`
-	GalleryCount    int        `json:"gallery_count"`
-	AssetCount      int        `json:"asset_count"`
+	Format                string     `json:"format"`
+	FormatVersion         int        `json:"format_version"`
+	ProductID             string     `json:"product_id"`
+	ExportID              string     `json:"export_id"`
+	CreatedAt             string     `json:"created_at"`
+	Versions              VersionSet `json:"versions"`
+	ChecksumsSHA256       string     `json:"checksums_sha256"`
+	IdentityCount         int        `json:"identity_count"`
+	CoserCount            int        `json:"coser_count"`
+	WorkCount             int        `json:"work_count"`
+	CharacterCount        int        `json:"character_count"`
+	TagCount              int        `json:"tag_count"`
+	AccountCount          int        `json:"account_count"`
+	GalleryCount          int        `json:"gallery_count"`
+	AssetCount            int        `json:"asset_count"`
+	OwnerContinuity       bool       `json:"owner_continuity"`
+	OwnerGalleryLifecycle bool       `json:"owner_gallery_lifecycle"`
+	OwnerPersonalFlags    bool       `json:"owner_personal_flags"`
+	OwnerGalleryCount     int        `json:"owner_gallery_count"`
+	OwnerItemCount        int        `json:"owner_item_count"`
 }
 
 type ChecksumManifest struct {
@@ -185,11 +190,38 @@ type GalleryLocator struct {
 	ManifestHash     string `json:"manifest_hash,omitempty"`
 }
 
+// OwnerContinuity is deliberately separate from Gallery manifests. Ratings
+// remain manifest-owned; Slugs and browsing history are intentionally not
+// portable. Every reference uses a portable identity rather than a database ID.
+type OwnerContinuity struct {
+	SchemaVersion            int                      `json:"schema_version"`
+	IncludesGalleryLifecycle bool                     `json:"includes_gallery_lifecycle"`
+	IncludesPersonalFlags    bool                     `json:"includes_personal_flags"`
+	Galleries                []GalleryOwnerContinuity `json:"galleries"`
+}
+
+type GalleryOwnerContinuity struct {
+	SetID       string                `json:"set_id"`
+	State       string                `json:"state,omitempty"`
+	AddedAt     string                `json:"added_at,omitempty"`
+	Favorite    bool                  `json:"favorite"`
+	FavoritedAt string                `json:"favorited_at,omitempty"`
+	Hidden      bool                  `json:"hidden"`
+	Items       []ItemOwnerContinuity `json:"items"`
+}
+
+type ItemOwnerContinuity struct {
+	ItemUUID    string `json:"item_uuid"`
+	Favorite    bool   `json:"favorite"`
+	FavoritedAt string `json:"favorited_at,omitempty"`
+}
+
 type Bundle struct {
 	Manifest PackageManifest
 	Identity IdentityLedger
 	Catalog  CoreCatalog
 	Gallery  GalleryIndex
+	Owner    *OwnerContinuity
 }
 
 func (b *Bundle) Normalize() {
@@ -250,6 +282,17 @@ func (b *Bundle) Normalize() {
 	})
 	sort.Slice(b.Gallery.Libraries, func(i, j int) bool { return b.Gallery.Libraries[i].Key < b.Gallery.Libraries[j].Key })
 	sort.Slice(b.Gallery.Galleries, func(i, j int) bool { return b.Gallery.Galleries[i].SetID < b.Gallery.Galleries[j].SetID })
+	if b.Owner != nil {
+		for index := range b.Owner.Galleries {
+			if b.Owner.Galleries[index].Items == nil {
+				b.Owner.Galleries[index].Items = []ItemOwnerContinuity{}
+			}
+			sort.Slice(b.Owner.Galleries[index].Items, func(i, j int) bool {
+				return b.Owner.Galleries[index].Items[i].ItemUUID < b.Owner.Galleries[index].Items[j].ItemUUID
+			})
+		}
+		sort.Slice(b.Owner.Galleries, func(i, j int) bool { return b.Owner.Galleries[i].SetID < b.Owner.Galleries[j].SetID })
+	}
 }
 
 func normalizeNamed(value *NamedEntity) {
@@ -265,7 +308,7 @@ func normalizeNamed(value *NamedEntity) {
 }
 
 func (b Bundle) Validate() error {
-	if b.Manifest.Format != Format || b.Manifest.FormatVersion != FormatVersion || b.Manifest.ProductID != product.ID {
+	if b.Manifest.Format != Format || (b.Manifest.FormatVersion != 1 && b.Manifest.FormatVersion != FormatVersion) || b.Manifest.ProductID != product.ID {
 		return errors.New("unsupported portable metadata package")
 	}
 	if _, err := portableid.Parse(b.Manifest.ExportID); err != nil {
@@ -459,6 +502,60 @@ func (b Bundle) Validate() error {
 	}
 	if hasTagCycle(b.Catalog.TagEdges) {
 		return errors.New("portable Tag graph contains a cycle")
+	}
+	if err := validateOwnerContinuity(b.Owner, active); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateOwnerContinuity(value *OwnerContinuity, active func(string, string) bool) error {
+	if value == nil {
+		return nil
+	}
+	if value.SchemaVersion != 1 {
+		return errors.New("unsupported owner continuity schema")
+	}
+	if !value.IncludesGalleryLifecycle && !value.IncludesPersonalFlags {
+		return errors.New("owner continuity has no selected data")
+	}
+	previousGallery := ""
+	seenItems := map[string]bool{}
+	for _, gallery := range value.Galleries {
+		if gallery.SetID <= previousGallery || !active(gallery.SetID, "GALLERY") {
+			return errors.New("invalid owner continuity Gallery identity")
+		}
+		previousGallery = gallery.SetID
+		if value.IncludesGalleryLifecycle {
+			if gallery.State != "DRAFT" && gallery.State != "ACTIVE" && gallery.State != "ARCHIVED" {
+				return errors.New("invalid owner continuity Gallery state")
+			}
+			if gallery.AddedAt != "" && !canonicalNanoTime(gallery.AddedAt) {
+				return errors.New("invalid owner continuity added_at")
+			}
+			if gallery.State == "ACTIVE" && gallery.AddedAt == "" {
+				return errors.New("active owner continuity Gallery lacks added_at")
+			}
+		} else if gallery.State != "" || gallery.AddedAt != "" {
+			return errors.New("unselected Gallery lifecycle is present")
+		}
+		if value.IncludesPersonalFlags {
+			if gallery.Favorite != (gallery.FavoritedAt != "") || gallery.FavoritedAt != "" && !canonicalNanoTime(gallery.FavoritedAt) {
+				return errors.New("invalid owner continuity Gallery favorite")
+			}
+		} else if gallery.Favorite || gallery.FavoritedAt != "" || gallery.Hidden || len(gallery.Items) != 0 {
+			return errors.New("unselected personal flags are present")
+		}
+		previousItem := ""
+		for _, item := range gallery.Items {
+			if item.ItemUUID <= previousItem || seenItems[item.ItemUUID] || !active(item.ItemUUID, "GALLERY_ITEM") {
+				return errors.New("invalid owner continuity Item identity")
+			}
+			previousItem, seenItems[item.ItemUUID] = item.ItemUUID, true
+			if !value.IncludesPersonalFlags || !item.Favorite || item.FavoritedAt == "" || !canonicalNanoTime(item.FavoritedAt) {
+				return errors.New("invalid owner continuity Item favorite")
+			}
+		}
 	}
 	return nil
 }

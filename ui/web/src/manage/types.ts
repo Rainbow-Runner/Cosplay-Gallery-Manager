@@ -67,9 +67,17 @@ export interface ManageBackupRecord {
   productVersion: string; databaseSchemaVersion: number; manifestSchemaVersion: number; mediaProcessingVersion: number;
   createdAt: string; completedAt?: string | null; lastErrorCode: string;
 }
-export interface ManageMaintenanceState { state: "NORMAL" | "RESTORING" | "WAITING_VALIDATION"; restoreBackupID?: string | null; lastErrorCode: string; updatedAt: string }
+export interface ManageMaintenanceState { state: "NORMAL" | "RESTORING" | "WAITING_VALIDATION" | "PORTABLE_IMPORTING" | "PORTABLE_MERGING"; restoreBackupID?: string | null; lastErrorCode: string; updatedAt: string }
 export interface ManageAuditEvent { id: number; eventCode: string; targetKind: string; targetID: string; outcome: string; errorCode: string; summaryJSON: string; createdAt: string }
 export interface ManageAuditPage { items: ManageAuditEvent[]; page: number; pageSize: number; totalItems: number; totalPages: number }
+export interface ManagePortableImportSession { importID: string; exportID: string; state: string; formatVersion: number; identityCount: number; coreEntityCount: number; galleryClaimCount: number; itemClaimCount: number; linkClaimCount: number; assetCount: number; errorCode: string; createdAt: string; updatedAt: string }
+export interface ManagePortableMergeSession { mergeID: string; exportID: string; state: string; hardBlockingCount: number; reviewCount: number; identityAddCount: number; identityReuseCount: number; entityAddCount: number; entityReuseCount: number; errorCode: string; safetyBackupID?: string | null; createdAt: string; updatedAt: string }
+export interface ManagePortableMergeConflict { issueKey: string; issueCode: string; severity: string; entityKind: string; incomingUUID: string; localUUID?: string | null; fieldKey: string; decision: string }
+export interface ManagePortableLibraryMapping { libraryKey: string; libraryName: string; decision: string; targetLibraryID?: number | null; targetName: string; targetRoot: string }
+export interface ManagePortableGalleryRebuild { setID: string; libraryKey: string; sourceType: string; relativeSource: string; locatorStatus: string; manifestStatus: string; state: string; issueCode: string }
+export interface ManagePortableOwnerContinuity { available: boolean; galleryLifecycle: boolean; personalFlags: boolean; galleryCount: number; itemCount: number }
+export interface ManagePortablePreflight { identityCount: number; coreEntityCount: number; galleryCount: number; incompleteGalleryCount: number; assetCount: number; warningCount: number; blockingCount: number; issues: { code: string; severity: string; count: number }[] }
+export interface ManagePortableMigrationSnapshot { imports: ManagePortableImportSession[]; merges: ManagePortableMergeSession[]; conflicts: ManagePortableMergeConflict[]; mappings: ManagePortableLibraryMapping[]; rebuilds: ManagePortableGalleryRebuild[]; owner?: ManagePortableOwnerContinuity | null }
 export interface ManageCoserAssetReviewGroup {
   id: string; coser_uuid: string; kind: "AVATAR" | "BANNER"; reason: "REPLACED" | "MERGED_COSER" | "DELETED_COSER";
   file_count: number; byte_size: number; modified_at: string;

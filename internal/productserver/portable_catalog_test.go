@@ -588,6 +588,10 @@ func TestPortableMergePreflightReportsIdentityAndNameConflictsWithoutBusinessWri
 	if prepared.State != "BLOCKED" || prepared.MergeID == "" || prepared.Report.PackageSHA256 != report.PackageSHA256 || prepared.Report.TargetFingerprint != report.TargetFingerprint {
 		t.Fatalf("prepared merge=%+v", prepared)
 	}
+	var storedFormatVersion int
+	if err := target.Database.QueryRowContext(ctx, `SELECT format_version FROM portable_merge_sessions WHERE merge_id=?`, prepared.MergeID).Scan(&storedFormatVersion); err != nil || storedFormatVersion != portablecatalog.FormatVersion {
+		t.Fatalf("stored merge format version=%d err=%v", storedFormatVersion, err)
+	}
 	conflicts, err := target.Database.ListPortableMergeConflicts(ctx, prepared.MergeID)
 	if err != nil || len(conflicts) != len(report.Issues) {
 		t.Fatalf("stored conflicts=%+v err=%v", conflicts, err)

@@ -832,6 +832,8 @@ SocialAccount：
 - Web与CLI共用维护模式恢复：重新认证、包Hash/产品/Schema校验、临时安全解包、替换前安全快照、失败自动回滚。
 - 恢复后撤销Session，取消旧可执行任务，自动计划SUSPENDED_AFTER_RESTORE；完成路径/依赖检查后用户显式恢复。
 - 搜索索引、Tag闭包、推荐缓存和计数可重建；不自动扫描或Manifest Pull/Push。
+- 异机可移植迁移与完整备份解耦：核心身份/实体和Gallery重建声明进入可移植包，旧机器绝对媒体路径不进入；Gallery由目标媒体根及Manifest重建。
+- 可选owner continuity只允许Gallery生命周期/首次收录时间和Gallery收藏隐藏/Item收藏，默认不导出且只在Gallery身份重建后应用。Gallery地址/Slug历史、最后浏览时间、最后浏览项目和其他浏览历史不迁移；Gallery/Item评分继续由Manifest负责。
 
 ## 28. 日志与审计
 
@@ -911,6 +913,8 @@ SocialAccount：
 - Windows原生发行（含amd64/ARM）、macOS原生发行和移动原生应用。
 
 ## 35. 当前结论
+
+- 2026-09-10：异机可移植迁移的CLI/Web业务闭环已完成源码收口；Web包含导出预检、owner-continuity范围摘要、最近200条会话窗口和中断恢复入口。Gallery地址、评分重复副本及浏览历史仍按已确认边界排除；真实迁移模拟由所有者在本轮提交部署后执行。
 
 - 第一版关键产品和架构决策已闭合，没有阻塞Schema设计的待确认项。
 - 旧数据迁移、上游兼容和插件兼容均不再是实现约束。

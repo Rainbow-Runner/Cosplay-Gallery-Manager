@@ -732,6 +732,103 @@ type ManageMediaExclusionRule struct {
 	SystemDefault bool   `json:"systemDefault"`
 }
 
+type ManagePortableGalleryRebuild struct {
+	SetID          string `json:"setID"`
+	LibraryKey     string `json:"libraryKey"`
+	SourceType     string `json:"sourceType"`
+	RelativeSource string `json:"relativeSource"`
+	LocatorStatus  string `json:"locatorStatus"`
+	ManifestStatus string `json:"manifestStatus"`
+	State          string `json:"state"`
+	IssueCode      string `json:"issueCode"`
+}
+
+type ManagePortableImportSession struct {
+	ImportID          string `json:"importID"`
+	ExportID          string `json:"exportID"`
+	State             string `json:"state"`
+	FormatVersion     int    `json:"formatVersion"`
+	IdentityCount     int    `json:"identityCount"`
+	CoreEntityCount   int    `json:"coreEntityCount"`
+	GalleryClaimCount int    `json:"galleryClaimCount"`
+	ItemClaimCount    int    `json:"itemClaimCount"`
+	LinkClaimCount    int    `json:"linkClaimCount"`
+	AssetCount        int    `json:"assetCount"`
+	ErrorCode         string `json:"errorCode"`
+	CreatedAt         string `json:"createdAt"`
+	UpdatedAt         string `json:"updatedAt"`
+}
+
+type ManagePortableLibraryMapping struct {
+	LibraryKey      string `json:"libraryKey"`
+	LibraryName     string `json:"libraryName"`
+	Decision        string `json:"decision"`
+	TargetLibraryID *int64 `json:"targetLibraryID,omitempty"`
+	TargetName      string `json:"targetName"`
+	TargetRoot      string `json:"targetRoot"`
+}
+
+type ManagePortableMergeConflict struct {
+	IssueKey     string  `json:"issueKey"`
+	IssueCode    string  `json:"issueCode"`
+	Severity     string  `json:"severity"`
+	EntityKind   string  `json:"entityKind"`
+	IncomingUUID string  `json:"incomingUUID"`
+	LocalUUID    *string `json:"localUUID,omitempty"`
+	FieldKey     string  `json:"fieldKey"`
+	Decision     string  `json:"decision"`
+}
+
+type ManagePortableMergeSession struct {
+	MergeID            string  `json:"mergeID"`
+	ExportID           string  `json:"exportID"`
+	State              string  `json:"state"`
+	HardBlockingCount  int     `json:"hardBlockingCount"`
+	ReviewCount        int     `json:"reviewCount"`
+	IdentityAddCount   int     `json:"identityAddCount"`
+	IdentityReuseCount int     `json:"identityReuseCount"`
+	EntityAddCount     int     `json:"entityAddCount"`
+	EntityReuseCount   int     `json:"entityReuseCount"`
+	ErrorCode          string  `json:"errorCode"`
+	SafetyBackupID     *string `json:"safetyBackupID,omitempty"`
+	CreatedAt          string  `json:"createdAt"`
+	UpdatedAt          string  `json:"updatedAt"`
+}
+
+type ManagePortableMigrationSnapshot struct {
+	Imports   []*ManagePortableImportSession  `json:"imports"`
+	Merges    []*ManagePortableMergeSession   `json:"merges"`
+	Conflicts []*ManagePortableMergeConflict  `json:"conflicts"`
+	Mappings  []*ManagePortableLibraryMapping `json:"mappings"`
+	Rebuilds  []*ManagePortableGalleryRebuild `json:"rebuilds"`
+	Owner     *ManagePortableOwnerContinuity  `json:"owner,omitempty"`
+}
+
+type ManagePortableOwnerContinuity struct {
+	Available        bool `json:"available"`
+	GalleryLifecycle bool `json:"galleryLifecycle"`
+	PersonalFlags    bool `json:"personalFlags"`
+	GalleryCount     int  `json:"galleryCount"`
+	ItemCount        int  `json:"itemCount"`
+}
+
+type ManagePortablePreflight struct {
+	IdentityCount          int                             `json:"identityCount"`
+	CoreEntityCount        int                             `json:"coreEntityCount"`
+	GalleryCount           int                             `json:"galleryCount"`
+	IncompleteGalleryCount int                             `json:"incompleteGalleryCount"`
+	AssetCount             int                             `json:"assetCount"`
+	WarningCount           int                             `json:"warningCount"`
+	BlockingCount          int                             `json:"blockingCount"`
+	Issues                 []*ManagePortablePreflightIssue `json:"issues"`
+}
+
+type ManagePortablePreflightIssue struct {
+	Code     string `json:"code"`
+	Severity string `json:"severity"`
+	Count    int    `json:"count"`
+}
+
 type ManageProcessingJob struct {
 	ID                int64   `json:"id"`
 	Kind              string  `json:"kind"`
@@ -923,6 +1020,41 @@ type PersonSummary struct {
 
 type PersonalStateResult struct {
 	MetadataRevision int64 `json:"metadataRevision"`
+}
+
+type PortableLibraryDecisionInput struct {
+	LibraryKey      string `json:"libraryKey"`
+	TargetLibraryID *int64 `json:"targetLibraryID,omitempty"`
+}
+
+type PortableMergeDecisionInput struct {
+	IssueKey string `json:"issueKey"`
+	Decision string `json:"decision"`
+}
+
+type PortableMigrationActionInput struct {
+	Action                  PortableMigrationAction         `json:"action"`
+	Path                    string                          `json:"path"`
+	ImportID                string                          `json:"importID"`
+	MergeID                 string                          `json:"mergeID"`
+	Password                string                          `json:"password"`
+	Confirmation            string                          `json:"confirmation"`
+	AllowIncompleteGallery  bool                            `json:"allowIncompleteGallery"`
+	IncludeGalleryLifecycle bool                            `json:"includeGalleryLifecycle"`
+	IncludePersonalFlags    bool                            `json:"includePersonalFlags"`
+	MergeDecisions          []*PortableMergeDecisionInput   `json:"mergeDecisions"`
+	LibraryDecisions        []*PortableLibraryDecisionInput `json:"libraryDecisions"`
+}
+
+type PortableMigrationActionResult struct {
+	Code      string                           `json:"code"`
+	ImportID  *string                          `json:"importID,omitempty"`
+	MergeID   *string                          `json:"mergeID,omitempty"`
+	ExportID  *string                          `json:"exportID,omitempty"`
+	FileName  string                           `json:"fileName"`
+	Count     int                              `json:"count"`
+	Snapshot  *ManagePortableMigrationSnapshot `json:"snapshot"`
+	Preflight *ManagePortablePreflight         `json:"preflight,omitempty"`
 }
 
 type Query struct {
@@ -1695,6 +1827,83 @@ func (e *MediaKind) UnmarshalJSON(b []byte) error {
 }
 
 func (e MediaKind) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type PortableMigrationAction string
+
+const (
+	PortableMigrationActionPreflightExport  PortableMigrationAction = "PREFLIGHT_EXPORT"
+	PortableMigrationActionExport           PortableMigrationAction = "EXPORT"
+	PortableMigrationActionImport           PortableMigrationAction = "IMPORT"
+	PortableMigrationActionPrepareMerge     PortableMigrationAction = "PREPARE_MERGE"
+	PortableMigrationActionDecideMerge      PortableMigrationAction = "DECIDE_MERGE"
+	PortableMigrationActionApplyMerge       PortableMigrationAction = "APPLY_MERGE"
+	PortableMigrationActionAbortMerge       PortableMigrationAction = "ABORT_MERGE"
+	PortableMigrationActionRecoverImport    PortableMigrationAction = "RECOVER_IMPORT"
+	PortableMigrationActionRecoverMerge     PortableMigrationAction = "RECOVER_MERGE"
+	PortableMigrationActionMapLibraries     PortableMigrationAction = "MAP_LIBRARIES"
+	PortableMigrationActionPreflightRebuild PortableMigrationAction = "PREFLIGHT_REBUILD"
+	PortableMigrationActionRebuild          PortableMigrationAction = "REBUILD"
+	PortableMigrationActionApplyContinuity  PortableMigrationAction = "APPLY_CONTINUITY"
+)
+
+var AllPortableMigrationAction = []PortableMigrationAction{
+	PortableMigrationActionPreflightExport,
+	PortableMigrationActionExport,
+	PortableMigrationActionImport,
+	PortableMigrationActionPrepareMerge,
+	PortableMigrationActionDecideMerge,
+	PortableMigrationActionApplyMerge,
+	PortableMigrationActionAbortMerge,
+	PortableMigrationActionRecoverImport,
+	PortableMigrationActionRecoverMerge,
+	PortableMigrationActionMapLibraries,
+	PortableMigrationActionPreflightRebuild,
+	PortableMigrationActionRebuild,
+	PortableMigrationActionApplyContinuity,
+}
+
+func (e PortableMigrationAction) IsValid() bool {
+	switch e {
+	case PortableMigrationActionPreflightExport, PortableMigrationActionExport, PortableMigrationActionImport, PortableMigrationActionPrepareMerge, PortableMigrationActionDecideMerge, PortableMigrationActionApplyMerge, PortableMigrationActionAbortMerge, PortableMigrationActionRecoverImport, PortableMigrationActionRecoverMerge, PortableMigrationActionMapLibraries, PortableMigrationActionPreflightRebuild, PortableMigrationActionRebuild, PortableMigrationActionApplyContinuity:
+		return true
+	}
+	return false
+}
+
+func (e PortableMigrationAction) String() string {
+	return string(e)
+}
+
+func (e *PortableMigrationAction) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = PortableMigrationAction(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid PortableMigrationAction", str)
+	}
+	return nil
+}
+
+func (e PortableMigrationAction) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *PortableMigrationAction) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e PortableMigrationAction) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

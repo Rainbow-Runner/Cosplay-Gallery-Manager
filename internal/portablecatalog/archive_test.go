@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/color"
@@ -55,6 +56,46 @@ func TestPortablePackageRoundTripIsDeterministic(t *testing.T) {
 	}
 	if inspection.Bundle.Catalog.Cosers[0].Avatar == nil || inspection.Bundle.Catalog.Cosers[0].Avatar.PackagePath == "" {
 		t.Fatal("avatar reference was not preserved")
+	}
+}
+
+func TestPortableInspectorContinuesToReadFormatV1WithoutOwnerFields(t *testing.T) {
+	bundle := validBundle()
+	bundle.Catalog.Cosers[0].Avatar = nil
+	v2 := filepath.Join(t.TempDir(), "v2.cgm-portable.zip")
+	if err := WriteFileAtomic(v2, bundle, nil); err != nil {
+		t.Fatal(err)
+	}
+	v1 := filepath.Join(t.TempDir(), "v1.cgm-portable.zip")
+	if err := rewriteArchive(v2, v1, func(name string, data []byte) (string, []byte) {
+		if name != "package.json" {
+			return name, data
+		}
+		var manifest map[string]any
+		if err := json.Unmarshal(data, &manifest); err != nil {
+			t.Fatal(err)
+		}
+		manifest["format_version"] = float64(1)
+		delete(manifest, "owner_continuity")
+		delete(manifest, "owner_gallery_lifecycle")
+		delete(manifest, "owner_personal_flags")
+		delete(manifest, "owner_gallery_count")
+		delete(manifest, "owner_item_count")
+		data, err := json.Marshal(manifest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return name, data
+	}); err != nil {
+		t.Fatal(err)
+	}
+	inspection, err := InspectFile(context.Background(), v1)
+	if err != nil || inspection.Manifest.FormatVersion != 1 || inspection.Bundle.Owner != nil {
+		t.Fatalf("format v1 compatibility = %#v, %v", inspection.Manifest, err)
+	}
+	manifest, err := ReadPackageManifest(context.Background(), v1)
+	if err != nil || manifest.FormatVersion != 1 || manifest.OwnerContinuity {
+		t.Fatalf("format v1 manifest summary = %#v, %v", manifest, err)
 	}
 }
 

@@ -37,7 +37,7 @@ CGM 当前的完整备份会同时保存产品数据库、Coser 托管元数据�
 | 全局身份账本 | 所有 Portable UUID 的 kind、创建状态、Alias 链、Tombstone | 是 | 否 |
 | 核心目录 | Coser、Work、Character、Tag、SocialAccount、Slug 历史、关系和当前 Coser 资源 | 是 | 否 |
 | Gallery Manifest | Gallery 业务元数据、实体 UUID 引用、成员相对路径、Item UUID、封面与排除项 | 随媒体迁移 | 否 |
-| 可选连续性状态 | Gallery Slug 历史、收藏、隐藏、历史及其他所有者状态 | 可选、独立导入 | 否 |
+| 可选连续性状态 | Gallery生命周期/首次收录时间、Gallery收藏/隐藏、Item收藏 | 可选、独立导入 | 否 |
 | 机器本地绑定 | 媒体库根、来源绝对路径、缓存/日志/备份根、工具路径、Session、任务和调度 | 否 | 是 |
 | 完整备份 | 某一时点的完整数据库、Coser 元数据和必要启动配置 | 是，需路径映射 | 是 |
 
@@ -184,12 +184,14 @@ CGM-portable-<timestamp>-<export-id>.cgm-portable.zip
 
 ## 8. 可选连续性状态
 
-为了不推翻 Gallery Manifest v1 的既有边界，以下信息不加入 `.cosplay.json`：Gallery Slug/历史、状态、收录时间、收藏、隐藏、个人评分/历史和其他所有者状态。
+为了不推翻 Gallery Manifest v1 的既有边界，Gallery 生命周期、收藏、隐藏和 Item 收藏不加入 `.cosplay.json`。Gallery 与 Item 评分继续由 Manifest 负责，不在 owner continuity 重复保存；Gallery Slug/历史以及最后浏览时间、最后浏览项目等浏览状态明确不参与可移植迁移。
 
 长期可在可移植包中增加独立、可选的 `owner-continuity.json`，全部以 `set_id`/`item_uuid` 为键。它应满足：
 
 - 默认不导出，用户明确选择后才包含；
+- 只允许分别选择 Gallery 生命周期（`state`、`added_at`）和轻量个人标记（Gallery 收藏/隐藏、Item 收藏）；
 - 不含认证凭据、Session、审计、任务或物理路径；
+- 不含 Gallery Slug/地址历史、Gallery/Item 评分、最后浏览时间、最后浏览项目或其他浏览历史；
 - 只能在对应 Gallery/Item 身份已安全重建后应用；
 - ACTIVE 状态仅作为“请求恢复状态”，必须重新通过当前环境激活门禁；
 - 导入失败不影响已经完成的核心目录导入，且可单独重试。
@@ -300,15 +302,18 @@ cgm -inspect-portable /absolute/path/export.cgm-portable.zip
 
 阶段4第二切片现已新增schema v10技术状态：`portable_merge_sessions`绑定merge/export UUID、受控包相对路径、包SHA-256、目标Registry+核心目录指纹、预检计数和状态；`portable_merge_conflicts`只保存稳定issue key/code、severity、kind、双方UUID、可选field key及决策，不复制名称、URL或字段正文。`-prepare-portable-merge`要求确认词`PREPARE`，先预检调用者文件，再复制到Backup根专属0600目录并对保留副本重新完整预检，最后才原子建立会话；硬冲突会话固定`BLOCKED`。`-decide-portable-merge`要求逐项输入和最终`DECIDE`：内容/Tag边差异只接受`KEEP_LOCAL/USE_INCOMING`，同名/帐号候选只接受`KEEP_SEPARATE/MAP_TO_LOCAL`，硬冲突不接受任何决策；必须一次覆盖全部REVIEW。提交决策前重新预检保留包和当前目标，包摘要或目标指纹变化会把会话标为`STALE`并拒绝旧决策。当前`READY`只表示决策集合完整，不代表数据已合并；实际核心写入、字段级拆分、Gallery Merge和Web工作台仍未开放。
 
-阶段4基础写入闭环现已完成：READY会话可应用完整人工决定；`MAP_TO_LOCAL`把传入UUID登记为指向已确认本地实体的永久Alias并重映射包内关系，`KEEP_LOCAL/USE_INCOMING`控制同UUID对象、SocialAccount位置和Tag边。应用前创建完整安全备份并进入`PORTABLE_MERGING`；新增Coser资源安全发布，`USE_INCOMING`替换既有资源时保留旧assets回滚目录，事务失败自动还原，进程中断可按所有权标记恢复。Merge不再建立一套孤立重建表，而是原子创建兼容阶段3的技术重建会话及Gallery/Item/Link声明，因此同一Merge UUID可继续执行逻辑媒体库映射、只读sidecar核验和DRAFT Gallery身份接管。应用前可显式ABORT，应用后重复执行拒绝。CLI基础迁移闭环已具备；Web冲突工作台和owner continuity仍为后续产品化增强。
+阶段4基础写入闭环现已完成：READY会话可应用完整人工决定；`MAP_TO_LOCAL`把传入UUID登记为指向已确认本地实体的永久Alias并重映射包内关系，`KEEP_LOCAL/USE_INCOMING`控制同UUID对象、SocialAccount位置和Tag边。应用前创建完整安全备份并进入`PORTABLE_MERGING`；新增Coser资源安全发布，`USE_INCOMING`替换既有资源时保留旧assets回滚目录，事务失败自动还原，进程中断可按所有权标记恢复。Merge不再建立一套孤立重建表，而是原子创建兼容阶段3的技术重建会话及Gallery/Item/Link声明，因此同一Merge UUID可继续执行逻辑媒体库映射、只读sidecar核验和DRAFT Gallery身份接管。应用前可显式ABORT，应用后重复执行拒绝。CLI基础迁移闭环已具备；双语Web工作台现已在源码中接入同一服务，支持会话选择、全部REVIEW决定、应用/终止、媒体库映射、重建预检与执行。
 
 ### 阶段 5：可选所有者连续性状态
 
 - 增加独立 owner continuity 分区。
-- 在 Gallery 重建完成后恢复 Slug 连续性和用户选择的个人状态。
+- 在 Gallery 重建完成后，仅按导出时选择恢复生命周期和/或轻量收藏隐藏标记；不实现 Gallery 地址连续性。
+- Gallery/Item评分由Manifest恢复；最后浏览时间、最后浏览项目和其他浏览历史保持目标系统本地轻量状态，不迁移。
 - ACTIVE 请求重新执行环境校验，不恢复 Session、任务和调度租约。
 
 门禁：不选择该分区时导入结果与阶段 3 完全一致；失败可独立重试。
+
+当前阶段5源码已实现portable package format v2的可选`owner-continuity.json`：默认导出不包含该Entry，用户可分别选择Gallery生命周期和Gallery/Item收藏隐藏标记。Entry只以`set_id`/`item_uuid`引用ACTIVE身份并纳入checksums；v1包继续可读。它只能在会话达到`GALLERIES_REBUILT`后整批原子应用，ACTIVE请求重新执行当前激活门禁，失败不回滚已完成的核心导入与Gallery重建并可重试。写入只触及所选字段，明确保留Manifest负责的Gallery/Item评分和目标机既有浏览历史。CLI与双语Web工作台均调用同一服务并要求所有者重新认证及`CONTINUITY`确认词；本阶段不新增数据库schema。
 
 ### 阶段 6：产品化、恢复演练与文档
 
@@ -317,6 +322,8 @@ cgm -inspect-portable /absolute/path/export.cgm-portable.zip
 - 在新 Linux 主机与 Docker 上执行真实迁移演练，再考虑其他平台。
 
 门禁：从源机导出到全新目标机的整套演练可由文档独立复现，并能证明没有访问或修改源媒体。
+
+当前状态：双语Web工作台已补齐导出就绪报告、导入包可选owner-continuity范围摘要、最近200条会话窗口以及`PORTABLE_IMPORTING`/`PORTABLE_MERGING`中断恢复入口；所有动作要求重新认证和精确确认，服务失败只返回不含路径/正文的动作级稳定码。CLI与Web共用同一服务、保留包和持久化会话。源码和自动化门禁已闭合；真实Linux→Docker迁移与恢复模拟由所有者在独立目标环境执行后，阶段6环境门禁才能最终标记通过。
 
 ## 12. 测试矩阵
 

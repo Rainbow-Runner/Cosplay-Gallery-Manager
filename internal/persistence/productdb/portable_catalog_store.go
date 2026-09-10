@@ -31,10 +31,19 @@ type PortableCatalogReader struct {
 	identityCount int
 }
 
+type PortableOwnerContinuityOptions struct {
+	GalleryLifecycle bool
+	PersonalFlags    bool
+}
+
 // BeginPortableCatalogRead captures the non-identity documents and keeps the
 // same read transaction open so the identity ledger can be consumed without
 // materialising it in memory.
 func (db *Database) BeginPortableCatalogRead(ctx context.Context, manifest portablecatalog.PackageManifest) (*PortableCatalogReader, error) {
+	return db.BeginPortableCatalogReadWithOwner(ctx, manifest, PortableOwnerContinuityOptions{})
+}
+
+func (db *Database) BeginPortableCatalogReadWithOwner(ctx context.Context, manifest portablecatalog.PackageManifest, owner PortableOwnerContinuityOptions) (*PortableCatalogReader, error) {
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, err
@@ -71,12 +80,84 @@ func (db *Database) BeginPortableCatalogRead(ctx context.Context, manifest porta
 	if err := loadPortableGalleryIndex(ctx, tx, &result); err != nil {
 		return fail(err)
 	}
+	if owner.GalleryLifecycle || owner.PersonalFlags {
+		if err := loadPortableOwnerContinuity(ctx, tx, owner, &result); err != nil {
+			return fail(err)
+		}
+	}
 	var identityCount int
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM portable_uuid_registry`).Scan(&identityCount); err != nil {
 		return fail(err)
 	}
 	result.Bundle.Normalize()
 	return &PortableCatalogReader{tx: tx, snapshot: result, identityCount: identityCount}, nil
+}
+
+func loadPortableOwnerContinuity(ctx context.Context, tx *sql.Tx, options PortableOwnerContinuityOptions, result *PortableCatalogSnapshot) error {
+	owner := &portablecatalog.OwnerContinuity{SchemaVersion: 1, IncludesGalleryLifecycle: options.GalleryLifecycle, IncludesPersonalFlags: options.PersonalFlags, Galleries: []portablecatalog.GalleryOwnerContinuity{}}
+	rows, err := tx.QueryContext(ctx, `SELECT gallery.set_id,gallery.state,COALESCE(gallery.added_at_utc,''),
+		COALESCE(personal.favorite,0),COALESCE(personal.favorited_at_utc,''),COALESCE(personal.hidden,0)
+		FROM galleries gallery LEFT JOIN gallery_personal_states personal ON personal.gallery_id=gallery.id ORDER BY gallery.set_id`)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var value portablecatalog.GalleryOwnerContinuity
+		var favorite, hidden int
+		if err := rows.Scan(&value.SetID, &value.State, &value.AddedAt, &favorite, &value.FavoritedAt, &hidden); err != nil {
+			rows.Close()
+			return err
+		}
+		value.Items = []portablecatalog.ItemOwnerContinuity{}
+		if !options.GalleryLifecycle {
+			value.State, value.AddedAt = "", ""
+		}
+		if options.PersonalFlags {
+			value.Favorite, value.Hidden = favorite == 1, hidden == 1
+		} else {
+			value.FavoritedAt = ""
+		}
+		owner.Galleries = append(owner.Galleries, value)
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if options.PersonalFlags {
+		items, err := tx.QueryContext(ctx, `SELECT gallery.set_id,item.item_uuid,personal.favorite,COALESCE(personal.favorited_at_utc,'')
+			FROM gallery_item_personal_states personal JOIN gallery_items item ON item.id=personal.gallery_item_id
+			JOIN galleries gallery ON gallery.id=item.gallery_id WHERE personal.favorite=1 ORDER BY gallery.set_id,item.item_uuid`)
+		if err != nil {
+			return err
+		}
+		bySet := make(map[string]*portablecatalog.GalleryOwnerContinuity, len(owner.Galleries))
+		for index := range owner.Galleries {
+			bySet[owner.Galleries[index].SetID] = &owner.Galleries[index]
+		}
+		for items.Next() {
+			var setID string
+			var value portablecatalog.ItemOwnerContinuity
+			var favorite int
+			if err := items.Scan(&setID, &value.ItemUUID, &favorite, &value.FavoritedAt); err != nil {
+				items.Close()
+				return err
+			}
+			value.Favorite = favorite == 1
+			if target := bySet[setID]; target != nil {
+				target.Items = append(target.Items, value)
+			}
+		}
+		if err := items.Close(); err != nil {
+			return err
+		}
+		if err := items.Err(); err != nil {
+			return err
+		}
+	}
+	result.Bundle.Owner = owner
+	return nil
 }
 
 func (r *PortableCatalogReader) Snapshot() PortableCatalogSnapshot { return r.snapshot }

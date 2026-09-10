@@ -2045,3 +2045,19 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 2026-09-09 20:08 CST停服并确认`MainPID=0`后，创建并实际解包逐项复验0600回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260909T120810Z-b477ddc.tar.gz`，SHA-256为`aeda830f024c7aba2a1b4e72cd4918e9e2288acb959211cc4f79d143c3419c00`。包内schema v8 SQLite、旧二进制、配置、systemd单元和Coser托管资源与正式来源一致，不含媒体、缓存、日志或既有备份；解包数据库`integrity_check=ok`。
 - 新二进制经同目录候选逐字节校验后原子替换，并只启动服务一次。应用自动创建`product.sqlite.pre-schema-v8-1788955809181123991.bak`，该快照仍为schema v8且`integrity_check=ok`；正式数据库升级为schema v10、`integrity_check=ok`、maintenance=`NORMAL`，inode仍为`19679716`。迁移前后均保持2个媒体库、6个Gallery、6个来源、322个Item、135个Coser、108个Work、697个Character和0个Tag，新增迁移会话表为空。
 - 服务保持`active/running`、`MainPID=23429`、`NRestarts=0`；Health/Ready为204，Root/Legal/Session为200，2个Worker及LibRaw/FFmpeg/FFprobe正常启用，启动及探针日志无WARN、ERROR、FAILED、panic或fatal。配置SHA-256继续为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`。About因本地新提交尚未位于远端可访问源码而报告`exactSourceAvailable=false`，二进制自身VCS revision已独立核验为`b477ddc`；本轮未执行远端推送。
+
+## 1.5-74 双语Web迁移工作台与可选所有者连续性
+
+日期：2026-09-10
+
+- 按所有者最终边界取消Gallery地址连续性；Gallery/Item评分继续由`.cosplay.json` Manifest负责；最后浏览时间、最后浏览项目及其他Gallery浏览历史保持目标系统现有轻量状态，不进入迁移包，也不由迁移应用覆盖。
+- portable package升级为format v2并继续兼容读取v1。新增默认不存在的`owner-continuity.json`，导出时只能分别显式选择Gallery生命周期/首次收录时间和Gallery收藏隐藏/Item收藏；Entry进入逐文件checksums并记录独立计数，只允许引用身份账本中的ACTIVE `set_id`/`item_uuid`。默认导出行为与旧流程一致。
+- 连续性应用只能在技术会话达到`GALLERIES_REBUILT`后执行。整份分区在一个事务内解析到目标机已重建的Gallery/Item；ACTIVE仅作为请求并重新运行`DISPLAYABLE_ITEM_REQUIRED`、`CONTENT_RATING_REQUIRED`等当前激活门禁。任一引用或门禁失败整批回滚，但不撤销此前完成的核心导入与Gallery重建，可在修复后独立重试。
+- 数据库写入只更新已选择的生命周期或收藏隐藏字段。Gallery/Item评分列和Gallery最后浏览时间/项目列不在SQL写集合中；回归测试先写入这些目标机状态再应用收藏连续性，确认它们保持不变。没有新增数据库表、字段或schema版本。
+- CLI新增`-include-owner-lifecycle`、`-include-owner-flags`和`-apply-owner-continuity <workflow-id>`；后者要求所有者重新认证及`CONTINUITY`确认。离线Inspector继续严格校验完整包并显示可选分区计数。
+- Manage → Operations新增中英文Portable migration workbench，与CLI直接共用Server服务和schema v9/v10持久化会话。界面覆盖服务器绝对路径导出、空库导入、非空库Merge准备、合法REVIEW决定、应用/终止、逻辑媒体库映射、Gallery重建预检/执行和可选连续性应用；每个写动作均要求所有者密码和动作专属确认词。界面明确说明服务器路径语义及不迁移地址、评分和浏览历史的边界。
+- 工作台收口补齐导出就绪检查及问题计数、所选保留包的生命周期/收藏隐藏范围与Gallery/Item计数，以及`PORTABLE_IMPORTING`/`PORTABLE_MERGING`维护态的显式安全恢复入口。会话列表固定最近200条，所选历史会话按UUID直接读取；包摘要只读取受控`package.json`，实际动作仍执行完整Inspector。服务失败只返回动作级稳定码，不把文件系统细节暴露给浏览器。
+- 修复format v2 Merge保留会话曾错误写成v1的问题：预检报告现在携带Inspector识别的真实格式版本，准备会话原样持久化；回归锁定v2写入和v1读取兼容，确保Merge后仍能识别并应用可选owner continuity。
+- GraphQL只返回会话计数、状态、稳定问题码和不透明身份，不暴露保留包路径或旧媒体绝对路径；媒体库映射只在认证Manage界面显示本机目标根。新增会话列表读取，没有把包业务正文复制进数据库。
+- 当前源码定向`portablecatalog/productdb/productapi/productserver`测试、GraphQL所有者重新认证/稳定失败码测试、format v1兼容和v2 Merge格式回归通过；正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签下`portablecatalog/productdb/productapi/productserver/cmd/cgm`测试及同范围Go Vet通过。TypeScript检查、前端31文件103项测试和682模块生产构建通过；主共享chunk约535.61KiB，继续保留既有大包提示。`git diff --check`通过。
+- 本轮功能源码准备提交和部署；部署前不执行任何迁移导入/合并/重建，真实迁移模拟由所有者在部署后执行。

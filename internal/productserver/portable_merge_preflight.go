@@ -21,6 +21,7 @@ import (
 
 type PortableMergePreflightReport struct {
 	ExportID          string
+	FormatVersion     int
 	PackageSHA256     string
 	TargetFingerprint string
 	IdentityAdd       int
@@ -100,6 +101,7 @@ func (s *Server) preflightPortableMerge(ctx context.Context, sourcePath string) 
 		return report, err
 	}
 	report.ExportID = inspection.Manifest.ExportID
+	report.FormatVersion = inspection.Manifest.FormatVersion
 	report.PackageSHA256, err = portableFileSHA256(sourcePath)
 	finalInfo, finalInfoErr := os.Lstat(sourcePath)
 	if err != nil || finalInfoErr != nil || !finalInfo.Mode().IsRegular() || !os.SameFile(info, finalInfo) || report.PackageSHA256 != beforeDigest {

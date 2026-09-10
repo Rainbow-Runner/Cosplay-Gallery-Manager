@@ -357,6 +357,28 @@ type ManageBackupRecord {
   createdAt: String! completedAt: String lastErrorCode: String!
 }
 type ManageMaintenanceState { state: String! restoreBackupID: ID lastErrorCode: String! updatedAt: String! }
+enum PortableMigrationAction { PREFLIGHT_EXPORT EXPORT IMPORT PREPARE_MERGE DECIDE_MERGE APPLY_MERGE ABORT_MERGE RECOVER_IMPORT RECOVER_MERGE MAP_LIBRARIES PREFLIGHT_REBUILD REBUILD APPLY_CONTINUITY }
+input PortableMergeDecisionInput { issueKey: String! decision: String! }
+input PortableLibraryDecisionInput { libraryKey: String! targetLibraryID: Int64 }
+input PortableMigrationActionInput {
+  action: PortableMigrationAction! path: String! importID: ID! mergeID: ID! password: String! confirmation: String!
+  allowIncompleteGallery: Boolean! includeGalleryLifecycle: Boolean! includePersonalFlags: Boolean!
+  mergeDecisions: [PortableMergeDecisionInput!]! libraryDecisions: [PortableLibraryDecisionInput!]!
+}
+type ManagePortableImportSession {
+  importID: ID! exportID: ID! state: String! formatVersion: Int! identityCount: Int! coreEntityCount: Int! galleryClaimCount: Int! itemClaimCount: Int! linkClaimCount: Int! assetCount: Int! errorCode: String! createdAt: String! updatedAt: String!
+}
+type ManagePortableMergeSession {
+  mergeID: ID! exportID: ID! state: String! hardBlockingCount: Int! reviewCount: Int! identityAddCount: Int! identityReuseCount: Int! entityAddCount: Int! entityReuseCount: Int! errorCode: String! safetyBackupID: ID createdAt: String! updatedAt: String!
+}
+type ManagePortableMergeConflict { issueKey: String! issueCode: String! severity: String! entityKind: String! incomingUUID: ID! localUUID: ID fieldKey: String! decision: String! }
+type ManagePortableLibraryMapping { libraryKey: String! libraryName: String! decision: String! targetLibraryID: Int64 targetName: String! targetRoot: String! }
+type ManagePortableGalleryRebuild { setID: ID! libraryKey: String! sourceType: String! relativeSource: String! locatorStatus: String! manifestStatus: String! state: String! issueCode: String! }
+type ManagePortableOwnerContinuity { available: Boolean! galleryLifecycle: Boolean! personalFlags: Boolean! galleryCount: Int! itemCount: Int! }
+type ManagePortableMigrationSnapshot { imports: [ManagePortableImportSession!]! merges: [ManagePortableMergeSession!]! conflicts: [ManagePortableMergeConflict!]! mappings: [ManagePortableLibraryMapping!]! rebuilds: [ManagePortableGalleryRebuild!]! owner: ManagePortableOwnerContinuity }
+type ManagePortablePreflightIssue { code: String! severity: String! count: Int! }
+type ManagePortablePreflight { identityCount: Int! coreEntityCount: Int! galleryCount: Int! incompleteGalleryCount: Int! assetCount: Int! warningCount: Int! blockingCount: Int! issues: [ManagePortablePreflightIssue!]! }
+type PortableMigrationActionResult { code: String! importID: ID mergeID: ID exportID: ID fileName: String! count: Int! snapshot: ManagePortableMigrationSnapshot! preflight: ManagePortablePreflight }
 type ManageAuditEvent {
   id: Int64! eventCode: String! targetKind: String! targetID: String!
   outcome: String! errorCode: String! summaryJSON: String! createdAt: String!
@@ -435,6 +457,7 @@ type Query {
   manageProcessingJobs(status: String! = "ALL", page: Int! = 1): ManageProcessingJobPage!
   manageBackups: [ManageBackupRecord!]!
   manageMaintenance: ManageMaintenanceState!
+  managePortableMigration(importID: ID, mergeID: ID): ManagePortableMigrationSnapshot!
   manageAudit(page: Int! = 1): ManageAuditPage!
   manageCoreEntities(kind: SearchEntityKind!, page: Int! = 1, pageSize: Int! = 0, query: String! = "", coserAssetFilter: ManageCoserAssetFilter! = ALL): ManageCoreEntityPage!
   manageCoreEntity(kind: SearchEntityKind!, uuid: ID!): ManageCoreEntity!
@@ -498,6 +521,7 @@ type Mutation {
   retryGalleryItemVideo(itemUUID: ID!): Boolean!
   createFullBackup: ManageBackupRecord!
   restoreBackup(backupID: ID!): ManageMaintenanceState!
+  runPortableMigration(input: PortableMigrationActionInput!): PortableMigrationActionResult!
   createCoreEntity(input: CoreEntityInput!): ManageCoreEntity!
   updateCoreEntity(uuid: ID!, expectedMetadataRevision: Int64!, input: CoreEntityInput!): ManageCoreEntity!
   addCoserSocialAccount(coserUUID: ID!, expectedMetadataRevision: Int64!, input: SocialAccountInput!): ManageCoreEntity!

@@ -609,3 +609,72 @@ func manageCoreEntityDeletePreview(value productdb.CoreEntityDeletePreview) *Man
 	}
 	return result
 }
+
+func optionalPortableString(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
+}
+
+func managePortableMigrationSnapshot(value PortableMigrationSnapshot) *ManagePortableMigrationSnapshot {
+	result := &ManagePortableMigrationSnapshot{}
+	for _, item := range value.Imports {
+		result.Imports = append(result.Imports, &ManagePortableImportSession{
+			ImportID: item.ImportID, ExportID: item.ExportID, State: item.State, FormatVersion: item.FormatVersion,
+			IdentityCount: item.IdentityCount, CoreEntityCount: item.CoreEntityCount,
+			GalleryClaimCount: item.GalleryClaimCount, ItemClaimCount: item.ItemClaimCount,
+			LinkClaimCount: item.LinkClaimCount, AssetCount: item.AssetCount,
+			ErrorCode: item.ErrorCode, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt,
+		})
+	}
+	for _, item := range value.Merges {
+		result.Merges = append(result.Merges, &ManagePortableMergeSession{
+			MergeID: item.MergeID, ExportID: item.ExportID, State: item.State,
+			HardBlockingCount: item.HardBlockingCount, ReviewCount: item.ReviewCount,
+			IdentityAddCount: item.IdentityAddCount, IdentityReuseCount: item.IdentityReuseCount,
+			EntityAddCount: item.EntityAddCount, EntityReuseCount: item.EntityReuseCount,
+			ErrorCode: item.ErrorCode, SafetyBackupID: optionalPortableString(item.SafetyBackupID),
+			CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt,
+		})
+	}
+	for _, item := range value.Conflicts {
+		result.Conflicts = append(result.Conflicts, &ManagePortableMergeConflict{
+			IssueKey: item.IssueKey, IssueCode: item.IssueCode, Severity: item.Severity,
+			EntityKind: item.EntityKind, IncomingUUID: item.IncomingUUID,
+			LocalUUID: optionalPortableString(item.LocalUUID), FieldKey: item.FieldKey, Decision: item.Decision,
+		})
+	}
+	for _, item := range value.Mappings {
+		result.Mappings = append(result.Mappings, &ManagePortableLibraryMapping{
+			LibraryKey: item.LibraryKey, LibraryName: item.LibraryName, Decision: item.Decision,
+			TargetLibraryID: item.TargetLibraryID, TargetName: item.TargetName, TargetRoot: item.TargetRoot,
+		})
+	}
+	for _, item := range value.Rebuilds {
+		result.Rebuilds = append(result.Rebuilds, &ManagePortableGalleryRebuild{
+			SetID: item.SetID, LibraryKey: item.LibraryKey, SourceType: string(item.SourceType),
+			RelativeSource: item.RelativeSource, LocatorStatus: item.LocatorStatus,
+			ManifestStatus: item.ManifestStatus, State: item.State, IssueCode: item.IssueCode,
+		})
+	}
+	if value.Owner != nil {
+		result.Owner = &ManagePortableOwnerContinuity{Available: value.Owner.Available, GalleryLifecycle: value.Owner.GalleryLifecycle, PersonalFlags: value.Owner.PersonalFlags, GalleryCount: value.Owner.GalleryCount, ItemCount: value.Owner.ItemCount}
+	}
+	return result
+}
+
+func portableMigrationActionResult(value PortableMigrationRunResult) *PortableMigrationActionResult {
+	result := &PortableMigrationActionResult{
+		Code: value.Code, ImportID: optionalPortableString(value.ImportID),
+		MergeID: optionalPortableString(value.MergeID), ExportID: optionalPortableString(value.ExportID),
+		FileName: value.FileName, Count: value.Count, Snapshot: managePortableMigrationSnapshot(value.Snapshot),
+	}
+	if value.Preflight != nil {
+		result.Preflight = &ManagePortablePreflight{IdentityCount: value.Preflight.IdentityCount, CoreEntityCount: value.Preflight.CoreEntityCount, GalleryCount: value.Preflight.GalleryCount, IncompleteGalleryCount: value.Preflight.IncompleteGalleryCount, AssetCount: value.Preflight.AssetCount, WarningCount: value.Preflight.WarningCount, BlockingCount: value.Preflight.BlockingCount}
+		for _, issue := range value.Preflight.Issues {
+			result.Preflight.Issues = append(result.Preflight.Issues, &ManagePortablePreflightIssue{Code: issue.Code, Severity: issue.Severity, Count: issue.Count})
+		}
+	}
+	return result
+}

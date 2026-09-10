@@ -81,7 +81,7 @@ func (s *Server) PreparePortableMerge(ctx context.Context, sourcePath string) (r
 	relativePackage := filepath.ToSlash(filepath.Join("portable-merges", mergeID, "package.zip"))
 	if err := s.Database.CreatePortableMergeSession(ctx, productdb.PortableMergeSessionInput{
 		MergeID: mergeID, ExportID: report.ExportID, PackageSHA256: digest, PackageRelativePath: relativePackage,
-		TargetFingerprint: report.TargetFingerprint, FormatVersion: 1,
+		TargetFingerprint: report.TargetFingerprint, FormatVersion: report.FormatVersion,
 		IdentityAdd: report.IdentityAdd, IdentityReuse: report.IdentityReuse, EntityAdd: report.EntityAdd, EntityReuse: report.EntityReuse, Issues: conflicts,
 	}, time.Now()); err != nil {
 		return result, err

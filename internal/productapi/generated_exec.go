@@ -716,6 +716,103 @@ type ComplexityRoot struct {
 		SystemDefault func(childComplexity int) int
 	}
 
+	ManagePortableGalleryRebuild struct {
+		IssueCode      func(childComplexity int) int
+		LibraryKey     func(childComplexity int) int
+		LocatorStatus  func(childComplexity int) int
+		ManifestStatus func(childComplexity int) int
+		RelativeSource func(childComplexity int) int
+		SetID          func(childComplexity int) int
+		SourceType     func(childComplexity int) int
+		State          func(childComplexity int) int
+	}
+
+	ManagePortableImportSession struct {
+		AssetCount        func(childComplexity int) int
+		CoreEntityCount   func(childComplexity int) int
+		CreatedAt         func(childComplexity int) int
+		ErrorCode         func(childComplexity int) int
+		ExportID          func(childComplexity int) int
+		FormatVersion     func(childComplexity int) int
+		GalleryClaimCount func(childComplexity int) int
+		IdentityCount     func(childComplexity int) int
+		ImportID          func(childComplexity int) int
+		ItemClaimCount    func(childComplexity int) int
+		LinkClaimCount    func(childComplexity int) int
+		State             func(childComplexity int) int
+		UpdatedAt         func(childComplexity int) int
+	}
+
+	ManagePortableLibraryMapping struct {
+		Decision        func(childComplexity int) int
+		LibraryKey      func(childComplexity int) int
+		LibraryName     func(childComplexity int) int
+		TargetLibraryID func(childComplexity int) int
+		TargetName      func(childComplexity int) int
+		TargetRoot      func(childComplexity int) int
+	}
+
+	ManagePortableMergeConflict struct {
+		Decision     func(childComplexity int) int
+		EntityKind   func(childComplexity int) int
+		FieldKey     func(childComplexity int) int
+		IncomingUUID func(childComplexity int) int
+		IssueCode    func(childComplexity int) int
+		IssueKey     func(childComplexity int) int
+		LocalUUID    func(childComplexity int) int
+		Severity     func(childComplexity int) int
+	}
+
+	ManagePortableMergeSession struct {
+		CreatedAt          func(childComplexity int) int
+		EntityAddCount     func(childComplexity int) int
+		EntityReuseCount   func(childComplexity int) int
+		ErrorCode          func(childComplexity int) int
+		ExportID           func(childComplexity int) int
+		HardBlockingCount  func(childComplexity int) int
+		IdentityAddCount   func(childComplexity int) int
+		IdentityReuseCount func(childComplexity int) int
+		MergeID            func(childComplexity int) int
+		ReviewCount        func(childComplexity int) int
+		SafetyBackupID     func(childComplexity int) int
+		State              func(childComplexity int) int
+		UpdatedAt          func(childComplexity int) int
+	}
+
+	ManagePortableMigrationSnapshot struct {
+		Conflicts func(childComplexity int) int
+		Imports   func(childComplexity int) int
+		Mappings  func(childComplexity int) int
+		Merges    func(childComplexity int) int
+		Owner     func(childComplexity int) int
+		Rebuilds  func(childComplexity int) int
+	}
+
+	ManagePortableOwnerContinuity struct {
+		Available        func(childComplexity int) int
+		GalleryCount     func(childComplexity int) int
+		GalleryLifecycle func(childComplexity int) int
+		ItemCount        func(childComplexity int) int
+		PersonalFlags    func(childComplexity int) int
+	}
+
+	ManagePortablePreflight struct {
+		AssetCount             func(childComplexity int) int
+		BlockingCount          func(childComplexity int) int
+		CoreEntityCount        func(childComplexity int) int
+		GalleryCount           func(childComplexity int) int
+		IdentityCount          func(childComplexity int) int
+		IncompleteGalleryCount func(childComplexity int) int
+		Issues                 func(childComplexity int) int
+		WarningCount           func(childComplexity int) int
+	}
+
+	ManagePortablePreflightIssue struct {
+		Code     func(childComplexity int) int
+		Count    func(childComplexity int) int
+		Severity func(childComplexity int) int
+	}
+
 	ManageProcessingJob struct {
 		AttemptCount      func(childComplexity int) int
 		CreatedAt         func(childComplexity int) int
@@ -904,6 +1001,7 @@ type ComplexityRoot struct {
 		RetryGalleryItemVideo                  func(childComplexity int, itemUUID string) int
 		RetryProcessingJob                     func(childComplexity int, id int64) int
 		RunLibraryAutomation                   func(childComplexity int, libraryID int64) int
+		RunPortableMigration                   func(childComplexity int, input PortableMigrationActionInput) int
 		SaveLibraryAutomationPolicy            func(childComplexity int, libraryID int64, expectedRevision int64, input LibraryAutomationPolicyInput) int
 		ScanGallerySource                      func(childComplexity int, setID string, excludeNewRootMedia bool) int
 		SetGalleryCoverItem                    func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64) int
@@ -942,6 +1040,17 @@ type ComplexityRoot struct {
 		MetadataRevision func(childComplexity int) int
 	}
 
+	PortableMigrationActionResult struct {
+		Code      func(childComplexity int) int
+		Count     func(childComplexity int) int
+		ExportID  func(childComplexity int) int
+		FileName  func(childComplexity int) int
+		ImportID  func(childComplexity int) int
+		MergeID   func(childComplexity int) int
+		Preflight func(childComplexity int) int
+		Snapshot  func(childComplexity int) int
+	}
+
 	Query struct {
 		BrowseGalleries                      func(childComplexity int, scope BrowseScope, page int, sort GallerySort, collectionType *CollectionType) int
 		BrowseUISettings                     func(childComplexity int) int
@@ -977,6 +1086,7 @@ type ComplexityRoot struct {
 		ManageMediaClassificationSuggestions func(childComplexity int, libraryID *int64, status string) int
 		ManageMediaExclusionDecisions        func(childComplexity int, libraryID *int64, status string) int
 		ManageMediaExclusionRules            func(childComplexity int, libraryID *int64) int
+		ManagePortableMigration              func(childComplexity int, importID *string, mergeID *string) int
 		ManageProcessingJobs                 func(childComplexity int, status string, page int) int
 		ManageRuntimeSettings                func(childComplexity int) int
 		ManageVideoDependencyStatus          func(childComplexity int) int
@@ -1127,6 +1237,7 @@ type MutationResolver interface {
 	RetryGalleryItemVideo(ctx context.Context, itemUUID string) (bool, error)
 	CreateFullBackup(ctx context.Context) (*ManageBackupRecord, error)
 	RestoreBackup(ctx context.Context, backupID string) (*ManageMaintenanceState, error)
+	RunPortableMigration(ctx context.Context, input PortableMigrationActionInput) (*PortableMigrationActionResult, error)
 	CreateCoreEntity(ctx context.Context, input CoreEntityInput) (*ManageCoreEntity, error)
 	UpdateCoreEntity(ctx context.Context, uuid string, expectedMetadataRevision int64, input CoreEntityInput) (*ManageCoreEntity, error)
 	AddCoserSocialAccount(ctx context.Context, coserUUID string, expectedMetadataRevision int64, input SocialAccountInput) (*ManageCoreEntity, error)
@@ -1182,6 +1293,7 @@ type QueryResolver interface {
 	ManageProcessingJobs(ctx context.Context, status string, page int) (*ManageProcessingJobPage, error)
 	ManageBackups(ctx context.Context) ([]*ManageBackupRecord, error)
 	ManageMaintenance(ctx context.Context) (*ManageMaintenanceState, error)
+	ManagePortableMigration(ctx context.Context, importID *string, mergeID *string) (*ManagePortableMigrationSnapshot, error)
 	ManageAudit(ctx context.Context, page int) (*ManageAuditPage, error)
 	ManageCoreEntities(ctx context.Context, kind SearchEntityKind, page int, pageSize int, query string, coserAssetFilter ManageCoserAssetFilter) (*ManageCoreEntityPage, error)
 	ManageCoreEntity(ctx context.Context, kind SearchEntityKind, uuid string) (*ManageCoreEntity, error)
@@ -4476,6 +4588,496 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageMediaExclusionRule.SystemDefault(childComplexity), true
 
+	case "ManagePortableGalleryRebuild.issueCode":
+		if e.complexity.ManagePortableGalleryRebuild.IssueCode == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableGalleryRebuild.IssueCode(childComplexity), true
+
+	case "ManagePortableGalleryRebuild.libraryKey":
+		if e.complexity.ManagePortableGalleryRebuild.LibraryKey == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableGalleryRebuild.LibraryKey(childComplexity), true
+
+	case "ManagePortableGalleryRebuild.locatorStatus":
+		if e.complexity.ManagePortableGalleryRebuild.LocatorStatus == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableGalleryRebuild.LocatorStatus(childComplexity), true
+
+	case "ManagePortableGalleryRebuild.manifestStatus":
+		if e.complexity.ManagePortableGalleryRebuild.ManifestStatus == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableGalleryRebuild.ManifestStatus(childComplexity), true
+
+	case "ManagePortableGalleryRebuild.relativeSource":
+		if e.complexity.ManagePortableGalleryRebuild.RelativeSource == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableGalleryRebuild.RelativeSource(childComplexity), true
+
+	case "ManagePortableGalleryRebuild.setID":
+		if e.complexity.ManagePortableGalleryRebuild.SetID == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableGalleryRebuild.SetID(childComplexity), true
+
+	case "ManagePortableGalleryRebuild.sourceType":
+		if e.complexity.ManagePortableGalleryRebuild.SourceType == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableGalleryRebuild.SourceType(childComplexity), true
+
+	case "ManagePortableGalleryRebuild.state":
+		if e.complexity.ManagePortableGalleryRebuild.State == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableGalleryRebuild.State(childComplexity), true
+
+	case "ManagePortableImportSession.assetCount":
+		if e.complexity.ManagePortableImportSession.AssetCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableImportSession.AssetCount(childComplexity), true
+
+	case "ManagePortableImportSession.coreEntityCount":
+		if e.complexity.ManagePortableImportSession.CoreEntityCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableImportSession.CoreEntityCount(childComplexity), true
+
+	case "ManagePortableImportSession.createdAt":
+		if e.complexity.ManagePortableImportSession.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableImportSession.CreatedAt(childComplexity), true
+
+	case "ManagePortableImportSession.errorCode":
+		if e.complexity.ManagePortableImportSession.ErrorCode == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableImportSession.ErrorCode(childComplexity), true
+
+	case "ManagePortableImportSession.exportID":
+		if e.complexity.ManagePortableImportSession.ExportID == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableImportSession.ExportID(childComplexity), true
+
+	case "ManagePortableImportSession.formatVersion":
+		if e.complexity.ManagePortableImportSession.FormatVersion == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableImportSession.FormatVersion(childComplexity), true
+
+	case "ManagePortableImportSession.galleryClaimCount":
+		if e.complexity.ManagePortableImportSession.GalleryClaimCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableImportSession.GalleryClaimCount(childComplexity), true
+
+	case "ManagePortableImportSession.identityCount":
+		if e.complexity.ManagePortableImportSession.IdentityCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableImportSession.IdentityCount(childComplexity), true
+
+	case "ManagePortableImportSession.importID":
+		if e.complexity.ManagePortableImportSession.ImportID == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableImportSession.ImportID(childComplexity), true
+
+	case "ManagePortableImportSession.itemClaimCount":
+		if e.complexity.ManagePortableImportSession.ItemClaimCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableImportSession.ItemClaimCount(childComplexity), true
+
+	case "ManagePortableImportSession.linkClaimCount":
+		if e.complexity.ManagePortableImportSession.LinkClaimCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableImportSession.LinkClaimCount(childComplexity), true
+
+	case "ManagePortableImportSession.state":
+		if e.complexity.ManagePortableImportSession.State == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableImportSession.State(childComplexity), true
+
+	case "ManagePortableImportSession.updatedAt":
+		if e.complexity.ManagePortableImportSession.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableImportSession.UpdatedAt(childComplexity), true
+
+	case "ManagePortableLibraryMapping.decision":
+		if e.complexity.ManagePortableLibraryMapping.Decision == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableLibraryMapping.Decision(childComplexity), true
+
+	case "ManagePortableLibraryMapping.libraryKey":
+		if e.complexity.ManagePortableLibraryMapping.LibraryKey == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableLibraryMapping.LibraryKey(childComplexity), true
+
+	case "ManagePortableLibraryMapping.libraryName":
+		if e.complexity.ManagePortableLibraryMapping.LibraryName == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableLibraryMapping.LibraryName(childComplexity), true
+
+	case "ManagePortableLibraryMapping.targetLibraryID":
+		if e.complexity.ManagePortableLibraryMapping.TargetLibraryID == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableLibraryMapping.TargetLibraryID(childComplexity), true
+
+	case "ManagePortableLibraryMapping.targetName":
+		if e.complexity.ManagePortableLibraryMapping.TargetName == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableLibraryMapping.TargetName(childComplexity), true
+
+	case "ManagePortableLibraryMapping.targetRoot":
+		if e.complexity.ManagePortableLibraryMapping.TargetRoot == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableLibraryMapping.TargetRoot(childComplexity), true
+
+	case "ManagePortableMergeConflict.decision":
+		if e.complexity.ManagePortableMergeConflict.Decision == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeConflict.Decision(childComplexity), true
+
+	case "ManagePortableMergeConflict.entityKind":
+		if e.complexity.ManagePortableMergeConflict.EntityKind == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeConflict.EntityKind(childComplexity), true
+
+	case "ManagePortableMergeConflict.fieldKey":
+		if e.complexity.ManagePortableMergeConflict.FieldKey == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeConflict.FieldKey(childComplexity), true
+
+	case "ManagePortableMergeConflict.incomingUUID":
+		if e.complexity.ManagePortableMergeConflict.IncomingUUID == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeConflict.IncomingUUID(childComplexity), true
+
+	case "ManagePortableMergeConflict.issueCode":
+		if e.complexity.ManagePortableMergeConflict.IssueCode == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeConflict.IssueCode(childComplexity), true
+
+	case "ManagePortableMergeConflict.issueKey":
+		if e.complexity.ManagePortableMergeConflict.IssueKey == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeConflict.IssueKey(childComplexity), true
+
+	case "ManagePortableMergeConflict.localUUID":
+		if e.complexity.ManagePortableMergeConflict.LocalUUID == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeConflict.LocalUUID(childComplexity), true
+
+	case "ManagePortableMergeConflict.severity":
+		if e.complexity.ManagePortableMergeConflict.Severity == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeConflict.Severity(childComplexity), true
+
+	case "ManagePortableMergeSession.createdAt":
+		if e.complexity.ManagePortableMergeSession.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeSession.CreatedAt(childComplexity), true
+
+	case "ManagePortableMergeSession.entityAddCount":
+		if e.complexity.ManagePortableMergeSession.EntityAddCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeSession.EntityAddCount(childComplexity), true
+
+	case "ManagePortableMergeSession.entityReuseCount":
+		if e.complexity.ManagePortableMergeSession.EntityReuseCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeSession.EntityReuseCount(childComplexity), true
+
+	case "ManagePortableMergeSession.errorCode":
+		if e.complexity.ManagePortableMergeSession.ErrorCode == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeSession.ErrorCode(childComplexity), true
+
+	case "ManagePortableMergeSession.exportID":
+		if e.complexity.ManagePortableMergeSession.ExportID == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeSession.ExportID(childComplexity), true
+
+	case "ManagePortableMergeSession.hardBlockingCount":
+		if e.complexity.ManagePortableMergeSession.HardBlockingCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeSession.HardBlockingCount(childComplexity), true
+
+	case "ManagePortableMergeSession.identityAddCount":
+		if e.complexity.ManagePortableMergeSession.IdentityAddCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeSession.IdentityAddCount(childComplexity), true
+
+	case "ManagePortableMergeSession.identityReuseCount":
+		if e.complexity.ManagePortableMergeSession.IdentityReuseCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeSession.IdentityReuseCount(childComplexity), true
+
+	case "ManagePortableMergeSession.mergeID":
+		if e.complexity.ManagePortableMergeSession.MergeID == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeSession.MergeID(childComplexity), true
+
+	case "ManagePortableMergeSession.reviewCount":
+		if e.complexity.ManagePortableMergeSession.ReviewCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeSession.ReviewCount(childComplexity), true
+
+	case "ManagePortableMergeSession.safetyBackupID":
+		if e.complexity.ManagePortableMergeSession.SafetyBackupID == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeSession.SafetyBackupID(childComplexity), true
+
+	case "ManagePortableMergeSession.state":
+		if e.complexity.ManagePortableMergeSession.State == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeSession.State(childComplexity), true
+
+	case "ManagePortableMergeSession.updatedAt":
+		if e.complexity.ManagePortableMergeSession.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMergeSession.UpdatedAt(childComplexity), true
+
+	case "ManagePortableMigrationSnapshot.conflicts":
+		if e.complexity.ManagePortableMigrationSnapshot.Conflicts == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMigrationSnapshot.Conflicts(childComplexity), true
+
+	case "ManagePortableMigrationSnapshot.imports":
+		if e.complexity.ManagePortableMigrationSnapshot.Imports == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMigrationSnapshot.Imports(childComplexity), true
+
+	case "ManagePortableMigrationSnapshot.mappings":
+		if e.complexity.ManagePortableMigrationSnapshot.Mappings == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMigrationSnapshot.Mappings(childComplexity), true
+
+	case "ManagePortableMigrationSnapshot.merges":
+		if e.complexity.ManagePortableMigrationSnapshot.Merges == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMigrationSnapshot.Merges(childComplexity), true
+
+	case "ManagePortableMigrationSnapshot.owner":
+		if e.complexity.ManagePortableMigrationSnapshot.Owner == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMigrationSnapshot.Owner(childComplexity), true
+
+	case "ManagePortableMigrationSnapshot.rebuilds":
+		if e.complexity.ManagePortableMigrationSnapshot.Rebuilds == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableMigrationSnapshot.Rebuilds(childComplexity), true
+
+	case "ManagePortableOwnerContinuity.available":
+		if e.complexity.ManagePortableOwnerContinuity.Available == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableOwnerContinuity.Available(childComplexity), true
+
+	case "ManagePortableOwnerContinuity.galleryCount":
+		if e.complexity.ManagePortableOwnerContinuity.GalleryCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableOwnerContinuity.GalleryCount(childComplexity), true
+
+	case "ManagePortableOwnerContinuity.galleryLifecycle":
+		if e.complexity.ManagePortableOwnerContinuity.GalleryLifecycle == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableOwnerContinuity.GalleryLifecycle(childComplexity), true
+
+	case "ManagePortableOwnerContinuity.itemCount":
+		if e.complexity.ManagePortableOwnerContinuity.ItemCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableOwnerContinuity.ItemCount(childComplexity), true
+
+	case "ManagePortableOwnerContinuity.personalFlags":
+		if e.complexity.ManagePortableOwnerContinuity.PersonalFlags == nil {
+			break
+		}
+
+		return e.complexity.ManagePortableOwnerContinuity.PersonalFlags(childComplexity), true
+
+	case "ManagePortablePreflight.assetCount":
+		if e.complexity.ManagePortablePreflight.AssetCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortablePreflight.AssetCount(childComplexity), true
+
+	case "ManagePortablePreflight.blockingCount":
+		if e.complexity.ManagePortablePreflight.BlockingCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortablePreflight.BlockingCount(childComplexity), true
+
+	case "ManagePortablePreflight.coreEntityCount":
+		if e.complexity.ManagePortablePreflight.CoreEntityCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortablePreflight.CoreEntityCount(childComplexity), true
+
+	case "ManagePortablePreflight.galleryCount":
+		if e.complexity.ManagePortablePreflight.GalleryCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortablePreflight.GalleryCount(childComplexity), true
+
+	case "ManagePortablePreflight.identityCount":
+		if e.complexity.ManagePortablePreflight.IdentityCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortablePreflight.IdentityCount(childComplexity), true
+
+	case "ManagePortablePreflight.incompleteGalleryCount":
+		if e.complexity.ManagePortablePreflight.IncompleteGalleryCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortablePreflight.IncompleteGalleryCount(childComplexity), true
+
+	case "ManagePortablePreflight.issues":
+		if e.complexity.ManagePortablePreflight.Issues == nil {
+			break
+		}
+
+		return e.complexity.ManagePortablePreflight.Issues(childComplexity), true
+
+	case "ManagePortablePreflight.warningCount":
+		if e.complexity.ManagePortablePreflight.WarningCount == nil {
+			break
+		}
+
+		return e.complexity.ManagePortablePreflight.WarningCount(childComplexity), true
+
+	case "ManagePortablePreflightIssue.code":
+		if e.complexity.ManagePortablePreflightIssue.Code == nil {
+			break
+		}
+
+		return e.complexity.ManagePortablePreflightIssue.Code(childComplexity), true
+
+	case "ManagePortablePreflightIssue.count":
+		if e.complexity.ManagePortablePreflightIssue.Count == nil {
+			break
+		}
+
+		return e.complexity.ManagePortablePreflightIssue.Count(childComplexity), true
+
+	case "ManagePortablePreflightIssue.severity":
+		if e.complexity.ManagePortablePreflightIssue.Severity == nil {
+			break
+		}
+
+		return e.complexity.ManagePortablePreflightIssue.Severity(childComplexity), true
+
 	case "ManageProcessingJob.attemptCount":
 		if e.complexity.ManageProcessingJob.AttemptCount == nil {
 			break
@@ -5701,6 +6303,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.RunLibraryAutomation(childComplexity, args["libraryID"].(int64)), true
 
+	case "Mutation.runPortableMigration":
+		if e.complexity.Mutation.RunPortableMigration == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_runPortableMigration_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RunPortableMigration(childComplexity, args["input"].(PortableMigrationActionInput)), true
+
 	case "Mutation.saveLibraryAutomationPolicy":
 		if e.complexity.Mutation.SaveLibraryAutomationPolicy == nil {
 			break
@@ -5989,6 +6603,62 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.PersonalStateResult.MetadataRevision(childComplexity), true
+
+	case "PortableMigrationActionResult.code":
+		if e.complexity.PortableMigrationActionResult.Code == nil {
+			break
+		}
+
+		return e.complexity.PortableMigrationActionResult.Code(childComplexity), true
+
+	case "PortableMigrationActionResult.count":
+		if e.complexity.PortableMigrationActionResult.Count == nil {
+			break
+		}
+
+		return e.complexity.PortableMigrationActionResult.Count(childComplexity), true
+
+	case "PortableMigrationActionResult.exportID":
+		if e.complexity.PortableMigrationActionResult.ExportID == nil {
+			break
+		}
+
+		return e.complexity.PortableMigrationActionResult.ExportID(childComplexity), true
+
+	case "PortableMigrationActionResult.fileName":
+		if e.complexity.PortableMigrationActionResult.FileName == nil {
+			break
+		}
+
+		return e.complexity.PortableMigrationActionResult.FileName(childComplexity), true
+
+	case "PortableMigrationActionResult.importID":
+		if e.complexity.PortableMigrationActionResult.ImportID == nil {
+			break
+		}
+
+		return e.complexity.PortableMigrationActionResult.ImportID(childComplexity), true
+
+	case "PortableMigrationActionResult.mergeID":
+		if e.complexity.PortableMigrationActionResult.MergeID == nil {
+			break
+		}
+
+		return e.complexity.PortableMigrationActionResult.MergeID(childComplexity), true
+
+	case "PortableMigrationActionResult.preflight":
+		if e.complexity.PortableMigrationActionResult.Preflight == nil {
+			break
+		}
+
+		return e.complexity.PortableMigrationActionResult.Preflight(childComplexity), true
+
+	case "PortableMigrationActionResult.snapshot":
+		if e.complexity.PortableMigrationActionResult.Snapshot == nil {
+			break
+		}
+
+		return e.complexity.PortableMigrationActionResult.Snapshot(childComplexity), true
 
 	case "Query.browseGalleries":
 		if e.complexity.Query.BrowseGalleries == nil {
@@ -6372,6 +7042,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.ManageMediaExclusionRules(childComplexity, args["libraryID"].(*int64)), true
+
+	case "Query.managePortableMigration":
+		if e.complexity.Query.ManagePortableMigration == nil {
+			break
+		}
+
+		args, err := ec.field_Query_managePortableMigration_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ManagePortableMigration(childComplexity, args["importID"].(*string), args["mergeID"].(*string)), true
 
 	case "Query.manageProcessingJobs":
 		if e.complexity.Query.ManageProcessingJobs == nil {
@@ -6945,6 +7627,9 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputManifestConflictChoiceInput,
 		ec.unmarshalInputMediaClassificationRuleInput,
 		ec.unmarshalInputMediaExclusionRuleInput,
+		ec.unmarshalInputPortableLibraryDecisionInput,
+		ec.unmarshalInputPortableMergeDecisionInput,
+		ec.unmarshalInputPortableMigrationActionInput,
 		ec.unmarshalInputReplaceGalleryCastInput,
 		ec.unmarshalInputReplaceGalleryCreditInput,
 		ec.unmarshalInputReplaceGalleryRelationsInput,
@@ -9143,6 +9828,34 @@ func (ec *executionContext) field_Mutation_runLibraryAutomation_argsLibraryID(
 	}
 
 	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_runPortableMigration_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_runPortableMigration_argsInput(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_runPortableMigration_argsInput(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (PortableMigrationActionInput, error) {
+	if _, ok := rawArgs["input"]; !ok {
+		var zeroVal PortableMigrationActionInput
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+	if tmp, ok := rawArgs["input"]; ok {
+		return ec.unmarshalNPortableMigrationActionInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableMigrationActionInput(ctx, tmp)
+	}
+
+	var zeroVal PortableMigrationActionInput
 	return zeroVal, nil
 }
 
@@ -11854,6 +12567,57 @@ func (ec *executionContext) field_Query_manageMediaExclusionRules_argsLibraryID(
 	}
 
 	var zeroVal *int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_managePortableMigration_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_managePortableMigration_argsImportID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["importID"] = arg0
+	arg1, err := ec.field_Query_managePortableMigration_argsMergeID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["mergeID"] = arg1
+	return args, nil
+}
+func (ec *executionContext) field_Query_managePortableMigration_argsImportID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*string, error) {
+	if _, ok := rawArgs["importID"]; !ok {
+		var zeroVal *string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("importID"))
+	if tmp, ok := rawArgs["importID"]; ok {
+		return ec.unmarshalOID2ᚖstring(ctx, tmp)
+	}
+
+	var zeroVal *string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_managePortableMigration_argsMergeID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*string, error) {
+	if _, ok := rawArgs["mergeID"]; !ok {
+		var zeroVal *string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("mergeID"))
+	if tmp, ok := rawArgs["mergeID"]; ok {
+		return ec.unmarshalOID2ᚖstring(ctx, tmp)
+	}
+
+	var zeroVal *string
 	return zeroVal, nil
 }
 
@@ -34092,6 +34856,3200 @@ func (ec *executionContext) fieldContext_ManageMediaExclusionRule_systemDefault(
 	return fc, nil
 }
 
+func (ec *executionContext) _ManagePortableGalleryRebuild_setID(ctx context.Context, field graphql.CollectedField, obj *ManagePortableGalleryRebuild) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableGalleryRebuild_setID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SetID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableGalleryRebuild_setID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableGalleryRebuild",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableGalleryRebuild_libraryKey(ctx context.Context, field graphql.CollectedField, obj *ManagePortableGalleryRebuild) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableGalleryRebuild_libraryKey(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LibraryKey, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableGalleryRebuild_libraryKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableGalleryRebuild",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableGalleryRebuild_sourceType(ctx context.Context, field graphql.CollectedField, obj *ManagePortableGalleryRebuild) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableGalleryRebuild_sourceType(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SourceType, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableGalleryRebuild_sourceType(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableGalleryRebuild",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableGalleryRebuild_relativeSource(ctx context.Context, field graphql.CollectedField, obj *ManagePortableGalleryRebuild) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableGalleryRebuild_relativeSource(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RelativeSource, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableGalleryRebuild_relativeSource(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableGalleryRebuild",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableGalleryRebuild_locatorStatus(ctx context.Context, field graphql.CollectedField, obj *ManagePortableGalleryRebuild) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableGalleryRebuild_locatorStatus(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LocatorStatus, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableGalleryRebuild_locatorStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableGalleryRebuild",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableGalleryRebuild_manifestStatus(ctx context.Context, field graphql.CollectedField, obj *ManagePortableGalleryRebuild) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableGalleryRebuild_manifestStatus(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ManifestStatus, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableGalleryRebuild_manifestStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableGalleryRebuild",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableGalleryRebuild_state(ctx context.Context, field graphql.CollectedField, obj *ManagePortableGalleryRebuild) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableGalleryRebuild_state(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.State, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableGalleryRebuild_state(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableGalleryRebuild",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableGalleryRebuild_issueCode(ctx context.Context, field graphql.CollectedField, obj *ManagePortableGalleryRebuild) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableGalleryRebuild_issueCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IssueCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableGalleryRebuild_issueCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableGalleryRebuild",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableImportSession_importID(ctx context.Context, field graphql.CollectedField, obj *ManagePortableImportSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableImportSession_importID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ImportID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableImportSession_importID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableImportSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableImportSession_exportID(ctx context.Context, field graphql.CollectedField, obj *ManagePortableImportSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableImportSession_exportID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ExportID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableImportSession_exportID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableImportSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableImportSession_state(ctx context.Context, field graphql.CollectedField, obj *ManagePortableImportSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableImportSession_state(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.State, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableImportSession_state(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableImportSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableImportSession_formatVersion(ctx context.Context, field graphql.CollectedField, obj *ManagePortableImportSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableImportSession_formatVersion(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FormatVersion, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableImportSession_formatVersion(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableImportSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableImportSession_identityCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableImportSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableImportSession_identityCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IdentityCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableImportSession_identityCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableImportSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableImportSession_coreEntityCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableImportSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableImportSession_coreEntityCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CoreEntityCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableImportSession_coreEntityCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableImportSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableImportSession_galleryClaimCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableImportSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableImportSession_galleryClaimCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryClaimCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableImportSession_galleryClaimCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableImportSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableImportSession_itemClaimCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableImportSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableImportSession_itemClaimCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ItemClaimCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableImportSession_itemClaimCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableImportSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableImportSession_linkClaimCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableImportSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableImportSession_linkClaimCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LinkClaimCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableImportSession_linkClaimCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableImportSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableImportSession_assetCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableImportSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableImportSession_assetCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AssetCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableImportSession_assetCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableImportSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableImportSession_errorCode(ctx context.Context, field graphql.CollectedField, obj *ManagePortableImportSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableImportSession_errorCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ErrorCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableImportSession_errorCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableImportSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableImportSession_createdAt(ctx context.Context, field graphql.CollectedField, obj *ManagePortableImportSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableImportSession_createdAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableImportSession_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableImportSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableImportSession_updatedAt(ctx context.Context, field graphql.CollectedField, obj *ManagePortableImportSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableImportSession_updatedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableImportSession_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableImportSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableLibraryMapping_libraryKey(ctx context.Context, field graphql.CollectedField, obj *ManagePortableLibraryMapping) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableLibraryMapping_libraryKey(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LibraryKey, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableLibraryMapping_libraryKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableLibraryMapping",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableLibraryMapping_libraryName(ctx context.Context, field graphql.CollectedField, obj *ManagePortableLibraryMapping) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableLibraryMapping_libraryName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LibraryName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableLibraryMapping_libraryName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableLibraryMapping",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableLibraryMapping_decision(ctx context.Context, field graphql.CollectedField, obj *ManagePortableLibraryMapping) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableLibraryMapping_decision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Decision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableLibraryMapping_decision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableLibraryMapping",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableLibraryMapping_targetLibraryID(ctx context.Context, field graphql.CollectedField, obj *ManagePortableLibraryMapping) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableLibraryMapping_targetLibraryID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TargetLibraryID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int64)
+	fc.Result = res
+	return ec.marshalOInt642ᚖint64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableLibraryMapping_targetLibraryID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableLibraryMapping",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableLibraryMapping_targetName(ctx context.Context, field graphql.CollectedField, obj *ManagePortableLibraryMapping) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableLibraryMapping_targetName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TargetName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableLibraryMapping_targetName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableLibraryMapping",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableLibraryMapping_targetRoot(ctx context.Context, field graphql.CollectedField, obj *ManagePortableLibraryMapping) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableLibraryMapping_targetRoot(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TargetRoot, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableLibraryMapping_targetRoot(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableLibraryMapping",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeConflict_issueKey(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeConflict_issueKey(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IssueKey, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeConflict_issueKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeConflict_issueCode(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeConflict_issueCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IssueCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeConflict_issueCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeConflict_severity(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeConflict_severity(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Severity, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeConflict_severity(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeConflict_entityKind(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeConflict_entityKind(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EntityKind, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeConflict_entityKind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeConflict_incomingUUID(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeConflict_incomingUUID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IncomingUUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeConflict_incomingUUID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeConflict_localUUID(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeConflict_localUUID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LocalUUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeConflict_localUUID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeConflict_fieldKey(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeConflict_fieldKey(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FieldKey, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeConflict_fieldKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeConflict_decision(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeConflict) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeConflict_decision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Decision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeConflict_decision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeConflict",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeSession_mergeID(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeSession_mergeID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MergeID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeSession_mergeID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeSession_exportID(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeSession_exportID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ExportID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeSession_exportID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeSession_state(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeSession_state(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.State, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeSession_state(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeSession_hardBlockingCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeSession_hardBlockingCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HardBlockingCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeSession_hardBlockingCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeSession_reviewCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeSession_reviewCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ReviewCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeSession_reviewCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeSession_identityAddCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeSession_identityAddCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IdentityAddCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeSession_identityAddCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeSession_identityReuseCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeSession_identityReuseCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IdentityReuseCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeSession_identityReuseCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeSession_entityAddCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeSession_entityAddCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EntityAddCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeSession_entityAddCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeSession_entityReuseCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeSession_entityReuseCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EntityReuseCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeSession_entityReuseCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeSession_errorCode(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeSession_errorCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ErrorCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeSession_errorCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeSession_safetyBackupID(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeSession_safetyBackupID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SafetyBackupID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeSession_safetyBackupID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeSession_createdAt(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeSession_createdAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeSession_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMergeSession_updatedAt(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMergeSession) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMergeSession_updatedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMergeSession_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMergeSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMigrationSnapshot_imports(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMigrationSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMigrationSnapshot_imports(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Imports, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManagePortableImportSession)
+	fc.Result = res
+	return ec.marshalNManagePortableImportSession2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableImportSessionᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMigrationSnapshot_imports(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMigrationSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "importID":
+				return ec.fieldContext_ManagePortableImportSession_importID(ctx, field)
+			case "exportID":
+				return ec.fieldContext_ManagePortableImportSession_exportID(ctx, field)
+			case "state":
+				return ec.fieldContext_ManagePortableImportSession_state(ctx, field)
+			case "formatVersion":
+				return ec.fieldContext_ManagePortableImportSession_formatVersion(ctx, field)
+			case "identityCount":
+				return ec.fieldContext_ManagePortableImportSession_identityCount(ctx, field)
+			case "coreEntityCount":
+				return ec.fieldContext_ManagePortableImportSession_coreEntityCount(ctx, field)
+			case "galleryClaimCount":
+				return ec.fieldContext_ManagePortableImportSession_galleryClaimCount(ctx, field)
+			case "itemClaimCount":
+				return ec.fieldContext_ManagePortableImportSession_itemClaimCount(ctx, field)
+			case "linkClaimCount":
+				return ec.fieldContext_ManagePortableImportSession_linkClaimCount(ctx, field)
+			case "assetCount":
+				return ec.fieldContext_ManagePortableImportSession_assetCount(ctx, field)
+			case "errorCode":
+				return ec.fieldContext_ManagePortableImportSession_errorCode(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ManagePortableImportSession_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ManagePortableImportSession_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagePortableImportSession", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMigrationSnapshot_merges(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMigrationSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMigrationSnapshot_merges(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Merges, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManagePortableMergeSession)
+	fc.Result = res
+	return ec.marshalNManagePortableMergeSession2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableMergeSessionᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMigrationSnapshot_merges(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMigrationSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "mergeID":
+				return ec.fieldContext_ManagePortableMergeSession_mergeID(ctx, field)
+			case "exportID":
+				return ec.fieldContext_ManagePortableMergeSession_exportID(ctx, field)
+			case "state":
+				return ec.fieldContext_ManagePortableMergeSession_state(ctx, field)
+			case "hardBlockingCount":
+				return ec.fieldContext_ManagePortableMergeSession_hardBlockingCount(ctx, field)
+			case "reviewCount":
+				return ec.fieldContext_ManagePortableMergeSession_reviewCount(ctx, field)
+			case "identityAddCount":
+				return ec.fieldContext_ManagePortableMergeSession_identityAddCount(ctx, field)
+			case "identityReuseCount":
+				return ec.fieldContext_ManagePortableMergeSession_identityReuseCount(ctx, field)
+			case "entityAddCount":
+				return ec.fieldContext_ManagePortableMergeSession_entityAddCount(ctx, field)
+			case "entityReuseCount":
+				return ec.fieldContext_ManagePortableMergeSession_entityReuseCount(ctx, field)
+			case "errorCode":
+				return ec.fieldContext_ManagePortableMergeSession_errorCode(ctx, field)
+			case "safetyBackupID":
+				return ec.fieldContext_ManagePortableMergeSession_safetyBackupID(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ManagePortableMergeSession_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ManagePortableMergeSession_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagePortableMergeSession", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMigrationSnapshot_conflicts(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMigrationSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMigrationSnapshot_conflicts(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Conflicts, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManagePortableMergeConflict)
+	fc.Result = res
+	return ec.marshalNManagePortableMergeConflict2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableMergeConflictᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMigrationSnapshot_conflicts(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMigrationSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "issueKey":
+				return ec.fieldContext_ManagePortableMergeConflict_issueKey(ctx, field)
+			case "issueCode":
+				return ec.fieldContext_ManagePortableMergeConflict_issueCode(ctx, field)
+			case "severity":
+				return ec.fieldContext_ManagePortableMergeConflict_severity(ctx, field)
+			case "entityKind":
+				return ec.fieldContext_ManagePortableMergeConflict_entityKind(ctx, field)
+			case "incomingUUID":
+				return ec.fieldContext_ManagePortableMergeConflict_incomingUUID(ctx, field)
+			case "localUUID":
+				return ec.fieldContext_ManagePortableMergeConflict_localUUID(ctx, field)
+			case "fieldKey":
+				return ec.fieldContext_ManagePortableMergeConflict_fieldKey(ctx, field)
+			case "decision":
+				return ec.fieldContext_ManagePortableMergeConflict_decision(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagePortableMergeConflict", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMigrationSnapshot_mappings(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMigrationSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMigrationSnapshot_mappings(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Mappings, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManagePortableLibraryMapping)
+	fc.Result = res
+	return ec.marshalNManagePortableLibraryMapping2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableLibraryMappingᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMigrationSnapshot_mappings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMigrationSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "libraryKey":
+				return ec.fieldContext_ManagePortableLibraryMapping_libraryKey(ctx, field)
+			case "libraryName":
+				return ec.fieldContext_ManagePortableLibraryMapping_libraryName(ctx, field)
+			case "decision":
+				return ec.fieldContext_ManagePortableLibraryMapping_decision(ctx, field)
+			case "targetLibraryID":
+				return ec.fieldContext_ManagePortableLibraryMapping_targetLibraryID(ctx, field)
+			case "targetName":
+				return ec.fieldContext_ManagePortableLibraryMapping_targetName(ctx, field)
+			case "targetRoot":
+				return ec.fieldContext_ManagePortableLibraryMapping_targetRoot(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagePortableLibraryMapping", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMigrationSnapshot_rebuilds(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMigrationSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMigrationSnapshot_rebuilds(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Rebuilds, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManagePortableGalleryRebuild)
+	fc.Result = res
+	return ec.marshalNManagePortableGalleryRebuild2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableGalleryRebuildᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMigrationSnapshot_rebuilds(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMigrationSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "setID":
+				return ec.fieldContext_ManagePortableGalleryRebuild_setID(ctx, field)
+			case "libraryKey":
+				return ec.fieldContext_ManagePortableGalleryRebuild_libraryKey(ctx, field)
+			case "sourceType":
+				return ec.fieldContext_ManagePortableGalleryRebuild_sourceType(ctx, field)
+			case "relativeSource":
+				return ec.fieldContext_ManagePortableGalleryRebuild_relativeSource(ctx, field)
+			case "locatorStatus":
+				return ec.fieldContext_ManagePortableGalleryRebuild_locatorStatus(ctx, field)
+			case "manifestStatus":
+				return ec.fieldContext_ManagePortableGalleryRebuild_manifestStatus(ctx, field)
+			case "state":
+				return ec.fieldContext_ManagePortableGalleryRebuild_state(ctx, field)
+			case "issueCode":
+				return ec.fieldContext_ManagePortableGalleryRebuild_issueCode(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagePortableGalleryRebuild", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableMigrationSnapshot_owner(ctx context.Context, field graphql.CollectedField, obj *ManagePortableMigrationSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableMigrationSnapshot_owner(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Owner, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*ManagePortableOwnerContinuity)
+	fc.Result = res
+	return ec.marshalOManagePortableOwnerContinuity2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableOwnerContinuity(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableMigrationSnapshot_owner(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableMigrationSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "available":
+				return ec.fieldContext_ManagePortableOwnerContinuity_available(ctx, field)
+			case "galleryLifecycle":
+				return ec.fieldContext_ManagePortableOwnerContinuity_galleryLifecycle(ctx, field)
+			case "personalFlags":
+				return ec.fieldContext_ManagePortableOwnerContinuity_personalFlags(ctx, field)
+			case "galleryCount":
+				return ec.fieldContext_ManagePortableOwnerContinuity_galleryCount(ctx, field)
+			case "itemCount":
+				return ec.fieldContext_ManagePortableOwnerContinuity_itemCount(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagePortableOwnerContinuity", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableOwnerContinuity_available(ctx context.Context, field graphql.CollectedField, obj *ManagePortableOwnerContinuity) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableOwnerContinuity_available(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Available, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableOwnerContinuity_available(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableOwnerContinuity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableOwnerContinuity_galleryLifecycle(ctx context.Context, field graphql.CollectedField, obj *ManagePortableOwnerContinuity) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableOwnerContinuity_galleryLifecycle(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryLifecycle, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableOwnerContinuity_galleryLifecycle(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableOwnerContinuity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableOwnerContinuity_personalFlags(ctx context.Context, field graphql.CollectedField, obj *ManagePortableOwnerContinuity) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableOwnerContinuity_personalFlags(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PersonalFlags, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableOwnerContinuity_personalFlags(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableOwnerContinuity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableOwnerContinuity_galleryCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableOwnerContinuity) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableOwnerContinuity_galleryCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableOwnerContinuity_galleryCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableOwnerContinuity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortableOwnerContinuity_itemCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortableOwnerContinuity) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortableOwnerContinuity_itemCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ItemCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortableOwnerContinuity_itemCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortableOwnerContinuity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortablePreflight_identityCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortablePreflight) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortablePreflight_identityCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IdentityCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortablePreflight_identityCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortablePreflight",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortablePreflight_coreEntityCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortablePreflight) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortablePreflight_coreEntityCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CoreEntityCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortablePreflight_coreEntityCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortablePreflight",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortablePreflight_galleryCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortablePreflight) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortablePreflight_galleryCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortablePreflight_galleryCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortablePreflight",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortablePreflight_incompleteGalleryCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortablePreflight) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortablePreflight_incompleteGalleryCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IncompleteGalleryCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortablePreflight_incompleteGalleryCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortablePreflight",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortablePreflight_assetCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortablePreflight) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortablePreflight_assetCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AssetCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortablePreflight_assetCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortablePreflight",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortablePreflight_warningCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortablePreflight) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortablePreflight_warningCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.WarningCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortablePreflight_warningCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortablePreflight",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortablePreflight_blockingCount(ctx context.Context, field graphql.CollectedField, obj *ManagePortablePreflight) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortablePreflight_blockingCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BlockingCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortablePreflight_blockingCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortablePreflight",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortablePreflight_issues(ctx context.Context, field graphql.CollectedField, obj *ManagePortablePreflight) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortablePreflight_issues(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Issues, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManagePortablePreflightIssue)
+	fc.Result = res
+	return ec.marshalNManagePortablePreflightIssue2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortablePreflightIssueᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortablePreflight_issues(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortablePreflight",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "code":
+				return ec.fieldContext_ManagePortablePreflightIssue_code(ctx, field)
+			case "severity":
+				return ec.fieldContext_ManagePortablePreflightIssue_severity(ctx, field)
+			case "count":
+				return ec.fieldContext_ManagePortablePreflightIssue_count(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagePortablePreflightIssue", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortablePreflightIssue_code(ctx context.Context, field graphql.CollectedField, obj *ManagePortablePreflightIssue) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortablePreflightIssue_code(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Code, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortablePreflightIssue_code(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortablePreflightIssue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortablePreflightIssue_severity(ctx context.Context, field graphql.CollectedField, obj *ManagePortablePreflightIssue) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortablePreflightIssue_severity(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Severity, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortablePreflightIssue_severity(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortablePreflightIssue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagePortablePreflightIssue_count(ctx context.Context, field graphql.CollectedField, obj *ManagePortablePreflightIssue) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagePortablePreflightIssue_count(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Count, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagePortablePreflightIssue_count(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagePortablePreflightIssue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageProcessingJob_id(ctx context.Context, field graphql.CollectedField, obj *ManageProcessingJob) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageProcessingJob_id(ctx, field)
 	if err != nil {
@@ -42197,6 +46155,79 @@ func (ec *executionContext) fieldContext_Mutation_restoreBackup(ctx context.Cont
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_runPortableMigration(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_runPortableMigration(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().RunPortableMigration(rctx, fc.Args["input"].(PortableMigrationActionInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*PortableMigrationActionResult)
+	fc.Result = res
+	return ec.marshalNPortableMigrationActionResult2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableMigrationActionResult(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_runPortableMigration(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "code":
+				return ec.fieldContext_PortableMigrationActionResult_code(ctx, field)
+			case "importID":
+				return ec.fieldContext_PortableMigrationActionResult_importID(ctx, field)
+			case "mergeID":
+				return ec.fieldContext_PortableMigrationActionResult_mergeID(ctx, field)
+			case "exportID":
+				return ec.fieldContext_PortableMigrationActionResult_exportID(ctx, field)
+			case "fileName":
+				return ec.fieldContext_PortableMigrationActionResult_fileName(ctx, field)
+			case "count":
+				return ec.fieldContext_PortableMigrationActionResult_count(ctx, field)
+			case "snapshot":
+				return ec.fieldContext_PortableMigrationActionResult_snapshot(ctx, field)
+			case "preflight":
+				return ec.fieldContext_PortableMigrationActionResult_preflight(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PortableMigrationActionResult", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_runPortableMigration_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_createCoreEntity(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_createCoreEntity(ctx, field)
 	if err != nil {
@@ -43623,6 +47654,378 @@ func (ec *executionContext) fieldContext_PersonalStateResult_metadataRevision(_ 
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortableMigrationActionResult_code(ctx context.Context, field graphql.CollectedField, obj *PortableMigrationActionResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortableMigrationActionResult_code(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Code, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortableMigrationActionResult_code(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortableMigrationActionResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortableMigrationActionResult_importID(ctx context.Context, field graphql.CollectedField, obj *PortableMigrationActionResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortableMigrationActionResult_importID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ImportID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortableMigrationActionResult_importID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortableMigrationActionResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortableMigrationActionResult_mergeID(ctx context.Context, field graphql.CollectedField, obj *PortableMigrationActionResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortableMigrationActionResult_mergeID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MergeID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortableMigrationActionResult_mergeID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortableMigrationActionResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortableMigrationActionResult_exportID(ctx context.Context, field graphql.CollectedField, obj *PortableMigrationActionResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortableMigrationActionResult_exportID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ExportID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortableMigrationActionResult_exportID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortableMigrationActionResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortableMigrationActionResult_fileName(ctx context.Context, field graphql.CollectedField, obj *PortableMigrationActionResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortableMigrationActionResult_fileName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FileName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortableMigrationActionResult_fileName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortableMigrationActionResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortableMigrationActionResult_count(ctx context.Context, field graphql.CollectedField, obj *PortableMigrationActionResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortableMigrationActionResult_count(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Count, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortableMigrationActionResult_count(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortableMigrationActionResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortableMigrationActionResult_snapshot(ctx context.Context, field graphql.CollectedField, obj *PortableMigrationActionResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortableMigrationActionResult_snapshot(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Snapshot, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManagePortableMigrationSnapshot)
+	fc.Result = res
+	return ec.marshalNManagePortableMigrationSnapshot2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableMigrationSnapshot(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortableMigrationActionResult_snapshot(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortableMigrationActionResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "imports":
+				return ec.fieldContext_ManagePortableMigrationSnapshot_imports(ctx, field)
+			case "merges":
+				return ec.fieldContext_ManagePortableMigrationSnapshot_merges(ctx, field)
+			case "conflicts":
+				return ec.fieldContext_ManagePortableMigrationSnapshot_conflicts(ctx, field)
+			case "mappings":
+				return ec.fieldContext_ManagePortableMigrationSnapshot_mappings(ctx, field)
+			case "rebuilds":
+				return ec.fieldContext_ManagePortableMigrationSnapshot_rebuilds(ctx, field)
+			case "owner":
+				return ec.fieldContext_ManagePortableMigrationSnapshot_owner(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagePortableMigrationSnapshot", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortableMigrationActionResult_preflight(ctx context.Context, field graphql.CollectedField, obj *PortableMigrationActionResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortableMigrationActionResult_preflight(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Preflight, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*ManagePortablePreflight)
+	fc.Result = res
+	return ec.marshalOManagePortablePreflight2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortablePreflight(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortableMigrationActionResult_preflight(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortableMigrationActionResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "identityCount":
+				return ec.fieldContext_ManagePortablePreflight_identityCount(ctx, field)
+			case "coreEntityCount":
+				return ec.fieldContext_ManagePortablePreflight_coreEntityCount(ctx, field)
+			case "galleryCount":
+				return ec.fieldContext_ManagePortablePreflight_galleryCount(ctx, field)
+			case "incompleteGalleryCount":
+				return ec.fieldContext_ManagePortablePreflight_incompleteGalleryCount(ctx, field)
+			case "assetCount":
+				return ec.fieldContext_ManagePortablePreflight_assetCount(ctx, field)
+			case "warningCount":
+				return ec.fieldContext_ManagePortablePreflight_warningCount(ctx, field)
+			case "blockingCount":
+				return ec.fieldContext_ManagePortablePreflight_blockingCount(ctx, field)
+			case "issues":
+				return ec.fieldContext_ManagePortablePreflight_issues(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagePortablePreflight", field.Name)
 		},
 	}
 	return fc, nil
@@ -46258,6 +50661,75 @@ func (ec *executionContext) fieldContext_Query_manageMaintenance(_ context.Conte
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageMaintenanceState", field.Name)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_managePortableMigration(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_managePortableMigration(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ManagePortableMigration(rctx, fc.Args["importID"].(*string), fc.Args["mergeID"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManagePortableMigrationSnapshot)
+	fc.Result = res
+	return ec.marshalNManagePortableMigrationSnapshot2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableMigrationSnapshot(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_managePortableMigration(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "imports":
+				return ec.fieldContext_ManagePortableMigrationSnapshot_imports(ctx, field)
+			case "merges":
+				return ec.fieldContext_ManagePortableMigrationSnapshot_merges(ctx, field)
+			case "conflicts":
+				return ec.fieldContext_ManagePortableMigrationSnapshot_conflicts(ctx, field)
+			case "mappings":
+				return ec.fieldContext_ManagePortableMigrationSnapshot_mappings(ctx, field)
+			case "rebuilds":
+				return ec.fieldContext_ManagePortableMigrationSnapshot_rebuilds(ctx, field)
+			case "owner":
+				return ec.fieldContext_ManagePortableMigrationSnapshot_owner(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagePortableMigrationSnapshot", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_managePortableMigration_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -52310,6 +56782,171 @@ func (ec *executionContext) unmarshalInputMediaExclusionRuleInput(ctx context.Co
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputPortableLibraryDecisionInput(ctx context.Context, obj any) (PortableLibraryDecisionInput, error) {
+	var it PortableLibraryDecisionInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"libraryKey", "targetLibraryID"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "libraryKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("libraryKey"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LibraryKey = data
+		case "targetLibraryID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetLibraryID"))
+			data, err := ec.unmarshalOInt642ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.TargetLibraryID = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputPortableMergeDecisionInput(ctx context.Context, obj any) (PortableMergeDecisionInput, error) {
+	var it PortableMergeDecisionInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"issueKey", "decision"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "issueKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issueKey"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IssueKey = data
+		case "decision":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("decision"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Decision = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputPortableMigrationActionInput(ctx context.Context, obj any) (PortableMigrationActionInput, error) {
+	var it PortableMigrationActionInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"action", "path", "importID", "mergeID", "password", "confirmation", "allowIncompleteGallery", "includeGalleryLifecycle", "includePersonalFlags", "mergeDecisions", "libraryDecisions"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "action":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("action"))
+			data, err := ec.unmarshalNPortableMigrationAction2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableMigrationAction(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Action = data
+		case "path":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("path"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Path = data
+		case "importID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("importID"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ImportID = data
+		case "mergeID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mergeID"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MergeID = data
+		case "password":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Password = data
+		case "confirmation":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("confirmation"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Confirmation = data
+		case "allowIncompleteGallery":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("allowIncompleteGallery"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AllowIncompleteGallery = data
+		case "includeGalleryLifecycle":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("includeGalleryLifecycle"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IncludeGalleryLifecycle = data
+		case "includePersonalFlags":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("includePersonalFlags"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IncludePersonalFlags = data
+		case "mergeDecisions":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mergeDecisions"))
+			data, err := ec.unmarshalNPortableMergeDecisionInput2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableMergeDecisionInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MergeDecisions = data
+		case "libraryDecisions":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("libraryDecisions"))
+			data, err := ec.unmarshalNPortableLibraryDecisionInput2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableLibraryDecisionInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LibraryDecisions = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputReplaceGalleryCastInput(ctx context.Context, obj any) (ReplaceGalleryCastInput, error) {
 	var it ReplaceGalleryCastInput
 	asMap := map[string]any{}
@@ -57730,6 +62367,650 @@ func (ec *executionContext) _ManageMediaExclusionRule(ctx context.Context, sel a
 	return out
 }
 
+var managePortableGalleryRebuildImplementors = []string{"ManagePortableGalleryRebuild"}
+
+func (ec *executionContext) _ManagePortableGalleryRebuild(ctx context.Context, sel ast.SelectionSet, obj *ManagePortableGalleryRebuild) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, managePortableGalleryRebuildImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManagePortableGalleryRebuild")
+		case "setID":
+			out.Values[i] = ec._ManagePortableGalleryRebuild_setID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "libraryKey":
+			out.Values[i] = ec._ManagePortableGalleryRebuild_libraryKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sourceType":
+			out.Values[i] = ec._ManagePortableGalleryRebuild_sourceType(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "relativeSource":
+			out.Values[i] = ec._ManagePortableGalleryRebuild_relativeSource(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "locatorStatus":
+			out.Values[i] = ec._ManagePortableGalleryRebuild_locatorStatus(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "manifestStatus":
+			out.Values[i] = ec._ManagePortableGalleryRebuild_manifestStatus(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "state":
+			out.Values[i] = ec._ManagePortableGalleryRebuild_state(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "issueCode":
+			out.Values[i] = ec._ManagePortableGalleryRebuild_issueCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var managePortableImportSessionImplementors = []string{"ManagePortableImportSession"}
+
+func (ec *executionContext) _ManagePortableImportSession(ctx context.Context, sel ast.SelectionSet, obj *ManagePortableImportSession) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, managePortableImportSessionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManagePortableImportSession")
+		case "importID":
+			out.Values[i] = ec._ManagePortableImportSession_importID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "exportID":
+			out.Values[i] = ec._ManagePortableImportSession_exportID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "state":
+			out.Values[i] = ec._ManagePortableImportSession_state(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "formatVersion":
+			out.Values[i] = ec._ManagePortableImportSession_formatVersion(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "identityCount":
+			out.Values[i] = ec._ManagePortableImportSession_identityCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "coreEntityCount":
+			out.Values[i] = ec._ManagePortableImportSession_coreEntityCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryClaimCount":
+			out.Values[i] = ec._ManagePortableImportSession_galleryClaimCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "itemClaimCount":
+			out.Values[i] = ec._ManagePortableImportSession_itemClaimCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "linkClaimCount":
+			out.Values[i] = ec._ManagePortableImportSession_linkClaimCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "assetCount":
+			out.Values[i] = ec._ManagePortableImportSession_assetCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "errorCode":
+			out.Values[i] = ec._ManagePortableImportSession_errorCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._ManagePortableImportSession_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._ManagePortableImportSession_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var managePortableLibraryMappingImplementors = []string{"ManagePortableLibraryMapping"}
+
+func (ec *executionContext) _ManagePortableLibraryMapping(ctx context.Context, sel ast.SelectionSet, obj *ManagePortableLibraryMapping) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, managePortableLibraryMappingImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManagePortableLibraryMapping")
+		case "libraryKey":
+			out.Values[i] = ec._ManagePortableLibraryMapping_libraryKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "libraryName":
+			out.Values[i] = ec._ManagePortableLibraryMapping_libraryName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "decision":
+			out.Values[i] = ec._ManagePortableLibraryMapping_decision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "targetLibraryID":
+			out.Values[i] = ec._ManagePortableLibraryMapping_targetLibraryID(ctx, field, obj)
+		case "targetName":
+			out.Values[i] = ec._ManagePortableLibraryMapping_targetName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "targetRoot":
+			out.Values[i] = ec._ManagePortableLibraryMapping_targetRoot(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var managePortableMergeConflictImplementors = []string{"ManagePortableMergeConflict"}
+
+func (ec *executionContext) _ManagePortableMergeConflict(ctx context.Context, sel ast.SelectionSet, obj *ManagePortableMergeConflict) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, managePortableMergeConflictImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManagePortableMergeConflict")
+		case "issueKey":
+			out.Values[i] = ec._ManagePortableMergeConflict_issueKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "issueCode":
+			out.Values[i] = ec._ManagePortableMergeConflict_issueCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "severity":
+			out.Values[i] = ec._ManagePortableMergeConflict_severity(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "entityKind":
+			out.Values[i] = ec._ManagePortableMergeConflict_entityKind(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "incomingUUID":
+			out.Values[i] = ec._ManagePortableMergeConflict_incomingUUID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "localUUID":
+			out.Values[i] = ec._ManagePortableMergeConflict_localUUID(ctx, field, obj)
+		case "fieldKey":
+			out.Values[i] = ec._ManagePortableMergeConflict_fieldKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "decision":
+			out.Values[i] = ec._ManagePortableMergeConflict_decision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var managePortableMergeSessionImplementors = []string{"ManagePortableMergeSession"}
+
+func (ec *executionContext) _ManagePortableMergeSession(ctx context.Context, sel ast.SelectionSet, obj *ManagePortableMergeSession) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, managePortableMergeSessionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManagePortableMergeSession")
+		case "mergeID":
+			out.Values[i] = ec._ManagePortableMergeSession_mergeID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "exportID":
+			out.Values[i] = ec._ManagePortableMergeSession_exportID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "state":
+			out.Values[i] = ec._ManagePortableMergeSession_state(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "hardBlockingCount":
+			out.Values[i] = ec._ManagePortableMergeSession_hardBlockingCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "reviewCount":
+			out.Values[i] = ec._ManagePortableMergeSession_reviewCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "identityAddCount":
+			out.Values[i] = ec._ManagePortableMergeSession_identityAddCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "identityReuseCount":
+			out.Values[i] = ec._ManagePortableMergeSession_identityReuseCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "entityAddCount":
+			out.Values[i] = ec._ManagePortableMergeSession_entityAddCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "entityReuseCount":
+			out.Values[i] = ec._ManagePortableMergeSession_entityReuseCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "errorCode":
+			out.Values[i] = ec._ManagePortableMergeSession_errorCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "safetyBackupID":
+			out.Values[i] = ec._ManagePortableMergeSession_safetyBackupID(ctx, field, obj)
+		case "createdAt":
+			out.Values[i] = ec._ManagePortableMergeSession_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._ManagePortableMergeSession_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var managePortableMigrationSnapshotImplementors = []string{"ManagePortableMigrationSnapshot"}
+
+func (ec *executionContext) _ManagePortableMigrationSnapshot(ctx context.Context, sel ast.SelectionSet, obj *ManagePortableMigrationSnapshot) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, managePortableMigrationSnapshotImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManagePortableMigrationSnapshot")
+		case "imports":
+			out.Values[i] = ec._ManagePortableMigrationSnapshot_imports(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "merges":
+			out.Values[i] = ec._ManagePortableMigrationSnapshot_merges(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "conflicts":
+			out.Values[i] = ec._ManagePortableMigrationSnapshot_conflicts(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "mappings":
+			out.Values[i] = ec._ManagePortableMigrationSnapshot_mappings(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "rebuilds":
+			out.Values[i] = ec._ManagePortableMigrationSnapshot_rebuilds(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "owner":
+			out.Values[i] = ec._ManagePortableMigrationSnapshot_owner(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var managePortableOwnerContinuityImplementors = []string{"ManagePortableOwnerContinuity"}
+
+func (ec *executionContext) _ManagePortableOwnerContinuity(ctx context.Context, sel ast.SelectionSet, obj *ManagePortableOwnerContinuity) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, managePortableOwnerContinuityImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManagePortableOwnerContinuity")
+		case "available":
+			out.Values[i] = ec._ManagePortableOwnerContinuity_available(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryLifecycle":
+			out.Values[i] = ec._ManagePortableOwnerContinuity_galleryLifecycle(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "personalFlags":
+			out.Values[i] = ec._ManagePortableOwnerContinuity_personalFlags(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryCount":
+			out.Values[i] = ec._ManagePortableOwnerContinuity_galleryCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "itemCount":
+			out.Values[i] = ec._ManagePortableOwnerContinuity_itemCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var managePortablePreflightImplementors = []string{"ManagePortablePreflight"}
+
+func (ec *executionContext) _ManagePortablePreflight(ctx context.Context, sel ast.SelectionSet, obj *ManagePortablePreflight) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, managePortablePreflightImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManagePortablePreflight")
+		case "identityCount":
+			out.Values[i] = ec._ManagePortablePreflight_identityCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "coreEntityCount":
+			out.Values[i] = ec._ManagePortablePreflight_coreEntityCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryCount":
+			out.Values[i] = ec._ManagePortablePreflight_galleryCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "incompleteGalleryCount":
+			out.Values[i] = ec._ManagePortablePreflight_incompleteGalleryCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "assetCount":
+			out.Values[i] = ec._ManagePortablePreflight_assetCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "warningCount":
+			out.Values[i] = ec._ManagePortablePreflight_warningCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "blockingCount":
+			out.Values[i] = ec._ManagePortablePreflight_blockingCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "issues":
+			out.Values[i] = ec._ManagePortablePreflight_issues(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var managePortablePreflightIssueImplementors = []string{"ManagePortablePreflightIssue"}
+
+func (ec *executionContext) _ManagePortablePreflightIssue(ctx context.Context, sel ast.SelectionSet, obj *ManagePortablePreflightIssue) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, managePortablePreflightIssueImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManagePortablePreflightIssue")
+		case "code":
+			out.Values[i] = ec._ManagePortablePreflightIssue_code(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "severity":
+			out.Values[i] = ec._ManagePortablePreflightIssue_severity(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "count":
+			out.Values[i] = ec._ManagePortablePreflightIssue_count(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var manageProcessingJobImplementors = []string{"ManageProcessingJob"}
 
 func (ec *executionContext) _ManageProcessingJob(ctx context.Context, sel ast.SelectionSet, obj *ManageProcessingJob) graphql.Marshaler {
@@ -59061,6 +64342,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "runPortableMigration":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_runPortableMigration(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "createCoreEntity":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createCoreEntity(ctx, field)
@@ -59297,6 +64585,68 @@ func (ec *executionContext) _PersonalStateResult(ctx context.Context, sel ast.Se
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var portableMigrationActionResultImplementors = []string{"PortableMigrationActionResult"}
+
+func (ec *executionContext) _PortableMigrationActionResult(ctx context.Context, sel ast.SelectionSet, obj *PortableMigrationActionResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, portableMigrationActionResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PortableMigrationActionResult")
+		case "code":
+			out.Values[i] = ec._PortableMigrationActionResult_code(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "importID":
+			out.Values[i] = ec._PortableMigrationActionResult_importID(ctx, field, obj)
+		case "mergeID":
+			out.Values[i] = ec._PortableMigrationActionResult_mergeID(ctx, field, obj)
+		case "exportID":
+			out.Values[i] = ec._PortableMigrationActionResult_exportID(ctx, field, obj)
+		case "fileName":
+			out.Values[i] = ec._PortableMigrationActionResult_fileName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "count":
+			out.Values[i] = ec._PortableMigrationActionResult_count(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "snapshot":
+			out.Values[i] = ec._PortableMigrationActionResult_snapshot(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "preflight":
+			out.Values[i] = ec._PortableMigrationActionResult_preflight(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -60163,6 +65513,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_manageMaintenance(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "managePortableMigration":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_managePortableMigration(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -63886,6 +69258,344 @@ func (ec *executionContext) marshalNManageMediaExclusionRule2ᚖgithubᚗcomᚋs
 	return ec._ManageMediaExclusionRule(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNManagePortableGalleryRebuild2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableGalleryRebuildᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManagePortableGalleryRebuild) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManagePortableGalleryRebuild2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableGalleryRebuild(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManagePortableGalleryRebuild2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableGalleryRebuild(ctx context.Context, sel ast.SelectionSet, v *ManagePortableGalleryRebuild) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManagePortableGalleryRebuild(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManagePortableImportSession2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableImportSessionᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManagePortableImportSession) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManagePortableImportSession2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableImportSession(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManagePortableImportSession2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableImportSession(ctx context.Context, sel ast.SelectionSet, v *ManagePortableImportSession) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManagePortableImportSession(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManagePortableLibraryMapping2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableLibraryMappingᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManagePortableLibraryMapping) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManagePortableLibraryMapping2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableLibraryMapping(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManagePortableLibraryMapping2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableLibraryMapping(ctx context.Context, sel ast.SelectionSet, v *ManagePortableLibraryMapping) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManagePortableLibraryMapping(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManagePortableMergeConflict2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableMergeConflictᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManagePortableMergeConflict) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManagePortableMergeConflict2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableMergeConflict(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManagePortableMergeConflict2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableMergeConflict(ctx context.Context, sel ast.SelectionSet, v *ManagePortableMergeConflict) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManagePortableMergeConflict(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManagePortableMergeSession2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableMergeSessionᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManagePortableMergeSession) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManagePortableMergeSession2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableMergeSession(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManagePortableMergeSession2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableMergeSession(ctx context.Context, sel ast.SelectionSet, v *ManagePortableMergeSession) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManagePortableMergeSession(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManagePortableMigrationSnapshot2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableMigrationSnapshot(ctx context.Context, sel ast.SelectionSet, v ManagePortableMigrationSnapshot) graphql.Marshaler {
+	return ec._ManagePortableMigrationSnapshot(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManagePortableMigrationSnapshot2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableMigrationSnapshot(ctx context.Context, sel ast.SelectionSet, v *ManagePortableMigrationSnapshot) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManagePortableMigrationSnapshot(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManagePortablePreflightIssue2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortablePreflightIssueᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManagePortablePreflightIssue) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManagePortablePreflightIssue2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortablePreflightIssue(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManagePortablePreflightIssue2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortablePreflightIssue(ctx context.Context, sel ast.SelectionSet, v *ManagePortablePreflightIssue) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManagePortablePreflightIssue(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNManageProcessingJob2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageProcessingJobᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageProcessingJob) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -64442,6 +70152,75 @@ func (ec *executionContext) marshalNPersonalStateResult2ᚖgithubᚗcomᚋstasha
 		return graphql.Null
 	}
 	return ec._PersonalStateResult(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNPortableLibraryDecisionInput2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableLibraryDecisionInputᚄ(ctx context.Context, v any) ([]*PortableLibraryDecisionInput, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*PortableLibraryDecisionInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNPortableLibraryDecisionInput2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableLibraryDecisionInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalNPortableLibraryDecisionInput2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableLibraryDecisionInput(ctx context.Context, v any) (*PortableLibraryDecisionInput, error) {
+	res, err := ec.unmarshalInputPortableLibraryDecisionInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNPortableMergeDecisionInput2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableMergeDecisionInputᚄ(ctx context.Context, v any) ([]*PortableMergeDecisionInput, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*PortableMergeDecisionInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNPortableMergeDecisionInput2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableMergeDecisionInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalNPortableMergeDecisionInput2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableMergeDecisionInput(ctx context.Context, v any) (*PortableMergeDecisionInput, error) {
+	res, err := ec.unmarshalInputPortableMergeDecisionInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNPortableMigrationAction2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableMigrationAction(ctx context.Context, v any) (PortableMigrationAction, error) {
+	var res PortableMigrationAction
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPortableMigrationAction2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableMigrationAction(ctx context.Context, sel ast.SelectionSet, v PortableMigrationAction) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNPortableMigrationActionInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableMigrationActionInput(ctx context.Context, v any) (PortableMigrationActionInput, error) {
+	res, err := ec.unmarshalInputPortableMigrationActionInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPortableMigrationActionResult2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableMigrationActionResult(ctx context.Context, sel ast.SelectionSet, v PortableMigrationActionResult) graphql.Marshaler {
+	return ec._PortableMigrationActionResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPortableMigrationActionResult2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐPortableMigrationActionResult(ctx context.Context, sel ast.SelectionSet, v *PortableMigrationActionResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PortableMigrationActionResult(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNProcessingState2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐProcessingState(ctx context.Context, v any) (ProcessingState, error) {
@@ -65275,6 +71054,20 @@ func (ec *executionContext) marshalOManageFocalPoint2ᚖgithubᚗcomᚋstashapp�
 		return graphql.Null
 	}
 	return ec._ManageFocalPoint(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOManagePortableOwnerContinuity2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortableOwnerContinuity(ctx context.Context, sel ast.SelectionSet, v *ManagePortableOwnerContinuity) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._ManagePortableOwnerContinuity(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOManagePortablePreflight2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManagePortablePreflight(ctx context.Context, sel ast.SelectionSet, v *ManagePortablePreflight) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._ManagePortablePreflight(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOResourceIdentity2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐResourceIdentity(ctx context.Context, sel ast.SelectionSet, v *ResourceIdentity) graphql.Marshaler {

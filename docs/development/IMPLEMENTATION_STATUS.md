@@ -2,14 +2,16 @@
 
 > 当前里程碑：1.5 本机业务迭代与可诊断性增强
 > 状态：进行中
-> 更新日期：2026-09-09
+> 更新日期：2026-09-10
 
 ## 已规划、尚未实现
 
-- 长期迁移后续产品化：可移植核心目录、空库导入、非空库Merge、Coser资源和Gallery UUID重建的CLI基础闭环已完成并部署，正式库已安全升级到schema v10。双语Web冲突工作台、可选owner continuity分区、真实Linux→Docker演练仍是后续增强；现有完整备份继续承担无损灾难恢复。操作顺序见[可移植元数据迁移操作手册](PORTABLE_MIGRATION_RUNBOOK.md)。
+- 长期迁移环境验收：可移植迁移的CLI/Web业务闭环、可选owner continuity、导出预检、范围摘要和中断恢复均已完成源码实现；本轮提交部署后只剩由所有者执行真实Linux→Docker迁移与恢复模拟。现有完整备份继续承担无损灾难恢复。操作顺序见[可移植元数据迁移操作手册](PORTABLE_MIGRATION_RUNBOOK.md)。
 - 后续（视频处理第三阶段）：已持久化[第三阶段条件式功能规划](VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)。第三阶段A规划按需Storyboard Sprite/WebVTT和可访问辅助时间轴；第三阶段B仅在第二阶段真实大视频冷启动指标证明必要并完成ADR后，才规划单清晰度渐进HLS、会话治理和完整bundle缓存。该阶段不属于当前第一版/1.5门禁，尚未实现或部署。
 
 ## 已完成
+
+- 1.5（双语Web迁移工作台与可选owner continuity，源码完成、待本轮部署）：Manage → Operations新增中英文可移植迁移工作台，与CLI共用既有服务和持久化会话，覆盖导出就绪报告、服务器绝对路径导出、空库导入、非空库Merge准备/逐项合法决定/应用/终止、逻辑媒体库映射、Gallery重建预检/执行、连续性范围摘要/应用及中断恢复；每项迁移动作均需所有者密码和动作确认词，失败只返回动作级稳定码。portable package升级为format v2并继续读取v1，可选`owner-continuity.json`默认不导出，只能分别选择Gallery生命周期/首次收录时间或Gallery收藏隐藏/Item收藏；仅在`GALLERIES_REBUILT`后原子应用，ACTIVE请求重新通过目标门禁。Gallery地址/Slug历史明确不迁移，Gallery/Item评分继续由Manifest负责，最后浏览时间/项目等浏览状态不迁移且应用测试证明保持目标值。修复Merge会话真实格式版本持久化；无数据库schema变化。正式三标签Go测试/Vet、TypeScript、前端31文件103项测试和682模块生产构建通过。
 
 - 1.5（可移植元数据迁移基础闭环，已部署）：非空库Merge现可实际执行全部持久化REVIEW决定；`MAP_TO_LOCAL`把传入UUID登记为永久Alias并重映射关系，`KEEP_LOCAL/USE_INCOMING`控制实体、帐号位置及Tag边写入，硬冲突仍不可绕过。新增或明确采用传入内容的Coser资源在维护模式中暂存发布；替换既有资源时在Merge隔离目录保留旧assets，数据库失败恢复旧目录，提交后复验并清理，进程中断可用`-recover-portable-merge`按所有权标记恢复。Merge应用同时建立兼容阶段3的重建工作流，后续直接使用Merge UUID映射新媒体根并接管set/item/link UUID；非空库目录来源端到端已验证保持Item身份和DRAFT门禁。应用前可`-abort-portable-merge`，包/目标变化使决定失效，重复Apply拒绝；每次Apply先创建完整安全备份并进入`PORTABLE_MERGING`。完整CLI运行手册已持久化；正式三标签测试、Go Vet、构建和差异检查通过，无前端/GraphQL变化。2026-09-09从清洁提交`b477ddc`完成停服备份和schema v8→v10部署，迁移前后业务计数一致，数据库完整性、维护状态、健康探针及日志门禁通过。
 

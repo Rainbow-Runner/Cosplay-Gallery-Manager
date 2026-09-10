@@ -681,6 +681,47 @@ func (r *mutationResolver) RestoreBackup(ctx context.Context, backupID string) (
 	return manageMaintenanceState(value), nil
 }
 
+// RunPortableMigration is the resolver for the runPortableMigration field.
+func (r *mutationResolver) RunPortableMigration(ctx context.Context, input PortableMigrationActionInput) (*PortableMigrationActionResult, error) {
+	service, ok := r.Operations.(PortableOperationsService)
+	if !ok {
+		return nil, manageError(errors.New("portable migration operations are unavailable"))
+	}
+	if r.OwnerPassword == nil {
+		return nil, manageError(errors.New("owner password verification is unavailable"))
+	}
+	if err := r.OwnerPassword.VerifyPassword(ctx, input.Password); err != nil {
+		r.auditManage(ctx, "PORTABLE_MIGRATION_"+string(input.Action), "PORTABLE_MIGRATION", input.ImportID+input.MergeID, "OWNER_REAUTH_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	request := PortableMigrationRequest{
+		Action:                  string(input.Action),
+		Path:                    input.Path,
+		ImportID:                input.ImportID,
+		MergeID:                 input.MergeID,
+		Confirmation:            input.Confirmation,
+		AllowIncompleteGallery:  input.AllowIncompleteGallery,
+		IncludeGalleryLifecycle: input.IncludeGalleryLifecycle,
+		IncludePersonalFlags:    input.IncludePersonalFlags,
+	}
+	for _, decision := range input.MergeDecisions {
+		request.MergeDecisions = append(request.MergeDecisions, productdb.PortableMergeDecision{IssueKey: decision.IssueKey, Decision: decision.Decision})
+	}
+	for _, decision := range input.LibraryDecisions {
+		request.LibraryDecisions = append(request.LibraryDecisions, productdb.PortableLibraryDecision{LibraryKey: decision.LibraryKey, TargetLibraryID: decision.TargetLibraryID})
+	}
+	value, err := service.RunPortableMigration(ctx, request)
+	targetID := value.ImportID
+	if targetID == "" {
+		targetID = value.MergeID
+	}
+	r.auditManage(ctx, "PORTABLE_MIGRATION_"+string(input.Action), "PORTABLE_MIGRATION", targetID, "PORTABLE_MIGRATION_FAILED", err, map[string]any{"count": value.Count})
+	if err != nil {
+		return nil, errors.New("PORTABLE_" + string(input.Action) + "_FAILED")
+	}
+	return portableMigrationActionResult(value), nil
+}
+
 // CreateCoreEntity is the resolver for the createCoreEntity field.
 func (r *mutationResolver) CreateCoreEntity(ctx context.Context, input CoreEntityInput) (*ManageCoreEntity, error) {
 	named := productdb.CreateNamedEntityInput{Name: input.Name, SortName: input.SortName, Aliases: input.Aliases}
@@ -1533,6 +1574,26 @@ func (r *queryResolver) ManageMaintenance(ctx context.Context) (*ManageMaintenan
 		return nil, manageError(err)
 	}
 	return manageMaintenanceState(value), nil
+}
+
+// ManagePortableMigration is the resolver for the managePortableMigration field.
+func (r *queryResolver) ManagePortableMigration(ctx context.Context, importID *string, mergeID *string) (*ManagePortableMigrationSnapshot, error) {
+	service, ok := r.Operations.(PortableOperationsService)
+	if !ok {
+		return nil, manageError(errors.New("portable migration operations are unavailable"))
+	}
+	selectedImport, selectedMerge := "", ""
+	if importID != nil {
+		selectedImport = *importID
+	}
+	if mergeID != nil {
+		selectedMerge = *mergeID
+	}
+	value, err := service.PortableMigrationSnapshot(ctx, selectedImport, selectedMerge)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	return managePortableMigrationSnapshot(value), nil
 }
 
 // ManageAudit is the resolver for the manageAudit field.

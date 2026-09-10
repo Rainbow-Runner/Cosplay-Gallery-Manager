@@ -172,6 +172,16 @@ export const MANAGE_OPERATIONS = gql`${BACKUP_FIELDS} query ManageOperations($pa
 }`;
 export const CREATE_FULL_BACKUP = gql`${BACKUP_FIELDS} mutation CreateFullBackup { createFullBackup { ...BackupFields } }`;
 export const RESTORE_BACKUP = gql`mutation RestoreBackup($backupID: ID!) { restoreBackup(backupID: $backupID) { state restoreBackupID lastErrorCode updatedAt } }`;
+const PORTABLE_MIGRATION_SNAPSHOT_FIELDS = gql`fragment PortableMigrationSnapshotFields on ManagePortableMigrationSnapshot {
+  imports { importID exportID state formatVersion identityCount coreEntityCount galleryClaimCount itemClaimCount linkClaimCount assetCount errorCode createdAt updatedAt }
+  merges { mergeID exportID state hardBlockingCount reviewCount identityAddCount identityReuseCount entityAddCount entityReuseCount errorCode safetyBackupID createdAt updatedAt }
+  conflicts { issueKey issueCode severity entityKind incomingUUID localUUID fieldKey decision }
+  mappings { libraryKey libraryName decision targetLibraryID targetName targetRoot }
+  rebuilds { setID libraryKey sourceType relativeSource locatorStatus manifestStatus state issueCode }
+  owner { available galleryLifecycle personalFlags galleryCount itemCount }
+}`;
+export const MANAGE_PORTABLE_MIGRATION = gql`${PORTABLE_MIGRATION_SNAPSHOT_FIELDS} query ManagePortableMigration($importID: ID, $mergeID: ID) { managePortableMigration(importID: $importID, mergeID: $mergeID) { ...PortableMigrationSnapshotFields } manageMaintenance { state restoreBackupID lastErrorCode updatedAt } }`;
+export const RUN_PORTABLE_MIGRATION = gql`${PORTABLE_MIGRATION_SNAPSHOT_FIELDS} mutation RunPortableMigration($input: PortableMigrationActionInput!) { runPortableMigration(input: $input) { code importID mergeID exportID fileName count snapshot { ...PortableMigrationSnapshotFields } preflight { identityCount coreEntityCount galleryCount incompleteGalleryCount assetCount warningCount blockingCount issues { code severity count } } } }`;
 const MANAGE_CORE_ENTITY_FIELDS = gql`fragment ManageCoreEntityFields on ManageCoreEntity { kind uuid name sortName aliases slug metadataRevision workUUID workName profileSummary biography countryOrRegion useInRecommendation avatarURL bannerURL avatarCrop { x y size } bannerFocalPoint { x y } socialAccounts { uuid platformKey label handle url status visible position } parents { uuid name metadataRevision } }`;
 export const MANAGE_CORE_ENTITIES = gql`${MANAGE_CORE_ENTITY_FIELDS} query ManageCoreEntities($kind: SearchEntityKind!, $page: Int!, $pageSize: Int!, $query: String!, $coserAssetFilter: ManageCoserAssetFilter!) { manageCoreEntities(kind: $kind, page: $page, pageSize: $pageSize, query: $query, coserAssetFilter: $coserAssetFilter) { page pageSize totalItems totalPages items { ...ManageCoreEntityFields } } }`;
 export const MANAGE_CORE_ENTITY = gql`${MANAGE_CORE_ENTITY_FIELDS} query ManageCoreEntity($kind: SearchEntityKind!, $uuid: ID!) { manageCoreEntity(kind: $kind, uuid: $uuid) { ...ManageCoreEntityFields } }`;

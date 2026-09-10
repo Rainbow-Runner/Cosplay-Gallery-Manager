@@ -22,6 +22,8 @@ type PortableMergeSessionInput struct {
 type PortableMergeSession struct {
 	MergeID, ExportID, PackageSHA256, PackageRelativePath, TargetFingerprint, State string
 	HardBlockingCount, ReviewCount                                                  int
+	IdentityAddCount, IdentityReuseCount, EntityAddCount, EntityReuseCount          int
+	ErrorCode, SafetyBackupID, CreatedAt, UpdatedAt                                 string
 }
 
 type PortableMergeConflict struct {
@@ -109,9 +111,26 @@ func (db *Database) CreatePortableMergeSession(ctx context.Context, input Portab
 
 func (db *Database) FindPortableMergeSession(ctx context.Context, mergeID string) (PortableMergeSession, error) {
 	var value PortableMergeSession
-	err := db.QueryRowContext(ctx, `SELECT merge_id,export_id,package_sha256,package_relative_path,target_fingerprint,state,hard_blocking_count,review_count
-		FROM portable_merge_sessions WHERE merge_id=?`, mergeID).Scan(&value.MergeID, &value.ExportID, &value.PackageSHA256, &value.PackageRelativePath, &value.TargetFingerprint, &value.State, &value.HardBlockingCount, &value.ReviewCount)
+	err := db.QueryRowContext(ctx, `SELECT merge_id,export_id,package_sha256,package_relative_path,target_fingerprint,state,hard_blocking_count,review_count,identity_add_count,identity_reuse_count,entity_add_count,entity_reuse_count,error_code,safety_backup_id,created_at_utc,updated_at_utc
+		FROM portable_merge_sessions WHERE merge_id=?`, mergeID).Scan(&value.MergeID, &value.ExportID, &value.PackageSHA256, &value.PackageRelativePath, &value.TargetFingerprint, &value.State, &value.HardBlockingCount, &value.ReviewCount, &value.IdentityAddCount, &value.IdentityReuseCount, &value.EntityAddCount, &value.EntityReuseCount, &value.ErrorCode, &value.SafetyBackupID, &value.CreatedAt, &value.UpdatedAt)
 	return value, err
+}
+
+func (db *Database) ListPortableMergeSessions(ctx context.Context) ([]PortableMergeSession, error) {
+	rows, err := db.QueryContext(ctx, `SELECT merge_id,export_id,package_sha256,package_relative_path,target_fingerprint,state,hard_blocking_count,review_count,identity_add_count,identity_reuse_count,entity_add_count,entity_reuse_count,error_code,safety_backup_id,created_at_utc,updated_at_utc FROM portable_merge_sessions ORDER BY created_at_utc DESC,merge_id DESC LIMIT 200`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := []PortableMergeSession{}
+	for rows.Next() {
+		var value PortableMergeSession
+		if err := rows.Scan(&value.MergeID, &value.ExportID, &value.PackageSHA256, &value.PackageRelativePath, &value.TargetFingerprint, &value.State, &value.HardBlockingCount, &value.ReviewCount, &value.IdentityAddCount, &value.IdentityReuseCount, &value.EntityAddCount, &value.EntityReuseCount, &value.ErrorCode, &value.SafetyBackupID, &value.CreatedAt, &value.UpdatedAt); err != nil {
+			return nil, err
+		}
+		result = append(result, value)
+	}
+	return result, rows.Err()
 }
 
 func (db *Database) ListPortableMergeConflicts(ctx context.Context, mergeID string) ([]PortableMergeConflict, error) {

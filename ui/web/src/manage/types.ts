@@ -1,7 +1,7 @@
 export interface ManageGalleryRow {
   setID: string; slug: string; state: "DRAFT" | "ACTIVE" | "ARCHIVED"; title: string; contentRating?: "NON_ADULT" | "ADULT" | null;
   metadataRevision: number; scanRevision: number; browsable: boolean; sourceType: string; sourcePath: string; sourceAvailability: string;
-  reconcileState: string; overLimit: boolean; itemCount: number; missingCount: number; pendingCount: number; errorCount: number; blockingIssues: number;
+  reconcileState: string; overLimit: boolean; itemCount: number; missingCount: number; pendingCount: number; errorCount: number; blockingIssues: number; lastScanErrorCode: string; lastScanCompleted: string;
 }
 export interface ManageGalleryPage { items: ManageGalleryRow[]; summary: { draft: number; overLimit: number; unavailable: number; blocking: number; missingItem: number }; page: number; pageSize: number; totalItems: number; totalPages: number }
 export interface ManageGalleryItem { uuid: string; relativePath: string; mediaKind: string; contentFormat: string; imageCategory?: string | null; position: string; caption: string; excluded: boolean; availability: string; processingState: string; byteSize: number; videoProbeState: string; videoErrorCode: string; videoContainer: string; videoDurationSeconds: number; videoWidth: number; videoHeight: number; videoCodec: string; audioCodec: string }
@@ -10,12 +10,13 @@ export interface ManageGalleryCredit { coserUUID: string; coserName: string; pos
 export interface ManageGalleryTag { uuid: string; name: string; position: string }
 export interface ManageGalleryExternalLink { uuid: string; type: "SOURCE" | "PROFILE" | "REFERENCE"; label: string; url: string; position: string }
 export interface ManageGalleryFolderMatch { kind: "COSER" | "WORK" | "CHARACTER"; uuid: string; name: string; matchedName: string; workUUID: string; workName: string }
-export interface ManageGalleryManifestState { status: "NONE" | "CLEAN" | "DB_DIRTY" | "FILE_DIRTY" | "CONFLICT" | "MISSING" | "ERROR"; path: string; manifestRevision: number; metadataRevision: number; conflicts: { path: string; baselineJSON: string; databaseJSON: string; fileJSON: string }[] }
+export interface ManageGalleryManifestState { status: "NONE" | "CLEAN" | "DB_DIRTY" | "FILE_DIRTY" | "CONFLICT" | "MISSING" | "ERROR"; path: string; manifestRevision: number; metadataRevision: number; pushAdded: number; pushRemoved: number; pushRetained: number; pushUpdated: number; conflicts: { path: string; baselineJSON: string; databaseJSON: string; fileJSON: string }[] }
 export type ManageCoserManifestState = ManageGalleryManifestState;
 export interface ManageGalleryDetail {
   row: ManageGalleryRow; aliases: string[]; description: string; shootDate: string; shootDatePrecision: "DAY" | "MONTH" | "UNKNOWN";
   photographerName: string; studioName: string; items: ManageGalleryItem[]; credits: ManageGalleryCredit[]; tags: ManageGalleryTag[]; externalLinks: ManageGalleryExternalLink[];
   folderMatches: ManageGalleryFolderMatch[];
+  scanRuns: { id: string; status: string; startedAt: string; completedAt: string; errorCode: string }[];
 }
 export interface ManageGalleryDeletePreview {
   setID: string; state: "DRAFT" | "ACTIVE" | "ARCHIVED"; metadataRevision: number; itemCount: number;
@@ -23,6 +24,10 @@ export interface ManageGalleryDeletePreview {
 }
 export interface ManageRecognitionRule { id: number; name: string; kind: "MARKER" | "PATH_TEMPLATE" | "FIXED_DEPTH"; enabled: boolean; autoCreateDraft: boolean; order: number; pattern: string; fixedDepth: number }
 export interface ManageLibrary { id: number; name: string; rootPath: string; enabled: boolean; readOnly: boolean; captureTimezone: string; rules: ManageRecognitionRule[] }
+export interface ManageLibraryChangePreview { libraryID: number; currentRoot: string; proposedRoot: string; revisionToken: string; ignoredSourceCount: number; ignoredSources: { id: number; path: string; reason: string }[]; unassignedSourcePaths: string[]; recognitionRules: { id: number; name: string }[]; classificationRules: { id: number; name: string }[]; exclusionRules: { id: number; name: string }[]; automationMode: string; automationPolicyRevision: number; automationRunCount: number; activeRunCount: number; portableMappingCount: number; scanningSourceCount: number; childRoots: string[]; proposedBoundaryConflicts: string[]; impacts: { sourceID: number; galleryID: number; galleryTitle: string; sourcePath: string; currentLibraryID: number; suggestedOwnerID: number | null }[] }
+export interface ManageIgnoredSourceRecord { id: number; libraryID: number | null; setID: string | null; path: string; reason: string; createdAt: string }
+export interface ManageIgnoredSourcePage { page: number; pageSize: number; total: number; items: ManageIgnoredSourceRecord[] }
+export interface ManageIgnoredSourceRemovalPreview { record: ManageIgnoredSourceRecord; affectedLibraryIDs: number[]; activeRunCount: number; boundSourceCount: number; revisionToken: string }
 export interface ManageMediaClassificationRule { id: number; libraryID?: number | null; name: string; enabled: boolean; order: number; subject: "PARENT_FOLDER" | "FILE_NAME" | "FILE_STEM" | "RELATIVE_PATH"; operator: "EXACT" | "GLOB" | "RE2"; pattern: string; caseSensitive: boolean; resultCategory: "PHOTO" | "SELFIE"; revision: number; systemDefault: boolean }
 export interface ManageMediaClassificationSuggestion { id: number; galleryID: number; galleryRevision: number; gallerySetID: string; galleryTitle: string; itemUUID: string; relativePath: string; ruleID: number; ruleRevision: number; ruleName: string; proposedCategory: "PHOTO" | "SELFIE"; matchedSubject: string; matchedValue: string; status: string }
 export interface ManageMediaClassificationPreview { totalMatches: number; samples: { gallerySetID: string; galleryTitle: string; itemUUID: string; relativePath: string; currentCategory: "PHOTO" | "SELFIE"; proposedCategory: "PHOTO" | "SELFIE"; matchedValue: string }[] }
@@ -44,7 +49,7 @@ export interface ManageRuntimeSettings {
   galleryAnimatedPlaybackLimit: number; galleryAnimatedLockIntervalMS: number;
   relatedLimit: number; tagParentWeight: number; tagMinimumScore: number; tagMaximumDepth: number;
   randomLimit: number; randomStaticQuota: number; randomGIFQuota: number; randomVideoQuota: number; randomGalleryRepeatDecay: number;
-  enhancedCacheMaximumBytes: number; minimumFreeBytes: number; minimumFreePercent: number; automaticScanEnabled: boolean; automaticSchedulesSuspended: boolean;
+  enhancedCacheMaximumBytes: number; minimumFreeBytes: number; minimumFreePercent: number; automaticScanEnabled: boolean; automaticScanOnStartup: boolean; automaticScanIntervalMinutes: number; automaticSchedulesSuspended: boolean;
   dailyBackupEnabled: boolean; dailyBackupRetention: number;
   archiveMaxEntries: number; archiveMaxEntryBytes: number; archiveMaxTotalBytes: number; archiveMaxCompressionRatio: number; archiveMaxImagePixels: number;
 }

@@ -25,6 +25,68 @@ import (
 	"github.com/stashapp/stash/internal/settings"
 )
 
+// ForgetGalleryItem is the resolver for the forgetGalleryItem field.
+func (r *mutationResolver) ForgetGalleryItem(ctx context.Context, setID string, itemUUID string, expectedMetadataRevision int64) (*ManageGalleryDetail, error) {
+	itemID, err := r.Database.Manage().GalleryItemID(ctx, setID, itemUUID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	if err := r.Database.Galleries().ForgetItem(ctx, itemID, expectedMetadataRevision, time.Now()); err != nil {
+		r.auditManage(ctx, "GALLERY_ITEM_FORGET", "GALLERY_ITEM", itemUUID, "GALLERY_ITEM_FORGET_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "GALLERY_ITEM_FORGET", "GALLERY_ITEM", itemUUID, "", nil, map[string]any{"gallery_set_id": setID})
+	return r.loadManageGalleryDetail(ctx, setID)
+}
+
+// ForgetMissingGalleryItems is the resolver for the forgetMissingGalleryItems field.
+func (r *mutationResolver) ForgetMissingGalleryItems(ctx context.Context, setID string, expectedMetadataRevision int64) (*ManageGalleryDetail, error) {
+	galleryID, err := r.Database.Manage().GalleryID(ctx, setID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	count, err := r.Database.Galleries().ForgetMissingItems(ctx, galleryID, expectedMetadataRevision, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "GALLERY_MISSING_ITEMS_FORGET", "GALLERY", setID, "GALLERY_MISSING_ITEMS_FORGET_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "GALLERY_MISSING_ITEMS_FORGET", "GALLERY", setID, "", nil, map[string]any{"item_count": count})
+	return r.loadManageGalleryDetail(ctx, setID)
+}
+
+// ReplaceMissingGalleryItem is the resolver for the replaceMissingGalleryItem field.
+func (r *mutationResolver) ReplaceMissingGalleryItem(ctx context.Context, setID string, missingItemUUID string, replacementItemUUID string, expectedMetadataRevision int64, expectedScanRevision int64) (*ManageGalleryDetail, error) {
+	missingID, err := r.Database.Manage().GalleryItemID(ctx, setID, missingItemUUID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	replacementID, err := r.Database.Manage().GalleryItemID(ctx, setID, replacementItemUUID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	if err := r.Database.Galleries().ReplaceMissingItem(ctx, missingID, replacementID, expectedMetadataRevision, expectedScanRevision, time.Now()); err != nil {
+		r.auditManage(ctx, "GALLERY_ITEM_REPLACE", "GALLERY_ITEM", missingItemUUID, "GALLERY_ITEM_REPLACE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "GALLERY_ITEM_REPLACE", "GALLERY_ITEM", missingItemUUID, "", nil, map[string]any{"gallery_set_id": setID, "replacement_item_uuid": replacementItemUUID})
+	return r.loadManageGalleryDetail(ctx, setID)
+}
+
+// ConfirmGallerySourceRebind is the resolver for the confirmGallerySourceRebind field.
+func (r *mutationResolver) ConfirmGallerySourceRebind(ctx context.Context, candidateID int64, allowAccessibleDuplicate bool) (*ManageGalleryDetail, error) {
+	source, err := r.Database.CandidateDiscovery().ConfirmSourceRebind(ctx, candidateID, allowAccessibleDuplicate, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "GALLERY_SOURCE_REBIND", "CANDIDATE", strconv.FormatInt(candidateID, 10), "GALLERY_SOURCE_REBIND_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	var setID string
+	if err := r.Database.QueryRowContext(ctx, `SELECT set_id FROM galleries WHERE id=?`, source.GalleryID).Scan(&setID); err != nil {
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "GALLERY_SOURCE_REBIND", "GALLERY", setID, "", nil, map[string]any{"candidate_id": candidateID, "source_id": source.ID})
+	return r.loadManageGalleryDetail(ctx, setID)
+}
+
 // SetGalleryFavorite is the resolver for the setGalleryFavorite field.
 func (r *mutationResolver) SetGalleryFavorite(ctx context.Context, setID string, favorite bool) (*PersonalStateResult, error) {
 	if err := r.Database.PersonalStates().SetGalleryFavoriteBySetID(ctx, setID, favorite, time.Now()); err != nil {
@@ -271,6 +333,67 @@ func (r *mutationResolver) CreateMediaLibrary(ctx context.Context, input CreateM
 	}
 	r.auditManage(ctx, "LIBRARY_CREATE", "LIBRARY", strconv.FormatInt(value.ID, 10), "", nil, map[string]any{"enabled": value.Enabled, "read_only": value.ReadOnly})
 	return manageLibrary(value, nil), nil
+}
+
+// TransferMediaLibrarySource is the resolver for the transferMediaLibrarySource field.
+func (r *mutationResolver) TransferMediaLibrarySource(ctx context.Context, sourceID int64, expectedLibraryID int64, targetLibraryID *int64) (bool, error) {
+	err := r.Database.Libraries().TransferSource(ctx, sourceID, expectedLibraryID, targetLibraryID)
+	if err != nil {
+		r.auditManage(ctx, "LIBRARY_SOURCE_TRANSFER", "SOURCE", strconv.FormatInt(sourceID, 10), "LIBRARY_SOURCE_TRANSFER_FAILED", err, nil)
+		return false, manageError(err)
+	}
+	r.auditManage(ctx, "LIBRARY_SOURCE_TRANSFER", "SOURCE", strconv.FormatInt(sourceID, 10), "", nil, map[string]any{"from_library_id": expectedLibraryID, "to_library_id": targetLibraryID})
+	return true, nil
+}
+
+// ApplyMediaLibraryChange is the resolver for the applyMediaLibraryChange field.
+func (r *mutationResolver) ApplyMediaLibraryChange(ctx context.Context, libraryID int64, newRoot string, revisionToken string, password string, confirmation string) (bool, error) {
+	phrase := "MOVE ROOT"
+	if newRoot == "" {
+		phrase = "DELETE LIBRARY"
+	}
+	if confirmation != phrase {
+		return false, errors.New("confirmation phrase does not match")
+	}
+	if r.OwnerPassword == nil {
+		return false, errors.New("owner password verification is unavailable")
+	}
+	if err := r.OwnerPassword.VerifyPassword(ctx, password); err != nil {
+		return false, errors.New("owner password verification failed")
+	}
+	err := r.Database.Libraries().ApplyChange(ctx, libraryID, newRoot, revisionToken, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "LIBRARY_CHANGE", "LIBRARY", strconv.FormatInt(libraryID, 10), "LIBRARY_CHANGE_FAILED", err, nil)
+		return false, manageError(err)
+	}
+	r.auditManage(ctx, "LIBRARY_CHANGE", "LIBRARY", strconv.FormatInt(libraryID, 10), "", nil, map[string]any{"action": phrase})
+	return true, nil
+}
+
+// RevokeIgnoredSource is the resolver for the revokeIgnoredSource field.
+func (r *mutationResolver) RevokeIgnoredSource(ctx context.Context, id int64, revisionToken string, password string, confirmation string) (bool, error) {
+	target := strconv.FormatInt(id, 10)
+	if confirmation != "REVEAL" {
+		err := errors.New("confirmation phrase does not match")
+		r.auditManage(ctx, "IGNORED_SOURCE_REVOKE", "IGNORED_SOURCE", target, "IGNORED_SOURCE_CONFIRMATION_FAILED", err, nil)
+		return false, err
+	}
+	if r.OwnerPassword == nil {
+		err := errors.New("owner password verification is unavailable")
+		r.auditManage(ctx, "IGNORED_SOURCE_REVOKE", "IGNORED_SOURCE", target, "IGNORED_SOURCE_PASSWORD_FAILED", err, nil)
+		return false, err
+	}
+	if err := r.OwnerPassword.VerifyPassword(ctx, password); err != nil {
+		r.auditManage(ctx, "IGNORED_SOURCE_REVOKE", "IGNORED_SOURCE", target, "IGNORED_SOURCE_PASSWORD_FAILED", err, nil)
+		return false, errors.New("owner password verification failed")
+	}
+	err := r.Database.Libraries().RevokeIgnoredSource(ctx, id, revisionToken)
+	if err != nil {
+		r.auditManage(ctx, "IGNORED_SOURCE_REVOKE", "IGNORED_SOURCE", target, "IGNORED_SOURCE_REVOKE_FAILED", err, nil)
+		return false, manageError(err)
+	}
+	r.auditManage(ctx, "IGNORED_SOURCE_REVOKE", "IGNORED_SOURCE", target, "", nil, nil)
+	return true, nil
 }
 
 // CreateRecognitionRule is the resolver for the createRecognitionRule field.
@@ -597,6 +720,7 @@ func (r *mutationResolver) UpdateRuntimeSettings(ctx context.Context, expectedSe
 		RandomStaticQuota: input.RandomStaticQuota, RandomGIFQuota: input.RandomGIFQuota, RandomVideoQuota: input.RandomVideoQuota,
 		RandomGalleryRepeatDecay: input.RandomGalleryRepeatDecay, EnhancedCacheMaximumBytes: input.EnhancedCacheMaximumBytes,
 		MinimumFreeBytes: input.MinimumFreeBytes, MinimumFreePercent: input.MinimumFreePercent, AutomaticScanEnabled: input.AutomaticScanEnabled,
+		AutomaticScanOnStartup: input.AutomaticScanOnStartup, AutomaticScanIntervalMinutes: input.AutomaticScanIntervalMinutes,
 		AutomaticSchedulesSuspended: input.AutomaticSchedulesSuspended, DailyBackupEnabled: input.DailyBackupEnabled,
 		DailyBackupRetention: input.DailyBackupRetention, ArchiveMaxEntries: input.ArchiveMaxEntries,
 		ArchiveMaxEntryBytes: input.ArchiveMaxEntryBytes, ArchiveMaxTotalBytes: input.ArchiveMaxTotalBytes,
@@ -1384,8 +1508,8 @@ func (r *queryResolver) FavoriteMedia(ctx context.Context, scope BrowseScope, pa
 }
 
 // ManageGalleries is the resolver for the manageGalleries field.
-func (r *queryResolver) ManageGalleries(ctx context.Context, page int) (*ManageGalleryPage, error) {
-	value, err := r.Database.Manage().GalleryPage(ctx, page)
+func (r *queryResolver) ManageGalleries(ctx context.Context, page int, issue string) (*ManageGalleryPage, error) {
+	value, err := r.Database.Manage().GalleryPage(ctx, page, issue)
 	if err != nil {
 		return nil, manageError(err)
 	}
@@ -1440,6 +1564,57 @@ func (r *queryResolver) ManageLibraries(ctx context.Context) ([]*ManageLibrary, 
 			return nil, manageError(err)
 		}
 		result = append(result, manageLibrary(value, rules))
+	}
+	return result, nil
+}
+
+// ManageIgnoredSources is the resolver for the manageIgnoredSources field.
+func (r *queryResolver) ManageIgnoredSources(ctx context.Context, libraryID *int64, page int, query string) (*ManageIgnoredSourcePage, error) {
+	result, err := r.Database.Libraries().ListIgnoredSources(ctx, libraryID, page, query)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	output := &ManageIgnoredSourcePage{Page: result.Page, PageSize: result.PageSize, Total: result.Total}
+	for _, item := range result.Items {
+		output.Items = append(output.Items, manageIgnoredSourceRecord(item))
+	}
+	return output, nil
+}
+
+// PreviewIgnoredSourceRemoval is the resolver for the previewIgnoredSourceRemoval field.
+func (r *queryResolver) PreviewIgnoredSourceRemoval(ctx context.Context, id int64) (*ManageIgnoredSourceRemovalPreview, error) {
+	preview, err := r.Database.Libraries().PreviewIgnoredSourceRemoval(ctx, id)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	return &ManageIgnoredSourceRemovalPreview{Record: manageIgnoredSourceRecord(preview.Record), AffectedLibraryIDs: preview.AffectedLibraryIDs, ActiveRunCount: preview.ActiveRunCount, BoundSourceCount: preview.BoundSourceCount, RevisionToken: preview.RevisionToken}, nil
+}
+
+func manageIgnoredSourceRecord(value productdb.IgnoredSourceRecord) *ManageIgnoredSourceRecord {
+	return &ManageIgnoredSourceRecord{ID: value.ID, LibraryID: value.LibraryID, SetID: value.SetID, Path: value.Path, Reason: value.Reason, CreatedAt: value.CreatedAt}
+}
+
+// PreviewMediaLibraryChange is the resolver for the previewMediaLibraryChange field.
+func (r *queryResolver) PreviewMediaLibraryChange(ctx context.Context, libraryID int64, newRoot string) (*ManageLibraryChangePreview, error) {
+	preview, err := r.Database.Libraries().PreviewChange(ctx, libraryID, newRoot)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	result := &ManageLibraryChangePreview{LibraryID: preview.LibraryID, CurrentRoot: preview.CurrentRoot, ProposedRoot: preview.NewRoot, RevisionToken: preview.RevisionToken, IgnoredSourceCount: preview.IgnoredSourceCount, UnassignedSourcePaths: preview.UnassignedSourcePaths, ChildRoots: preview.ChildRoots, ProposedBoundaryConflicts: preview.ProposedBoundaryConflicts, AutomationMode: preview.AutomationMode, AutomationPolicyRevision: preview.AutomationPolicyRevision, AutomationRunCount: preview.AutomationRunCount, ActiveRunCount: preview.ActiveRunCount, PortableMappingCount: preview.PortableMappingCount, ScanningSourceCount: preview.ScanningSourceCount}
+	for _, ignored := range preview.IgnoredSources {
+		result.IgnoredSources = append(result.IgnoredSources, &ManageLibraryIgnoredSourceImpact{ID: ignored.ID, Path: ignored.Path, Reason: ignored.Reason})
+	}
+	for _, rule := range preview.RecognitionRules {
+		result.RecognitionRules = append(result.RecognitionRules, &ManageLibraryRuleImpact{ID: rule.ID, Name: rule.Name})
+	}
+	for _, rule := range preview.ClassificationRules {
+		result.ClassificationRules = append(result.ClassificationRules, &ManageLibraryRuleImpact{ID: rule.ID, Name: rule.Name})
+	}
+	for _, rule := range preview.ExclusionRules {
+		result.ExclusionRules = append(result.ExclusionRules, &ManageLibraryRuleImpact{ID: rule.ID, Name: rule.Name})
+	}
+	for _, impact := range preview.Impacts {
+		result.Impacts = append(result.Impacts, &ManageLibrarySourceImpact{SourceID: impact.SourceID, GalleryID: impact.GalleryID, GalleryTitle: impact.GalleryTitle, SourcePath: impact.SourcePath, CurrentLibraryID: impact.CurrentLibrary, SuggestedOwnerID: impact.SuggestedOwner})
 	}
 	return result, nil
 }

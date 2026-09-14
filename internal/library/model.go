@@ -17,13 +17,41 @@ type Library struct {
 type SourceImpact struct {
 	SourceID       int64
 	GalleryID      int64
+	GalleryTitle   string
 	SourcePath     string
 	CurrentLibrary int64
 	SuggestedOwner *int64
 }
 
 type ChangePreview struct {
-	LibraryID int64
-	NewRoot   string
-	Impacts   []SourceImpact
+	LibraryID                 int64
+	CurrentRoot               string
+	NewRoot                   string
+	RevisionToken             string
+	IgnoredSourceCount        int
+	IgnoredSources            []IgnoredSourceImpact
+	UnassignedSourcePaths     []string
+	RecognitionRules          []RuleImpact
+	ClassificationRules       []RuleImpact
+	ExclusionRules            []RuleImpact
+	AutomationMode            string
+	AutomationPolicyRevision  int64
+	AutomationRunCount        int
+	ActiveRunCount            int
+	PortableMappingCount      int
+	ScanningSourceCount       int
+	ChildRoots                []string
+	ProposedBoundaryConflicts []string
+	Impacts                   []SourceImpact
+}
+
+type IgnoredSourceImpact struct {
+	ID     int64
+	Path   string
+	Reason string
+}
+type RuleImpact struct {
+	ID       int64
+	Name     string
+	Revision string
 }

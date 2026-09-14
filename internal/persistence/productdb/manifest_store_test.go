@@ -104,6 +104,47 @@ func TestGalleryManifestPushDirtyConflictAndMissingStates(t *testing.T) {
 	}
 }
 
+func TestGalleryManifestPushPreviewCountsForgottenMembers(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 10, 14, 0, 0, 0, time.UTC)
+	created, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "Preview", ContentRating: gallery.ContentRatingNonAdult}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := db.Galleries().AddSource(ctx, created.ID, CreateSourceInput{Type: gallery.SourceTypeDirectory, Path: t.TempDir(), Availability: gallery.AvailabilityAvailable}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item, err := db.Galleries().AddItem(ctx, created.ID, source.ID, CreateItemInput{
+		RelativePath: "missing.jpg", MediaKind: gallery.MediaKindStaticImage, ImageCategory: gallery.ImageCategoryPhoto,
+		Position: 1024, Availability: gallery.AvailabilityMissing, ProcessingState: gallery.ProcessingReady,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preview, err := db.Manifests().PreviewGalleryPush(ctx, created.ID)
+	if err != nil || preview.Added != 1 || preview.Removed != 0 || preview.Retained != 0 {
+		t.Fatalf("initial push preview=%#v err=%v", preview, err)
+	}
+	current, _ := db.Galleries().Find(ctx, created.ID)
+	if _, err := db.Manifests().PushGallery(ctx, created.ID, current.MetadataRevision, now); err != nil {
+		t.Fatal(err)
+	}
+	preview, err = db.Manifests().PreviewGalleryPush(ctx, created.ID)
+	if err != nil || preview.Added != 0 || preview.Removed != 0 || preview.Retained != 1 || preview.Updated != 0 {
+		t.Fatalf("clean push preview=%#v err=%v", preview, err)
+	}
+	current, _ = db.Galleries().Find(ctx, created.ID)
+	if err := db.Galleries().ForgetItem(ctx, item.ID, current.MetadataRevision, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	preview, err = db.Manifests().PreviewGalleryPush(ctx, created.ID)
+	if err != nil || preview.Added != 0 || preview.Removed != 1 || preview.Retained != 0 {
+		t.Fatalf("forgotten member push preview=%#v err=%v", preview, err)
+	}
+}
+
 func TestGalleryManifestNeverOverwritesUntrackedOrReadOnlySource(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

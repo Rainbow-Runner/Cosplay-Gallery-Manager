@@ -2063,3 +2063,35 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 功能与部署前记录提交为`771b1889c7a123044ce16879c73278b4e9c4e8ee`（`Complete portable migration workbench`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，`go version -m`确认revision一致且`vcs.modified=false`；正式二进制SHA-256为`e7de3fd1805048321c2660fa9ca9c3a2819b402424f197ff95799f8f6364ad9b`，构建时间为`2026-09-10T01:33:38Z`。
 - 部署前停止服务并创建额外完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260910T093759-771b188.tar.gz`，包含旧二进制、配置、用户systemd unit、SQLite一致快照和完整Coser托管根；包为70MiB，SHA-256为`8a7e371bfb87c667874adc5012f55537f87673289ddd7fa69169bff8d017ef89`。实际解包后，全部文件清单、旧二进制/配置/unit逐项比较及快照产品身份、schema v10和`integrity_check=ok`均通过。
 - 本次无schema迁移，只原子替换正式二进制并启动服务一次。配置SHA-256保持`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，数据库inode保持`19679716`；正式库仍为schema v10、`integrity_check=ok`、maintenance=`NORMAL`及2个媒体库、6个Gallery、6个来源、322个Item、135个Coser、108个Work、697个Character和0个Tag。服务保持`active/running`、`MainPID=234086`、`NRestarts=0`，Health/Ready为204，Root/Legal/Session为200，2个Worker及LibRaw、FFmpeg、FFprobe正常启用，启动及探针日志无WARN、ERROR、FAILED、panic或fatal。About因提交尚未位于远端可访问源码而保持`exactSourceAvailable=false`；本轮未推送远端，也未执行迁移模拟，后者由所有者继续。
+# 2026-09-10 自动扫描计划与来源异常恢复
+
+- 自动扫描从固定24小时扩展为数据库配置的总开关、可选启动扫描和15～10080分钟周期；默认仍关闭且默认周期1440分钟。调度复用持久租约、维护门禁、恢复暂停、媒体库自动化策略与原子Source扫描，不增加实时文件监听。
+- 产品数据库升级为schema v11，只增加`runtime_settings.automatic_scan_on_startup`和`automatic_scan_interval_minutes`，旧库迁移保留原每日行为且不自动开启启动扫描。
+- Manage Gallery新增全库异常筛选、高亮与MISSING优先；Media支持MISSING-only和显式Forget；Forget只删除应用记录并Tombstone UUID，不触碰源文件。
+- 来源读取错误稳定区分不存在、权限不足及通用读取失败，Manage显示最近错误与完成时间。Libraries的`SOURCE_REBIND_CANDIDATE`补齐显式确认入口，新旧来源都可访问时再次确认，绑定后仍要求完整扫描。
+- 扫描新增Item或唯一指纹路径重绑定会把已跟踪Manifest置为`DB_DIRTY`，解决成员变化只增加scan revision而Manifest误报CLEAN的问题；MISSING条目继续保留到显式Forget。
+- 异常第二闭环新增显式媒体替换：所有者从同组AVAILABLE Item中选择新文件，预览后输入`REPLACE`；事务保留旧UUID及Caption/排序/Exclude/收藏/评分/封面意图，新临时UUID永久Tombstone并重新排队派生处理。带编辑或个人/封面引用的新记录会被拒绝，系统不做启发式自动迁移。
+- 新增输入`FORGET N`的Gallery内批量MISSING清理；单项和批量操作均在删除前安全解除封面引用，不接触源文件。Source页新增最近20次扫描状态、时间和稳定错误码；现有schema不保留提交后的观察明细，因此不虚构历史技术计数。
+- Manifest页新增基于Portable Item UUID和上次同步基线的Push成员预览，显示新增/删除/保留/更新数量；Push前二次显示摘要，实际写入继续重新校验文件哈希，不能覆盖外部修改。
+- 回归覆盖正式schema v10→v11独立快照与默认值、v7连续迁移、配置周期与启动触发、持久租约、来源缺失不批量制造MISSING、Gallery异常全库筛选、Manifest成员变化/Push预览、显式替换及单项/批量Forget；产品数据库/API/Server/Manifest/SourceScan测试通过。前端TypeScript、31文件105项测试和682模块生产构建通过；正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签组合测试及验证二进制构建通过，仅保留既有主共享chunk超过500KiB提示。`git diff --check`通过。
+- 当前仅完成源码与发布构建验证，未提交、未部署，也未触碰正式schema v10业务数据库；部署时必须先做独立完整备份，再由启动迁移生成schema v10快照并升级到v11。
+- 详细边界和后续阶段见`AUTOMATIC_SCAN_AND_SOURCE_RECOVERY_2026-09-10.md`。
+
+# 2026-09-14 媒体库变更影响预览与Source转移（第一段）
+
+- Libraries新增只读媒体库改根/删除影响预览，逐项列出直接绑定的Gallery Source、Gallery标题、路径和建议归属，同时显示ignored Source数量及子媒体库根；此阶段不执行改根或删除。
+- 新增逐Source显式转移工作台，用户选目标并二次确认；事务比较原库归属、校验目标路径包含关系和两端无活动自动化任务，成功后失效相关发现快照，防止旧预览静默生效；不移动媒体文件或Gallery身份。允许显式转未分配，但不会自动由父库接管。
+- 目标外路径与过期归属的数据库回归通过；GraphQL与Web工作台交互测试通过。仍需完成改根/删除执行、ignored Source和规则/自动化影响预览及执行前并发复核，详见同日开发备忘录。
+
+# 2026-09-14 媒体库改根/删除工作台第二段
+
+- 影响预览扩展为ignored Source路径/原因、三类库专属规则、自动化策略与历史/活动任务、扫描中的Source、迁移映射及目标库边界冲突；令牌绑定本次预览全部关键状态。
+- 实际改根/删除须所有者密码与`MOVE ROOT`/`DELETE LIBRARY`确认词，事务内重算并比对令牌；过期预览、活动任务/扫描、迁移映射、目标冲突均拒绝。删除还要求全部Gallery Source已显式转移。
+- 删除只清理CGM媒体库及库专属规则/任务，子库保留；ignored Source改为全局精确路径忽略，防止父库静默重导。改根按相对路径映射Source/ignored/Manifest并标记待复扫；都不触碰源媒体文件。
+- 数据库回归覆盖旧预览、改根路径映射、Source转移门禁、规则/策略影响、活动任务及扫描中Source阻断和删除后忽略路径保留；无新增schema。正式三标签产品数据库/API/Server/CMD测试及同范围Go Vet、Web 31文件107项测试、TypeScript、682模块生产构建和差异检查均通过。当前未提交、未部署。
+
+# 2026-09-14 全局/库级ignored Source撤销
+
+- Libraries补充独立忽略路径工作台：全局/当前库切换、路径子串搜索、50项分页、单项影响预览及明确的`REVEAL`确认。预览展示受影响库、活动自动化任务、同路径Gallery Source和可选Set ID。
+- 撤销动作要求所有者密码，事务内复核预览令牌；旧预览和受影响库活动任务拒绝。成功只删除CGM忽略记录并失效受影响库发现快照，不访问媒体或自动扫描；下一次发现可能重新出现。审计仅记录动作和不透明ID，不包含路径/Set ID。
+- 数据库回归覆盖全局/库级分页检索、旧预览、活动自动化阻断、带Set ID忽略的跨库影响/快照失效与媒体目录保留；GraphQL认证、确认词和成功路径及前端操作测试已新增。正式三标签产品数据库/API/Server/CMD测试及同范围Go Vet、Web 31文件108项测试、TypeScript、682模块生产构建和差异检查通过。无新schema，未提交/部署。

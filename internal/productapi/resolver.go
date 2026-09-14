@@ -98,8 +98,13 @@ func (r *Resolver) manageGalleryManifestState(ctx context.Context, state product
 	if err := r.Database.QueryRowContext(ctx, `SELECT metadata_revision FROM galleries WHERE id=?`, state.GalleryID).Scan(&metadataRevision); err != nil {
 		return nil, manageError(err)
 	}
+	preview, err := r.Database.Manifests().PreviewGalleryPush(ctx, state.GalleryID)
+	if err != nil {
+		return nil, manageError(err)
+	}
 	result := &ManageGalleryManifestState{
 		Status: string(state.Status), Path: state.Path, ManifestRevision: int(state.ManifestRevision), MetadataRevision: metadataRevision,
+		PushAdded: preview.Added, PushRemoved: preview.Removed, PushRetained: preview.Retained, PushUpdated: preview.Updated,
 	}
 	for _, conflict := range state.Conflicts {
 		result.Conflicts = append(result.Conflicts, &ManageManifestConflict{

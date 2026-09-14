@@ -29,6 +29,8 @@ type GalleryRow struct {
 	PendingCount       int
 	ErrorCount         int
 	BlockingIssues     int
+	LastScanErrorCode  string
+	LastScanCompleted  string
 }
 
 type GalleryPage struct {
@@ -75,6 +77,11 @@ type GalleryDetail struct {
 	Tags               []GalleryTag
 	ExternalLinks      []GalleryExternalLink
 	FolderMatches      []GalleryFolderMatch
+	ScanRuns           []GalleryScanRun
+}
+
+type GalleryScanRun struct {
+	ID, Status, StartedAt, CompletedAt, ErrorCode string
 }
 
 type GalleryCast struct {

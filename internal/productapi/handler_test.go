@@ -770,6 +770,71 @@ func TestGalleryDeleteGraphQLRequiresArchivePasswordAndConfirmation(t *testing.T
 	}
 }
 
+func TestIgnoredSourceRevokeGraphQLRequiresPasswordAndPreview(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 14, 0, 0, 0, 0, time.UTC)
+	root := t.TempDir()
+	library, err := database.Libraries().Create(ctx, productdb.CreateLibraryInput{Name: "Collection", RootPath: root, Enabled: true}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "ignored")
+	if err := database.CandidateDiscovery().IgnoreSource(ctx, nil, nil, path, "LIBRARY_DELETED_UNASSIGNED_SOURCE", now); err != nil {
+		t.Fatal(err)
+	}
+	page, err := database.Libraries().ListIgnoredSources(ctx, nil, 1, "")
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("ignored source=%#v err=%v", page, err)
+	}
+	id := page.Items[0].ID
+	verifier := &fakeOwnerPasswordVerifier{password: "owner secret"}
+	handler := NewHandlerWithServices(database, func(*http.Request) bool { return true }, nil, verifier)
+	call := func(query string) []byte {
+		t.Helper()
+		request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(fmt.Sprintf(`{"query":%q}`, query)))
+		request.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK {
+			t.Fatalf("GraphQL response=%d %s", response.Code, response.Body.String())
+		}
+		return response.Body.Bytes()
+	}
+	previewJSON := call(fmt.Sprintf(`query { previewIgnoredSourceRemoval(id:%d) { revisionToken affectedLibraryIDs record { path } } }`, id))
+	var parsed struct {
+		Data struct {
+			Preview struct {
+				RevisionToken      string  `json:"revisionToken"`
+				AffectedLibraryIDs []int64 `json:"affectedLibraryIDs"`
+			} `json:"previewIgnoredSourceRemoval"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(previewJSON, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	token := parsed.Data.Preview.RevisionToken
+	if len(token) != 64 || len(parsed.Data.Preview.AffectedLibraryIDs) != 1 || parsed.Data.Preview.AffectedLibraryIDs[0] != library.ID {
+		t.Fatalf("preview=%s", previewJSON)
+	}
+	bad := call(fmt.Sprintf(`mutation { revokeIgnoredSource(id:%d,revisionToken:%q,password:"wrong",confirmation:"REVEAL") }`, id, token))
+	if !bytes.Contains(bad, []byte("owner password verification failed")) {
+		t.Fatalf("wrong password=%s", bad)
+	}
+	wrongPhrase := call(fmt.Sprintf(`mutation { revokeIgnoredSource(id:%d,revisionToken:%q,password:"owner secret",confirmation:"DELETE") }`, id, token))
+	if !bytes.Contains(wrongPhrase, []byte("confirmation phrase does not match")) {
+		t.Fatalf("wrong phrase=%s", wrongPhrase)
+	}
+	good := call(fmt.Sprintf(`mutation { revokeIgnoredSource(id:%d,revisionToken:%q,password:"owner secret",confirmation:"REVEAL") }`, id, token))
+	if !bytes.Contains(good, []byte(`"revokeIgnoredSource":true`)) {
+		t.Fatalf("revoke=%s", good)
+	}
+	listed := call(`query { manageIgnoredSources(page:1) { total items { id } } }`)
+	if !bytes.Contains(listed, []byte(`"total":0`)) {
+		t.Fatalf("remaining ignores=%s", listed)
+	}
+}
+
 func TestCoreEntityLifecycleGraphQLRequiresPreviewAndPreservesPermanentUUIDHistory(t *testing.T) {
 	database := openTestDatabase(t)
 	ctx := context.Background()

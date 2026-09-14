@@ -12,10 +12,11 @@ import (
 )
 
 var (
-	ErrGalleryItemNotFound       = errors.New("GalleryItem not found")
-	ErrGalleryItemNotForgettable = errors.New("GalleryItem must be excluded or missing before it can be forgotten")
-	ErrMoveAcrossMediaGroups     = errors.New("GalleryItem cannot be dragged across media groups")
-	ErrInvalidGalleryItemOrder   = errors.New("GalleryItem order must contain every item in exactly one media group once")
+	ErrGalleryItemNotFound           = errors.New("GalleryItem not found")
+	ErrGalleryItemNotForgettable     = errors.New("GalleryItem must be excluded or missing before it can be forgotten")
+	ErrGalleryItemReplacementInvalid = errors.New("GalleryItem replacement requires one missing and one available pristine item in the same media group")
+	ErrMoveAcrossMediaGroups         = errors.New("GalleryItem cannot be dragged across media groups")
+	ErrInvalidGalleryItemOrder       = errors.New("GalleryItem order must contain every item in exactly one media group once")
 )
 
 // FindItem returns one Gallery-scoped member. It does not expose a standalone
@@ -243,13 +244,218 @@ func (s *GalleryStore) ForgetItem(
 	`, item.UUID, timestamp); err != nil {
 		return fmt.Errorf("tombstoning forgotten GalleryItem: %w", err)
 	}
+	if err := detachItemFromCover(ctx, tx, item.GalleryID, item.UUID, now); err != nil {
+		return err
+	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM gallery_items WHERE id = ?`, itemID); err != nil {
 		return fmt.Errorf("forgetting GalleryItem record: %w", err)
 	}
 	if err := touchGalleryMetadata(ctx, tx, item.GalleryID, expectedRevision, now); err != nil {
 		return err
 	}
+	if _, err := tx.ExecContext(ctx, `UPDATE galleries SET scan_revision=scan_revision+1,scrubber_revision=scrubber_revision+1 WHERE id=?`, item.GalleryID); err != nil {
+		return err
+	}
 	if err := demoteInvalidActiveGallery(ctx, tx, item.GalleryID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// ForgetMissingItems performs the same safe database-only retirement as
+// ForgetItem for every currently missing member, but advances Gallery
+// revisions only once so a large recovery operation is atomic.
+func (s *GalleryStore) ForgetMissingItems(ctx context.Context, galleryID int64, expectedRevision int64, now time.Time) (int, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	current, err := findGallery(ctx, tx, galleryID)
+	if err != nil {
+		return 0, err
+	}
+	if current.MetadataRevision != expectedRevision {
+		return 0, ErrMetadataRevisionConflict
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT id,item_uuid FROM gallery_items WHERE gallery_id=? AND availability_state='MISSING' ORDER BY id`, galleryID)
+	if err != nil {
+		return 0, err
+	}
+	type missingItem struct {
+		id   int64
+		uuid string
+	}
+	var items []missingItem
+	for rows.Next() {
+		var item missingItem
+		if err := rows.Scan(&item.id, &item.uuid); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return 0, err
+	}
+	if err := rows.Close(); err != nil {
+		return 0, err
+	}
+	if len(items) == 0 {
+		return 0, tx.Commit()
+	}
+	timestamp := formatTime(normalisedTime(now))
+	for _, item := range items {
+		if err := requireActivePortableKind(ctx, tx, item.uuid, portableid.KindGalleryItem); err != nil {
+			return 0, err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO portable_uuid_tombstones(uuid,entity_kind,deleted_at_utc,reason)
+			VALUES(?,'GALLERY_ITEM',?,'Missing GalleryItem explicitly forgotten in batch')`, item.uuid, timestamp); err != nil {
+			return 0, err
+		}
+		if err := detachItemFromCover(ctx, tx, galleryID, item.uuid, now); err != nil {
+			return 0, err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM gallery_items WHERE id=?`, item.id); err != nil {
+			return 0, err
+		}
+	}
+	if err := touchGalleryMetadata(ctx, tx, galleryID, expectedRevision, now); err != nil {
+		return 0, err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE galleries SET scan_revision=scan_revision+1,scrubber_revision=scrubber_revision+1 WHERE id=?`, galleryID); err != nil {
+		return 0, err
+	}
+	if err := demoteInvalidActiveGallery(ctx, tx, galleryID); err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return len(items), nil
+}
+
+func detachItemFromCover(ctx context.Context, tx *sql.Tx, galleryID int64, itemUUID string, now time.Time) error {
+	_, err := tx.ExecContext(ctx, `UPDATE gallery_covers SET
+		preferred_kind=CASE WHEN preferred_item_uuid=? THEN 'NONE' ELSE preferred_kind END,
+		preferred_item_uuid=CASE WHEN preferred_item_uuid=? THEN NULL ELSE preferred_item_uuid END,
+		fallback_item_uuid=CASE WHEN fallback_item_uuid=? THEN NULL ELSE fallback_item_uuid END,
+		effective_kind=CASE WHEN effective_item_uuid=? THEN 'NONE' ELSE effective_kind END,
+		effective_item_uuid=CASE WHEN effective_item_uuid=? THEN NULL ELSE effective_item_uuid END,
+		warning_code=CASE WHEN preferred_item_uuid=? THEN 'PREFERRED_COVER_FORGOTTEN' ELSE warning_code END,
+		cover_revision=cover_revision+1,updated_at_utc=?
+		WHERE gallery_id=? AND (preferred_item_uuid=? OR fallback_item_uuid=? OR effective_item_uuid=?)`,
+		itemUUID, itemUUID, itemUUID, itemUUID, itemUUID, itemUUID, formatTime(normalisedTime(now)), galleryID,
+		itemUUID, itemUUID, itemUUID)
+	return err
+}
+
+// ReplaceMissingItem adopts the file facts of a newly scanned Item while
+// retaining the missing Item's durable identity and all business state keyed
+// by that identity. The replacement must still be pristine so this operation
+// can never silently discard edits made to the new record.
+func (s *GalleryStore) ReplaceMissingItem(
+	ctx context.Context,
+	missingItemID int64,
+	replacementItemID int64,
+	expectedMetadataRevision int64,
+	expectedScanRevision int64,
+	now time.Time,
+) error {
+	if missingItemID == replacementItemID {
+		return ErrGalleryItemReplacementInvalid
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	missing, err := findItem(ctx, tx, missingItemID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrGalleryItemNotFound
+	}
+	if err != nil {
+		return err
+	}
+	replacement, err := findItem(ctx, tx, replacementItemID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrGalleryItemNotFound
+	}
+	if err != nil {
+		return err
+	}
+	current, err := findGallery(ctx, tx, missing.GalleryID)
+	if err != nil {
+		return err
+	}
+	if current.MetadataRevision != expectedMetadataRevision || current.ScanRevision != expectedScanRevision {
+		return ErrMetadataRevisionConflict
+	}
+	if missing.GalleryID != replacement.GalleryID || missing.SourceID != replacement.SourceID ||
+		missing.Availability != gallery.AvailabilityMissing || replacement.Availability != gallery.AvailabilityAvailable ||
+		itemGroup(missing) != itemGroup(replacement) || replacement.Caption != "" || replacement.Excluded {
+		return ErrGalleryItemReplacementInvalid
+	}
+	var replacementBusinessReferences int
+	if err := tx.QueryRowContext(ctx, `SELECT
+		EXISTS(SELECT 1 FROM gallery_item_personal_states WHERE gallery_item_id=?) +
+		EXISTS(SELECT 1 FROM gallery_covers WHERE gallery_id=? AND
+			(preferred_item_uuid=? OR fallback_item_uuid=? OR effective_item_uuid=?))`,
+		replacement.ID, replacement.GalleryID, replacement.UUID, replacement.UUID, replacement.UUID,
+	).Scan(&replacementBusinessReferences); err != nil {
+		return err
+	}
+	if replacementBusinessReferences != 0 {
+		return ErrGalleryItemReplacementInvalid
+	}
+	if err := requireActivePortableKind(ctx, tx, missing.UUID, portableid.KindGalleryItem); err != nil {
+		return err
+	}
+	if err := requireActivePortableKind(ctx, tx, replacement.UUID, portableid.KindGalleryItem); err != nil {
+		return err
+	}
+	var lastSeenScanRunID sql.NullInt64
+	if err := tx.QueryRowContext(ctx, `SELECT last_seen_scan_run_id FROM gallery_items WHERE id=?`, replacement.ID).Scan(&lastSeenScanRunID); err != nil {
+		return err
+	}
+	timestamp := formatTime(normalisedTime(now))
+	if _, err := tx.ExecContext(ctx, `INSERT INTO portable_uuid_tombstones(uuid,entity_kind,deleted_at_utc,reason)
+		VALUES(?,'GALLERY_ITEM',?,'Temporary replacement GalleryItem adopted by existing identity')`, replacement.UUID, timestamp); err != nil {
+		return fmt.Errorf("tombstoning replacement GalleryItem: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM gallery_items WHERE id=?`, replacement.ID); err != nil {
+		return fmt.Errorf("removing temporary replacement GalleryItem: %w", err)
+	}
+	newContentRevision := missing.ContentRevision + 1
+	if _, err := tx.ExecContext(ctx, `UPDATE gallery_items SET relative_path=?,media_kind=?,content_format=?,
+		availability_state='AVAILABLE',processing_state='PENDING',byte_size=?,quick_fingerprint=?,full_fingerprint=?,
+		content_revision=?,last_seen_scan_run_id=?,updated_at_utc=? WHERE id=?`,
+		replacement.RelativePath, replacement.MediaKind, replacement.ContentFormat, replacement.ByteSize,
+		replacement.QuickFingerprint, replacement.FullFingerprint, newContentRevision, lastSeenScanRunID, timestamp, missing.ID); err != nil {
+		return fmt.Errorf("adopting replacement GalleryItem facts: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE media_derivatives SET state='HARD_INVALID',is_current=0 WHERE item_uuid=?`, missing.UUID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM video_technical_metadata WHERE item_uuid=?`, missing.UUID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE processing_jobs SET status='CANCELLED',lease_owner=NULL,lease_expires_at_utc=NULL,
+		last_heartbeat_at_utc=NULL,updated_at_utc=? WHERE item_uuid=? AND status IN ('PENDING','RUNNING','RETRY_WAIT','PAUSED')`, timestamp, missing.UUID); err != nil {
+		return err
+	}
+	if err := touchGalleryMetadata(ctx, tx, missing.GalleryID, expectedMetadataRevision, now); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE galleries SET scan_revision=scan_revision+1,scrubber_revision=scrubber_revision+1 WHERE id=?`, missing.GalleryID); err != nil {
+		return err
+	}
+	if err := enqueueScanProcessingJobs(ctx, tx, missing.GalleryID, now); err != nil {
+		return err
+	}
+	if err := demoteInvalidActiveGallery(ctx, tx, missing.GalleryID); err != nil {
 		return err
 	}
 	return tx.Commit()

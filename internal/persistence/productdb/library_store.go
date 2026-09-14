@@ -128,52 +128,20 @@ func (s *LibraryStore) PreviewChange(
 	libraryID int64,
 	newRoot string,
 ) (library.ChangePreview, error) {
-	current, err := s.Find(ctx, libraryID)
+	root, err := canonicalProposedRoot(newRoot)
 	if err != nil {
 		return library.ChangePreview{}, err
 	}
-	if newRoot != "" {
-		newRoot, err = canonicalLibraryRoot(newRoot)
-		if err != nil {
-			return library.ChangePreview{}, err
-		}
-	}
-
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, gallery_id, source_path
-		FROM gallery_sources WHERE library_id = ? ORDER BY id
-	`, libraryID)
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return library.ChangePreview{}, err
 	}
-	defer rows.Close()
-
-	preview := library.ChangePreview{LibraryID: current.ID, NewRoot: newRoot}
-	for rows.Next() {
-		var impact library.SourceImpact
-		impact.CurrentLibrary = current.ID
-		if err := rows.Scan(&impact.SourceID, &impact.GalleryID, &impact.SourcePath); err != nil {
-			return library.ChangePreview{}, err
-		}
-		preview.Impacts = append(preview.Impacts, impact)
-	}
-	if err := rows.Err(); err != nil {
+	defer tx.Rollback()
+	preview, err := loadLibraryChangePreview(ctx, tx, libraryID, root)
+	if err != nil {
 		return library.ChangePreview{}, err
 	}
-	if err := rows.Close(); err != nil {
-		return library.ChangePreview{}, err
-	}
-	for index := range preview.Impacts {
-		owner, err := s.ownerExcluding(ctx, preview.Impacts[index].SourcePath, libraryID, newRoot)
-		if err != nil {
-			return library.ChangePreview{}, err
-		}
-		if owner != nil {
-			value := owner.ID
-			preview.Impacts[index].SuggestedOwner = &value
-		}
-	}
-	return preview, nil
+	return preview, tx.Commit()
 }
 
 // AssignSource performs the explicit transfer selected after preview. Passing
@@ -196,31 +164,66 @@ func (s *LibraryStore) AssignSource(ctx context.Context, sourceID int64, targetL
 	return err
 }
 
-func (s *LibraryStore) ownerExcluding(
-	ctx context.Context,
-	candidate string,
-	excludedID int64,
-	replacementRoot string,
-) (*library.Library, error) {
-	libraries, err := s.list(ctx)
-	if err != nil {
-		return nil, err
+// TransferSource changes only the selected binding. The expected owner is a
+// compare-and-swap guard against acting on a stale workbench preview.
+func (s *LibraryStore) TransferSource(ctx context.Context, sourceID, expectedLibraryID int64, targetLibraryID *int64) error {
+	if targetLibraryID != nil && *targetLibraryID == expectedLibraryID {
+		return errors.New("target media library must differ from current library")
 	}
-	for index := range libraries {
-		if libraries[index].ID == excludedID {
-			libraries[index].RootPath = replacementRoot
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var sourcePath string
+	if err := tx.QueryRowContext(ctx, `SELECT source_path FROM gallery_sources WHERE id=? AND library_id=?`, sourceID, expectedLibraryID).Scan(&sourcePath); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("GallerySource binding changed; refresh impact preview")
+		}
+		return err
+	}
+	if targetLibraryID != nil {
+		target, err := findLibrary(ctx, tx, *targetLibraryID)
+		if err != nil {
+			return err
+		}
+		if !pathWithin(target.RootPath, sourcePath) {
+			return fmt.Errorf("GallerySource path %q is outside target media library %q", sourcePath, target.RootPath)
 		}
 	}
-	sort.Slice(libraries, func(i int, j int) bool {
-		return len(libraries[i].RootPath) > len(libraries[j].RootPath)
-	})
+	var activeRuns int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM library_automation_runs
+		WHERE (library_id=? OR library_id=?) AND status IN ('QUEUED','RUNNING')`, expectedLibraryID, targetLibraryID).Scan(&activeRuns); err != nil {
+		return err
+	}
+	if activeRuns != 0 {
+		return errors.New("cancel active library automation before transferring a GallerySource")
+	}
+	result, err := tx.ExecContext(ctx, `UPDATE gallery_sources SET library_id=? WHERE id=? AND library_id=?`, targetLibraryID, sourceID, expectedLibraryID)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows != 1 {
+		return errors.New("GallerySource binding changed; refresh impact preview")
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM discovery_snapshots WHERE library_id=? OR library_id=?`, expectedLibraryID, targetLibraryID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func ownerFromSortedLibraries(libraries []library.Library, candidate string) *library.Library {
 	for _, candidateLibrary := range libraries {
 		if candidateLibrary.RootPath != "" && pathWithin(candidateLibrary.RootPath, candidate) {
 			owned := candidateLibrary
-			return &owned, nil
+			return &owned
 		}
 	}
-	return nil, nil
+	return nil
 }
 
 func (s *LibraryStore) list(ctx context.Context) ([]library.Library, error) {

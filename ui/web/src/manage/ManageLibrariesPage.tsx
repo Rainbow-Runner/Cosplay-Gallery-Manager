@@ -1,11 +1,11 @@
-import { useMutation, useQuery } from "@apollo/client/react";
+import { useLazyQuery, useMutation, useQuery } from "@apollo/client/react";
 import { type FormEvent, type RefObject, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
-import { CANCEL_LIBRARY_AUTOMATION, CREATE_MEDIA_LIBRARY, CREATE_RECOGNITION_RULE, DELETE_RECOGNITION_RULE, DISCOVER_MEDIA_LIBRARY, IMPORT_GALLERY_CANDIDATE, MANAGE_DISCOVERY, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, RUN_LIBRARY_AUTOMATION, SAVE_LIBRARY_AUTOMATION_POLICY, UPDATE_RECOGNITION_RULE } from "../api/manage";
+import { APPLY_MEDIA_LIBRARY_CHANGE, CANCEL_LIBRARY_AUTOMATION, CONFIRM_GALLERY_SOURCE_REBIND, CREATE_MEDIA_LIBRARY, CREATE_RECOGNITION_RULE, DELETE_RECOGNITION_RULE, DISCOVER_MEDIA_LIBRARY, IMPORT_GALLERY_CANDIDATE, MANAGE_DISCOVERY, MANAGE_IGNORED_SOURCES, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, PREVIEW_IGNORED_SOURCE_REMOVAL, PREVIEW_MEDIA_LIBRARY_CHANGE, REVOKE_IGNORED_SOURCE, RUN_LIBRARY_AUTOMATION, SAVE_LIBRARY_AUTOMATION_POLICY, TRANSFER_MEDIA_LIBRARY_SOURCE, UPDATE_RECOGNITION_RULE } from "../api/manage";
 import { MediaClassificationRules } from "./MediaClassificationRules";
 import { MediaExclusionRules } from "./MediaExclusionRules";
-import type { ManageDiscoverySnapshot, ManageGalleryDetail, ManageLibrary, ManageLibraryAutomation, ManageLibraryAutomationPolicy, ManageLibraryAutomationRun, ManageRecognitionRule } from "./types";
+import type { ManageDiscoverySnapshot, ManageGalleryDetail, ManageIgnoredSourcePage, ManageIgnoredSourceRemovalPreview, ManageLibrary, ManageLibraryAutomation, ManageLibraryAutomationPolicy, ManageLibraryAutomationRun, ManageLibraryChangePreview, ManageRecognitionRule } from "./types";
 
 const emptyLibrary = { name: "", rootPath: "", enabled: true, readOnly: true, captureTimezone: "UTC" };
 type RuleDraft = Omit<ManageRecognitionRule, "id">;
@@ -32,6 +32,7 @@ export function ManageLibrariesPage() {
   const [deleteRule] = useMutation(DELETE_RECOGNITION_RULE);
   const [discover, discoveryState] = useMutation<{ discoverMediaLibrary: ManageDiscoverySnapshot }>(DISCOVER_MEDIA_LIBRARY);
   const [importCandidate] = useMutation<{ importGalleryCandidate: ManageGalleryDetail }>(IMPORT_GALLERY_CANDIDATE);
+  const [confirmRebind, confirmRebindState] = useMutation<{ confirmGallerySourceRebind: ManageGalleryDetail }>(CONFIRM_GALLERY_SOURCE_REBIND);
 
   useEffect(() => {
     if (selectedID === null && libraries[0]) setSelectedID(libraries[0].id);
@@ -110,6 +111,18 @@ export function ManageLibrariesPage() {
       setMessage(error instanceof Error ? error.message : f("manage.library.error.createDraft"));
     }
   }
+	async function rebindSource(candidate: ManageDiscoverySnapshot["candidates"][number]) {
+		const warning = candidate.hasConflict
+			? "The old and new sources are both accessible. Confirm that the new path must replace the old Gallery source."
+			: "Rebind this existing Gallery to the discovered path? A complete source scan is still required afterwards.";
+		if (!window.confirm(warning)) return;
+		setMessage("");
+		try {
+			const result = await confirmRebind({ variables: { candidateID: candidate.id, allowAccessibleDuplicate: candidate.hasConflict } });
+			const target = result.data?.confirmGallerySourceRebind.row.setID;
+			if (target) navigate(`/manage/gallery/${target}?tab=source`);
+		} catch (error) { setMessage(error instanceof Error ? error.message : "Unable to rebind Gallery source"); }
+	}
 
   function prepareExactDirectoryRule(parentPath: string) {
     if (!selectedLibrary) return;
@@ -142,9 +155,10 @@ export function ManageLibrariesPage() {
         <details><summary>{f("manage.library.add")}</summary><form onSubmit={addLibrary}><label>{f("manage.library.nameRequired")}<input required value={libraryDraft.name} onChange={(event) => setLibraryDraft({ ...libraryDraft, name: event.target.value })} /></label><label>{f("manage.library.pathRequired")}<input required value={libraryDraft.rootPath} onChange={(event) => setLibraryDraft({ ...libraryDraft, rootPath: event.target.value })} /></label><label>{f("manage.library.timezoneRequired")}<input required value={libraryDraft.captureTimezone} onChange={(event) => setLibraryDraft({ ...libraryDraft, captureTimezone: event.target.value })} /></label><label className="check"><input type="checkbox" checked={libraryDraft.readOnly} onChange={(event) => setLibraryDraft({ ...libraryDraft, readOnly: event.target.checked })} /> {f("manage.library.readOnly")}</label><button type="submit" disabled={!libraryValid || createLibraryState.loading}>{createLibraryState.loading ? f("manage.library.creating") : f("manage.library.create")}</button></form></details>
       </aside>
       <div className="library-workspace">{selectedLibrary === null ? <p className="state-message">{f("manage.library.createFirst")}</p> : <>
+        <LibraryChangeWorkbench key={`change-${selectedLibrary.id}`} library={selectedLibrary} libraries={libraries} onApplied={async (deleted) => { const refreshed = await librariesQuery.refetch(); if (deleted) setSelectedID(refreshed.data?.manageLibraries[0]?.id ?? null); }} />
         <LibraryAutomationPanel key={selectedLibrary.id} libraryID={selectedLibrary.id} report={setMessage} />
         <LibraryRules sectionRef={rulesSectionRef} library={selectedLibrary} draft={ruleDraft} setDraft={setRuleDraft} submit={saveRule} saving={createRuleState.loading || updateRuleState.loading} editingRuleID={editingRuleID} deletingRuleID={deletingRuleID} editRule={editRule} cancelEdit={resetRuleEditor} requestDelete={setDeletingRuleID} deleteRule={removeRule} />
-        <section className="candidate-section"><header><h3>{f("manage.library.latestDiscovery")}</h3><span>{snapshot?.completedAt || f("manage.library.notScanned")}</span></header>{snapshot?.candidates.map((candidate) => <article className={`candidate-card ${candidate.hasConflict || candidate.overLimit ? "has-issue" : ""}`} key={candidate.id}><div><strong>{candidate.rootPath}</strong><p>{candidate.sourceType} · {candidate.method} · {f("manage.library.mediaCount", { count: candidate.mediaCount })}</p>{candidate.suggestions.length ? <ul>{candidate.suggestions.map((suggestion) => <li key={`${suggestion.field}:${suggestion.value}`}>{suggestion.field}: {suggestion.value}</li>)}</ul> : null}</div><div><span>{candidate.status}</span><button type="button" disabled={candidate.status !== "PENDING" || candidate.hasConflict || candidate.overLimit} onClick={() => createDraft(candidate.id)}>{f("manage.library.createDraft")}</button></div></article>)}
+        <section className="candidate-section"><header><h3>{f("manage.library.latestDiscovery")}</h3><span>{snapshot?.completedAt || f("manage.library.notScanned")}</span></header>{snapshot?.candidates.map((candidate) => <article className={`candidate-card ${candidate.hasConflict || candidate.overLimit || candidate.status === "SOURCE_REBIND_CANDIDATE" ? "has-issue" : ""}`} key={candidate.id}><div><strong>{candidate.rootPath}</strong><p>{candidate.sourceType} · {candidate.method} · {f("manage.library.mediaCount", { count: candidate.mediaCount })}</p>{candidate.suggestions.length ? <ul>{candidate.suggestions.map((suggestion) => <li key={`${suggestion.field}:${suggestion.value}`}>{suggestion.field}: {suggestion.value}</li>)}</ul> : null}</div><div><span>{candidate.status}</span>{candidate.status === "SOURCE_REBIND_CANDIDATE" ? <button type="button" disabled={candidate.overLimit || confirmRebindState.loading} onClick={() => rebindSource(candidate)}>确认重新绑定 / Rebind</button> : <button type="button" disabled={candidate.status !== "PENDING" || candidate.hasConflict || candidate.overLimit} onClick={() => createDraft(candidate.id)}>{f("manage.library.createDraft")}</button>}</div></article>)}
           {snapshot && snapshot.candidates.length === 0 ? <p className="state-message">{f("manage.library.noCandidates")}</p> : null}
           {snapshot ? <section className="coverage-report"><header><div><h4>{f("manage.library.coverage.title")}</h4><p>{f("manage.library.coverage.help")}</p></div><strong>{f("manage.library.coverage.issues", { count: snapshot.coverageSummary.actionableIssueCount })}</strong></header><dl>
             <div><dt>{f("manage.library.coverage.regular")}</dt><dd>{snapshot.coverageSummary.regularFileCount}</dd></div>
@@ -163,7 +177,160 @@ export function ManageLibrariesPage() {
     </section>
     <MediaClassificationRules library={selectedLibrary ? { id: selectedLibrary.id, name: selectedLibrary.name } : null} />
     <MediaExclusionRules library={selectedLibrary ? { id: selectedLibrary.id, name: selectedLibrary.name } : null} />
+    <IgnoredSourcesWorkbench selectedLibrary={selectedLibrary} libraries={libraries} />
   </main>;
+}
+
+function IgnoredSourcesWorkbench({ selectedLibrary, libraries }: { selectedLibrary: ManageLibrary | null; libraries: ManageLibrary[] }) {
+  const [scope, setScope] = useState<"global" | "selected">("global");
+  const [search, setSearch] = useState("");
+  const [loadedKey, setLoadedKey] = useState("");
+  const [review, setReview] = useState<ManageIgnoredSourceRemovalPreview | null>(null);
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [message, setMessage] = useState("");
+  const [fetchItems, itemsState] = useLazyQuery<{ manageIgnoredSources: ManageIgnoredSourcePage }>(MANAGE_IGNORED_SOURCES, { fetchPolicy: "network-only" });
+  const [fetchReview, reviewState] = useLazyQuery<{ previewIgnoredSourceRemoval: ManageIgnoredSourceRemovalPreview }>(PREVIEW_IGNORED_SOURCE_REMOVAL, { fetchPolicy: "network-only" });
+  const [revoke, revokeState] = useMutation<{ revokeIgnoredSource: boolean }>(REVOKE_IGNORED_SOURCE);
+  const libraryID = scope === "global" ? null : selectedLibrary?.id ?? null;
+  const keyFor = (page: number) => `${scope}:${libraryID ?? "global"}:${search.trim()}:${page}`;
+  const page = itemsState.data?.manageIgnoredSources;
+  const visible = page && loadedKey === keyFor(page.page) ? page : null;
+  async function load(pageNumber = 1) {
+    if (scope === "selected" && libraryID === null) return;
+    setMessage(""); setReview(null); setPassword(""); setConfirmation(""); setLoadedKey("");
+    try {
+      const result = await fetchItems({ variables: { libraryID, page: pageNumber, query: search.trim() } });
+      if (!result.data) throw new Error("Unable to load ignored sources");
+      setLoadedKey(keyFor(pageNumber));
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to load ignored sources"); }
+  }
+  async function previewRemoval(id: number) {
+    setMessage(""); setReview(null); setPassword(""); setConfirmation("");
+    try {
+      const result = await fetchReview({ variables: { id } });
+      if (!result.data) throw new Error("Unable to preview removal");
+      setReview(result.data.previewIgnoredSourceRemoval);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to preview removal"); }
+  }
+  async function remove(event: FormEvent) {
+    event.preventDefault();
+    if (!review || confirmation !== "REVEAL" || !password || review.activeRunCount > 0) return;
+    setMessage("");
+    try {
+      const result = await revoke({ variables: { id: review.record.id, revisionToken: review.revisionToken, password, confirmation } });
+      if (!result.data?.revokeIgnoredSource) throw new Error("Unable to revoke ignored source");
+      setReview(null); setPassword(""); setConfirmation("");
+      await load(page?.page ?? 1);
+      setMessage("忽略记录已撤销；下次发现扫描可能重新发现该路径。/ Ignore removed; the next discovery may see this path.");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Unable to revoke ignored source";
+      setMessage(detail.includes("IGNORED_SOURCE_PREVIEW_STALE") ? "预览已过期，请重新预览。/ Preview is stale; review again." : detail.includes("IGNORED_SOURCE_AUTOMATION_ACTIVE") ? "请先停止受影响媒体库的自动化任务。/ Stop affected automation first." : detail);
+    }
+  }
+  return <section className="rule-section ignored-source-section">
+    <header><h3>忽略路径管理 / Ignored source paths</h3></header>
+    <p>默认查看全局忽略；也可查看当前媒体库的专属忽略。撤销仅删除 CGM 的忽略记录，不会立即扫描或改动媒体文件。</p>
+    <label>作用范围 / Scope<select value={scope} onChange={(event) => { setScope(event.target.value as "global" | "selected"); setLoadedKey(""); setReview(null); }}><option value="global">全局 / Global</option><option value="selected" disabled={!selectedLibrary}>当前媒体库 / Selected library</option></select></label>
+    <label>路径搜索 / Path search<input value={search} onChange={(event) => { setSearch(event.target.value); setLoadedKey(""); setReview(null); }} maxLength={300} /></label>
+    <button type="button" disabled={itemsState.loading || scope === "selected" && !selectedLibrary} onClick={() => load(1)}>加载忽略记录 / Load ignores</button>
+    {message ? <p role="status">{message}</p> : null}
+    {visible ? <><p>{visible.total} records · page {visible.page}</p>{visible.items.map((item) => <article className="candidate-card" key={item.id}><div><strong><code>{item.path}</code></strong><p>#{item.id} · {item.libraryID === null ? "Global" : libraries.find((lib) => lib.id === item.libraryID)?.name ?? item.libraryID} · {item.reason || "—"}</p>{item.setID ? <p>Set ID: {item.setID}</p> : null}</div><button type="button" onClick={() => previewRemoval(item.id)}>预览撤销 / Preview removal</button></article>)}
+      {visible.total === 0 ? <p className="state-message">没有匹配的忽略记录 / No matching ignores</p> : null}
+      <div><button type="button" disabled={visible.page <= 1 || itemsState.loading} onClick={() => load(visible.page - 1)}>上一页 / Previous</button><button type="button" disabled={visible.page * visible.pageSize >= visible.total || itemsState.loading} onClick={() => load(visible.page + 1)}>下一页 / Next</button></div>
+    </> : null}
+    {reviewState.loading ? <p>正在加载撤销预览 / Loading removal preview</p> : null}
+    {review ? <form onSubmit={remove}><h4>撤销忽略 / Revoke ignore #{review.record.id}</h4><p><code>{review.record.path}</code> · {review.record.reason || "—"}</p>
+      <p>受影响媒体库 / Affected libraries: {review.affectedLibraryIDs.map((id) => libraries.find((lib) => lib.id === id)?.name ?? id).join(", ") || "none"} · 活动任务 / Active runs: {review.activeRunCount} · 同路径 Gallery Source: {review.boundSourceCount}</p>
+      <p>下次发现扫描可能重新出现；若有已删除 Gallery 的 Set ID，身份 Tombstone 仍可能阻止导入。不会自动扫描或修改媒体文件。</p>
+      <label>所有者密码 / Owner password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+      <label>输入 REVEAL 确认 / Type REVEAL<input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>
+      <button type="submit" disabled={revokeState.loading || review.activeRunCount > 0 || confirmation !== "REVEAL" || !password}>撤销忽略 / Revoke ignore</button>
+    </form> : null}
+  </section>;
+}
+
+function LibraryChangeWorkbench({ library, libraries, onApplied }: { library: ManageLibrary; libraries: ManageLibrary[]; onApplied: (deleted: boolean) => Promise<void> }) {
+  const [newRoot, setNewRoot] = useState("");
+  const [previewedInput, setPreviewedInput] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [targets, setTargets] = useState<Record<number, string>>({});
+  const [message, setMessage] = useState("");
+  const [preview, previewState] = useLazyQuery<{ previewMediaLibraryChange: ManageLibraryChangePreview }>(PREVIEW_MEDIA_LIBRARY_CHANGE, { fetchPolicy: "network-only" });
+  const [transfer, transferState] = useMutation(TRANSFER_MEDIA_LIBRARY_SOURCE);
+  const [applyChange, applyState] = useMutation(APPLY_MEDIA_LIBRARY_CHANGE);
+  const impact = previewState.data?.previewMediaLibraryChange;
+  async function loadPreview() {
+    setMessage("");
+    setPreviewedInput(null);
+    try { await preview({ variables: { libraryID: library.id, newRoot: newRoot.trim() } }); setPreviewedInput(newRoot.trim()); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "Unable to preview library impact"); }
+  }
+  const deleting = previewedInput === "";
+  const phrase = deleting ? "DELETE LIBRARY" : "MOVE ROOT";
+  const blocked = !impact || previewedInput === null || previewedInput !== newRoot.trim() || impact.activeRunCount > 0 || impact.scanningSourceCount > 0 || impact.portableMappingCount > 0 || (deleting && impact.impacts.length > 0) || (!deleting && (impact.currentRoot === impact.proposedRoot || impact.childRoots.length > 0 || impact.proposedBoundaryConflicts.length > 0));
+  async function applyReviewedChange(event: FormEvent) {
+    event.preventDefault();
+    if (!impact || blocked || confirmation !== phrase || !password) return;
+    setMessage("");
+    try {
+      await applyChange({ variables: { libraryID: library.id, newRoot: previewedInput, revisionToken: impact.revisionToken, password, confirmation } });
+      setPassword(""); setConfirmation(""); setPreviewedInput(null);
+      await onApplied(deleting);
+      setMessage("Media library change applied / 媒体库变更已执行");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to apply library change; refresh preview"); }
+  }
+  async function transferSource(sourceID: number) {
+    const selected = targets[sourceID];
+    if (!selected) return;
+    const targetID = selected === "unassign" ? null : Number(selected);
+    const targetName = targetID === null ? "unassigned / 未分配" : libraries.find((item) => item.id === targetID)?.name;
+    if (!window.confirm(`Transfer only Source #${sourceID} to ${targetName}? No media files will be moved.\n仅更改 Source 归属，不移动媒体文件。`)) return;
+    setMessage("");
+    try {
+      await transfer({ variables: { sourceID, expectedLibraryID: library.id, targetLibraryID: targetID } });
+      setTargets((previous) => ({ ...previous, [sourceID]: "" }));
+      await loadPreview();
+      setMessage("Source binding updated / Source 归属已更新");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to transfer Source"); }
+  }
+  return <section className="rule-section library-change-section">
+    <header><h3>媒体库变更影响 / Library change impact</h3></header>
+    <p>先预览改根或删除的全部影响；变更须输入所有者密码及确认词。操作只改变 CGM 记录，不移动或删除媒体文件。改根后 Source 需重新扫描。</p>
+    <label>拟议的新根路径（留空预览删除） / Proposed root (blank for deletion)
+      <input value={newRoot} onChange={(event) => setNewRoot(event.target.value)} placeholder="/media/new-root" />
+    </label>
+    <button type="button" disabled={previewState.loading || !!newRoot.trim() && !newRoot.startsWith("/")} onClick={loadPreview}>预览影响 / Preview impact</button>
+    {message ? <p role="status">{message}</p> : null}
+    {impact ? <div>
+      <p>当前根 / Current root: <code>{impact.currentRoot}</code>{impact.proposedRoot ? <> → <code>{impact.proposedRoot}</code></> : " → deletion preview"}</p>
+      <p>Source: {impact.impacts.length} · 忽略的 Source / Ignored sources: {impact.ignoredSourceCount} · 子媒体库 / Child libraries: {impact.childRoots.length}</p>
+      <p>识别规则 / Recognition: {impact.recognitionRules.length} · 分类规则 / Classification: {impact.classificationRules.length} · 排除规则 / Exclusion: {impact.exclusionRules.length}</p>
+      <p>自动化 / Automation: {impact.automationMode} (revision {impact.automationPolicyRevision}) · 历史任务 / Runs: {impact.automationRunCount} · 活动任务 / Active: {impact.activeRunCount} · 正在扫描 / Scanning: {impact.scanningSourceCount} · 迁移映射 / Migration mappings: {impact.portableMappingCount}</p>
+      {impact.ignoredSources.length ? <details><summary>被忽略的 Source / Ignored source paths</summary>{impact.ignoredSources.map((item) => <p key={item.id}><code>{item.path}</code> · {item.reason}</p>)}</details> : null}
+      {impact.unassignedSourcePaths.length ? <details><summary>库根下未分配的 Source / Unassigned sources ({impact.unassignedSourcePaths.length})</summary><p>{deleting ? "删除时会为这些精确路径建立全局忽略，防止父库重新导入。" : "这些Source不属于本库；改根不会映射其路径，之后仍需人工处理。"}</p>{impact.unassignedSourcePaths.map((path) => <p key={path}><code>{path}</code></p>)}</details> : null}
+      {([['Recognition',impact.recognitionRules],['Classification',impact.classificationRules],['Exclusion',impact.exclusionRules]] as const).map(([name,rules]) => rules.length ? <details key={name}><summary>{name} rules ({rules.length})</summary>{rules.map((rule) => <p key={rule.id}>#{rule.id} {rule.name}</p>)}</details> : null)}
+      {impact.childRoots.map((root) => <p key={root}><code>{root}</code></p>)}
+      {impact.proposedBoundaryConflicts.map((root) => <p key={`conflict-${root}`}>目标根包含其他媒体库 / Proposed root contains library: <code>{root}</code></p>)}
+      {impact.impacts.map((source) => <article className="candidate-card" key={source.sourceID}>
+        <div><strong>{source.galleryTitle}</strong><p>Source #{source.sourceID} · <code>{source.sourcePath}</code></p><p>建议归属 / Suggested owner: {source.suggestedOwnerID === null ? "unassigned" : libraries.find((item) => item.id === source.suggestedOwnerID)?.name ?? source.suggestedOwnerID}</p></div>
+        <div><label>显式转移到 / Transfer to
+          <select aria-label={`Transfer Source ${source.sourceID} to`} value={targets[source.sourceID] ?? ""} onChange={(event) => setTargets((previous) => ({ ...previous, [source.sourceID]: event.target.value }))}>
+            <option value="">选择目标 / Select target</option><option value="unassign">未分配 / Unassigned</option>
+            {libraries.filter((item) => item.id !== library.id).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.rootPath}</option>)}
+          </select>
+        </label><button type="button" disabled={!targets[source.sourceID] || transferState.loading} onClick={() => transferSource(source.sourceID)}>确认转移 / Transfer</button></div>
+      </article>)}
+      <form onSubmit={applyReviewedChange}>
+        <p>{deleting ? "删除会保留该库的 ignored Source 为全局精确路径忽略，防止父库静默重新导入；专属规则、自动化策略和历史任务会删除。已绑定的 Gallery Source 必须先逐项转移。子媒体库仍保留。" : "改根会按相对路径映射 Source、ignored Source 和 Manifest 路径，保留规则/自动化策略，并把 Source 标为待重新扫描。子媒体库须先单独处理。"}</p>
+        {blocked ? <p role="status">当前变更不可执行：请刷新预览并解决 Source、活动任务、正在扫描、迁移映射或媒体库边界门禁。</p> : null}
+        <label>所有者密码 / Owner password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+        <label>输入确认词 / Type {phrase}<input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>
+        <button type="submit" disabled={blocked || confirmation !== phrase || !password || applyState.loading}>{deleting ? "删除媒体库 / Delete library" : "更改媒体库根 / Move root"}</button>
+      </form>
+    </div> : null}
+  </section>;
 }
 
 function LibraryAutomationPanel({ libraryID, report }: { libraryID: number; report: (message: string) => void }) {

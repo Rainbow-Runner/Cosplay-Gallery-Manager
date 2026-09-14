@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"time"
 
@@ -42,12 +43,53 @@ type GalleryManifestState struct {
 	Conflicts        []manifest.Conflict
 }
 
+type GalleryManifestPushPreview struct {
+	Added, Removed, Retained, Updated int
+}
+
 type ManifestStore struct {
 	db *sql.DB
 }
 
 func (db *Database) Manifests() *ManifestStore {
 	return &ManifestStore{db: db.DB}
+}
+
+// PreviewGalleryPush compares only portable member identities and their
+// manifest business fields. It neither reads nor writes the source file; Push
+// still performs its independent baseline/hash safety checks.
+func (s *ManifestStore) PreviewGalleryPush(ctx context.Context, galleryID int64) (GalleryManifestPushPreview, error) {
+	_, baseline, _, found, err := loadGalleryManifestState(ctx, s.db, galleryID)
+	if err != nil {
+		return GalleryManifestPushPreview{}, err
+	}
+	current, err := buildGalleryBusinessSnapshot(ctx, s.db, galleryID)
+	if err != nil {
+		return GalleryManifestPushPreview{}, err
+	}
+	baselineItems := map[string]any{}
+	if found {
+		baselineItems = objectValue(baseline["items"])
+	}
+	currentItems := objectValue(current["items"])
+	preview := GalleryManifestPushPreview{}
+	for uuid, currentItem := range currentItems {
+		baselineItem, exists := baselineItems[uuid]
+		if !exists {
+			preview.Added++
+			continue
+		}
+		preview.Retained++
+		if !reflect.DeepEqual(baselineItem, currentItem) {
+			preview.Updated++
+		}
+	}
+	for uuid := range baselineItems {
+		if _, exists := currentItems[uuid]; !exists {
+			preview.Removed++
+		}
+	}
+	return preview, nil
 }
 
 func (s *ManifestStore) CheckGallery(ctx context.Context, galleryID int64, now time.Time) (GalleryManifestState, error) {
@@ -101,7 +143,7 @@ func (s *ManifestStore) CheckGallery(ctx context.Context, galleryID int64, now t
 	if err != nil {
 		return GalleryManifestState{}, err
 	}
-	databaseChanged := currentGallery.MetadataRevision != baselineRevision
+	databaseChanged := currentGallery.MetadataRevision != baselineRevision || state.Status == ManifestDBDirty
 	fileChanged := currentHash != state.FileHash
 	state.FileHash = currentHash
 	switch {

@@ -90,7 +90,7 @@ func Open(ctx context.Context, path string) (*Database, error) {
 		if err != nil {
 			return closeOnError(fmt.Errorf("initialising database identity: %w", err))
 		}
-		if err := validateSchemaV10(ctx, connection); err != nil {
+		if err := validateSchemaV11(ctx, connection); err != nil {
 			return closeOnError(err)
 		}
 		if err := validateIntegrity(ctx, connection); err != nil {
@@ -168,13 +168,15 @@ func validateSchemaVersion(ctx context.Context, db *sql.DB, version uint) error 
 		return validateSchemaV9(ctx, db)
 	case 10:
 		return validateSchemaV10(ctx, db)
+	case 11:
+		return validateSchemaV11(ctx, db)
 	default:
 		return &SchemaVersionMismatchError{Found: version, Required: product.DatabaseSchemaVersion}
 	}
 }
 
 func migrateProductDatabase(ctx context.Context, connection *sql.DB, databasePath string, from uint) error {
-	if from < 1 || from >= product.DatabaseSchemaVersion || product.DatabaseSchemaVersion != 10 {
+	if from < 1 || from >= product.DatabaseSchemaVersion || product.DatabaseSchemaVersion != 11 {
 		return &SchemaVersionMismatchError{Found: from, Required: product.DatabaseSchemaVersion}
 	}
 	backupPath := fmt.Sprintf("%s.pre-schema-v%d-%d.bak", databasePath, from, time.Now().UTC().UnixNano())
@@ -231,13 +233,18 @@ func migrateProductDatabase(ctx context.Context, connection *sql.DB, databasePat
 			return err
 		}
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE cgm_product_identity SET database_schema_version=10 WHERE singleton_id=1 AND database_schema_version=?`, from); err != nil {
+	if from < 11 {
+		if err := createSettingsSchemaV11(ctx, tx); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE cgm_product_identity SET database_schema_version=11 WHERE singleton_id=1 AND database_schema_version=?`, from); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	if err := validateSchemaV10(ctx, connection); err != nil {
+	if err := validateSchemaV11(ctx, connection); err != nil {
 		return fmt.Errorf("validating migrated schema: %w", err)
 	}
 	return validateIntegrity(ctx, connection)

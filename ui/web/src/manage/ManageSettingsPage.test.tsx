@@ -17,7 +17,7 @@ const runtimeSettings = {
   relatedLimit: 12, tagParentWeight: 0.5, tagMinimumScore: 0.2, tagMaximumDepth: 3,
   randomLimit: 24, randomStaticQuota: 0.7, randomGIFQuota: 0.15, randomVideoQuota: 0.15, randomGalleryRepeatDecay: 0.5,
   enhancedCacheMaximumBytes: 53687091200, minimumFreeBytes: 10737418240, minimumFreePercent: 0.05,
-  automaticScanEnabled: false, automaticSchedulesSuspended: false, dailyBackupEnabled: true, dailyBackupRetention: 7,
+  automaticScanEnabled: false, automaticScanOnStartup: false, automaticScanIntervalMinutes: 1440, automaticSchedulesSuspended: false, dailyBackupEnabled: true, dailyBackupRetention: 7,
   archiveMaxEntries: 10000, archiveMaxEntryBytes: 2147483648, archiveMaxTotalBytes: 2147483648,
   archiveMaxCompressionRatio: 200, archiveMaxImagePixels: 250000000,
 };
@@ -38,7 +38,7 @@ describe("ManageSettingsPage cache status", () => {
     expect(screen.getByText("156,263,337 bytes · 216 files")).toBeInTheDocument();
 		expect(screen.getByText("3.56 MiB")).toBeInTheDocument();
 		expect(screen.getByText("145 MiB")).toBeInTheDocument();
-		expect(screen.getByLabelText("Reclaimable cache limit (GiB)")).toHaveValue(50);
+		expect(screen.getByLabelText("可回收缓存上限（GiB）/ Reclaimable cache limit")).toHaveValue(50);
 		expect(screen.getByLabelText("Animated playback limit")).toHaveValue(12);
 		expect(screen.getByLabelText("Animation lock interval (ms)")).toHaveValue(800);
     expect(screen.getByLabelText("作者 / Author")).toBeChecked();
@@ -46,6 +46,9 @@ describe("ManageSettingsPage cache status", () => {
     expect(screen.queryByDisplayValue("/var/cache/cgm")).not.toBeInTheDocument();
 		fireEvent.change(screen.getByLabelText("Animation lock interval (ms)"), { target: { value: "699" } });
 		expect(screen.getByRole("button", { name: "Save all runtime settings" })).toBeDisabled();
+		fireEvent.click(screen.getByLabelText("启用自动扫描 / Enable automatic scans"));
+		expect(screen.getByLabelText("服务启动后扫描一次 / Scan once after service startup")).not.toBeChecked();
+		expect(screen.getByLabelText("扫描周期（分钟）/ Scan interval (minutes)")).toHaveValue(1440);
   });
 
   it("formats binary storage units without overstating precision", () => {

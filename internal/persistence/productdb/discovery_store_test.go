@@ -76,6 +76,112 @@ func TestFilesystemDiscoveryHonoursMarkerRootAndSuppressesNestedDiagnostics(t *t
 	}
 }
 
+func TestFilesystemDiscoveryRejectsRootChangedBeforeSnapshotCommit(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 14, 0, 0, 0, 0, time.UTC)
+	root := t.TempDir()
+	otherRoot := t.TempDir()
+	setRoot := filepath.Join(root, "Set")
+	if err := os.Mkdir(setRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(setRoot, ".cosplay-root"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(setRoot, "01.jpg"), []byte("image"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mediaLibrary, err := db.Libraries().Create(ctx, CreateLibraryInput{Name: "Root", RootPath: root, Enabled: true}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := &CandidateDiscoveryStore{db: db.DB}
+	store.beforeSnapshotCommit = func() {
+		if _, err := db.ExecContext(ctx, `UPDATE media_libraries SET root_path = ? WHERE id = ?`, otherRoot, mediaLibrary.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := store.DiscoverFilesystem(ctx, mediaLibrary.ID, now); !errors.Is(err, ErrDiscoveryStateChanged) {
+		t.Fatalf("discovery after library root change: %v", err)
+	}
+	var count int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM discovery_snapshots WHERE library_id = ?`, mediaLibrary.ID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("stale discovery snapshots = %d, want zero", count)
+	}
+}
+
+func TestFilesystemDiscoveryRejectsNewChildBoundaryBeforeSnapshotCommit(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 14, 0, 0, 0, 0, time.UTC)
+	root := t.TempDir()
+	childRoot := filepath.Join(root, "Child")
+	if err := os.Mkdir(childRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(childRoot, "01.jpg"), []byte("image"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mediaLibrary, err := db.Libraries().Create(ctx, CreateLibraryInput{Name: "Root", RootPath: root, Enabled: true}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := &CandidateDiscoveryStore{db: db.DB}
+	store.beforeSnapshotCommit = func() {
+		if _, err := db.Libraries().Create(ctx, CreateLibraryInput{Name: "Child", RootPath: childRoot, Enabled: true}, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := store.DiscoverFilesystem(ctx, mediaLibrary.ID, now); !errors.Is(err, ErrDiscoveryStateChanged) {
+		t.Fatalf("discovery after child boundary change: %v", err)
+	}
+	var count int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM discovery_snapshots WHERE library_id = ?`, mediaLibrary.ID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("stale discovery snapshots = %d, want zero", count)
+	}
+}
+
+func TestFilesystemDiscoveryUsesIgnoredSourcesAtSnapshotCommit(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 14, 0, 0, 0, 0, time.UTC)
+	root := t.TempDir()
+	setRoot := filepath.Join(root, "Set")
+	if err := os.Mkdir(setRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(setRoot, ".cosplay-root"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(setRoot, "01.jpg"), []byte("image"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mediaLibrary, err := db.Libraries().Create(ctx, CreateLibraryInput{Name: "Root", RootPath: root, Enabled: true}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := &CandidateDiscoveryStore{db: db.DB}
+	store.beforeSnapshotCommit = func() {
+		if err := store.IgnoreSource(ctx, &mediaLibrary.ID, nil, setRoot, "test", now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	snapshot, err := store.DiscoverFilesystem(ctx, mediaLibrary.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Candidates) != 0 || len(snapshot.Unassigned) != 0 {
+		t.Fatalf("ignored path leaked into snapshot: candidates=%#v unassigned=%#v", snapshot.Candidates, snapshot.Unassigned)
+	}
+}
+
 func TestFilesystemMarkerWithMultipleImmediateChildDirectoriesUsesRootName(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

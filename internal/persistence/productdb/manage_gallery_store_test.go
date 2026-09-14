@@ -31,6 +31,42 @@ func TestManageGalleryItemResolutionNeverCrossesAggregateBoundary(t *testing.T) 
 	}
 }
 
+func TestManageGalleryPageFiltersMissingMembersAcrossTheWholeDatabase(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	missingGallery, missingSource := createEmptySourceFixture(t, db, now)
+	if _, err := db.Galleries().AddItem(ctx, missingGallery.ID, missingSource.ID, CreateItemInput{
+		RelativePath: "old-name.jpg", MediaKind: gallery.MediaKindStaticImage,
+		ContentFormat: gallery.ContentFormatImage, ImageCategory: gallery.ImageCategoryPhoto,
+		Position: 1024, Availability: gallery.AvailabilityMissing, ProcessingState: gallery.ProcessingReady,
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+	_, _ = createEmptySourceFixture(t, db, now.Add(time.Minute))
+	page, err := db.Manage().GalleryPage(ctx, 1, "MISSING")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.TotalItems != 1 || len(page.Items) != 1 || page.Items[0].SetID != missingGallery.SetID || page.Items[0].MissingCount != 1 {
+		t.Fatalf("missing Gallery page = %#v", page)
+	}
+	if _, err := db.Manage().GalleryPage(ctx, 1, "NOT_A_FILTER"); err == nil {
+		t.Fatal("unsupported issue filter was accepted")
+	}
+	runID, err := db.Scans().Begin(ctx, missingSource.ID, now.Add(2*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Abort(ctx, runID, false, "SOURCE_NOT_FOUND", now.Add(3*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	detail, err := db.Manage().GalleryDetail(ctx, missingGallery.SetID)
+	if err != nil || len(detail.ScanRuns) != 1 || detail.ScanRuns[0].Status != "FAILED" || detail.ScanRuns[0].ErrorCode != "SOURCE_NOT_FOUND" {
+		t.Fatalf("Manage scan history=%#v err=%v", detail.ScanRuns, err)
+	}
+}
+
 func TestManageCoreEntitiesIncludeStandaloneCoserAndOrderedAccounts(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

@@ -247,7 +247,7 @@ type ManageGalleryRow {
   setID: ID! slug: String! state: GalleryState! title: String! contentRating: ContentRating
   metadataRevision: Int64! scanRevision: Int64! browsable: Boolean!
   sourceType: String! sourcePath: String! sourceAvailability: String! reconcileState: String! overLimit: Boolean!
-  itemCount: Int! missingCount: Int! pendingCount: Int! errorCount: Int! blockingIssues: Int!
+  itemCount: Int! missingCount: Int! pendingCount: Int! errorCount: Int! blockingIssues: Int! lastScanErrorCode: String! lastScanCompleted: String!
 }
 type ManageGalleryPage { items: [ManageGalleryRow!]! summary: ManageIssueSummary! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
 type ManageGalleryItem {
@@ -259,14 +259,16 @@ type ManageGalleryDetail {
   row: ManageGalleryRow! aliases: [String!]! description: String! shootDate: String! shootDatePrecision: ShootDatePrecision!
   photographerName: String! studioName: String! items: [ManageGalleryItem!]! credits: [ManageGalleryCredit!]! tags: [ManageGalleryTag!]! externalLinks: [ManageGalleryExternalLink!]!
   folderMatches: [ManageGalleryFolderMatch!]!
+  scanRuns: [ManageGalleryScanRun!]!
 }
+type ManageGalleryScanRun { id: ID! status: String! startedAt: String! completedAt: String! errorCode: String! }
 type ManageGalleryFolderMatch { kind: SearchEntityKind! uuid: ID! name: String! matchedName: String! workUUID: ID! workName: String! }
 type ManageGalleryCast { characterUUID: ID! characterName: String! workUUID: ID! workName: String! position: String! }
 type ManageGalleryCredit { coserUUID: ID! coserName: String! position: String! cast: [ManageGalleryCast!]! }
 type ManageGalleryTag { uuid: ID! name: String! position: String! }
 type ManageGalleryExternalLink { uuid: ID! type: String! label: String! url: String! position: String! }
 type ManageManifestConflict { path: String! baselineJSON: String! databaseJSON: String! fileJSON: String! }
-type ManageGalleryManifestState { status: String! path: String! manifestRevision: Int! metadataRevision: Int64! conflicts: [ManageManifestConflict!]! }
+type ManageGalleryManifestState { status: String! path: String! manifestRevision: Int! metadataRevision: Int64! pushAdded: Int! pushRemoved: Int! pushRetained: Int! pushUpdated: Int! conflicts: [ManageManifestConflict!]! }
 type ManageCoserManifestState { status: String! path: String! manifestRevision: Int! metadataRevision: Int64! conflicts: [ManageManifestConflict!]! }
 input UpdateGalleryMetadataInput {
   title: String! aliases: [String!]! description: String! shootDate: String! shootDatePrecision: ShootDatePrecision!
@@ -281,6 +283,13 @@ input GalleryExternalLinkInput { type: String! label: String! url: String! posit
 input ManifestConflictChoiceInput { path: String! choice: String! }
 type ManageRecognitionRule { id: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }
 type ManageLibrary { id: Int64! name: String! rootPath: String! enabled: Boolean! readOnly: Boolean! captureTimezone: String! rules: [ManageRecognitionRule!]! }
+type ManageLibrarySourceImpact { sourceID: Int64! galleryID: Int64! galleryTitle: String! sourcePath: String! currentLibraryID: Int64! suggestedOwnerID: Int64 }
+type ManageLibraryIgnoredSourceImpact { id: Int64! path: String! reason: String! }
+type ManageIgnoredSourceRecord { id: Int64! libraryID: Int64 setID: ID path: String! reason: String! createdAt: String! }
+type ManageIgnoredSourcePage { items: [ManageIgnoredSourceRecord!]! page: Int! pageSize: Int! total: Int! }
+type ManageIgnoredSourceRemovalPreview { record: ManageIgnoredSourceRecord! affectedLibraryIDs: [Int64!]! activeRunCount: Int! boundSourceCount: Int! revisionToken: String! }
+type ManageLibraryRuleImpact { id: Int64! name: String! }
+type ManageLibraryChangePreview { libraryID: Int64! currentRoot: String! proposedRoot: String! revisionToken: String! ignoredSourceCount: Int! ignoredSources: [ManageLibraryIgnoredSourceImpact!]! unassignedSourcePaths: [String!]! recognitionRules: [ManageLibraryRuleImpact!]! classificationRules: [ManageLibraryRuleImpact!]! exclusionRules: [ManageLibraryRuleImpact!]! automationMode: String! automationPolicyRevision: Int64! automationRunCount: Int! activeRunCount: Int! portableMappingCount: Int! scanningSourceCount: Int! childRoots: [String!]! proposedBoundaryConflicts: [String!]! impacts: [ManageLibrarySourceImpact!]! }
 type ManageLibraryAutomationPolicy { libraryID: Int64! mode: String! defaultContentRating: ContentRating excludeNewRootMedia: Boolean! autoImportArchives: Boolean! autoAcceptUniqueEntities: Boolean! autoAcceptMediaClassification: Boolean! autoActivate: Boolean! revision: Int64! }
 type ManageLibraryAutomationPreview { candidateCount: Int! autoCreateEligible: Int! draftCount: Int! activationReady: Int! needsReview: Int! }
 type ManageLibraryAutomationRun { id: Int64! libraryID: Int64! policyRevision: Int64! mode: String! status: String! cancellationRequested: Boolean! candidatesSeen: Int! draftsCreated: Int! scanned: Int! activated: Int! needsReview: Int! issueCount: Int! errorCode: String! startedAt: String! completedAt: String }
@@ -318,7 +327,7 @@ type ManageRuntimeSettings {
   galleryAnimatedPlaybackLimit: Int! galleryAnimatedLockIntervalMS: Int!
   relatedLimit: Int! tagParentWeight: Float! tagMinimumScore: Float! tagMaximumDepth: Int!
   randomLimit: Int! randomStaticQuota: Float! randomGIFQuota: Float! randomVideoQuota: Float! randomGalleryRepeatDecay: Float!
-  enhancedCacheMaximumBytes: Int64! minimumFreeBytes: Int64! minimumFreePercent: Float! automaticScanEnabled: Boolean! automaticSchedulesSuspended: Boolean!
+  enhancedCacheMaximumBytes: Int64! minimumFreeBytes: Int64! minimumFreePercent: Float! automaticScanEnabled: Boolean! automaticScanOnStartup: Boolean! automaticScanIntervalMinutes: Int! automaticSchedulesSuspended: Boolean!
   dailyBackupEnabled: Boolean! dailyBackupRetention: Int!
   archiveMaxEntries: Int! archiveMaxEntryBytes: Int64! archiveMaxTotalBytes: Int64! archiveMaxCompressionRatio: Float! archiveMaxImagePixels: Int64!
 }
@@ -345,7 +354,7 @@ input RuntimeSettingsInput {
   galleryAnimatedPlaybackLimit: Int! galleryAnimatedLockIntervalMS: Int!
   relatedLimit: Int! tagParentWeight: Float! tagMinimumScore: Float! tagMaximumDepth: Int!
   randomLimit: Int! randomStaticQuota: Float! randomGIFQuota: Float! randomVideoQuota: Float! randomGalleryRepeatDecay: Float!
-  enhancedCacheMaximumBytes: Int64! minimumFreeBytes: Int64! minimumFreePercent: Float! automaticScanEnabled: Boolean! automaticSchedulesSuspended: Boolean!
+  enhancedCacheMaximumBytes: Int64! minimumFreeBytes: Int64! minimumFreePercent: Float! automaticScanEnabled: Boolean! automaticScanOnStartup: Boolean! automaticScanIntervalMinutes: Int! automaticSchedulesSuspended: Boolean!
   dailyBackupEnabled: Boolean! dailyBackupRetention: Int!
   archiveMaxEntries: Int! archiveMaxEntryBytes: Int64! archiveMaxTotalBytes: Int64! archiveMaxCompressionRatio: Float! archiveMaxImagePixels: Int64!
 }
@@ -440,11 +449,14 @@ type Query {
   favoriteGalleries(scope: BrowseScope! = LIST, page: Int! = 1): GalleryPage!
   galleryHistory(scope: BrowseScope! = LIST, page: Int! = 1): GalleryPage!
   favoriteMedia(scope: BrowseScope! = LIST, page: Int! = 1, ratingSort: Boolean! = false): MediaPage!
-  manageGalleries(page: Int! = 1): ManageGalleryPage!
+  manageGalleries(page: Int! = 1, issue: String! = "ALL"): ManageGalleryPage!
   manageGallery(setID: ID!): ManageGalleryDetail!
   manageGalleryManifest(setID: ID!): ManageGalleryManifestState!
   manageCoserManifest(coserUUID: ID!): ManageCoserManifestState!
   manageLibraries: [ManageLibrary!]!
+  manageIgnoredSources(libraryID: Int64, page: Int! = 1, query: String! = ""): ManageIgnoredSourcePage!
+  previewIgnoredSourceRemoval(id: Int64!): ManageIgnoredSourceRemovalPreview!
+  previewMediaLibraryChange(libraryID: Int64!, newRoot: String! = ""): ManageLibraryChangePreview!
   manageLibraryAutomation(libraryID: Int64!): ManageLibraryAutomation!
   manageMediaClassificationRules(libraryID: Int64): [ManageMediaClassificationRule!]!
   manageMediaClassificationSuggestions(libraryID: Int64, status: String! = "PENDING"): [ManageMediaClassificationSuggestion!]!
@@ -472,6 +484,10 @@ type Query {
 }
 
 type Mutation {
+	forgetGalleryItem(setID: ID!, itemUUID: ID!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
+	forgetMissingGalleryItems(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
+	replaceMissingGalleryItem(setID: ID!, missingItemUUID: ID!, replacementItemUUID: ID!, expectedMetadataRevision: Int64!, expectedScanRevision: Int64!): ManageGalleryDetail!
+	confirmGallerySourceRebind(candidateID: Int64!, allowAccessibleDuplicate: Boolean!): ManageGalleryDetail!
   setGalleryFavorite(setID: ID!, favorite: Boolean!): PersonalStateResult!
   setGalleryRating(setID: ID!, ratingHalfSteps: Int, expectedMetadataRevision: Int64!): PersonalStateResult!
   setItemFavorite(itemUUID: ID!, favorite: Boolean!): PersonalStateResult!
@@ -489,6 +505,9 @@ type Mutation {
   setGalleryCoverItem(setID: ID!, itemUUID: ID!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
   resetGalleryCover(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
   createMediaLibrary(input: CreateMediaLibraryInput!): ManageLibrary!
+  transferMediaLibrarySource(sourceID: Int64!, expectedLibraryID: Int64!, targetLibraryID: Int64): Boolean!
+  applyMediaLibraryChange(libraryID: Int64!, newRoot: String!, revisionToken: String!, password: String!, confirmation: String!): Boolean!
+  revokeIgnoredSource(id: Int64!, revisionToken: String!, password: String!, confirmation: String!): Boolean!
   createRecognitionRule(input: CreateRecognitionRuleInput!): ManageRecognitionRule!
   updateRecognitionRule(input: UpdateRecognitionRuleInput!): ManageRecognitionRule!
   deleteRecognitionRule(id: Int64!): Boolean!

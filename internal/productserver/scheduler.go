@@ -19,12 +19,14 @@ const automaticScanTaskKey = "AUTOMATIC_SCAN"
 
 func (s *Server) runSchedulerLoop(ctx context.Context) {
 	s.runDailyBackup(ctx, time.Now())
-	s.runAutomaticScan(ctx, time.Now())
+	s.runAutomaticStartupScan(ctx, time.Now())
 	s.runCacheMaintenance(ctx, time.Now())
 	s.runVideoProbeBackfill(ctx, time.Now())
 	hourly := time.NewTicker(time.Hour)
+	scanTicker := time.NewTicker(time.Minute)
 	cacheTicker := time.NewTicker(time.Minute)
 	defer hourly.Stop()
+	defer scanTicker.Stop()
 	defer cacheTicker.Stop()
 	for {
 		select {
@@ -32,11 +34,20 @@ func (s *Server) runSchedulerLoop(ctx context.Context) {
 			return
 		case now := <-hourly.C:
 			s.runDailyBackup(ctx, now)
+		case now := <-scanTicker.C:
 			s.runAutomaticScan(ctx, now)
 		case now := <-cacheTicker.C:
 			s.runCacheMaintenance(ctx, now)
 			s.runVideoProbeBackfill(ctx, now)
 		}
+	}
+}
+
+func (s *Server) runAutomaticStartupScan(ctx context.Context, now time.Time) {
+	if err := s.RunAutomaticStartupScanOnce(ctx, now); err != nil &&
+		!errors.Is(err, productdb.ErrScheduledOperationNotDue) &&
+		ctx.Err() == nil {
+		// The audit stores only technical counts and error codes.
 	}
 }
 
@@ -161,6 +172,18 @@ func (s *Server) RunDailyBackupOnce(ctx context.Context, now time.Time) error {
 // reconciliation for enabled libraries. Automatic scanning is opt-in and uses
 // the same atomic source scan implementation as the explicit Manage action.
 func (s *Server) RunAutomaticScanOnce(ctx context.Context, now time.Time) error {
+	return s.runAutomaticScanOnce(ctx, now, false)
+}
+
+// RunAutomaticStartupScanOnce runs the same bounded scan pipeline once during
+// process startup when the owner explicitly enabled that trigger. It resets
+// the periodic interval from this successful run and never bypasses restore
+// suspension or maintenance mode.
+func (s *Server) RunAutomaticStartupScanOnce(ctx context.Context, now time.Time) error {
+	return s.runAutomaticScanOnce(ctx, now, true)
+}
+
+func (s *Server) runAutomaticScanOnce(ctx context.Context, now time.Time, startup bool) error {
 	s.operationMu.Lock()
 	defer s.operationMu.Unlock()
 	runtime, err := s.Database.Settings().Find(ctx)
@@ -168,6 +191,9 @@ func (s *Server) RunAutomaticScanOnce(ctx context.Context, now time.Time) error 
 		return err
 	}
 	if !runtime.AutomaticScanEnabled || runtime.AutomaticSchedulesSuspended {
+		return productdb.ErrScheduledOperationNotDue
+	}
+	if startup && !runtime.AutomaticScanOnStartup {
 		return productdb.ErrScheduledOperationNotDue
 	}
 	state, err := s.Database.Operations().Maintenance(ctx)
@@ -178,7 +204,13 @@ func (s *Server) RunAutomaticScanOnce(ctx context.Context, now time.Time) error 
 		return productdb.ErrScheduledOperationNotDue
 	}
 	const owner = "local-automatic-scan"
-	if err := s.Database.Operations().ClaimScheduled(ctx, automaticScanTaskKey, owner, now.Add(-24*time.Hour), 12*time.Hour, now); err != nil {
+	dueBefore := now.Add(-time.Duration(runtime.AutomaticScanIntervalMinutes) * time.Minute)
+	if startup {
+		// A startup trigger is explicitly requested and therefore may run before
+		// the periodic interval expires. The shared lease still prevents overlap.
+		dueBefore = now
+	}
+	if err := s.Database.Operations().ClaimScheduled(ctx, automaticScanTaskKey, owner, dueBefore, 12*time.Hour, now); err != nil {
 		return err
 	}
 	libraries, err := s.Database.Libraries().List(ctx)

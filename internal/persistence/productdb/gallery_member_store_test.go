@@ -138,6 +138,11 @@ func TestGalleryItemForgetRequiresSafeStateAndTombstonesUUID(t *testing.T) {
 	if _, err := db.Galleries().SetItemExcluded(ctx, item.ID, true, current.MetadataRevision, now); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO gallery_covers(gallery_id,preferred_kind,preferred_item_uuid,
+		fallback_item_uuid,effective_kind,effective_item_uuid,warning_code,updated_at_utc)
+		VALUES(?,'ITEM',?,?,'ITEM',?,'',?)`, created.ID, item.UUID, item.UUID, item.UUID, formatTime(now)); err != nil {
+		t.Fatal(err)
+	}
 	current, _ = db.Galleries().Find(ctx, created.ID)
 	if err := db.Galleries().ForgetItem(ctx, item.ID, current.MetadataRevision, now.Add(time.Minute)); err != nil {
 		t.Fatal(err)
@@ -151,6 +156,142 @@ func TestGalleryItemForgetRequiresSafeStateAndTombstonesUUID(t *testing.T) {
 	}
 	if record.State != PortableUUIDTombstone || record.Kind != portableid.KindGalleryItem {
 		t.Fatalf("forgotten UUID record = %#v", record)
+	}
+	var preferredKind, effectiveKind string
+	var coverReferences int
+	if err := db.QueryRowContext(ctx, `SELECT preferred_kind,effective_kind,
+		(preferred_item_uuid IS NOT NULL)+(fallback_item_uuid IS NOT NULL)+(effective_item_uuid IS NOT NULL)
+		FROM gallery_covers WHERE gallery_id=?`, created.ID).Scan(&preferredKind, &effectiveKind, &coverReferences); err != nil ||
+		preferredKind != "NONE" || effectiveKind != "NONE" || coverReferences != 0 {
+		t.Fatalf("forgotten cover state=%s/%s/%d err=%v", preferredKind, effectiveKind, coverReferences, err)
+	}
+}
+
+func TestForgetMissingGalleryItemsIsAtomicAndLeavesAvailableMembers(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 10, 11, 0, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	var missingUUIDs []string
+	for index, availability := range []gallery.AvailabilityState{gallery.AvailabilityMissing, gallery.AvailabilityAvailable, gallery.AvailabilityMissing} {
+		item, err := db.Galleries().AddItem(ctx, created.ID, source.ID, CreateItemInput{
+			RelativePath: fmt.Sprintf("%d.jpg", index), MediaKind: gallery.MediaKindStaticImage,
+			ImageCategory: gallery.ImageCategoryPhoto, Position: int64(index+1) * 1024,
+			Availability: availability, ProcessingState: gallery.ProcessingReady,
+		}, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if availability == gallery.AvailabilityMissing {
+			missingUUIDs = append(missingUUIDs, item.UUID)
+		}
+	}
+	current, err := db.Galleries().Find(ctx, created.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	forgotten, err := db.Galleries().ForgetMissingItems(ctx, created.ID, current.MetadataRevision, now.Add(time.Minute))
+	if err != nil || forgotten != 2 {
+		t.Fatalf("forgotten=%d err=%v", forgotten, err)
+	}
+	items := loadGalleryItemsForTest(t, db, created.ID)
+	if len(items) != 1 || items[0].Availability != gallery.AvailabilityAvailable {
+		t.Fatalf("remaining items=%#v", items)
+	}
+	for _, uuid := range missingUUIDs {
+		record, err := db.UUIDRegistry().Lookup(ctx, uuid)
+		if err != nil || record.State != PortableUUIDTombstone {
+			t.Fatalf("missing UUID lifecycle=%#v err=%v", record, err)
+		}
+	}
+	updated, err := db.Galleries().Find(ctx, created.ID)
+	if err != nil || updated.MetadataRevision != current.MetadataRevision+1 || updated.ScanRevision != current.ScanRevision+1 {
+		t.Fatalf("updated Gallery=%#v err=%v", updated, err)
+	}
+}
+
+func TestReplaceMissingGalleryItemPreservesOldIdentityAndBusinessState(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	missing, err := db.Galleries().AddItem(ctx, created.ID, source.ID, CreateItemInput{
+		RelativePath: "old/portrait.jpg", MediaKind: gallery.MediaKindStaticImage,
+		ImageCategory: gallery.ImageCategoryPhoto, Position: 1024, Caption: "retained caption",
+		Availability: gallery.AvailabilityAvailable, ProcessingState: gallery.ProcessingReady,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replacement, err := db.Galleries().AddItem(ctx, created.ID, source.ID, CreateItemInput{
+		RelativePath: "new/portrait-hq.jpg", MediaKind: gallery.MediaKindStaticImage,
+		ImageCategory: gallery.ImageCategoryPhoto, Position: 2048,
+		Availability: gallery.AvailabilityAvailable, ProcessingState: gallery.ProcessingPending,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE gallery_items SET availability_state='MISSING',excluded=1,
+		byte_size=100,quick_fingerprint='old-quick',full_fingerprint='old-full' WHERE id=?;
+		UPDATE gallery_items SET byte_size=400,quick_fingerprint='new-quick',full_fingerprint='new-full' WHERE id=?;
+		INSERT INTO gallery_item_personal_states(gallery_item_id,favorite,favorited_at_utc) VALUES(?,1,?)`,
+		missing.ID, replacement.ID, missing.ID, formatTime(now)); err != nil {
+		t.Fatal(err)
+	}
+	current, err := db.Galleries().Find(ctx, created.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Galleries().ReplaceMissingItem(ctx, missing.ID, replacement.ID, current.MetadataRevision, current.ScanRevision, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	adopted, err := db.Galleries().FindItem(ctx, missing.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if adopted.UUID != missing.UUID || adopted.RelativePath != replacement.RelativePath || adopted.Caption != "retained caption" ||
+		!adopted.Excluded || adopted.Position != missing.Position || adopted.Availability != gallery.AvailabilityAvailable ||
+		adopted.ProcessingState != gallery.ProcessingPending || adopted.ByteSize != 400 || adopted.FullFingerprint != "new-full" ||
+		adopted.ContentRevision != missing.ContentRevision+1 {
+		t.Fatalf("adopted GalleryItem=%#v", adopted)
+	}
+	if _, err := db.Galleries().FindItem(ctx, replacement.ID); !errors.Is(err, ErrGalleryItemNotFound) {
+		t.Fatalf("temporary replacement still exists: %v", err)
+	}
+	record, err := db.UUIDRegistry().Lookup(ctx, replacement.UUID)
+	if err != nil || record.State != PortableUUIDTombstone {
+		t.Fatalf("replacement UUID lifecycle=%#v err=%v", record, err)
+	}
+	var favorite int
+	if err := db.QueryRowContext(ctx, `SELECT favorite FROM gallery_item_personal_states WHERE gallery_item_id=?`, missing.ID).Scan(&favorite); err != nil || favorite != 1 {
+		t.Fatalf("retained personal state=%d err=%v", favorite, err)
+	}
+	updated, err := db.Galleries().Find(ctx, created.ID)
+	if err != nil || updated.MetadataRevision != current.MetadataRevision+1 || updated.ScanRevision != current.ScanRevision+1 {
+		t.Fatalf("updated Gallery=%#v err=%v", updated, err)
+	}
+}
+
+func TestReplaceMissingGalleryItemRejectsEditedReplacement(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 10, 12, 30, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	missing, _ := db.Galleries().AddItem(ctx, created.ID, source.ID, CreateItemInput{
+		RelativePath: "old.jpg", MediaKind: gallery.MediaKindStaticImage, ImageCategory: gallery.ImageCategoryPhoto,
+		Position: 1024, Availability: gallery.AvailabilityMissing, ProcessingState: gallery.ProcessingReady,
+	}, now)
+	replacement, _ := db.Galleries().AddItem(ctx, created.ID, source.ID, CreateItemInput{
+		RelativePath: "new.jpg", MediaKind: gallery.MediaKindStaticImage, ImageCategory: gallery.ImageCategoryPhoto,
+		Position: 2048, Caption: "already reviewed", Availability: gallery.AvailabilityAvailable, ProcessingState: gallery.ProcessingReady,
+	}, now)
+	current, _ := db.Galleries().Find(ctx, created.ID)
+	err := db.Galleries().ReplaceMissingItem(ctx, missing.ID, replacement.ID, current.MetadataRevision, current.ScanRevision, now)
+	if !errors.Is(err, ErrGalleryItemReplacementInvalid) {
+		t.Fatalf("edited replacement error=%v", err)
+	}
+	if _, err := db.Galleries().FindItem(ctx, replacement.ID); err != nil {
+		t.Fatalf("rejected replacement was modified: %v", err)
 	}
 }
 

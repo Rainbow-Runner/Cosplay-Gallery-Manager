@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -261,6 +262,7 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 	})
 	seenItemIDs := make(map[int64]struct{}, len(observations))
 	claimedPortablePaths := make(map[string]bool, len(options.PortableItemUUIDByPath))
+	manifestBusinessChanged := false
 	for _, observation := range observations {
 		if item := byPath[observation.RelativePath]; item != nil {
 			if desired := options.PortableItemUUIDByPath[observation.RelativePath]; desired != "" {
@@ -283,6 +285,7 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 				if err := rebindObservedItem(ctx, tx, item, observation, scanRunID, now); err != nil {
 					return err
 				}
+				manifestBusinessChanged = true
 				seenItemIDs[item.ID] = struct{}{}
 				continue
 			}
@@ -300,6 +303,7 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 		if err != nil {
 			return err
 		}
+		manifestBusinessChanged = true
 		if ruleExcluded && !rootExcluded {
 			if err := recordAppliedMediaExclusion(ctx, tx, galleryID, itemUUID, ruleExclusion.rule, ruleExclusion.matchedValue, now); err != nil {
 				return err
@@ -340,6 +344,11 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 	}
 	if err := syncScanItemSuggestions(ctx, tx, galleryID, sourceID, now); err != nil {
 		return err
+	}
+	if manifestBusinessChanged {
+		if _, err := tx.ExecContext(ctx, `UPDATE gallery_manifest_sync SET status='DB_DIRTY' WHERE gallery_id=?`, galleryID); err != nil {
+			return err
+		}
 	}
 	if err := enqueueScanProcessingJobs(ctx, tx, galleryID, now); err != nil {
 		return err
@@ -467,7 +476,7 @@ func (s *ScanStore) RunWithOptions(
 		result, err = sourcescan.ScanDirectory(ctx, source.Path)
 	}
 	if err != nil {
-		_ = s.Abort(ctx, runID, false, "SOURCE_READ_FAILED", now)
+		_ = s.Abort(ctx, runID, false, sourceReadErrorCode(err), now)
 		_ = (&GalleryStore{db: s.db}).SetSourceHealth(
 			ctx, sourceID, gallery.AvailabilityUnreadable, gallery.ReconcileError, false, now,
 		)
@@ -493,6 +502,17 @@ func (s *ScanStore) RunWithOptions(
 	}
 	_, err = (&CoverStore{db: s.db, random: rand.Reader}).Initialize(ctx, source.GalleryID, now)
 	return err
+}
+
+func sourceReadErrorCode(err error) string {
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		return "SOURCE_NOT_FOUND"
+	case errors.Is(err, os.ErrPermission):
+		return "SOURCE_PERMISSION_DENIED"
+	default:
+		return "SOURCE_READ_FAILED"
+	}
 }
 
 func loadScanObservations(ctx context.Context, tx *sql.Tx, scanRunID int64) ([]ScanObservation, error) {

@@ -17,21 +17,44 @@ type ManageStore struct{ db *sql.DB }
 
 func (db *Database) Manage() *ManageStore { return &ManageStore{db: db.DB} }
 
-func (s *ManageStore) GalleryPage(ctx context.Context, page int) (manage.GalleryPage, error) {
+func (s *ManageStore) GalleryPage(ctx context.Context, page int, issue string) (manage.GalleryPage, error) {
 	if page < 1 || page > 1_000_000 {
 		return manage.GalleryPage{}, errors.New("Manage page is out of range")
+	}
+	condition := "1=1"
+	switch issue {
+	case "", "ALL":
+	case "DRAFT":
+		condition = "gallery.state='DRAFT'"
+	case "UNAVAILABLE":
+		condition = "source.id IS NULL OR source.availability_state<>'AVAILABLE'"
+	case "MISSING":
+		condition = "EXISTS(SELECT 1 FROM gallery_items filtered_item WHERE filtered_item.gallery_id=gallery.id AND filtered_item.availability_state='MISSING')"
+	case "PROCESSING_ERROR":
+		condition = "EXISTS(SELECT 1 FROM gallery_items filtered_item WHERE filtered_item.gallery_id=gallery.id AND filtered_item.processing_state='ERROR')"
+	case "BLOCKING":
+		condition = "EXISTS(SELECT 1 FROM gallery_source_issues filtered_issue WHERE filtered_issue.source_id=source.id AND filtered_issue.severity='BLOCKING' AND filtered_issue.resolved_at_utc IS NULL)"
+	case "OVER_LIMIT":
+		condition = "source.over_limit=1"
+	default:
+		return manage.GalleryPage{}, errors.New("unsupported Manage Gallery issue filter")
 	}
 	result := manage.GalleryPage{Page: page, PageSize: 24}
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*),
 		COALESCE(SUM(CASE WHEN gallery.state='DRAFT' THEN 1 ELSE 0 END),0),COALESCE(SUM(CASE WHEN source.over_limit=1 THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN source.availability_state<>'AVAILABLE' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN source.id IS NULL OR source.availability_state<>'AVAILABLE' THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN EXISTS(SELECT 1 FROM gallery_source_issues issue WHERE issue.source_id=source.id AND issue.severity='BLOCKING' AND issue.resolved_at_utc IS NULL) THEN 1 ELSE 0 END),0),
 		COALESCE(SUM((SELECT COUNT(*) FROM gallery_items item WHERE item.gallery_id=gallery.id AND item.availability_state='MISSING')),0)
 		FROM galleries gallery LEFT JOIN gallery_sources source ON source.gallery_id=gallery.id`).Scan(&result.TotalItems, &result.Summary.Draft, &result.Summary.OverLimit, &result.Summary.Unavailable, &result.Summary.Blocking, &result.Summary.MissingItem); err != nil {
 		return manage.GalleryPage{}, err
 	}
+	if condition != "1=1" {
+		if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM galleries gallery LEFT JOIN gallery_sources source ON source.gallery_id=gallery.id WHERE `+condition).Scan(&result.TotalItems); err != nil {
+			return manage.GalleryPage{}, err
+		}
+	}
 	result.TotalPages = int(math.Ceil(float64(result.TotalItems) / 24))
-	rows, err := s.db.QueryContext(ctx, manageGalleryRowSelect+` ORDER BY CASE WHEN gallery.state='DRAFT' THEN 0 WHEN source.over_limit=1 OR source.availability_state<>'AVAILABLE' THEN 1 ELSE 2 END,gallery.updated_at_utc DESC,gallery.id DESC LIMIT ? OFFSET ?`, 24, (page-1)*24)
+	rows, err := s.db.QueryContext(ctx, manageGalleryRowSelect+` WHERE `+condition+` ORDER BY CASE WHEN gallery.state='DRAFT' THEN 0 WHEN source.over_limit=1 OR source.availability_state<>'AVAILABLE' THEN 1 WHEN EXISTS(SELECT 1 FROM gallery_items priority_item WHERE priority_item.gallery_id=gallery.id AND priority_item.availability_state='MISSING') THEN 2 ELSE 3 END,gallery.updated_at_utc DESC,gallery.id DESC LIMIT ? OFFSET ?`, 24, (page-1)*24)
 	if err != nil {
 		return manage.GalleryPage{}, err
 	}
@@ -95,6 +118,23 @@ func (s *ManageStore) GalleryDetail(ctx context.Context, setID string) (manage.G
 		return manage.GalleryDetail{}, err
 	}
 	if err := items.Close(); err != nil {
+		return manage.GalleryDetail{}, err
+	}
+	scanRuns, err := s.db.QueryContext(ctx, `SELECT CAST(run.id AS TEXT),run.status,run.started_at_utc,
+		COALESCE(run.completed_at_utc,''),run.error_code FROM gallery_scan_runs run
+		JOIN gallery_sources source ON source.id=run.source_id WHERE source.gallery_id=? ORDER BY run.id DESC LIMIT 20`, galleryID)
+	if err != nil {
+		return manage.GalleryDetail{}, err
+	}
+	for scanRuns.Next() {
+		var run manage.GalleryScanRun
+		if err := scanRuns.Scan(&run.ID, &run.Status, &run.StartedAt, &run.CompletedAt, &run.ErrorCode); err != nil {
+			scanRuns.Close()
+			return manage.GalleryDetail{}, err
+		}
+		result.ScanRuns = append(result.ScanRuns, run)
+	}
+	if err := scanRuns.Close(); err != nil {
 		return manage.GalleryDetail{}, err
 	}
 	credits, err := s.db.QueryContext(ctx, `SELECT credit.id,credit.coser_uuid,coser.name,credit.position FROM gallery_credits credit JOIN cosers coser ON coser.uuid=credit.coser_uuid WHERE credit.gallery_id=? ORDER BY credit.position,credit.id`, galleryID)
@@ -324,7 +364,9 @@ const manageGalleryRowSelect = `SELECT gallery.set_id,gallery.slug,gallery.state
 	COALESCE(source.source_type,''),COALESCE(source.source_path,''),COALESCE(source.availability_state,'MISSING'),COALESCE(source.reconcile_state,'NEVER_SCANNED'),COALESCE(source.over_limit,0),
 	(SELECT COUNT(*) FROM gallery_items item WHERE item.gallery_id=gallery.id),(SELECT COUNT(*) FROM gallery_items item WHERE item.gallery_id=gallery.id AND item.availability_state='MISSING'),
 	(SELECT COUNT(*) FROM gallery_items item WHERE item.gallery_id=gallery.id AND item.processing_state IN ('PENDING','PROCESSING')),(SELECT COUNT(*) FROM gallery_items item WHERE item.gallery_id=gallery.id AND item.processing_state='ERROR'),
-	(SELECT COUNT(*) FROM gallery_source_issues issue WHERE issue.source_id=source.id AND issue.severity='BLOCKING' AND issue.resolved_at_utc IS NULL)
+	(SELECT COUNT(*) FROM gallery_source_issues issue WHERE issue.source_id=source.id AND issue.severity='BLOCKING' AND issue.resolved_at_utc IS NULL),
+	COALESCE((SELECT run.error_code FROM gallery_scan_runs run WHERE run.source_id=source.id ORDER BY run.id DESC LIMIT 1),''),
+	COALESCE((SELECT run.completed_at_utc FROM gallery_scan_runs run WHERE run.source_id=source.id ORDER BY run.id DESC LIMIT 1),'')
 	FROM galleries gallery LEFT JOIN gallery_sources source ON source.gallery_id=gallery.id`
 
 type manageRowScanner interface{ Scan(...any) error }
@@ -332,7 +374,7 @@ type manageRowScanner interface{ Scan(...any) error }
 func scanManageGalleryRow(scanner manageRowScanner) (manage.GalleryRow, error) {
 	var row manage.GalleryRow
 	var browsable, overLimit int
-	err := scanner.Scan(&row.SetID, &row.Slug, &row.State, &row.Title, &row.ContentRating, &row.MetadataRevision, &row.ScanRevision, &browsable, &row.SourceType, &row.SourcePath, &row.SourceAvailability, &row.ReconcileState, &overLimit, &row.ItemCount, &row.MissingCount, &row.PendingCount, &row.ErrorCount, &row.BlockingIssues)
+	err := scanner.Scan(&row.SetID, &row.Slug, &row.State, &row.Title, &row.ContentRating, &row.MetadataRevision, &row.ScanRevision, &browsable, &row.SourceType, &row.SourcePath, &row.SourceAvailability, &row.ReconcileState, &overLimit, &row.ItemCount, &row.MissingCount, &row.PendingCount, &row.ErrorCount, &row.BlockingIssues, &row.LastScanErrorCode, &row.LastScanCompleted)
 	row.Browsable = browsable == 1
 	row.OverLimit = overLimit == 1
 	return row, err

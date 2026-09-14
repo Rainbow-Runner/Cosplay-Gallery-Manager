@@ -6,7 +6,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { MANAGE_GALLERY } from "../api/manage";
+import { MANAGE_GALLERY, MANAGE_GALLERY_MANIFEST } from "../api/manage";
 import { ManageGalleryEditorPage } from "./ManageGalleryEditorPage";
 
 afterEach(cleanup);
@@ -19,7 +19,7 @@ const gallery = {
     contentRating: "NON_ADULT", metadataRevision: 7, scanRevision: 1, browsable: false,
     sourceType: "DIRECTORY", sourcePath: "/media/Alice Fate Saber", sourceAvailability: "AVAILABLE",
     reconcileState: "CLEAN", overLimit: false, itemCount: 1, missingCount: 0,
-    pendingCount: 0, errorCount: 0, blockingIssues: 0,
+    pendingCount: 0, errorCount: 0, blockingIssues: 0, lastScanErrorCode: "", lastScanCompleted: "",
   },
   aliases: [], description: "", shootDate: "", shootDatePrecision: "UNKNOWN",
   photographerName: "", studioName: "", items: [], tags: [], externalLinks: [],
@@ -32,6 +32,7 @@ const gallery = {
     { kind: "WORK", uuid: "work-1", name: "Fate", matchedName: "Fate", workUUID: "work-1", workName: "Fate" },
     { kind: "CHARACTER", uuid: "character-1", name: "Saber", matchedName: "Saber", workUUID: "work-1", workName: "Fate" },
   ],
+  scanRuns: [],
 };
 
 function renderPage(mocks: ReadonlyArray<MockedResponse>, tab = "cast") {
@@ -69,4 +70,33 @@ describe("ManageGalleryEditorPage relations", () => {
     expect(option).toBeChecked();
     expect(screen.getByText(/Existing Restore\/Exclude choices are never overwritten/)).toBeInTheDocument();
   });
+
+  it("makes missing members explicit and offers a database-only forget action", async () => {
+		const missing = { ...gallery, row: { ...gallery.row, itemCount: 2, missingCount: 1 }, items: [
+			{ uuid: "missing-item", relativePath: "old/01.jpg", mediaKind: "STATIC_IMAGE", contentFormat: "IMAGE", imageCategory: "PHOTO", position: "1024", caption: "", excluded: false, availability: "MISSING", processingState: "READY", byteSize: 100, videoProbeState: "", videoErrorCode: "", videoContainer: "", videoDurationSeconds: 0, videoWidth: 0, videoHeight: 0, videoCodec: "", audioCodec: "" },
+			{ uuid: "new-item", relativePath: "new/01.jpg", mediaKind: "STATIC_IMAGE", contentFormat: "IMAGE", imageCategory: "PHOTO", position: "2048", caption: "", excluded: false, availability: "AVAILABLE", processingState: "PENDING", byteSize: 200, videoProbeState: "", videoErrorCode: "", videoContainer: "", videoDurationSeconds: 0, videoWidth: 0, videoHeight: 0, videoCodec: "", audioCodec: "" },
+		] };
+		renderPage([{ request: { query: MANAGE_GALLERY, variables: { setID } }, result: { data: { manageGallery: missing } } }], "media");
+
+		expect(await screen.findByText("2 members · 1 missing · folder paths are relative to the Gallery root")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Forget record" })).toBeInTheDocument();
+		fireEvent.click(screen.getByRole("button", { name: "Replace file…" }));
+		expect(screen.getByRole("heading", { name: /Confirm media replacement/ })).toBeInTheDocument();
+		expect(screen.getByRole("option", { name: /new\/01.jpg/ })).toBeInTheDocument();
+		fireEvent.click(screen.getByRole("checkbox", { name: /Missing only/ }));
+		expect(screen.getByText("old")).toBeInTheDocument();
+		expect(screen.queryByText("new")).not.toBeInTheDocument();
+	});
+
+	it("shows the portable member diff before an explicit Manifest Push", async () => {
+		renderPage([
+			{ request: { query: MANAGE_GALLERY, variables: { setID } }, result: { data: { manageGallery: gallery } } },
+			{ request: { query: MANAGE_GALLERY_MANIFEST, variables: { setID } }, result: { data: { manageGalleryManifest: {
+				__typename: "ManageGalleryManifestState", status: "DB_DIRTY", path: "/media/.cosplay.json",
+				manifestRevision: 2, metadataRevision: 7, pushAdded: 1, pushRemoved: 2, pushRetained: 3, pushUpdated: 1, conflicts: [],
+			} } } },
+		], "manifest");
+
+		expect(await screen.findByText("+1 added · −2 removed · 3 retained · 1 updated")).toBeInTheDocument();
+	});
 });

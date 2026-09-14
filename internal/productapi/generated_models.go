@@ -421,6 +421,7 @@ type ManageGalleryDetail struct {
 	Tags               []*ManageGalleryTag          `json:"tags"`
 	ExternalLinks      []*ManageGalleryExternalLink `json:"externalLinks"`
 	FolderMatches      []*ManageGalleryFolderMatch  `json:"folderMatches"`
+	ScanRuns           []*ManageGalleryScanRun      `json:"scanRuns"`
 }
 
 type ManageGalleryExternalLink struct {
@@ -467,6 +468,10 @@ type ManageGalleryManifestState struct {
 	Path             string                    `json:"path"`
 	ManifestRevision int                       `json:"manifestRevision"`
 	MetadataRevision int64                     `json:"metadataRevision"`
+	PushAdded        int                       `json:"pushAdded"`
+	PushRemoved      int                       `json:"pushRemoved"`
+	PushRetained     int                       `json:"pushRetained"`
+	PushUpdated      int                       `json:"pushUpdated"`
 	Conflicts        []*ManageManifestConflict `json:"conflicts"`
 }
 
@@ -498,12 +503,46 @@ type ManageGalleryRow struct {
 	PendingCount       int            `json:"pendingCount"`
 	ErrorCount         int            `json:"errorCount"`
 	BlockingIssues     int            `json:"blockingIssues"`
+	LastScanErrorCode  string         `json:"lastScanErrorCode"`
+	LastScanCompleted  string         `json:"lastScanCompleted"`
+}
+
+type ManageGalleryScanRun struct {
+	ID          string `json:"id"`
+	Status      string `json:"status"`
+	StartedAt   string `json:"startedAt"`
+	CompletedAt string `json:"completedAt"`
+	ErrorCode   string `json:"errorCode"`
 }
 
 type ManageGalleryTag struct {
 	UUID     string `json:"uuid"`
 	Name     string `json:"name"`
 	Position string `json:"position"`
+}
+
+type ManageIgnoredSourcePage struct {
+	Items    []*ManageIgnoredSourceRecord `json:"items"`
+	Page     int                          `json:"page"`
+	PageSize int                          `json:"pageSize"`
+	Total    int                          `json:"total"`
+}
+
+type ManageIgnoredSourceRecord struct {
+	ID        int64   `json:"id"`
+	LibraryID *int64  `json:"libraryID,omitempty"`
+	SetID     *string `json:"setID,omitempty"`
+	Path      string  `json:"path"`
+	Reason    string  `json:"reason"`
+	CreatedAt string  `json:"createdAt"`
+}
+
+type ManageIgnoredSourceRemovalPreview struct {
+	Record             *ManageIgnoredSourceRecord `json:"record"`
+	AffectedLibraryIDs []int64                    `json:"affectedLibraryIDs"`
+	ActiveRunCount     int                        `json:"activeRunCount"`
+	BoundSourceCount   int                        `json:"boundSourceCount"`
+	RevisionToken      string                     `json:"revisionToken"`
 }
 
 type ManageIssueSummary struct {
@@ -568,6 +607,28 @@ type ManageLibraryAutomationRun struct {
 	CompletedAt           *string `json:"completedAt,omitempty"`
 }
 
+type ManageLibraryChangePreview struct {
+	LibraryID                 int64                               `json:"libraryID"`
+	CurrentRoot               string                              `json:"currentRoot"`
+	ProposedRoot              string                              `json:"proposedRoot"`
+	RevisionToken             string                              `json:"revisionToken"`
+	IgnoredSourceCount        int                                 `json:"ignoredSourceCount"`
+	IgnoredSources            []*ManageLibraryIgnoredSourceImpact `json:"ignoredSources"`
+	UnassignedSourcePaths     []string                            `json:"unassignedSourcePaths"`
+	RecognitionRules          []*ManageLibraryRuleImpact          `json:"recognitionRules"`
+	ClassificationRules       []*ManageLibraryRuleImpact          `json:"classificationRules"`
+	ExclusionRules            []*ManageLibraryRuleImpact          `json:"exclusionRules"`
+	AutomationMode            string                              `json:"automationMode"`
+	AutomationPolicyRevision  int64                               `json:"automationPolicyRevision"`
+	AutomationRunCount        int                                 `json:"automationRunCount"`
+	ActiveRunCount            int                                 `json:"activeRunCount"`
+	PortableMappingCount      int                                 `json:"portableMappingCount"`
+	ScanningSourceCount       int                                 `json:"scanningSourceCount"`
+	ChildRoots                []string                            `json:"childRoots"`
+	ProposedBoundaryConflicts []string                            `json:"proposedBoundaryConflicts"`
+	Impacts                   []*ManageLibrarySourceImpact        `json:"impacts"`
+}
+
 type ManageLibraryCoverageDiagnostic struct {
 	Path       string `json:"path"`
 	EntryKind  string `json:"entryKind"`
@@ -587,6 +648,26 @@ type ManageLibraryCoverageSummary struct {
 	RegisteredSourceCount   int `json:"registeredSourceCount"`
 	IndexedItemCount        int `json:"indexedItemCount"`
 	SourceNeedsScanCount    int `json:"sourceNeedsScanCount"`
+}
+
+type ManageLibraryIgnoredSourceImpact struct {
+	ID     int64  `json:"id"`
+	Path   string `json:"path"`
+	Reason string `json:"reason"`
+}
+
+type ManageLibraryRuleImpact struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+type ManageLibrarySourceImpact struct {
+	SourceID         int64  `json:"sourceID"`
+	GalleryID        int64  `json:"galleryID"`
+	GalleryTitle     string `json:"galleryTitle"`
+	SourcePath       string `json:"sourcePath"`
+	CurrentLibraryID int64  `json:"currentLibraryID"`
+	SuggestedOwnerID *int64 `json:"suggestedOwnerID,omitempty"`
 }
 
 type ManageMaintenanceState struct {
@@ -893,6 +974,8 @@ type ManageRuntimeSettings struct {
 	MinimumFreeBytes                int64       `json:"minimumFreeBytes"`
 	MinimumFreePercent              float64     `json:"minimumFreePercent"`
 	AutomaticScanEnabled            bool        `json:"automaticScanEnabled"`
+	AutomaticScanOnStartup          bool        `json:"automaticScanOnStartup"`
+	AutomaticScanIntervalMinutes    int         `json:"automaticScanIntervalMinutes"`
 	AutomaticSchedulesSuspended     bool        `json:"automaticSchedulesSuspended"`
 	DailyBackupEnabled              bool        `json:"dailyBackupEnabled"`
 	DailyBackupRetention            int         `json:"dailyBackupRetention"`
@@ -1129,6 +1212,8 @@ type RuntimeSettingsInput struct {
 	MinimumFreeBytes                int64       `json:"minimumFreeBytes"`
 	MinimumFreePercent              float64     `json:"minimumFreePercent"`
 	AutomaticScanEnabled            bool        `json:"automaticScanEnabled"`
+	AutomaticScanOnStartup          bool        `json:"automaticScanOnStartup"`
+	AutomaticScanIntervalMinutes    int         `json:"automaticScanIntervalMinutes"`
 	AutomaticSchedulesSuspended     bool        `json:"automaticSchedulesSuspended"`
 	DailyBackupEnabled              bool        `json:"dailyBackupEnabled"`
 	DailyBackupRetention            int         `json:"dailyBackupRetention"`

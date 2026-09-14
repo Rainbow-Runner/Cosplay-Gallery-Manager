@@ -2,20 +2,21 @@ import { gql } from "@apollo/client";
 
 const MANAGE_GALLERY_DETAIL = gql`
   fragment ManageGalleryDetailFields on ManageGalleryDetail {
-    row { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues }
+    row { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues lastScanErrorCode lastScanCompleted }
     aliases description shootDate shootDatePrecision photographerName studioName
     items { uuid relativePath mediaKind contentFormat imageCategory position caption excluded availability processingState byteSize videoProbeState videoErrorCode videoContainer videoDurationSeconds videoWidth videoHeight videoCodec audioCodec }
     credits { coserUUID coserName position cast { characterUUID characterName workUUID workName position } }
     tags { uuid name position }
     externalLinks { uuid type label url position }
     folderMatches { kind uuid name matchedName workUUID workName }
+    scanRuns { id status startedAt completedAt errorCode }
   }
 `;
 
 export const MANAGE_GALLERIES = gql`
-  query ManageGalleries($page: Int!) { manageGalleries(page: $page) {
+  query ManageGalleries($page: Int!, $issue: String!) { manageGalleries(page: $page, issue: $issue) {
     page pageSize totalItems totalPages summary { draft overLimit unavailable blocking missingItem }
-    items { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues }
+    items { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues lastScanErrorCode lastScanCompleted }
   } }
 `;
 export const MANAGE_GALLERY = gql`
@@ -52,6 +53,24 @@ export const SET_GALLERY_ITEM_EXCLUDED = gql`
     setGalleryItemExcluded(setID: $setID, itemUUID: $itemUUID, excluded: $excluded, expectedMetadataRevision: $expectedMetadataRevision) { ...ManageGalleryDetailFields }
   }
 `;
+export const FORGET_GALLERY_ITEM = gql`
+  ${MANAGE_GALLERY_DETAIL}
+  mutation ForgetGalleryItem($setID: ID!, $itemUUID: ID!, $expectedMetadataRevision: Int64!) {
+    forgetGalleryItem(setID: $setID, itemUUID: $itemUUID, expectedMetadataRevision: $expectedMetadataRevision) { ...ManageGalleryDetailFields }
+  }
+`;
+export const FORGET_MISSING_GALLERY_ITEMS = gql`
+  ${MANAGE_GALLERY_DETAIL}
+  mutation ForgetMissingGalleryItems($setID: ID!, $expectedMetadataRevision: Int64!) {
+    forgetMissingGalleryItems(setID: $setID, expectedMetadataRevision: $expectedMetadataRevision) { ...ManageGalleryDetailFields }
+  }
+`;
+export const REPLACE_MISSING_GALLERY_ITEM = gql`
+  ${MANAGE_GALLERY_DETAIL}
+  mutation ReplaceMissingGalleryItem($setID: ID!, $missingItemUUID: ID!, $replacementItemUUID: ID!, $expectedMetadataRevision: Int64!, $expectedScanRevision: Int64!) {
+    replaceMissingGalleryItem(setID: $setID, missingItemUUID: $missingItemUUID, replacementItemUUID: $replacementItemUUID, expectedMetadataRevision: $expectedMetadataRevision, expectedScanRevision: $expectedScanRevision) { ...ManageGalleryDetailFields }
+  }
+`;
 export const MOVE_GALLERY_ITEM = gql`
   ${MANAGE_GALLERY_DETAIL}
   mutation MoveGalleryItem($setID: ID!, $itemUUID: ID!, $beforeItemUUID: ID, $expectedMetadataRevision: Int64!) {
@@ -78,6 +97,47 @@ export const RESET_GALLERY_COVER = gql`
 `;
 export const MANAGE_LIBRARIES = gql`
   query ManageLibraries { manageLibraries { id name rootPath enabled readOnly captureTimezone rules { id name kind enabled autoCreateDraft order pattern fixedDepth } } }
+`;
+export const PREVIEW_MEDIA_LIBRARY_CHANGE = gql`
+  query PreviewMediaLibraryChange($libraryID: Int64!, $newRoot: String!) {
+    previewMediaLibraryChange(libraryID: $libraryID, newRoot: $newRoot) {
+      libraryID currentRoot proposedRoot revisionToken ignoredSourceCount childRoots
+      ignoredSources { id path reason } unassignedSourcePaths
+      recognitionRules { id name } classificationRules { id name } exclusionRules { id name }
+      automationMode automationPolicyRevision automationRunCount activeRunCount portableMappingCount scanningSourceCount proposedBoundaryConflicts
+      impacts { sourceID galleryID galleryTitle sourcePath currentLibraryID suggestedOwnerID }
+    }
+  }
+`;
+export const TRANSFER_MEDIA_LIBRARY_SOURCE = gql`
+  mutation TransferMediaLibrarySource($sourceID: Int64!, $expectedLibraryID: Int64!, $targetLibraryID: Int64) {
+    transferMediaLibrarySource(sourceID: $sourceID, expectedLibraryID: $expectedLibraryID, targetLibraryID: $targetLibraryID)
+  }
+`;
+export const APPLY_MEDIA_LIBRARY_CHANGE = gql`
+  mutation ApplyMediaLibraryChange($libraryID: Int64!, $newRoot: String!, $revisionToken: String!, $password: String!, $confirmation: String!) {
+    applyMediaLibraryChange(libraryID: $libraryID, newRoot: $newRoot, revisionToken: $revisionToken, password: $password, confirmation: $confirmation)
+  }
+`;
+export const MANAGE_IGNORED_SOURCES = gql`
+  query ManageIgnoredSources($libraryID: Int64, $page: Int!, $query: String!) {
+    manageIgnoredSources(libraryID: $libraryID, page: $page, query: $query) {
+      page pageSize total items { id libraryID setID path reason createdAt }
+    }
+  }
+`;
+export const PREVIEW_IGNORED_SOURCE_REMOVAL = gql`
+  query PreviewIgnoredSourceRemoval($id: Int64!) {
+    previewIgnoredSourceRemoval(id: $id) {
+      record { id libraryID setID path reason createdAt }
+      affectedLibraryIDs activeRunCount boundSourceCount revisionToken
+    }
+  }
+`;
+export const REVOKE_IGNORED_SOURCE = gql`
+  mutation RevokeIgnoredSource($id: Int64!, $revisionToken: String!, $password: String!, $confirmation: String!) {
+    revokeIgnoredSource(id: $id, revisionToken: $revisionToken, password: $password, confirmation: $confirmation)
+  }
 `;
 export const MANAGE_DISCOVERY = gql`
   query ManageDiscovery($libraryID: Int64!) { manageDiscovery(libraryID: $libraryID) { id libraryID completedAt candidates { id rootPath sourceType method manifestSetID status autoCreateDraft hasConflict overLimit mediaCount suggestions { field value } } unassigned { parentPath mediaCount } coverageSummary { regularFileCount supportedMediaCount supportedArchiveCount unsupportedArchiveCount controlFileCount ignoredOtherCount actionableIssueCount registeredSourceCount indexedItemCount sourceNeedsScanCount } coverageDiagnostics { path entryKind reasonCode fileCount byteSize } } }
@@ -128,6 +188,12 @@ export const DISCOVER_MEDIA_LIBRARY = gql`
 export const IMPORT_GALLERY_CANDIDATE = gql`
   mutation ImportGalleryCandidate($candidateID: Int64!) { importGalleryCandidate(candidateID: $candidateID) { row { setID } } }
 `;
+export const CONFIRM_GALLERY_SOURCE_REBIND = gql`
+  ${MANAGE_GALLERY_DETAIL}
+  mutation ConfirmGallerySourceRebind($candidateID: Int64!, $allowAccessibleDuplicate: Boolean!) {
+    confirmGallerySourceRebind(candidateID: $candidateID, allowAccessibleDuplicate: $allowAccessibleDuplicate) { ...ManageGalleryDetailFields }
+  }
+`;
 export const SCAN_GALLERY_SOURCE = gql`
   ${MANAGE_GALLERY_DETAIL}
   mutation ScanGallerySource($setID: ID!, $excludeNewRootMedia: Boolean! = true) {
@@ -146,7 +212,7 @@ export const ADD_GALLERY_EXTERNAL_LINK = gql`
     addGalleryExternalLink(setID: $setID, expectedMetadataRevision: $expectedMetadataRevision, input: $input) { ...ManageGalleryDetailFields }
   }
 `;
-const MANAGE_GALLERY_MANIFEST_FIELDS = gql`fragment ManageGalleryManifestFields on ManageGalleryManifestState { status path manifestRevision metadataRevision conflicts { path baselineJSON databaseJSON fileJSON } }`;
+const MANAGE_GALLERY_MANIFEST_FIELDS = gql`fragment ManageGalleryManifestFields on ManageGalleryManifestState { status path manifestRevision metadataRevision pushAdded pushRemoved pushRetained pushUpdated conflicts { path baselineJSON databaseJSON fileJSON } }`;
 export const MANAGE_GALLERY_MANIFEST = gql`${MANAGE_GALLERY_MANIFEST_FIELDS} query ManageGalleryManifest($setID: ID!) { manageGalleryManifest(setID: $setID) { ...ManageGalleryManifestFields } }`;
 export const PUSH_GALLERY_MANIFEST = gql`${MANAGE_GALLERY_MANIFEST_FIELDS} mutation PushGalleryManifest($setID: ID!, $expectedMetadataRevision: Int64!) { pushGalleryManifest(setID: $setID, expectedMetadataRevision: $expectedMetadataRevision) { ...ManageGalleryManifestFields } }`;
 export const PULL_GALLERY_MANIFEST = gql`${MANAGE_GALLERY_MANIFEST_FIELDS} mutation PullGalleryManifest($setID: ID!, $expectedMetadataRevision: Int64!) { pullGalleryManifest(setID: $setID, expectedMetadataRevision: $expectedMetadataRevision) { ...ManageGalleryManifestFields } }`;
@@ -156,7 +222,7 @@ export const MANAGE_COSER_MANIFEST = gql`${MANAGE_COSER_MANIFEST_FIELDS} query M
 export const PUSH_COSER_MANIFEST = gql`${MANAGE_COSER_MANIFEST_FIELDS} mutation PushCoserManifest($coserUUID: ID!, $expectedMetadataRevision: Int64!) { pushCoserManifest(coserUUID: $coserUUID, expectedMetadataRevision: $expectedMetadataRevision) { ...ManageCoserManifestFields } }`;
 export const PULL_COSER_MANIFEST = gql`${MANAGE_COSER_MANIFEST_FIELDS} mutation PullCoserManifest($coserUUID: ID!, $expectedMetadataRevision: Int64!) { pullCoserManifest(coserUUID: $coserUUID, expectedMetadataRevision: $expectedMetadataRevision) { ...ManageCoserManifestFields } }`;
 export const RESOLVE_COSER_MANIFEST = gql`${MANAGE_COSER_MANIFEST_FIELDS} mutation ResolveCoserManifest($coserUUID: ID!, $expectedMetadataRevision: Int64!, $choices: [ManifestConflictChoiceInput!]!) { resolveCoserManifest(coserUUID: $coserUUID, expectedMetadataRevision: $expectedMetadataRevision, choices: $choices) { ...ManageCoserManifestFields } }`;
-const RUNTIME_SETTINGS_FIELDS = gql`fragment RuntimeSettingsFields on ManageRuntimeSettings { settingsRevision homeScope galleryCardScrubberEnabled galleryDetailMediaFilterEnabled galleryCardControlsVisible mediaCardControlsVisible detailPersonalControlsVisible galleryAnimatedPlaybackLimit galleryAnimatedLockIntervalMS relatedLimit tagParentWeight tagMinimumScore tagMaximumDepth randomLimit randomStaticQuota randomGIFQuota randomVideoQuota randomGalleryRepeatDecay enhancedCacheMaximumBytes minimumFreeBytes minimumFreePercent automaticScanEnabled automaticSchedulesSuspended dailyBackupEnabled dailyBackupRetention archiveMaxEntries archiveMaxEntryBytes archiveMaxTotalBytes archiveMaxCompressionRatio archiveMaxImagePixels }`;
+const RUNTIME_SETTINGS_FIELDS = gql`fragment RuntimeSettingsFields on ManageRuntimeSettings { settingsRevision homeScope galleryCardScrubberEnabled galleryDetailMediaFilterEnabled galleryCardControlsVisible mediaCardControlsVisible detailPersonalControlsVisible galleryAnimatedPlaybackLimit galleryAnimatedLockIntervalMS relatedLimit tagParentWeight tagMinimumScore tagMaximumDepth randomLimit randomStaticQuota randomGIFQuota randomVideoQuota randomGalleryRepeatDecay enhancedCacheMaximumBytes minimumFreeBytes minimumFreePercent automaticScanEnabled automaticScanOnStartup automaticScanIntervalMinutes automaticSchedulesSuspended dailyBackupEnabled dailyBackupRetention archiveMaxEntries archiveMaxEntryBytes archiveMaxTotalBytes archiveMaxCompressionRatio archiveMaxImagePixels }`;
 export const MANAGE_RUNTIME_SETTINGS = gql`${RUNTIME_SETTINGS_FIELDS} query ManageRuntimeSettings { manageRuntimeSettings { ...RuntimeSettingsFields } manageCacheStorage { path byteSize fileCount baseByteSize enhancedByteSize } manageVideoDependencyStatus { ffmpegAvailable ffmpegSource ffmpegVersion ffmpegErrorCode ffprobeAvailable ffprobeSource ffprobeVersion ffprobeErrorCode } }`;
 export const UPDATE_RUNTIME_SETTINGS = gql`${RUNTIME_SETTINGS_FIELDS} mutation UpdateRuntimeSettings($expectedSettingsRevision: Int64!, $input: RuntimeSettingsInput!) { updateRuntimeSettings(expectedSettingsRevision: $expectedSettingsRevision, input: $input) { ...RuntimeSettingsFields } }`;
 const PROCESSING_JOB_PAGE_FIELDS = gql`fragment ProcessingJobPageFields on ManageProcessingJobPage { page pageSize totalItems totalPages items { id kind galleryID itemUUID variant status priority attemptCount maxAttempts lastErrorCode structuralFailure createdAt updatedAt } }`;

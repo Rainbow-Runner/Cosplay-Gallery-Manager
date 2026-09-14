@@ -33,6 +33,8 @@ type Runtime struct {
 	MinimumFreeBytes                int64
 	MinimumFreePercent              float64
 	AutomaticScanEnabled            bool
+	AutomaticScanOnStartup          bool
+	AutomaticScanIntervalMinutes    int
 	AutomaticSchedulesSuspended     bool
 	DailyBackupEnabled              bool
 	DailyBackupRetention            int

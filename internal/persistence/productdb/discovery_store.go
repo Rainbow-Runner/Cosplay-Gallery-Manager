@@ -154,7 +154,11 @@ func recognitionRuleParameters(rule discovery.Rule) (pattern any, depth any) {
 }
 
 func (s *RecognitionRuleStore) List(ctx context.Context, libraryID int64) ([]discovery.Rule, error) {
-	rows, err := s.db.QueryContext(ctx, `
+	return listRecognitionRules(ctx, s.db, libraryID)
+}
+
+func listRecognitionRules(ctx context.Context, queryer discoveryQueryer, libraryID int64) ([]discovery.Rule, error) {
+	rows, err := queryer.QueryContext(ctx, `
 		SELECT id, name, rule_kind, enabled, auto_create_draft, sort_order, pattern, fixed_depth
 		FROM gallery_recognition_rules WHERE library_id = ?
 		ORDER BY sort_order, id
@@ -254,6 +258,15 @@ type DiscoveryOptions struct {
 
 type CandidateDiscoveryStore struct {
 	db *sql.DB
+	// beforeSnapshotCommit is a deterministic test seam between filesystem
+	// traversal and the transaction; production stores leave it nil.
+	beforeSnapshotCommit func()
+}
+
+var ErrDiscoveryStateChanged = errors.New("discovery state changed during filesystem traversal; retry discovery")
+
+type discoveryQueryer interface {
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }
 
 func (db *Database) CandidateDiscovery() *CandidateDiscoveryStore {
@@ -408,7 +421,7 @@ func (s *CandidateDiscoveryStore) DiscoverFilesystemWithOptions(ctx context.Cont
 	}
 	observations = append(observations, archives...)
 	sort.Slice(observations, func(i, j int) bool { return observations[i].RelativePath < observations[j].RelativePath })
-	return s.commitSnapshot(ctx, libraryID, observations, coverage, options, now)
+	return s.commitSnapshot(ctx, libraryID, observations, coverage, options, mediaLibrary.RootPath, childRoots, now)
 }
 
 func descendantMediaCount(root string, counts map[string]int) int {
@@ -470,7 +483,7 @@ func validateMarkerTitle(value string) (string, error) {
 // archiveEntitySuggestions uses only the archive's external library path and
 // filename. It intentionally emits conservative pending suggestions: a token
 // must identify exactly one existing entity, and no relation is written here.
-func archiveEntitySuggestions(ctx context.Context, db *sql.DB, libraryRoot, archivePath string) ([]discovery.Suggestion, error) {
+func archiveEntitySuggestions(ctx context.Context, db discoveryQueryer, libraryRoot, archivePath string) ([]discovery.Suggestion, error) {
 	relative, err := filepath.Rel(libraryRoot, archivePath)
 	if err != nil {
 		return nil, err
@@ -640,33 +653,56 @@ func (s *CandidateDiscoveryStore) CommitSnapshot(
 	observations []ObservedDirectory,
 	now time.Time,
 ) (DiscoverySnapshot, error) {
-	return s.commitSnapshot(ctx, libraryID, observations, nil, DiscoveryOptions{}, now)
+	return s.commitSnapshot(ctx, libraryID, observations, nil, DiscoveryOptions{}, "", nil, now)
 }
 
 func (s *CandidateDiscoveryStore) commitSnapshot(
-	ctx context.Context, libraryID int64, observations []ObservedDirectory, coverage *filesystemCoverage, options DiscoveryOptions, now time.Time,
+	ctx context.Context, libraryID int64, observations []ObservedDirectory, coverage *filesystemCoverage, options DiscoveryOptions,
+	expectedRoot string, expectedChildRoots map[string]struct{}, now time.Time,
 ) (DiscoverySnapshot, error) {
-	mediaLibrary, err := findLibrary(ctx, s.db, libraryID)
+	if s.beforeSnapshotCommit != nil {
+		s.beforeSnapshotCommit()
+	}
+	// The writable connection uses BEGIN IMMEDIATE. All discovery decisions and
+	// the resulting snapshot therefore observe one serialized database state.
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return DiscoverySnapshot{}, err
 	}
-	rules, err := (&RecognitionRuleStore{db: s.db}).List(ctx, libraryID)
+	defer func() { _ = tx.Rollback() }()
+	mediaLibrary, err := findLibrary(ctx, tx, libraryID)
 	if err != nil {
 		return DiscoverySnapshot{}, err
 	}
-	boundaries, err := s.boundSourcePaths(ctx, libraryID)
+	if !mediaLibrary.Enabled || expectedRoot != "" && filepath.Clean(mediaLibrary.RootPath) != filepath.Clean(expectedRoot) {
+		return DiscoverySnapshot{}, ErrDiscoveryStateChanged
+	}
+	if expectedChildRoots != nil {
+		actual, err := childBoundaryRoots(ctx, tx, libraryID, mediaLibrary.RootPath)
+		if err != nil {
+			return DiscoverySnapshot{}, err
+		}
+		if !samePathSet(actual, expectedChildRoots) {
+			return DiscoverySnapshot{}, ErrDiscoveryStateChanged
+		}
+	}
+	rules, err := listRecognitionRules(ctx, tx, libraryID)
 	if err != nil {
 		return DiscoverySnapshot{}, err
 	}
-	ignored, err := s.ignoredPaths(ctx, libraryID)
+	boundaries, err := boundSourcePaths(ctx, tx, libraryID)
 	if err != nil {
 		return DiscoverySnapshot{}, err
 	}
-	ignoredSetIDs, err := s.ignoredSetIDs(ctx)
+	ignored, err := ignoredPaths(ctx, tx, libraryID)
 	if err != nil {
 		return DiscoverySnapshot{}, err
 	}
-	setIdentities, err := s.gallerySetIdentities(ctx)
+	ignoredSetIDs, err := ignoredSetIDs(ctx, tx)
+	if err != nil {
+		return DiscoverySnapshot{}, err
+	}
+	setIdentities, err := gallerySetIdentities(ctx, tx)
 	if err != nil {
 		return DiscoverySnapshot{}, err
 	}
@@ -766,7 +802,7 @@ func (s *CandidateDiscoveryStore) commitSnapshot(
 				candidate.ruleID = &value
 			}
 			if candidate.sourceType == gallery.SourceTypeArchive && !observed.HasValidManifest {
-				entitySuggestions, suggestionErr := archiveEntitySuggestions(ctx, s.db, mediaLibrary.RootPath, candidate.root)
+				entitySuggestions, suggestionErr := archiveEntitySuggestions(ctx, tx, mediaLibrary.RootPath, candidate.root)
 				if suggestionErr != nil {
 					return DiscoverySnapshot{}, suggestionErr
 				}
@@ -802,11 +838,6 @@ func (s *CandidateDiscoveryStore) commitSnapshot(
 		}
 	}
 
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return DiscoverySnapshot{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
 	timestamp := formatTime(normalisedTime(now))
 	result, err := tx.ExecContext(ctx, `
 		INSERT INTO discovery_snapshots (library_id, completed_at_utc) VALUES (?, ?)
@@ -909,6 +940,38 @@ func (s *CandidateDiscoveryStore) commitSnapshot(
 		}
 	}
 	return s.FindSnapshot(ctx, snapshotID)
+}
+
+func childBoundaryRoots(ctx context.Context, queryer discoveryQueryer, parentID int64, parentRoot string) (map[string]struct{}, error) {
+	rows, err := queryer.QueryContext(ctx, `SELECT id, root_path FROM media_libraries WHERE id != ?`, parentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	roots := make(map[string]struct{})
+	for rows.Next() {
+		var id int64
+		var root string
+		if err := rows.Scan(&id, &root); err != nil {
+			return nil, err
+		}
+		if pathWithin(parentRoot, root) {
+			roots[filepath.Clean(root)] = struct{}{}
+		}
+	}
+	return roots, rows.Err()
+}
+
+func samePathSet(left, right map[string]struct{}) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for path := range left {
+		if _, exists := right[path]; !exists {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *CandidateDiscoveryStore) FindSnapshot(ctx context.Context, snapshotID int64) (DiscoverySnapshot, error) {
@@ -1300,19 +1363,19 @@ func (s *CandidateDiscoveryStore) ConfirmSourceRebind(
 	return updated, nil
 }
 
-func (s *CandidateDiscoveryStore) boundSourcePaths(ctx context.Context, libraryID int64) ([]string, error) {
-	return queryPaths(ctx, s.db, `SELECT source_path FROM gallery_sources WHERE library_id = ?`, libraryID)
+func boundSourcePaths(ctx context.Context, queryer discoveryQueryer, libraryID int64) ([]string, error) {
+	return queryPaths(ctx, queryer, `SELECT source_path FROM gallery_sources WHERE library_id = ?`, libraryID)
 }
 
-func (s *CandidateDiscoveryStore) ignoredPaths(ctx context.Context, libraryID int64) ([]string, error) {
-	return queryPaths(ctx, s.db, `
+func ignoredPaths(ctx context.Context, queryer discoveryQueryer, libraryID int64) ([]string, error) {
+	return queryPaths(ctx, queryer, `
 		SELECT source_path FROM ignored_gallery_sources
 		WHERE library_id = ? OR library_id IS NULL
 	`, libraryID)
 }
 
-func (s *CandidateDiscoveryStore) ignoredSetIDs(ctx context.Context) (map[string]struct{}, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT set_id FROM ignored_gallery_sources WHERE set_id IS NOT NULL`)
+func ignoredSetIDs(ctx context.Context, queryer discoveryQueryer) (map[string]struct{}, error) {
+	rows, err := queryer.QueryContext(ctx, `SELECT set_id FROM ignored_gallery_sources WHERE set_id IS NOT NULL`)
 	if err != nil {
 		return nil, err
 	}
@@ -1334,8 +1397,8 @@ type gallerySetIdentity struct {
 	SourceAvailable bool
 }
 
-func (s *CandidateDiscoveryStore) gallerySetIdentities(ctx context.Context) (map[string]gallerySetIdentity, error) {
-	rows, err := s.db.QueryContext(ctx, `
+func gallerySetIdentities(ctx context.Context, queryer discoveryQueryer) (map[string]gallerySetIdentity, error) {
+	rows, err := queryer.QueryContext(ctx, `
 		SELECT gallery.set_id, gallery.id, COALESCE(source.source_path, ''),
 			COALESCE(source.availability_state = 'AVAILABLE', 0)
 		FROM galleries gallery
@@ -1367,7 +1430,7 @@ func findGallerySourceByGallery(ctx context.Context, queryer galleryQueryer, gal
 	return findSource(ctx, queryer, sourceID)
 }
 
-func queryPaths(ctx context.Context, db *sql.DB, query string, argument int64) ([]string, error) {
+func queryPaths(ctx context.Context, db discoveryQueryer, query string, argument int64) ([]string, error) {
 	rows, err := db.QueryContext(ctx, query, argument)
 	if err != nil {
 		return nil, err

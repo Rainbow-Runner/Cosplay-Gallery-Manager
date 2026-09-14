@@ -78,6 +78,65 @@ func TestScanInitialNaturalGroupedOrderAndAtomicAbort(t *testing.T) {
 	}
 }
 
+func TestMissingSourceRecordsSpecificDiagnosticWithoutMarkingMembersMissing(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 10, 11, 0, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	item, err := db.Galleries().AddItem(ctx, created.ID, source.ID, CreateItemInput{
+		RelativePath: "existing.jpg", MediaKind: gallery.MediaKindStaticImage, ContentFormat: gallery.ContentFormatImage,
+		ImageCategory: gallery.ImageCategoryPhoto, Position: 1024, Availability: gallery.AvailabilityAvailable, ProcessingState: gallery.ProcessingReady,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Run(ctx, source.ID, archivecheck.DefaultLimits(), now.Add(time.Minute)); err == nil {
+		t.Fatal("missing source scan unexpectedly succeeded")
+	}
+	detail, err := db.Manage().GalleryDetail(ctx, created.SetID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.Row.SourceAvailability != gallery.AvailabilityUnreadable || detail.Row.LastScanErrorCode != "SOURCE_NOT_FOUND" {
+		t.Fatalf("missing source detail = %#v", detail.Row)
+	}
+	for _, current := range detail.Items {
+		if current.UUID == item.UUID && current.Availability != gallery.AvailabilityAvailable {
+			t.Fatalf("source failure changed member availability = %s", current.Availability)
+		}
+	}
+}
+
+func TestScanMarksTrackedManifestDirtyWhenMembershipChanges(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 10, 10, 0, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	if err := os.MkdirAll(source.Path, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Manifests().PushGallery(ctx, created.ID, created.MetadataRevision, now); err != nil {
+		t.Fatal(err)
+	}
+	runID, err := db.Scans().Begin(ctx, source.ID, now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Stage(ctx, runID, scanPhoto("new-name.jpg", "new-content")); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Commit(ctx, runID, now.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	state, err := db.Manifests().CheckGallery(ctx, created.ID, now.Add(3*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Status != ManifestDBDirty {
+		t.Fatalf("Manifest status after scanned member change = %s, want DB_DIRTY", state.Status)
+	}
+}
+
 func TestSuccessfulScanAtomicallyEnqueuesPrimaryDerivativeJobs(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

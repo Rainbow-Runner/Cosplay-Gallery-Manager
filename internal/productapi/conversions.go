@@ -241,6 +241,12 @@ func mediaPage(value browse.MediaPage) *MediaPage {
 }
 
 func manageError(err error) error {
+	if errors.Is(err, productdb.ErrIgnoredSourcePreviewStale) {
+		return errors.New("IGNORED_SOURCE_PREVIEW_STALE")
+	}
+	if errors.Is(err, productdb.ErrIgnoredSourceAutomationActive) {
+		return errors.New("IGNORED_SOURCE_AUTOMATION_ACTIVE")
+	}
 	var invalidRule *mediaclassification.ValidationError
 	if errors.As(err, &invalidRule) {
 		return errors.New(invalidRule.Code + ": " + invalidRule.Message)
@@ -294,7 +300,8 @@ func manageGalleryRow(value manage.GalleryRow) *ManageGalleryRow {
 	return &ManageGalleryRow{SetID: value.SetID, Slug: value.Slug, State: GalleryState(value.State), Title: value.Title, ContentRating: rating,
 		MetadataRevision: value.MetadataRevision, ScanRevision: value.ScanRevision, Browsable: value.Browsable, SourceType: string(value.SourceType), SourcePath: value.SourcePath,
 		SourceAvailability: string(value.SourceAvailability), ReconcileState: string(value.ReconcileState), OverLimit: value.OverLimit, ItemCount: value.ItemCount,
-		MissingCount: value.MissingCount, PendingCount: value.PendingCount, ErrorCount: value.ErrorCount, BlockingIssues: value.BlockingIssues}
+		MissingCount: value.MissingCount, PendingCount: value.PendingCount, ErrorCount: value.ErrorCount, BlockingIssues: value.BlockingIssues,
+		LastScanErrorCode: value.LastScanErrorCode, LastScanCompleted: value.LastScanCompleted}
 }
 func manageGalleryDetail(value manage.GalleryDetail) *ManageGalleryDetail {
 	precision := ShootDatePrecisionUnknown
@@ -314,6 +321,9 @@ func manageGalleryDetail(value manage.GalleryDetail) *ManageGalleryDetail {
 			ProcessingState: ProcessingState(item.ProcessingState), ByteSize: item.ByteSize, VideoProbeState: item.VideoProbeState, VideoErrorCode: item.VideoErrorCode,
 			VideoContainer: item.VideoContainer, VideoDurationSeconds: item.VideoDurationSeconds, VideoWidth: item.VideoWidth, VideoHeight: item.VideoHeight,
 			VideoCodec: item.VideoCodec, AudioCodec: item.AudioCodec})
+	}
+	for _, run := range value.ScanRuns {
+		result.ScanRuns = append(result.ScanRuns, &ManageGalleryScanRun{ID: run.ID, Status: run.Status, StartedAt: run.StartedAt, CompletedAt: run.CompletedAt, ErrorCode: run.ErrorCode})
 	}
 	for _, credit := range value.Credits {
 		convertedCredit := &ManageGalleryCredit{CoserUUID: credit.CoserUUID, CoserName: credit.CoserName, Position: strconv.FormatInt(credit.Position, 10)}
@@ -479,6 +489,7 @@ func manageRuntimeSettings(value settings.Runtime) *ManageRuntimeSettings {
 		RandomLimit: value.RandomLimit, RandomStaticQuota: value.RandomStaticQuota, RandomGIFQuota: value.RandomGIFQuota, RandomVideoQuota: value.RandomVideoQuota,
 		RandomGalleryRepeatDecay: value.RandomGalleryRepeatDecay, EnhancedCacheMaximumBytes: value.EnhancedCacheMaximumBytes, MinimumFreeBytes: value.MinimumFreeBytes,
 		MinimumFreePercent: value.MinimumFreePercent, AutomaticScanEnabled: value.AutomaticScanEnabled, AutomaticSchedulesSuspended: value.AutomaticSchedulesSuspended,
+		AutomaticScanOnStartup: value.AutomaticScanOnStartup, AutomaticScanIntervalMinutes: value.AutomaticScanIntervalMinutes,
 		DailyBackupEnabled: value.DailyBackupEnabled, DailyBackupRetention: value.DailyBackupRetention,
 		ArchiveMaxEntries: value.ArchiveMaxEntries, ArchiveMaxEntryBytes: value.ArchiveMaxEntryBytes, ArchiveMaxTotalBytes: value.ArchiveMaxTotalBytes,
 		ArchiveMaxCompressionRatio: value.ArchiveMaxCompressionRatio, ArchiveMaxImagePixels: value.ArchiveMaxImagePixels}

@@ -4,14 +4,14 @@ import type { MockedResponse } from "@apollo/client/testing";
 import { MockedProvider } from "@apollo/client/testing/react";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { IntlProvider } from "react-intl";
 
-import { CANCEL_LIBRARY_AUTOMATION, DELETE_RECOGNITION_RULE, MANAGE_DISCOVERY, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, SAVE_LIBRARY_AUTOMATION_POLICY, UPDATE_RECOGNITION_RULE } from "../api/manage";
+import { APPLY_MEDIA_LIBRARY_CHANGE, CANCEL_LIBRARY_AUTOMATION, DELETE_RECOGNITION_RULE, MANAGE_DISCOVERY, MANAGE_IGNORED_SOURCES, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, PREVIEW_IGNORED_SOURCE_REMOVAL, PREVIEW_MEDIA_LIBRARY_CHANGE, REVOKE_IGNORED_SOURCE, SAVE_LIBRARY_AUTOMATION_POLICY, TRANSFER_MEDIA_LIBRARY_SOURCE, UPDATE_RECOGNITION_RULE } from "../api/manage";
 import { messages } from "../i18n/messages";
 import { ManageLibrariesPage } from "./ManageLibrariesPage";
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const markerRule = {
   id: 3, name: "Marker", kind: "MARKER", enabled: true,
@@ -43,6 +43,77 @@ function renderPage(mocks: ReadonlyArray<MockedResponse>) {
 }
 
 describe("ManageLibrariesPage recognition rules", () => {
+  it("reviews a global ignore before password-confirmed removal", async () => {
+    const record = { id: 7, libraryID: null, setID: null, path: "/media/collection/old", reason: "SOURCE_REBOUND", createdAt: "2026-09-14T00:00:00Z" };
+    renderPage([
+      { request: { query: MANAGE_LIBRARIES }, result: { data: { manageLibraries: [library] } } },
+      discoveryMock,
+      { request: { query: MANAGE_IGNORED_SOURCES, variables: { libraryID: null, page: 1, query: "" } }, result: { data: { manageIgnoredSources: { page: 1, pageSize: 50, total: 1, items: [record] } } } },
+      { request: { query: PREVIEW_IGNORED_SOURCE_REMOVAL, variables: { id: 7 } }, result: { data: { previewIgnoredSourceRemoval: { record, affectedLibraryIDs: [2], activeRunCount: 0, boundSourceCount: 0, revisionToken: "token" } } } },
+      { request: { query: REVOKE_IGNORED_SOURCE, variables: { id: 7, revisionToken: "token", password: "secret", confirmation: "REVEAL" } }, result: { data: { revokeIgnoredSource: true } } },
+      { request: { query: MANAGE_IGNORED_SOURCES, variables: { libraryID: null, page: 1, query: "" } }, result: { data: { manageIgnoredSources: { page: 1, pageSize: 50, total: 0, items: [] } } } },
+    ]);
+    fireEvent.click(await screen.findByRole("button", { name: "加载忽略记录 / Load ignores" }));
+    expect(await screen.findByText("/media/collection/old")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "预览撤销 / Preview removal" }));
+    const button = await screen.findByRole("button", { name: "撤销忽略 / Revoke ignore" });
+    expect(button).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("所有者密码 / Owner password"), { target: { value: "secret" } });
+    fireEvent.change(screen.getByLabelText("输入 REVEAL 确认 / Type REVEAL"), { target: { value: "REVEAL" } });
+    fireEvent.click(button);
+    expect(await screen.findByText(/忽略记录已撤销/)).toBeInTheDocument();
+  });
+  it("previews bound Sources and requires explicit transfer confirmation", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const parent = { ...library, id: 1, name: "Parent", rootPath: "/media", rules: [] };
+    const basePreview = { libraryID: 2, currentRoot: library.rootPath, proposedRoot: "", revisionToken: "token", ignoredSourceCount: 1,
+      ignoredSources: [{ id: 8, path: "/media/collection/ignored", reason: "reviewed" }], unassignedSourcePaths: [], recognitionRules: [], classificationRules: [], exclusionRules: [],
+      automationMode: "MANUAL", automationPolicyRevision: 0, automationRunCount: 0, activeRunCount: 0, portableMappingCount: 0, scanningSourceCount: 0, proposedBoundaryConflicts: [], childRoots: [], impacts: [
+      { sourceID: 9, galleryID: 11, galleryTitle: "Set", sourcePath: "/media/collection/set", currentLibraryID: 2, suggestedOwnerID: 1 },
+    ] };
+    renderPage([
+      { request: { query: MANAGE_LIBRARIES }, result: { data: { manageLibraries: [library, parent] } } },
+      discoveryMock,
+      { request: { query: PREVIEW_MEDIA_LIBRARY_CHANGE, variables: { libraryID: 2, newRoot: "" } }, result: { data: { previewMediaLibraryChange: basePreview } } },
+      { request: { query: TRANSFER_MEDIA_LIBRARY_SOURCE, variables: { sourceID: 9, expectedLibraryID: 2, targetLibraryID: 1 } }, result: { data: { transferMediaLibrarySource: true } } },
+      { request: { query: PREVIEW_MEDIA_LIBRARY_CHANGE, variables: { libraryID: 2, newRoot: "" } }, result: { data: { previewMediaLibraryChange: { ...basePreview, impacts: [] } } } },
+    ]);
+    fireEvent.click(await screen.findByRole("button", { name: "预览影响 / Preview impact" }));
+    expect(await screen.findByText("Set")).toBeInTheDocument();
+    const transferButton = screen.getByRole("button", { name: "确认转移 / Transfer" });
+    expect(transferButton).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Transfer Source 9 to"), { target: { value: "1" } });
+    fireEvent.click(transferButton);
+    expect(window.confirm).toHaveBeenCalledOnce();
+    expect(await screen.findByText("Source binding updated / Source 归属已更新")).toBeInTheDocument();
+  });
+
+  it("requires a fresh impact preview, owner password and exact move phrase", async () => {
+    const proposedRoot = "/media/new-collection";
+    renderPage([
+      { request: { query: MANAGE_LIBRARIES }, result: { data: { manageLibraries: [library] } } },
+      discoveryMock,
+      { request: { query: PREVIEW_MEDIA_LIBRARY_CHANGE, variables: { libraryID: 2, newRoot: proposedRoot } }, result: { data: { previewMediaLibraryChange: {
+        libraryID: 2, currentRoot: library.rootPath, proposedRoot, revisionToken: "review-token", ignoredSourceCount: 1,
+        ignoredSources: [{ id: 5, path: "/media/collection/ignored", reason: "reviewed" }], unassignedSourcePaths: [],
+        recognitionRules: [{ id: 3, name: "Marker" }], classificationRules: [], exclusionRules: [],
+        automationMode: "MANUAL", automationPolicyRevision: 0, automationRunCount: 0, activeRunCount: 0, portableMappingCount: 0, scanningSourceCount: 0, proposedBoundaryConflicts: [],
+        childRoots: [], impacts: [],
+      } } } },
+      { request: { query: APPLY_MEDIA_LIBRARY_CHANGE, variables: { libraryID: 2, newRoot: proposedRoot, revisionToken: "review-token", password: "secret", confirmation: "MOVE ROOT" } }, result: { data: { applyMediaLibraryChange: true } } },
+      { request: { query: MANAGE_LIBRARIES }, result: { data: { manageLibraries: [{ ...library, rootPath: proposedRoot }] } } },
+    ]);
+    fireEvent.change(await screen.findByLabelText("拟议的新根路径（留空预览删除） / Proposed root (blank for deletion)"), { target: { value: proposedRoot } });
+    fireEvent.click(screen.getByRole("button", { name: "预览影响 / Preview impact" }));
+    expect(await screen.findByText((_, element) => element?.tagName === "P" && element.textContent?.includes("#3 Marker") === true)).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: "更改媒体库根 / Move root" });
+    expect(button).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("所有者密码 / Owner password"), { target: { value: "secret" } });
+    fireEvent.change(screen.getByLabelText("输入确认词 / Type MOVE ROOT"), { target: { value: "MOVE ROOT" } });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    expect(await screen.findByText("Media library change applied / 媒体库变更已执行")).toBeInTheDocument();
+  });
   it("keeps automation opt-in and saves an assisted policy explicitly", async () => {
     renderPage([
       { request: { query: MANAGE_LIBRARIES }, result: { data: { manageLibraries: [library] } } },

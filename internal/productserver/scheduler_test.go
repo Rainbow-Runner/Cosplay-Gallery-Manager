@@ -130,3 +130,49 @@ func TestAutomaticScanQueuesSavedLibraryAutomationPolicy(t *testing.T) {
 		t.Fatalf("automation discovery snapshot = %#v/%v", snapshot, err)
 	}
 }
+
+func TestAutomaticScanUsesConfiguredIntervalAndStartupPolicy(t *testing.T) {
+	server := testServer(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 8, 0, 0, 0, time.UTC)
+	if _, err := server.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{
+		Name: "Scheduled", RootPath: t.TempDir(), Enabled: true, ReadOnly: true, CaptureTimezone: "UTC",
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+	runtime, err := server.Database.Settings().Find(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime.AutomaticScanEnabled = true
+	runtime.AutomaticScanIntervalMinutes = 60
+	if runtime.AutomaticScanOnStartup {
+		t.Fatal("startup scanning must default to disabled")
+	}
+	if _, err := server.Database.Settings().Update(ctx, runtime.Revision, runtime, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.RunAutomaticStartupScanOnce(ctx, now); !errors.Is(err, productdb.ErrScheduledOperationNotDue) {
+		t.Fatalf("disabled startup scan = %v", err)
+	}
+	if err := server.RunAutomaticScanOnce(ctx, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.RunAutomaticScanOnce(ctx, now.Add(59*time.Minute)); !errors.Is(err, productdb.ErrScheduledOperationNotDue) {
+		t.Fatalf("scan before configured interval = %v", err)
+	}
+	if err := server.RunAutomaticScanOnce(ctx, now.Add(60*time.Minute)); err != nil {
+		t.Fatalf("scan at configured interval = %v", err)
+	}
+	runtime, err = server.Database.Settings().Find(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime.AutomaticScanOnStartup = true
+	if _, err := server.Database.Settings().Update(ctx, runtime.Revision, runtime, now.Add(61*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.RunAutomaticStartupScanOnce(ctx, now.Add(61*time.Minute)); err != nil {
+		t.Fatalf("enabled startup scan = %v", err)
+	}
+}

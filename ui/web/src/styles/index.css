@@ -503,8 +503,9 @@ a { color: inherit; text-decoration: none; }
 .manage-heading h2 { margin: 0; font: 650 clamp(1.75rem, 3vw, 2.5rem)/1.1 var(--cgm-font-sans); }
 .manage-heading button, .manage-actions button, .metadata-form button, .manage-pagination button { padding: .7rem 1rem; border: 1px solid var(--accent); background: transparent; color: #fff; cursor: pointer; }
 .manage-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
-.issue-summary { display: grid; grid-template-columns: repeat(5, minmax(7rem, 1fr)); margin-bottom: 1.5rem; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
-.issue-summary span { display: grid; gap: .4rem; padding: .9rem 1rem; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--ink-muted); font-size: .55rem; letter-spacing: .08em; }
+.issue-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .6rem; margin-bottom: 1.5rem; }
+.issue-summary button { display: grid; gap: .4rem; min-width: 0; padding: .9rem 1rem; border: 1px solid var(--line); background: transparent; color: var(--ink-muted); text-align: left; cursor: pointer; }
+.issue-summary button span { font-size: .7rem; letter-spacing: .02em; }
 .issue-summary strong { color: #fff; font: 400 1.35rem Georgia, serif; }
 .manage-table-wrap { overflow-x: auto; border: 1px solid var(--line); }
 .manage-table { width: 100%; border-collapse: collapse; font-size: .7rem; }
@@ -978,7 +979,10 @@ a { color: inherit; text-decoration: none; }
 .manage-shell button { border-radius: var(--cgm-radius-sm); color: var(--cgm-foreground); }
 .manage-shell button:not(.danger):hover:not(:disabled) { background: var(--cgm-muted); }
 .manage-shell :is(.manage-panel, .metadata-form, .library-list, .rule-section, .candidate-section, .operation-panel, .operation-status > div, .settings-form fieldset, .entity-manage-list) { border-color: var(--cgm-border); border-radius: var(--cgm-radius); background: var(--cgm-surface); box-shadow: 0 1px 2px rgb(0 0 0 / 4%); }
-.manage-shell :is(.manage-table-wrap, .issue-summary) { border-color: var(--cgm-border); border-radius: var(--cgm-radius); background: var(--cgm-surface); }
+.manage-shell .manage-table-wrap { border-color: var(--cgm-border); border-radius: var(--cgm-radius); background: var(--cgm-surface); }
+.manage-shell .issue-summary button { border-color: var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface); color: var(--cgm-muted-foreground); }
+.manage-shell .issue-summary button.is-active { border-color: var(--cgm-primary); background: var(--cgm-surface-subtle); color: var(--cgm-foreground); box-shadow: inset 0 0 0 1px var(--cgm-primary); }
+.manage-shell .issue-summary button.is-active:hover { background: var(--cgm-surface-subtle); }
 .manage-shell :is(.manage-table td:nth-child(2) a, .manage-panel dd, .manage-external-links li a, .manage-message, .manage-folder-matches h4, .manage-folder-matches li span, .manage-relation-block h4, .manage-cast-list h5, .manage-credit__head > span, .manage-cast-row > span, .manage-tag-row > span, .manage-entity-selector > span, .required-entity-field > strong, .manage-media-table td:nth-child(2) strong, .library-list summary, .rule-section summary, .unassigned summary, .settings-form legend, .entity-manage-list > button, .entity-lifecycle h4, .entity-lifecycle__preview strong, .entity-lifecycle__preview li) { color: var(--cgm-foreground); }
 .manage-shell :is(.manage-heading button, .manage-actions button, .metadata-form button, .manage-pagination button, .manage-panel-actions button, .manage-inline-form button, .manage-folder-matches button, .manage-credit button, .manage-cast-row button, .manage-tag-row button, .manage-inline-toolbar button, .manifest-conflicts > button, .manage-media-table button, .library-list form button, .rule-form button, .candidate-card button, .rule-section header button, .rule-actions button, .settings-form footer button, .task-table td:last-child button, .coser-asset-review__actions button, .backup-table td:last-child button, .coser-assets__grid button) { border-color: var(--cgm-border); background: var(--cgm-surface); color: var(--cgm-foreground); }
 .manage-shell .alias-chip-input { border-color: var(--cgm-border); background: var(--cgm-surface); }

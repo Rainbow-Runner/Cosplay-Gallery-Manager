@@ -44,10 +44,13 @@ func (s *ManageStore) GalleryPage(ctx context.Context, page int, issue string) (
 		COALESCE(SUM(CASE WHEN gallery.state='DRAFT' THEN 1 ELSE 0 END),0),COALESCE(SUM(CASE WHEN source.over_limit=1 THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN source.id IS NULL OR source.availability_state<>'AVAILABLE' THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN EXISTS(SELECT 1 FROM gallery_source_issues issue WHERE issue.source_id=source.id AND issue.severity='BLOCKING' AND issue.resolved_at_utc IS NULL) THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN EXISTS(SELECT 1 FROM gallery_items item WHERE item.gallery_id=gallery.id AND item.processing_state='ERROR') THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN EXISTS(SELECT 1 FROM gallery_items item WHERE item.gallery_id=gallery.id AND item.availability_state='MISSING') THEN 1 ELSE 0 END),0),
 		COALESCE(SUM((SELECT COUNT(*) FROM gallery_items item WHERE item.gallery_id=gallery.id AND item.availability_state='MISSING')),0)
-		FROM galleries gallery LEFT JOIN gallery_sources source ON source.gallery_id=gallery.id`).Scan(&result.TotalItems, &result.Summary.Draft, &result.Summary.OverLimit, &result.Summary.Unavailable, &result.Summary.Blocking, &result.Summary.MissingItem); err != nil {
+		FROM galleries gallery LEFT JOIN gallery_sources source ON source.gallery_id=gallery.id`).Scan(&result.Summary.All, &result.Summary.Draft, &result.Summary.OverLimit, &result.Summary.Unavailable, &result.Summary.Blocking, &result.Summary.ProcessingError, &result.Summary.MissingGallery, &result.Summary.MissingItem); err != nil {
 		return manage.GalleryPage{}, err
 	}
+	result.TotalItems = result.Summary.All
 	if condition != "1=1" {
 		if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM galleries gallery LEFT JOIN gallery_sources source ON source.gallery_id=gallery.id WHERE `+condition).Scan(&result.TotalItems); err != nil {
 			return manage.GalleryPage{}, err

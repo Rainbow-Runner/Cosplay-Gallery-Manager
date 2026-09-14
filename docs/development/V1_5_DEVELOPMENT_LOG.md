@@ -2102,3 +2102,9 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 累计源码与开发记录提交为`276d7454178e4aecf031ed77fe9f00c3682a69df`；正式标签Go测试和Vet、TypeScript、Web 31文件108项、682模块生产构建及差异检查均通过。未执行远端推送。
 - 先停止本机systemd单实例，确认正式库schema v10、`integrity_check=ok`及`135/108/697/6/6/322`业务计数。独立回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-v11-276d745-VOW1cX`包含SQLite一致快照、配置、完整Coser托管资源和旧二进制；两份文件SHA-256与验证细节见[专项部署记录](AUTOMATIC_SCAN_AND_SOURCE_RECOVERY_2026-09-10.md)。原始媒体不在此包中且此次未修改。
 - 原子替换新二进制并启动一次；程序另生成自动v10迁移前快照，已验证完整性。正式库为schema v11、完整性`ok`、六类计数不变，启动扫描默认0、周期1440分钟。新二进制SHA-256=`db8ae3f62e495ea17e7b56663d0d96f768d8f207e016f1e05d601edc43857419`；About精确报告提交，服务`active/running`且`NRestarts=0`，Health/Ready均204，启动日志无错误。真实媒体库上的新管理动作尚需所有者人工验收。
+
+# 2026-09-14 Manage Gallery七卡片筛选
+
+- 作品集列表顶部的纯展示五项扩展为“全部、草稿、超过上限、来源不可用、阻断问题、缺失媒体、处理失败”七个可点击筛选卡片，移除重复的筛选下拉框。卡片使用原有`issue` URL参数，切换时回到第一页，显示当前选中态并支持原生按钮键盘操作。
+- 顶部所有数字统一代表符合条件的**作品集数量**：新增全库总数和存在处理失败Item的Gallery数，`MISSING`改为存在至少一个MISSING Item的Gallery数；旧API的`missingItem`文件数继续保留供兼容，不再作为卡片数字。多个异常可以落在同一个Gallery，因此卡片数字不应相加。GraphQL仅添加只读字段，不新增数据库表或schema。
+- 数据库测试覆盖一个Gallery有多个缺失Item时的计数分离、处理失败筛选及全局计数；Web测试覆盖七卡片、无下拉框、URL切换及分页重置。正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签的产品数据库/API/Server/CMD测试及同范围Go Vet通过；Web 32文件109项测试、TypeScript和682模块生产构建通过（保留既有主共享chunk超过500KiB提示）。此段不需要数据库schema迁移；提交和部署结果在后续记录补充。

@@ -43,13 +43,34 @@ func TestManageGalleryPageFiltersMissingMembersAcrossTheWholeDatabase(t *testing
 	}, now); err != nil {
 		t.Fatal(err)
 	}
-	_, _ = createEmptySourceFixture(t, db, now.Add(time.Minute))
+	if _, err := db.Galleries().AddItem(ctx, missingGallery.ID, missingSource.ID, CreateItemInput{
+		RelativePath: "other-missing.jpg", MediaKind: gallery.MediaKindStaticImage,
+		ContentFormat: gallery.ContentFormatImage, ImageCategory: gallery.ImageCategoryPhoto,
+		Position: 2048, Availability: gallery.AvailabilityMissing, ProcessingState: gallery.ProcessingReady,
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+	errorGallery, errorSource := createEmptySourceFixture(t, db, now.Add(time.Minute))
+	if _, err := db.Galleries().AddItem(ctx, errorGallery.ID, errorSource.ID, CreateItemInput{
+		RelativePath: "failed.jpg", MediaKind: gallery.MediaKindStaticImage,
+		ContentFormat: gallery.ContentFormatImage, ImageCategory: gallery.ImageCategoryPhoto,
+		Position: 1024, Availability: gallery.AvailabilityAvailable, ProcessingState: gallery.ProcessingError,
+	}, now); err != nil {
+		t.Fatal(err)
+	}
 	page, err := db.Manage().GalleryPage(ctx, 1, "MISSING")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if page.TotalItems != 1 || len(page.Items) != 1 || page.Items[0].SetID != missingGallery.SetID || page.Items[0].MissingCount != 1 {
+	if page.TotalItems != 1 || len(page.Items) != 1 || page.Items[0].SetID != missingGallery.SetID || page.Items[0].MissingCount != 2 {
 		t.Fatalf("missing Gallery page = %#v", page)
+	}
+	if page.Summary.All != 2 || page.Summary.MissingGallery != 1 || page.Summary.MissingItem != 2 || page.Summary.ProcessingError != 1 {
+		t.Fatalf("global summary must count Galleries, except legacy missingItem: %#v", page.Summary)
+	}
+	errorPage, err := db.Manage().GalleryPage(ctx, 1, "PROCESSING_ERROR")
+	if err != nil || errorPage.TotalItems != 1 || len(errorPage.Items) != 1 || errorPage.Items[0].SetID != errorGallery.SetID || errorPage.Summary.All != 2 {
+		t.Fatalf("processing error page = %#v, err=%v", errorPage, err)
 	}
 	if _, err := db.Manage().GalleryPage(ctx, 1, "NOT_A_FILTER"); err == nil {
 		t.Fatal("unsupported issue filter was accepted")

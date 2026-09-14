@@ -546,11 +546,14 @@ type ManageIgnoredSourceRemovalPreview struct {
 }
 
 type ManageIssueSummary struct {
-	Draft       int `json:"draft"`
-	OverLimit   int `json:"overLimit"`
-	Unavailable int `json:"unavailable"`
-	Blocking    int `json:"blocking"`
-	MissingItem int `json:"missingItem"`
+	All             int `json:"all"`
+	Draft           int `json:"draft"`
+	OverLimit       int `json:"overLimit"`
+	Unavailable     int `json:"unavailable"`
+	Blocking        int `json:"blocking"`
+	ProcessingError int `json:"processingError"`
+	MissingGallery  int `json:"missingGallery"`
+	MissingItem     int `json:"missingItem"`
 }
 
 type ManageLibrary struct {

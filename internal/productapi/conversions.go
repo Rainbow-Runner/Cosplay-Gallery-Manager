@@ -285,11 +285,15 @@ func manageError(err error) error {
 
 func manageGalleryPage(value manage.GalleryPage) *ManageGalleryPage {
 	result := &ManageGalleryPage{Page: value.Page, PageSize: value.PageSize, TotalItems: value.TotalItems, TotalPages: value.TotalPages,
-		Summary: &ManageIssueSummary{Draft: value.Summary.Draft, OverLimit: value.Summary.OverLimit, Unavailable: value.Summary.Unavailable, Blocking: value.Summary.Blocking, MissingItem: value.Summary.MissingItem}}
+		Summary: &ManageIssueSummary{All: value.Summary.All, Draft: value.Summary.Draft, OverLimit: value.Summary.OverLimit, Unavailable: value.Summary.Unavailable, Blocking: value.Summary.Blocking, ProcessingError: value.Summary.ProcessingError, MissingGallery: value.Summary.MissingGallery, MissingItem: value.Summary.MissingItem}}
 	for _, row := range value.Items {
 		result.Items = append(result.Items, manageGalleryRow(row))
 	}
 	return result
+}
+
+func manageIgnoredSourceRecord(value productdb.IgnoredSourceRecord) *ManageIgnoredSourceRecord {
+	return &ManageIgnoredSourceRecord{ID: value.ID, LibraryID: value.LibraryID, SetID: value.SetID, Path: value.Path, Reason: value.Reason, CreatedAt: value.CreatedAt}
 }
 func manageGalleryRow(value manage.GalleryRow) *ManageGalleryRow {
 	var rating *ContentRating

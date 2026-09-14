@@ -1590,10 +1590,6 @@ func (r *queryResolver) PreviewIgnoredSourceRemoval(ctx context.Context, id int6
 	return &ManageIgnoredSourceRemovalPreview{Record: manageIgnoredSourceRecord(preview.Record), AffectedLibraryIDs: preview.AffectedLibraryIDs, ActiveRunCount: preview.ActiveRunCount, BoundSourceCount: preview.BoundSourceCount, RevisionToken: preview.RevisionToken}, nil
 }
 
-func manageIgnoredSourceRecord(value productdb.IgnoredSourceRecord) *ManageIgnoredSourceRecord {
-	return &ManageIgnoredSourceRecord{ID: value.ID, LibraryID: value.LibraryID, SetID: value.SetID, Path: value.Path, Reason: value.Reason, CreatedAt: value.CreatedAt}
-}
-
 // PreviewMediaLibraryChange is the resolver for the previewMediaLibraryChange field.
 func (r *queryResolver) PreviewMediaLibraryChange(ctx context.Context, libraryID int64, newRoot string) (*ManageLibraryChangePreview, error) {
 	preview, err := r.Database.Libraries().PreviewChange(ctx, libraryID, newRoot)

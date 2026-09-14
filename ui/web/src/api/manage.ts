@@ -15,7 +15,7 @@ const MANAGE_GALLERY_DETAIL = gql`
 
 export const MANAGE_GALLERIES = gql`
   query ManageGalleries($page: Int!, $issue: String!) { manageGalleries(page: $page, issue: $issue) {
-    page pageSize totalItems totalPages summary { draft overLimit unavailable blocking missingItem }
+    page pageSize totalItems totalPages summary { all draft overLimit unavailable blocking processingError missingGallery }
     items { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues lastScanErrorCode lastScanCompleted }
   } }
 `;

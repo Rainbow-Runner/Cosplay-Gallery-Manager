@@ -242,7 +242,7 @@ type MediaPage {
 
 type PersonalStateResult { metadataRevision: Int64! }
 
-type ManageIssueSummary { draft: Int! overLimit: Int! unavailable: Int! blocking: Int! missingItem: Int! }
+type ManageIssueSummary { all: Int! draft: Int! overLimit: Int! unavailable: Int! blocking: Int! processingError: Int! missingGallery: Int! missingItem: Int! }
 type ManageGalleryRow {
   setID: ID! slug: String! state: GalleryState! title: String! contentRating: ContentRating
   metadataRevision: Int64! scanRevision: Int64! browsable: Boolean!

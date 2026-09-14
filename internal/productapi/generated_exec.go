@@ -530,11 +530,14 @@ type ComplexityRoot struct {
 	}
 
 	ManageIssueSummary struct {
-		Blocking    func(childComplexity int) int
-		Draft       func(childComplexity int) int
-		MissingItem func(childComplexity int) int
-		OverLimit   func(childComplexity int) int
-		Unavailable func(childComplexity int) int
+		All             func(childComplexity int) int
+		Blocking        func(childComplexity int) int
+		Draft           func(childComplexity int) int
+		MissingGallery  func(childComplexity int) int
+		MissingItem     func(childComplexity int) int
+		OverLimit       func(childComplexity int) int
+		ProcessingError func(childComplexity int) int
+		Unavailable     func(childComplexity int) int
 	}
 
 	ManageLibrary struct {
@@ -3760,6 +3763,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageIgnoredSourceRemovalPreview.RevisionToken(childComplexity), true
 
+	case "ManageIssueSummary.all":
+		if e.complexity.ManageIssueSummary.All == nil {
+			break
+		}
+
+		return e.complexity.ManageIssueSummary.All(childComplexity), true
+
 	case "ManageIssueSummary.blocking":
 		if e.complexity.ManageIssueSummary.Blocking == nil {
 			break
@@ -3774,6 +3784,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageIssueSummary.Draft(childComplexity), true
 
+	case "ManageIssueSummary.missingGallery":
+		if e.complexity.ManageIssueSummary.MissingGallery == nil {
+			break
+		}
+
+		return e.complexity.ManageIssueSummary.MissingGallery(childComplexity), true
+
 	case "ManageIssueSummary.missingItem":
 		if e.complexity.ManageIssueSummary.MissingItem == nil {
 			break
@@ -3787,6 +3804,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageIssueSummary.OverLimit(childComplexity), true
+
+	case "ManageIssueSummary.processingError":
+		if e.complexity.ManageIssueSummary.ProcessingError == nil {
+			break
+		}
+
+		return e.complexity.ManageIssueSummary.ProcessingError(childComplexity), true
 
 	case "ManageIssueSummary.unavailable":
 		if e.complexity.ManageIssueSummary.Unavailable == nil {
@@ -28241,6 +28265,8 @@ func (ec *executionContext) fieldContext_ManageGalleryPage_summary(_ context.Con
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "all":
+				return ec.fieldContext_ManageIssueSummary_all(ctx, field)
 			case "draft":
 				return ec.fieldContext_ManageIssueSummary_draft(ctx, field)
 			case "overLimit":
@@ -28249,6 +28275,10 @@ func (ec *executionContext) fieldContext_ManageGalleryPage_summary(_ context.Con
 				return ec.fieldContext_ManageIssueSummary_unavailable(ctx, field)
 			case "blocking":
 				return ec.fieldContext_ManageIssueSummary_blocking(ctx, field)
+			case "processingError":
+				return ec.fieldContext_ManageIssueSummary_processingError(ctx, field)
+			case "missingGallery":
+				return ec.fieldContext_ManageIssueSummary_missingGallery(ctx, field)
 			case "missingItem":
 				return ec.fieldContext_ManageIssueSummary_missingItem(ctx, field)
 			}
@@ -30345,6 +30375,50 @@ func (ec *executionContext) fieldContext_ManageIgnoredSourceRemovalPreview_revis
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageIssueSummary_all(ctx context.Context, field graphql.CollectedField, obj *ManageIssueSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageIssueSummary_all(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.All, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageIssueSummary_all(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageIssueSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageIssueSummary_draft(ctx context.Context, field graphql.CollectedField, obj *ManageIssueSummary) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageIssueSummary_draft(ctx, field)
 	if err != nil {
@@ -30509,6 +30583,94 @@ func (ec *executionContext) _ManageIssueSummary_blocking(ctx context.Context, fi
 }
 
 func (ec *executionContext) fieldContext_ManageIssueSummary_blocking(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageIssueSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageIssueSummary_processingError(ctx context.Context, field graphql.CollectedField, obj *ManageIssueSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageIssueSummary_processingError(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ProcessingError, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageIssueSummary_processingError(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageIssueSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageIssueSummary_missingGallery(ctx context.Context, field graphql.CollectedField, obj *ManageIssueSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageIssueSummary_missingGallery(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MissingGallery, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageIssueSummary_missingGallery(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ManageIssueSummary",
 		Field:      field,
@@ -65991,6 +66153,11 @@ func (ec *executionContext) _ManageIssueSummary(ctx context.Context, sel ast.Sel
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("ManageIssueSummary")
+		case "all":
+			out.Values[i] = ec._ManageIssueSummary_all(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "draft":
 			out.Values[i] = ec._ManageIssueSummary_draft(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -66008,6 +66175,16 @@ func (ec *executionContext) _ManageIssueSummary(ctx context.Context, sel ast.Sel
 			}
 		case "blocking":
 			out.Values[i] = ec._ManageIssueSummary_blocking(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "processingError":
+			out.Values[i] = ec._ManageIssueSummary_processingError(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "missingGallery":
+			out.Values[i] = ec._ManageIssueSummary_missingGallery(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

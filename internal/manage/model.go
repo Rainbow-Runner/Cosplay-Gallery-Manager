@@ -3,11 +3,14 @@ package manage
 import "github.com/stashapp/stash/internal/gallery"
 
 type IssueSummary struct {
-	Draft       int
-	OverLimit   int
-	Unavailable int
-	Blocking    int
-	MissingItem int
+	All             int
+	Draft           int
+	OverLimit       int
+	Unavailable     int
+	Blocking        int
+	ProcessingError int
+	MissingGallery  int
+	MissingItem     int
 }
 
 type GalleryRow struct {

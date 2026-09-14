@@ -2,7 +2,7 @@
 
 > 日期：2026-09-10
 > 分支：`agent/cgm-migration-handoff-20260726`
-> 状态：自动扫描及异常处理第二个闭环完成，尚未部署
+> 状态：自动扫描、来源异常恢复与媒体库工作台已部署；真实业务操作待所有者验收
 
 ## 1. 实施基线
 
@@ -102,4 +102,5 @@ Libraries新增按全局或当前媒体库作用范围查看ignored Source，服
 - Go：产品数据库（含正式v10→v11迁移快照及默认值）、Product API、Server、Manage、Manifest及SourceScan测试通过；正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签组合测试与Go Vet通过。
 - Web：TypeScript检查、31个测试文件108项测试及682模块生产构建通过；仅保留既有主共享chunk超过500KiB提示。
 - `git diff --check`通过。
-- 尚未提交或部署；正式业务数据库仍应保持schema v10，部署schema v11前必须执行完整备份和迁移前校验。
+- 2026-09-14从清洁提交`276d7454178e4aecf031ed77fe9f00c3682a69df`完成停服备份、正式v10→v11迁移及增量部署。独立回滚目录为`/home/rainbowrunner/cos/bk/cgm-pre-v11-276d745-VOW1cX`：SQLite Online Backup `database.sqlite`（SHA-256 `0ff0bbd9f4c767af195352606c017de3fb1b75bca2b8988c50fd22397fb958fb`）及配置、Coser托管资源、旧二进制归档`application-state.tar`（SHA-256 `e0faf4c60b540ee5d69ecc5a05f746b5dda132f13f6aad2f175382b219994fae`）。归档全量可读，配置/旧二进制逐项哈希吻合；数据库快照schema v10且完整性为`ok`。这是一套本机应用状态回滚材料，不包含用户原始媒体，也不是CGM原生Web可直接导入的完整备份ZIP。
+- 启动迁移另生成`/home/rainbowrunner/.local/share/cosplay-gallery-manager/product.sqlite.pre-schema-v10-1789396755255612479.bak`，独立打开确认schema v10及`integrity_check=ok`。正式库升级后schema v11、`integrity_check=ok`，扫描启动开关仍为0、周期默认1440分钟；Coser/Work/Character/Gallery/Source/Item计数维持`135/108/697/6/6/322`。正式二进制SHA-256为`db8ae3f62e495ea17e7b56663d0d96f768d8f207e016f1e05d601edc43857419`，About精确报告上述提交；systemd服务`active/running`、`NRestarts=0`，Health/Ready均204，启动日志无错误。本机真实媒体库上的新工作台操作仍待所有者验收。

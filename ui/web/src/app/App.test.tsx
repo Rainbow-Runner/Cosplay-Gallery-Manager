@@ -52,4 +52,11 @@ describe("AppRoutes", () => {
     expect(screen.getByRole("link", { name: /Cosplay-Gallery-Manager\/tree\/0123abc/ })).toBeInTheDocument();
     vi.unstubAllGlobals();
   });
+
+  it("routes the Manage navigation to the extensible Help page", async () => {
+    renderRoute("/manage/help");
+    expect(await screen.findByRole("heading", { name: "Help" })).toBeInTheDocument();
+    const currentHelpLink = screen.getAllByRole("link", { name: "Help" }).find((link) => link.getAttribute("aria-current") === "page");
+    expect(currentHelpLink).toHaveAttribute("href", "/manage/help");
+  });
 });

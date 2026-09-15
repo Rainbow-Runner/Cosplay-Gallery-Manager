@@ -341,8 +341,12 @@ function LibraryAutomationPanel({ libraryID, report }: { libraryID: number; repo
   const [run, runState] = useMutation<{ runLibraryAutomation: ManageLibraryAutomationRun }>(RUN_LIBRARY_AUTOMATION);
   const [cancel, cancelState] = useMutation(CANCEL_LIBRARY_AUTOMATION);
   const [draft, setDraft] = useState<ManageLibraryAutomationPolicy | null>(null);
+  const [savedPolicy, setSavedPolicy] = useState<ManageLibraryAutomationPolicy | null>(null);
   useEffect(() => {
-    if (query.data?.manageLibraryAutomation.policy) setDraft(query.data.manageLibraryAutomation.policy);
+    if (query.data?.manageLibraryAutomation.policy) {
+      setDraft(query.data.manageLibraryAutomation.policy);
+      setSavedPolicy(query.data.manageLibraryAutomation.policy);
+    }
   }, [query.data]);
   const activeRun = query.data?.manageLibraryAutomation.recentRuns.find((value) => value.status === "QUEUED" || value.status === "RUNNING") ?? null;
   useEffect(() => {
@@ -363,7 +367,10 @@ function LibraryAutomationPanel({ libraryID, report }: { libraryID: number; repo
         autoAcceptUniqueEntities: draft.autoAcceptUniqueEntities, autoAcceptMediaClassification: draft.autoAcceptMediaClassification,
         autoActivate: draft.mode === "TRUSTED" ? draft.autoActivate : false };
       const result = await save({ variables: { libraryID, expectedRevision: draft.revision, input } });
-      if (result.data) setDraft(result.data.saveLibraryAutomationPolicy.policy);
+      if (result.data) {
+        setDraft(result.data.saveLibraryAutomationPolicy.policy);
+        setSavedPolicy(result.data.saveLibraryAutomationPolicy.policy);
+      }
       report(f("manage.automation.saved"));
     } catch (error) { report(error instanceof Error ? error.message : f("manage.automation.saveFailed")); }
   }
@@ -385,7 +392,17 @@ function LibraryAutomationPanel({ libraryID, report }: { libraryID: number; repo
       await query.refetch();
     } catch (error) { report(error instanceof Error ? error.message : f("manage.automation.cancelFailed")); }
   }
-  const canRun = draft.revision > 0 && draft.mode !== "MANUAL" && activeRun === null;
+  const comparablePolicy = (policy: ManageLibraryAutomationPolicy) => JSON.stringify({
+    mode: policy.mode,
+    defaultContentRating: policy.defaultContentRating,
+    excludeNewRootMedia: policy.excludeNewRootMedia,
+    autoImportArchives: policy.autoImportArchives,
+    autoAcceptUniqueEntities: policy.autoAcceptUniqueEntities,
+    autoAcceptMediaClassification: policy.autoAcceptMediaClassification,
+    autoActivate: policy.autoActivate,
+  });
+  const hasUnsavedChanges = savedPolicy === null || comparablePolicy(draft) !== comparablePolicy(savedPolicy);
+  const canRun = draft.revision > 0 && draft.mode !== "MANUAL" && !hasUnsavedChanges && activeRun === null;
   const autoActivationValid = draft.mode !== "TRUSTED" || !draft.autoActivate || Boolean(draft.defaultContentRating);
   return <section className="rule-section automation-section">
     <header><div><h3>{f("manage.automation.title")}</h3><p>{f("manage.automation.help")}</p></div><div className="automation-actions"><button type="button" disabled={!canRun || runState.loading} onClick={runNow}>{runState.loading ? f("manage.automation.queueing") : f("manage.automation.run")}</button>{activeRun ? <button type="button" disabled={cancelState.loading || activeRun.cancellationRequested} onClick={cancelRun}>{activeRun.cancellationRequested ? f("manage.automation.cancelling") : f("manage.automation.cancel")}</button> : null}</div></header>
@@ -400,6 +417,7 @@ function LibraryAutomationPanel({ libraryID, report }: { libraryID: number; repo
       {!autoActivationValid ? <p className="automation-warning">{f("manage.automation.ratingRequired")}</p> : null}
       <button type="submit" disabled={!autoActivationValid || saveState.loading}>{saveState.loading ? f("manage.library.saving") : f("manage.automation.save")}</button>
     </form>
+    <p className="automation-last-run">{hasUnsavedChanges ? f("manage.automation.unsaved") : draft.mode === "MANUAL" ? f("manage.automation.manualRunDisabled") : f("manage.automation.explicitRun")}</p>
     {state ? <div className="automation-summary"><span>{f("manage.automation.candidates", { count: state.preview.candidateCount })}</span><span>{f("manage.automation.drafts", { count: state.preview.draftCount })}</span><span>{f("manage.automation.ready", { count: state.preview.activationReady })}</span><span>{f("manage.automation.review", { count: state.preview.needsReview })}</span></div> : null}
     {state?.recentRuns[0] ? <p className="automation-last-run" role="status">{f("manage.automation.lastRun", { status: state.recentRuns[0].status, scanned: state.recentRuns[0].scanned, activated: state.recentRuns[0].activated, review: state.recentRuns[0].needsReview })}</p> : null}
   </section>;

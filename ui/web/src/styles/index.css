@@ -714,6 +714,42 @@ a { color: inherit; text-decoration: none; }
 .automation-summary span { padding: .35rem .55rem; border: 1px solid var(--line); color: var(--ink-muted); font-size: .6rem; }
 .automation-last-run { margin: .75rem 0 0; color: var(--ink-muted); font-size: .62rem; }
 .automation-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
+.manage-help-intro { max-width: 58rem; margin: -1rem 0 2rem; color: var(--cgm-muted-foreground); font-size: .85rem; line-height: 1.7; }
+.manage-help-layout { display: grid; grid-template-columns: minmax(11rem, 15rem) minmax(0, 1fr); align-items: start; gap: 1.25rem; max-width: 82rem; }
+.manage-help-topics { position: sticky; top: 1.5rem; display: grid; gap: .35rem; padding: 1rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius); background: var(--cgm-surface); }
+.manage-help-topics strong { margin-bottom: .35rem; font-size: .72rem; letter-spacing: .04em; }
+.manage-help-topics a { padding: .6rem .7rem; border-radius: var(--cgm-radius-sm); color: var(--cgm-muted-foreground); font-size: .75rem; }
+.manage-help-topics a[aria-current="page"] { background: var(--cgm-muted); color: var(--cgm-foreground); font-weight: 600; }
+.manage-help-article { min-width: 0; overflow: hidden; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius); background: var(--cgm-surface); box-shadow: 0 1px 2px rgb(0 0 0 / 4%); }
+.manage-help-article > header, .manage-help-article > section { padding: clamp(1.1rem, 2.5vw, 1.75rem); }
+.manage-help-article > header { border-bottom: 1px solid var(--cgm-border); background: var(--cgm-surface-subtle); }
+.manage-help-article > header > p { margin: 0 0 .4rem; color: var(--cgm-primary); font-size: .62rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.manage-help-article > header h3 { margin: 0; font-size: 1.4rem; }
+.manage-help-article > header > span { display: block; max-width: 58rem; margin-top: .65rem; color: var(--cgm-muted-foreground); font-size: .8rem; line-height: 1.65; }
+.manage-help-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
+.manage-help-actions a { padding: .55rem .75rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface); color: var(--cgm-foreground); font-size: .7rem; font-weight: 600; }
+.manage-help-article > section + section { border-top: 1px solid var(--cgm-border); }
+.manage-help-article section > h4 { margin: 0 0 1rem; font-size: 1rem; }
+.manage-help-article section > p { margin: -.35rem 0 1rem; color: var(--cgm-muted-foreground); font-size: .75rem; line-height: 1.65; }
+.manage-help-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
+.manage-help-card-grid article { display: grid; align-content: start; gap: .55rem; padding: 1rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface-subtle); }
+.manage-help-card-grid strong { font-size: .8rem; }
+.manage-help-card-grid p, .manage-help-card-grid small { margin: 0; color: var(--cgm-muted-foreground); font-size: .7rem; line-height: 1.6; }
+.manage-help-card-grid small { padding-top: .55rem; border-top: 1px solid var(--cgm-border); font-size: .64rem; }
+.manage-help-table-wrap { overflow-x: auto; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); }
+.manage-help-table-wrap table { width: 100%; border-collapse: collapse; font-size: .7rem; line-height: 1.55; }
+.manage-help-table-wrap th, .manage-help-table-wrap td { min-width: 10rem; padding: .8rem; border-bottom: 1px solid var(--cgm-border); text-align: left; vertical-align: top; }
+.manage-help-table-wrap thead th { min-width: 8rem; background: var(--cgm-surface-subtle); color: var(--cgm-muted-foreground); font-size: .6rem; letter-spacing: .05em; text-transform: uppercase; }
+.manage-help-table-wrap tbody th { width: 10rem; color: var(--cgm-foreground); font-weight: 650; }
+.manage-help-table-wrap tbody td { color: var(--cgm-muted-foreground); }
+.manage-help-table-wrap tr:last-child > * { border-bottom: 0; }
+.manage-help-safety { background: color-mix(in srgb, var(--cgm-primary) 4%, var(--cgm-surface)); }
+.manage-help-safety ul { display: grid; gap: .65rem; margin: 0; padding-left: 1.15rem; color: var(--cgm-muted-foreground); font-size: .72rem; line-height: 1.6; }
+@media (max-width: 900px) {
+  .manage-help-layout { grid-template-columns: 1fr; }
+  .manage-help-topics { position: static; }
+  .manage-help-card-grid { grid-template-columns: 1fr; }
+}
 .candidate-section > header span { color: var(--ink-muted); font-size: .58rem; }
 .candidate-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; margin-top: .8rem; padding: .9rem; border: 1px solid var(--line); background: #121013; }
 .candidate-card.has-issue { border-color: rgb(164 49 68 / 55%); }

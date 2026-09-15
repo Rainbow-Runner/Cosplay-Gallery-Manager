@@ -30,6 +30,7 @@ const ManageSettingsPage = lazy(() => import("../manage/ManageSettingsPage").the
 const ManageTasksPage = lazy(() => import("../manage/ManageTasksPage").then((module) => ({ default: module.ManageTasksPage })));
 const ManageCoreEntitiesPage = lazy(() => import("../manage/ManageCoreEntitiesPage").then((module) => ({ default: module.ManageCoreEntitiesPage })));
 const ManageOperationsPage = lazy(() => import("../manage/ManageOperationsPage").then((module) => ({ default: module.ManageOperationsPage })));
+const ManageHelpPage = lazy(() => import("../manage/ManageHelpPage").then((module) => ({ default: module.ManageHelpPage })));
 const MaintenancePage = lazy(() => import("../manage/MaintenancePage").then((module) => ({ default: module.MaintenancePage })));
 const SetupPage = lazy(() => import("../setup/SetupPage").then((module) => ({ default: module.SetupPage })));
 
@@ -46,6 +47,7 @@ export function AppRoutes() {
           <Route path="tasks" element={<ManageTasksPage />} />
           <Route path="operations" element={<ManageOperationsPage />} />
           <Route path="settings" element={<ManageSettingsPage />} />
+          <Route path="help" element={<ManageHelpPage />} />
         </Route>
         <Route path="/setup/*" element={<SetupPage />} />
         <Route path="/login" element={<LoginPage />} />

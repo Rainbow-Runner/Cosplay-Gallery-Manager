@@ -7,7 +7,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { IntlProvider } from "react-intl";
 
-import { APPLY_MEDIA_LIBRARY_CHANGE, CANCEL_LIBRARY_AUTOMATION, DELETE_RECOGNITION_RULE, MANAGE_DISCOVERY, MANAGE_IGNORED_SOURCES, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, PREVIEW_IGNORED_SOURCE_REMOVAL, PREVIEW_MEDIA_LIBRARY_CHANGE, REVOKE_IGNORED_SOURCE, SAVE_LIBRARY_AUTOMATION_POLICY, TRANSFER_MEDIA_LIBRARY_SOURCE, UPDATE_RECOGNITION_RULE } from "../api/manage";
+import { APPLY_MEDIA_LIBRARY_CHANGE, CANCEL_LIBRARY_AUTOMATION, DELETE_RECOGNITION_RULE, MANAGE_DISCOVERY, MANAGE_IGNORED_SOURCES, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, PREVIEW_IGNORED_SOURCE_REMOVAL, PREVIEW_MEDIA_LIBRARY_CHANGE, REVOKE_IGNORED_SOURCE, RUN_LIBRARY_AUTOMATION, SAVE_LIBRARY_AUTOMATION_POLICY, TRANSFER_MEDIA_LIBRARY_SOURCE, UPDATE_RECOGNITION_RULE } from "../api/manage";
 import { messages } from "../i18n/messages";
 import { ManageLibrariesPage } from "./ManageLibrariesPage";
 
@@ -129,11 +129,35 @@ describe("ManageLibrariesPage recognition rules", () => {
       },
     ]);
 
-    expect(await screen.findByRole("button", { name: "Queue automation" }, { timeout: 5000 })).toBeDisabled();
+    expect(await screen.findByRole("button", { name: "Scan and process by saved rules" }, { timeout: 5000 })).toBeDisabled();
     expect(await screen.findByRole("heading", { name: "Library coverage" })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Automation level"), { target: { value: "ASSISTED" } });
     fireEvent.click(screen.getByRole("button", { name: "Save automation policy" }));
     expect(await screen.findByText("Automation policy saved.")).toBeInTheDocument();
+  });
+
+  it("distinguishes review-only discovery and requires saved policy before explicit automation", async () => {
+    const assistedPolicy = { ...manualAutomation.policy, mode: "ASSISTED", revision: 3 };
+    const assistedAutomation = { ...manualAutomation, policy: assistedPolicy };
+    const queuedRun = { __typename: "ManageLibraryAutomationRun", id: 12, libraryID: 2, policyRevision: 3, mode: "ASSISTED", status: "QUEUED", cancellationRequested: false,
+      candidatesSeen: 0, draftsCreated: 0, scanned: 0, activated: 0, needsReview: 0, issueCount: 0, errorCode: "", startedAt: null, completedAt: null };
+    renderPage([
+      { request: { query: MANAGE_LIBRARIES }, result: { data: { manageLibraries: [library] } } },
+      discoveryMock,
+      { request: { query: MANAGE_LIBRARY_AUTOMATION, variables: { libraryID: 2 } }, result: { data: { manageLibraryAutomation: assistedAutomation } }, maxUsageCount: 2 },
+      { request: { query: RUN_LIBRARY_AUTOMATION, variables: { libraryID: 2 } }, result: { data: { runLibraryAutomation: queuedRun } } },
+    ]);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Scan and review only" })).toBeEnabled());
+    const runButton = await screen.findByRole("button", { name: "Scan and process by saved rules" }, { timeout: 5000 });
+    expect(runButton).toBeEnabled();
+    fireEvent.click(screen.getByLabelText("Accept deterministic media classification suggestions"));
+    expect(runButton).toBeDisabled();
+    expect(screen.getByText(/Save the changed policy before running automation/)).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Accept deterministic media classification suggestions"));
+    expect(runButton).toBeEnabled();
+    fireEvent.click(runButton);
+    expect(await screen.findByText("Run #12 queued. It will scan the library first, then process the result with the saved policy.")).toBeInTheDocument();
   });
 
   it("shows background progress and requests cancellation", async () => {

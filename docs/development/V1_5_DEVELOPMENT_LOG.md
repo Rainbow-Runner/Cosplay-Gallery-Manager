@@ -2110,3 +2110,12 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 数据库测试覆盖一个Gallery有多个缺失Item时的计数分离、处理失败筛选及全局计数；Web测试覆盖七卡片、无下拉框、URL切换及分页重置。正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签的产品数据库/API/Server/CMD测试及同范围Go Vet通过；Web 32文件109项测试、TypeScript和682模块生产构建通过（保留既有主共享chunk超过500KiB提示）。此段不需要数据库schema迁移；提交和部署结果在后续记录补充。
 - 功能源码提交为`7b172be5d733806e0aac3b088586536af8a35554`。在正式服务停机状态创建独立回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-gallery-filter-7b172be-U3UM0F`，包含schema v11的SQLite一致快照`database.sqlite`（SHA-256 `2f96fbf092a9370c5c66da13ef59907a52109cb4482e0a2f87f1e180e7e5985a`）及启动配置、systemd unit、全部Coser托管资源、旧二进制的`application-state.tar`（SHA-256 `ef6726ebbfb651dfbba336c473705a9a57e6352fe2dbd10cfbb3ad17d9449e75`）。快照完整性为`ok`；归档全量可读，旧二进制与配置内容哈希和现存文件一致。此目录是本机应用状态回滚材料，不包含原始媒体，也不是CGM原生Web可直接导入的完整备份ZIP。
 - 无schema迁移；原子替换后正式二进制SHA-256为`b6d4174f948937ce6fb428fd2d6a267851828fba3ec6fd9c0011c8ae203f1e9d`，About精确指向上述功能提交。服务`active/running`、`NRestarts=0`，Health/Ready均204，Web首页和Manage深链均200，本轮Gallery索引JS与CSS哈希资源均200；启动日志无错误。正式数据库仍为schema v11、`integrity_check=ok`，Coser/Work/Character/Gallery/Source/Item计数维持`135/108/697/6/6/322`，用户媒体未修改。未执行远端推送；真实浏览器中的七卡片点击行为仍待所有者验收。
+
+# 2026-09-15 媒体库扫描与自动化入口语义澄清
+
+- Libraries页将顶部普通发现按钮改为“仅扫描并检查”，明确该入口只刷新候选、未分配目录和覆盖诊断，不会继续创建/扫描DRAFT或尝试激活。
+- 自动化按钮改为“扫描并按已保存规则自动处理”，说明其后台任务会先执行新一轮媒体库扫描，再按冻结的策略快照创建合资格DRAFT、扫描来源、应用复核策略，并只在TRUSTED策略明确启用且通过全部现有门禁时尝试激活。
+- 保持策略保存与任务执行两个显式动作。新增未保存策略门禁：任何表单改动都会禁用执行按钮并提示先保存，防止用户看到新值、后台却按旧快照运行；MANUAL模式仍不能入队，同库单活动任务和取消逻辑不变。
+- Manage侧栏新增独立“帮助”页，采用可扩展的主题索引与正文结构。首篇“媒体库与导入”对照三种执行入口、媒体库发现与Gallery来源扫描、不同Gallery状态处理结果，并提供Libraries及自动扫描设置直达入口；明确显式自动化不扫描ACTIVE来源，而计划任务会在独立来源对账阶段覆盖ACTIVE。
+- 帮助页和新增内容提供完整中英文消息，使用语义化标题、导航、表格和安全门禁列表，并针对窄屏把主题区和操作卡片收为单列。新增页面回归锁定两层扫描、ACTIVE差异、入口链接和显式执行语义。
+- 本轮仅调整Web交互、帮助内容与文案，不改变GraphQL、后台队列、自动扫描调度、数据库schema、媒体或Manifest。Web 33文件112项测试、TypeScript检查及683模块生产构建通过；帮助页保持独立懒加载chunk，构建仅保留既有共享chunk超过500KiB提示。`git diff --check`通过；尚未提交或部署。

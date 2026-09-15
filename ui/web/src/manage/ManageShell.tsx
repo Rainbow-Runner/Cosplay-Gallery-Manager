@@ -12,6 +12,7 @@ const links: Array<[string, string, IconName, boolean?]> = [
   ["/manage/tasks", "manage.tasks", "history"],
   ["/manage/operations", "Operations", "settings"],
   ["/manage/settings", "manage.settings", "settings"],
+  ["/manage/help", "manage.help", "book"],
   ["/legal", "nav.legal", "info"],
 ];
 

@@ -20,7 +20,7 @@ func (s *BrowseStore) GalleryDetailBySlug(ctx context.Context, scope browse.Scop
 	if err != nil {
 		return browse.GalleryDetail{}, err
 	}
-	result := browse.GalleryDetail{Card: card, Description: resolved.Description, PhotographerName: resolved.PhotographerName,
+	result := browse.GalleryDetail{Card: card, MetadataRevision: resolved.MetadataRevision, Description: resolved.Description, PhotographerName: resolved.PhotographerName,
 		StudioName: resolved.StudioName, Redirected: redirected}
 	if err := s.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(byte_size),0) FROM gallery_items
 		WHERE gallery_id=? AND excluded=0 AND availability_state='AVAILABLE'`, resolved.ID).Scan(&result.AvailableBytes); err != nil {

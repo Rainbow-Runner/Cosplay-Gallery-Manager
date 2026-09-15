@@ -231,6 +231,7 @@ type ExternalLink struct {
 
 type GalleryDetail struct {
 	Card                   GalleryCard
+	MetadataRevision       int64
 	Description            string
 	PhotographerName       string
 	StudioName             string

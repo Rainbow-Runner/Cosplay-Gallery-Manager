@@ -18,6 +18,7 @@ import { Breadcrumbs } from "../ui/Patterns";
 import { Icon } from "../ui/Icon";
 import { formatGalleryMediaCount } from "./galleryMediaCount";
 import { galleryCardPresentation } from "./galleryCardPresentation";
+import { GalleryTagEditor } from "./GalleryTagEditor";
 import { itemResourceURL } from "./resourceUrl";
 import type { BrowseGalleryCard, BrowseUISettings, GalleryDetail, GalleryMember, GalleryMemberIndex } from "./types";
 import { useImageDisplay } from "./useImageDisplay";
@@ -88,6 +89,7 @@ export function GalleryDetailPage() {
   const [ratingOverrides, setRatingOverrides] = useState<Record<string, number | null>>({});
   const [metadataRevision, setMetadataRevision] = useState(0);
   const [coverItemUUID, setCoverItemUUID] = useState("");
+  const [galleryTags, setGalleryTags] = useState<GalleryDetail["tags"]>([]);
   const [busyItemUUID, setBusyItemUUID] = useState("");
   const [actionMessage, setActionMessage] = useState("");
   const [moreDetailsOpen, setMoreDetailsOpen] = useState(false);
@@ -121,6 +123,8 @@ export function GalleryDetailPage() {
     if (!detail) return;
     setGalleryFavorite(detail.card.favorite);
     setCoverItemUUID(detail.card.cover.resource?.itemUUID ?? "");
+    setGalleryTags(detail.tags);
+    setMetadataRevision(detail.metadataRevision);
   }, [detail]);
   useEffect(() => {
     if (memberQuery.data) setMetadataRevision(memberQuery.data.galleryMemberIndex.metadataRevision);
@@ -395,7 +399,11 @@ export function GalleryDetailPage() {
                 ))}
               </div>
               {detail.description ? <p className="gallery-description">{detail.description}</p> : null}
-              <div className="tag-row">{detail.tags.map((tag) => <Link key={tag.uuid} to={`/tag/${tag.uuid}`}>#{tag.name}</Link>)}</div>
+              <GalleryTagEditor setID={setID} metadataRevision={metadataRevision} tags={galleryTags} onSaved={(tags, revision) => {
+                setGalleryTags(tags);
+                setMetadataRevision(revision);
+                void relatedQuery.refetch();
+              }} />
               <dl className="gallery-facts">
                 {detail.photographerName ? <><dt>{intl.formatMessage({ id: "gallery.photographer" })}</dt><dd>{detail.photographerName}</dd></> : null}
                 {detail.studioName ? <><dt>{intl.formatMessage({ id: "gallery.studio" })}</dt><dd>{detail.studioName}</dd></> : null}

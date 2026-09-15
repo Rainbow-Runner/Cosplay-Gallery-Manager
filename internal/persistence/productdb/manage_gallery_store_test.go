@@ -442,3 +442,60 @@ func TestReplaceGalleryRelationsIsAtomicAndRevisionGuarded(t *testing.T) {
 		t.Fatalf("stale relation save changed data: %#v, %v", detail, err)
 	}
 }
+
+func TestReplaceGalleryTagsPreservesLifecycleAndOtherRelations(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 16, 9, 0, 0, 0, time.UTC)
+	created, source, _ := createCompleteAlbumFixture(t, db, now)
+	active, err := db.Galleries().SetState(ctx, created.ID, created.MetadataRevision, gallery.StateActive, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := db.CoreEntities().CreateTag(ctx, CreateTagInput{CreateNamedEntityInput: CreateNamedEntityInput{Name: "Portrait"}, UseInRecommendation: true}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := db.CoreEntities().CreateTag(ctx, CreateTagInput{CreateNamedEntityInput: CreateNamedEntityInput{Name: "Studio"}, UseInRecommendation: true}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO gallery_manifest_sync(
+		gallery_id,manifest_path,status,schema_version,manifest_revision,file_hash,baseline_json,
+		baseline_metadata_revision,checked_at_utc,last_error_code
+	) VALUES(?,'/media/.cosplay.json','CLEAN',1,1,'hash','{}',?,?, '')`, created.ID, active.MetadataRevision, formatTime(now)); err != nil {
+		t.Fatal(err)
+	}
+	// Make the source invalid before the Tag-only edit. The operation must not
+	// opportunistically change the lifecycle state for this unrelated fact.
+	if _, err := db.ExecContext(ctx, `UPDATE gallery_sources SET availability_state='MISSING' WHERE id=?`, source.ID); err != nil {
+		t.Fatal(err)
+	}
+	input := []ReplaceGalleryTagInput{
+		{TagUUID: first.UUID, Position: 1024},
+		{TagUUID: second.UUID, Position: 2048},
+	}
+	if err := db.Galleries().ReplaceTags(ctx, created.ID, active.MetadataRevision, input, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	detail, err := db.Manage().GalleryDetail(ctx, created.SetID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.Row.State != gallery.StateActive || detail.Row.MetadataRevision != active.MetadataRevision+1 {
+		t.Fatalf("Tag edit changed lifecycle or wrong revision: %#v", detail.Row)
+	}
+	if len(detail.Credits) != 1 || len(detail.Tags) != 2 || detail.Tags[0].UUID != first.UUID || detail.Tags[1].UUID != second.UUID {
+		t.Fatalf("Tag edit changed other relations or ordering: %#v %#v", detail.Credits, detail.Tags)
+	}
+	var manifestStatus string
+	if err := db.QueryRowContext(ctx, `SELECT status FROM gallery_manifest_sync WHERE gallery_id=?`, created.ID).Scan(&manifestStatus); err != nil {
+		t.Fatal(err)
+	}
+	if manifestStatus != "DB_DIRTY" {
+		t.Fatalf("manifest status = %s, want DB_DIRTY", manifestStatus)
+	}
+	if err := db.Galleries().ReplaceTags(ctx, created.ID, active.MetadataRevision, nil, now.Add(2*time.Minute)); !errors.Is(err, ErrMetadataRevisionConflict) {
+		t.Fatalf("stale Tag edit error = %v", err)
+	}
+}

@@ -2134,3 +2134,11 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 功能源码提交为`ab2dc807aee30f4bd09168728fb77947c01febdc`（`Improve library automation progress`）。清洁提交以正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签重新构建，二进制报告完整提交、`vcs.modified=false`，SHA-256为`087c9070c56fc9d871e2b5d5fc48c3790faf34ef7a891a79fabb89213a36724a`。
 - 2026-09-15 23:26 CST平滑停服且确认`MainPID=0`后，创建独立回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-automation-ab2dc80-0CbOr8`，保存schema v11 SQLite一致副本、旧二进制、配置、用户systemd单元及完整Coser托管目录。停服关闭连接时WAL已归并；副本`integrity_check=ok`，业务计数为`135/108/697/8/8/570`，数据库SHA-256为`4a53879b846bb3cf698e1566ba33678863e802aacc3da62163462433736bface`，旧二进制SHA-256为`6d6b63117db5d83b0ac0e8c4ed481fda1377cf445813fa84f73928563b5840b4`。
 - 本次无schema迁移。正式二进制原子替换后报告提交`ab2dc807`且哈希与候选一致；服务`active/running`、`MainPID=642508`、`NRestarts=0`，Health/Ready为204，首页及`/manage/libraries`深链为200。正式库仍为schema v11、`integrity_check=ok`及上述业务计数；Worker、LibRaw、FFmpeg和FFprobe正常启用，启动与探针日志无WARN、ERROR、FAILED、panic或fatal。首次探针紧跟systemd启动、早于端口监听而返回连接失败，服务完成约1秒初始化后复检全部通过，未发生重启或回滚。未修改媒体、Manifest或缓存，未执行远端推送。
+
+# 2026-09-16 Browse Gallery快捷Tag编辑
+
+- Gallery详情“更多详情”的现有Tag区域增加类似Stash的多选输入：点击控件空白区域或聚焦输入框即展开最多20个现有Tag，输入主名或Alias由服务端实时筛选；选择后在同一控件生成可移除气泡，空输入退格可移除最后一项，并支持上下方向键、回车选择和Escape关闭候选列表。
+- 编辑采用页面内草稿和显式保存/取消；候选列表排除已选择Tag，最多保留既有200个直接Tag上限。第一段不允许在Browse创建、改名或配置Tag实体，没有结果时只显示无匹配提示。保存成功原地更新Tag和Gallery revision，不刷新页面、跳转后台、关闭Lightbox或重置媒体筛选。
+- 新增Gallery范围`replaceGalleryTags` GraphQL Mutation及专用数据库事务。事务以`expectedMetadataRevision`复核并校验ACTIVE Tag身份、UUID/Position唯一性，原子替换`gallery_tags`、递增Gallery metadata revision、把已跟踪Manifest从CLEAN置为DB_DIRTY并写聚合审计；它不读取或重写Credit/Cast，也不调用`demoteInvalidActiveGallery`，因此即使存在与本次Tag无关的来源异常，Gallery生命周期状态也保持原值。
+- 数据库回归覆盖ACTIVE Gallery在无关来源异常下保存Tag仍保持ACTIVE、Credit不变、顺序/revision/Manifest状态正确以及过期revision无部分写入；GraphQL回归覆盖专用返回契约。前端回归实际执行展开、名称筛选、气泡选择、revision保存、局部结果更新；Web 33文件113项测试、TypeScript检查及684模块生产构建通过，仅保留既有共享chunk超过500KiB提示。
+- 本段没有数据库schema迁移，不访问或改写正式媒体、Manifest文件及业务数据库；源码尚未提交、备份或部署。工作区同时保留上一轮已确认但暂不实施的并发调度规划文档改动。

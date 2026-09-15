@@ -1071,6 +1071,41 @@ func (r *mutationResolver) DeleteGallery(ctx context.Context, setID string, expe
 	return true, nil
 }
 
+// ReplaceGalleryTags is the resolver for the replaceGalleryTags field.
+func (r *mutationResolver) ReplaceGalleryTags(ctx context.Context, setID string, expectedMetadataRevision int64, tags []*ReplaceGalleryTagInput) (*GalleryTagEditResult, error) {
+	galleryID, err := r.Database.Manage().GalleryID(ctx, setID)
+	if err != nil {
+		r.auditManage(ctx, "GALLERY_TAGS_REPLACE", "GALLERY", setID, "GALLERY_TAGS_REPLACE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	converted := make([]productdb.ReplaceGalleryTagInput, 0, len(tags))
+	for _, tag := range tags {
+		if tag == nil {
+			return nil, manageError(errors.New("GalleryTag cannot be null"))
+		}
+		position, err := strconv.ParseInt(tag.Position, 10, 64)
+		if err != nil {
+			return nil, manageError(err)
+		}
+		converted = append(converted, productdb.ReplaceGalleryTagInput{TagUUID: tag.TagUUID, Position: position})
+	}
+	if err := r.Database.Galleries().ReplaceTags(ctx, galleryID, expectedMetadataRevision, converted, time.Now()); err != nil {
+		r.auditManage(ctx, "GALLERY_TAGS_REPLACE", "GALLERY", setID, "GALLERY_TAGS_REPLACE_FAILED", err, map[string]any{"tag_count": len(converted)})
+		return nil, manageError(err)
+	}
+	detail, err := r.Database.Manage().GalleryDetail(ctx, setID)
+	if err != nil {
+		r.auditManage(ctx, "GALLERY_TAGS_REPLACE", "GALLERY", setID, "GALLERY_TAGS_REPLACE_FAILED", err, map[string]any{"tag_count": len(converted)})
+		return nil, manageError(err)
+	}
+	result := &GalleryTagEditResult{MetadataRevision: detail.Row.MetadataRevision}
+	for _, tag := range detail.Tags {
+		result.Tags = append(result.Tags, &EntitySummary{UUID: tag.UUID, Name: tag.Name})
+	}
+	r.auditManage(ctx, "GALLERY_TAGS_REPLACE", "GALLERY", setID, "", nil, map[string]any{"tag_count": len(converted)})
+	return result, nil
+}
+
 // ReplaceGalleryRelations is the resolver for the replaceGalleryRelations field.
 func (r *mutationResolver) ReplaceGalleryRelations(ctx context.Context, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) (*ManageGalleryDetail, error) {
 	galleryID, err := r.Database.Manage().GalleryID(ctx, setID)

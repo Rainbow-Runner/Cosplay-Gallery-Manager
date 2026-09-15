@@ -8,10 +8,12 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  BROWSE_TAG_OPTIONS,
   BROWSE_UI_SETTINGS,
   GALLERY_DETAIL,
   GALLERY_MEMBER_INDEX,
   RECORD_GALLERY_VIEW,
+  REPLACE_GALLERY_TAGS,
   RELATED_GALLERIES,
   SET_BROWSE_GALLERY_COVER_ITEM,
   SET_ITEM_FAVORITE,
@@ -36,7 +38,7 @@ function card(coverItemUUID = "photo-1"): BrowseGalleryCard {
     __typename: "BrowseGalleryCard",
     setID: "gallery-1", slug: "gallery-one", title: "Gallery one", collectionType: "COSPLAY", contentRating: "NON_ADULT",
     cover: { kind: "ITEM", revision: 1, managed: false, warning: false, resource: resource(coverItemUUID) },
-    credits: [{ uuid: "coser-1", name: "Alice" }], creditCount: 1,
+    credits: [{ uuid: "coser-1", name: "Alice", avatarURL: null }], creditCount: 1,
     characters: [{ uuid: "character-1", name: "Saber" }], characterCount: 1,
     works: [{ uuid: "work-1", name: "Fate" }], workCount: 1,
     shootDate: "2026-07", shootDatePrecision: "MONTH", addedAtUTC: "2026-08-01T00:00:00Z",
@@ -46,9 +48,9 @@ function card(coverItemUUID = "photo-1"): BrowseGalleryCard {
 
 function detail(coverItemUUID = "photo-1"): GalleryDetail {
   return {
-    card: card(coverItemUUID), description: "Description", photographerName: "Photographer", studioName: "Studio", availableBytes: 4096,
+    card: card(coverItemUUID), metadataRevision: 7, description: "Description", photographerName: "Photographer", studioName: "Studio", availableBytes: 4096,
     mediaParentDirectories: ["/media/Gallery one", "/media/Gallery one/Disc 2"],
-    credits: [{ coser: { uuid: "coser-1", name: "Alice" }, characters: [{ uuid: "character-1", name: "Saber" }], works: [{ uuid: "work-1", name: "Fate" }] }],
+    credits: [{ coser: { uuid: "coser-1", name: "Alice", avatarURL: null }, characters: [{ uuid: "character-1", name: "Saber" }], works: [{ uuid: "work-1", name: "Fate" }] }],
     tags: [{ uuid: "tag-1", name: "Outdoor" }], externalLinks: [], redirected: false,
   };
 }
@@ -93,7 +95,7 @@ describe("GalleryDetailPage presentation and media actions", () => {
     renderPage(queryMocks());
     expect(await screen.findByRole("heading", { name: "Gallery one" })).toBeInTheDocument();
     expect(document.querySelector(".gallery-hero")).not.toBeInTheDocument();
-    expect(document.querySelectorAll(".media-tile")).toHaveLength(4);
+    await waitFor(() => expect(document.querySelectorAll(".media-tile")).toHaveLength(4));
     expect(screen.queryByRole("heading", { name: "Photos & selfies" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "GIF" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Video" })).not.toBeInTheDocument();
@@ -148,6 +150,36 @@ describe("GalleryDetailPage presentation and media actions", () => {
     await waitFor(() => expect(details).toHaveAttribute("open"));
     fireEvent.pointerDown(screen.getByRole("heading", { name: "Gallery one" }));
     await waitFor(() => expect(details).not.toHaveAttribute("open"));
+  });
+
+  it("edits existing Gallery tags with a searchable Stash-style chip control", async () => {
+    const mocks = queryMocks();
+    mocks.push(
+      { request: { query: BROWSE_TAG_OPTIONS, variables: { query: "", limit: 20 } }, result: { data: { manageCoreEntityOptions: [
+        { uuid: "tag-1", name: "Outdoor", aliases: [] },
+        { uuid: "tag-2", name: "Portrait", aliases: ["People"] },
+      ] } } },
+      { request: { query: BROWSE_TAG_OPTIONS, variables: { query: "por", limit: 20 } }, result: { data: { manageCoreEntityOptions: [
+        { uuid: "tag-2", name: "Portrait", aliases: ["People"] },
+      ] } } },
+      { request: { query: REPLACE_GALLERY_TAGS, variables: { setID: "gallery-1", expectedMetadataRevision: 7, tags: [
+        { tagUUID: "tag-1", position: "1024" }, { tagUUID: "tag-2", position: "2048" },
+      ] } }, result: { data: { replaceGalleryTags: { metadataRevision: 8, tags: [
+        { uuid: "tag-1", name: "Outdoor" }, { uuid: "tag-2", name: "Portrait" },
+      ] } } } },
+      { request: { query: RELATED_GALLERIES, variables: { setID: "gallery-1" } }, result: { data: { relatedGalleries: [] } } },
+    );
+    renderPage(mocks);
+    fireEvent.click(await screen.findByText("More details"));
+    fireEvent.click(await screen.findByRole("button", { name: "Edit tags" }));
+    const input = await screen.findByRole("combobox", { name: "Search tags by name or alias" });
+    fireEvent.change(input, { target: { value: "por" } });
+    const option = await screen.findByRole("option", { name: /Portrait/ });
+    fireEvent.click(option);
+    expect(document.querySelectorAll(".gallery-tag-editor__chip")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "Save tags" }));
+    expect(await screen.findByText("Tags saved. The Gallery state was not changed.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "#Portrait" })).toBeInTheDocument();
   });
 
   it("opens a deep-linked item and removes the dialog when it is closed", async () => {

@@ -148,6 +148,7 @@ type ComplexityRoot struct {
 		Description            func(childComplexity int) int
 		ExternalLinks          func(childComplexity int) int
 		MediaParentDirectories func(childComplexity int) int
+		MetadataRevision       func(childComplexity int) int
 		PhotographerName       func(childComplexity int) int
 		Redirected             func(childComplexity int) int
 		StudioName             func(childComplexity int) int
@@ -187,6 +188,11 @@ type ComplexityRoot struct {
 		Card    func(childComplexity int) int
 		Reasons func(childComplexity int) int
 		Score   func(childComplexity int) int
+	}
+
+	GalleryTagEditResult struct {
+		MetadataRevision func(childComplexity int) int
+		Tags             func(childComplexity int) int
 	}
 
 	HomeGalleryPage struct {
@@ -1081,6 +1087,7 @@ type ComplexityRoot struct {
 		RecordGalleryView                      func(childComplexity int, setID string, itemUUID *string) int
 		ReorderGalleryItems                    func(childComplexity int, setID string, itemUUIDs []string, expectedMetadataRevision int64) int
 		ReplaceGalleryRelations                func(childComplexity int, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) int
+		ReplaceGalleryTags                     func(childComplexity int, setID string, expectedMetadataRevision int64, tags []*ReplaceGalleryTagInput) int
 		ReplaceMissingGalleryItem              func(childComplexity int, setID string, missingItemUUID string, replacementItemUUID string, expectedMetadataRevision int64, expectedScanRevision int64) int
 		ReplaceTagParents                      func(childComplexity int, childUUID string, expectedChildRevision int64, parents []*ReplaceTagParentInput, expectedParents []*ExpectedTagRevisionInput) int
 		RequestItemAnimatedPreview             func(childComplexity int, itemUUID string) int
@@ -1352,6 +1359,7 @@ type MutationResolver interface {
 	MergeCoreEntities(ctx context.Context, kind SearchEntityKind, sourceUUID string, targetUUID string, expectedSourceRevision int64, expectedTargetRevision int64) (*ManageCoreEntityMergeResult, error)
 	DeleteCoreEntity(ctx context.Context, kind SearchEntityKind, uuid string, expectedMetadataRevision int64) (bool, error)
 	DeleteGallery(ctx context.Context, setID string, expectedMetadataRevision int64, password string, confirmation string) (bool, error)
+	ReplaceGalleryTags(ctx context.Context, setID string, expectedMetadataRevision int64, tags []*ReplaceGalleryTagInput) (*GalleryTagEditResult, error)
 	ReplaceGalleryRelations(ctx context.Context, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) (*ManageGalleryDetail, error)
 	AddGalleryExternalLink(ctx context.Context, setID string, expectedMetadataRevision int64, input GalleryExternalLinkInput) (*ManageGalleryDetail, error)
 	PushGalleryManifest(ctx context.Context, setID string, expectedMetadataRevision int64) (*ManageGalleryManifestState, error)
@@ -1933,6 +1941,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.GalleryDetail.MediaParentDirectories(childComplexity), true
 
+	case "GalleryDetail.metadataRevision":
+		if e.complexity.GalleryDetail.MetadataRevision == nil {
+			break
+		}
+
+		return e.complexity.GalleryDetail.MetadataRevision(childComplexity), true
+
 	case "GalleryDetail.photographerName":
 		if e.complexity.GalleryDetail.PhotographerName == nil {
 			break
@@ -2121,6 +2136,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.GalleryRecommendation.Score(childComplexity), true
+
+	case "GalleryTagEditResult.metadataRevision":
+		if e.complexity.GalleryTagEditResult.MetadataRevision == nil {
+			break
+		}
+
+		return e.complexity.GalleryTagEditResult.MetadataRevision(childComplexity), true
+
+	case "GalleryTagEditResult.tags":
+		if e.complexity.GalleryTagEditResult.Tags == nil {
+			break
+		}
+
+		return e.complexity.GalleryTagEditResult.Tags(childComplexity), true
 
 	case "HomeGalleryPage.page":
 		if e.complexity.HomeGalleryPage.Page == nil {
@@ -6760,6 +6789,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.ReplaceGalleryRelations(childComplexity, args["setID"].(string), args["expectedMetadataRevision"].(int64), args["input"].(ReplaceGalleryRelationsInput)), true
 
+	case "Mutation.replaceGalleryTags":
+		if e.complexity.Mutation.ReplaceGalleryTags == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_replaceGalleryTags_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ReplaceGalleryTags(childComplexity, args["setID"].(string), args["expectedMetadataRevision"].(int64), args["tags"].([]*ReplaceGalleryTagInput)), true
+
 	case "Mutation.replaceMissingGalleryItem":
 		if e.complexity.Mutation.ReplaceMissingGalleryItem == nil {
 			break
@@ -10176,6 +10217,80 @@ func (ec *executionContext) field_Mutation_replaceGalleryRelations_argsInput(
 	}
 
 	var zeroVal ReplaceGalleryRelationsInput
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_replaceGalleryTags_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_replaceGalleryTags_argsSetID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["setID"] = arg0
+	arg1, err := ec.field_Mutation_replaceGalleryTags_argsExpectedMetadataRevision(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["expectedMetadataRevision"] = arg1
+	arg2, err := ec.field_Mutation_replaceGalleryTags_argsTags(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["tags"] = arg2
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_replaceGalleryTags_argsSetID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["setID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("setID"))
+	if tmp, ok := rawArgs["setID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_replaceGalleryTags_argsExpectedMetadataRevision(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int64, error) {
+	if _, ok := rawArgs["expectedMetadataRevision"]; !ok {
+		var zeroVal int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedMetadataRevision"))
+	if tmp, ok := rawArgs["expectedMetadataRevision"]; ok {
+		return ec.unmarshalNInt642int64(ctx, tmp)
+	}
+
+	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_replaceGalleryTags_argsTags(
+	ctx context.Context,
+	rawArgs map[string]any,
+) ([]*ReplaceGalleryTagInput, error) {
+	if _, ok := rawArgs["tags"]; !ok {
+		var zeroVal []*ReplaceGalleryTagInput
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("tags"))
+	if tmp, ok := rawArgs["tags"]; ok {
+		return ec.unmarshalNReplaceGalleryTagInput2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐReplaceGalleryTagInputᚄ(ctx, tmp)
+	}
+
+	var zeroVal []*ReplaceGalleryTagInput
 	return zeroVal, nil
 }
 
@@ -17963,6 +18078,50 @@ func (ec *executionContext) fieldContext_GalleryDetail_card(_ context.Context, f
 	return fc, nil
 }
 
+func (ec *executionContext) _GalleryDetail_metadataRevision(ctx context.Context, field graphql.CollectedField, obj *GalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryDetail_metadataRevision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MetadataRevision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryDetail_metadataRevision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _GalleryDetail_description(ctx context.Context, field graphql.CollectedField, obj *GalleryDetail) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_GalleryDetail_description(ctx, field)
 	if err != nil {
@@ -19510,6 +19669,100 @@ func (ec *executionContext) fieldContext_GalleryRecommendation_reasons(_ context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GalleryTagEditResult_metadataRevision(ctx context.Context, field graphql.CollectedField, obj *GalleryTagEditResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryTagEditResult_metadataRevision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MetadataRevision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryTagEditResult_metadataRevision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryTagEditResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GalleryTagEditResult_tags(ctx context.Context, field graphql.CollectedField, obj *GalleryTagEditResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryTagEditResult_tags(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Tags, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*EntitySummary)
+	fc.Result = res
+	return ec.marshalNEntitySummary2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐEntitySummaryᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryTagEditResult_tags(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryTagEditResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "uuid":
+				return ec.fieldContext_EntitySummary_uuid(ctx, field)
+			case "name":
+				return ec.fieldContext_EntitySummary_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type EntitySummary", field.Name)
 		},
 	}
 	return fc, nil
@@ -51770,6 +52023,67 @@ func (ec *executionContext) fieldContext_Mutation_deleteGallery(ctx context.Cont
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_replaceGalleryTags(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_replaceGalleryTags(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().ReplaceGalleryTags(rctx, fc.Args["setID"].(string), fc.Args["expectedMetadataRevision"].(int64), fc.Args["tags"].([]*ReplaceGalleryTagInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*GalleryTagEditResult)
+	fc.Result = res
+	return ec.marshalNGalleryTagEditResult2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐGalleryTagEditResult(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_replaceGalleryTags(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "metadataRevision":
+				return ec.fieldContext_GalleryTagEditResult_metadataRevision(ctx, field)
+			case "tags":
+				return ec.fieldContext_GalleryTagEditResult_tags(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GalleryTagEditResult", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_replaceGalleryTags_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_replaceGalleryRelations(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_replaceGalleryRelations(ctx, field)
 	if err != nil {
@@ -53284,6 +53598,8 @@ func (ec *executionContext) fieldContext_Query_galleryDetail(ctx context.Context
 			switch field.Name {
 			case "card":
 				return ec.fieldContext_GalleryDetail_card(ctx, field)
+			case "metadataRevision":
+				return ec.fieldContext_GalleryDetail_metadataRevision(ctx, field)
 			case "description":
 				return ec.fieldContext_GalleryDetail_description(ctx, field)
 			case "photographerName":
@@ -63738,6 +64054,11 @@ func (ec *executionContext) _GalleryDetail(ctx context.Context, sel ast.Selectio
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "metadataRevision":
+			out.Values[i] = ec._GalleryDetail_metadataRevision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "description":
 			out.Values[i] = ec._GalleryDetail_description(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -64019,6 +64340,50 @@ func (ec *executionContext) _GalleryRecommendation(ctx context.Context, sel ast.
 			}
 		case "reasons":
 			out.Values[i] = ec._GalleryRecommendation_reasons(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var galleryTagEditResultImplementors = []string{"GalleryTagEditResult"}
+
+func (ec *executionContext) _GalleryTagEditResult(ctx context.Context, sel ast.SelectionSet, obj *GalleryTagEditResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, galleryTagEditResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("GalleryTagEditResult")
+		case "metadataRevision":
+			out.Values[i] = ec._GalleryTagEditResult_metadataRevision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "tags":
+			out.Values[i] = ec._GalleryTagEditResult_tags(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -70312,6 +70677,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "replaceGalleryTags":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_replaceGalleryTags(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "replaceGalleryRelations":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_replaceGalleryRelations(ctx, field)
@@ -73333,6 +73705,20 @@ func (ec *executionContext) unmarshalNGalleryState2githubᚗcomᚋstashappᚋsta
 
 func (ec *executionContext) marshalNGalleryState2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐGalleryState(ctx context.Context, sel ast.SelectionSet, v GalleryState) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) marshalNGalleryTagEditResult2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐGalleryTagEditResult(ctx context.Context, sel ast.SelectionSet, v GalleryTagEditResult) graphql.Marshaler {
+	return ec._GalleryTagEditResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNGalleryTagEditResult2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐGalleryTagEditResult(ctx context.Context, sel ast.SelectionSet, v *GalleryTagEditResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._GalleryTagEditResult(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNHomeGalleryPage2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐHomeGalleryPage(ctx context.Context, sel ast.SelectionSet, v HomeGalleryPage) graphql.Marshaler {

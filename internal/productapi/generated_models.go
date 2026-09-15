@@ -142,6 +142,7 @@ type GalleryCreditDetail struct {
 
 type GalleryDetail struct {
 	Card                   *BrowseGalleryCard     `json:"card"`
+	MetadataRevision       int64                  `json:"metadataRevision"`
 	Description            string                 `json:"description"`
 	PhotographerName       string                 `json:"photographerName"`
 	StudioName             string                 `json:"studioName"`
@@ -193,6 +194,11 @@ type GalleryRecommendation struct {
 	Card    *BrowseGalleryCard `json:"card"`
 	Score   float64            `json:"score"`
 	Reasons []string           `json:"reasons"`
+}
+
+type GalleryTagEditResult struct {
+	MetadataRevision int64            `json:"metadataRevision"`
+	Tags             []*EntitySummary `json:"tags"`
 }
 
 type HomeGalleryPage struct {

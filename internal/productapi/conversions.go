@@ -99,7 +99,7 @@ func personSummaries(values []browse.PersonSummary) []*PersonSummary {
 }
 
 func galleryDetail(value browse.GalleryDetail) *GalleryDetail {
-	result := &GalleryDetail{Card: galleryCard(value.Card), Description: value.Description, PhotographerName: value.PhotographerName,
+	result := &GalleryDetail{Card: galleryCard(value.Card), MetadataRevision: value.MetadataRevision, Description: value.Description, PhotographerName: value.PhotographerName,
 		StudioName: value.StudioName, AvailableBytes: value.AvailableBytes, MediaParentDirectories: value.MediaParentDirectories,
 		Tags: entitySummaries(value.Tags), Redirected: value.Redirected}
 	for _, credit := range value.Credits {

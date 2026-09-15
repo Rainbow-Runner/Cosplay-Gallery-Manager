@@ -75,6 +75,7 @@ export interface GalleryCreditDetail {
 
 export interface GalleryDetail {
   card: BrowseGalleryCard;
+  metadataRevision: number;
   description: string;
   photographerName: string;
   studioName: string;

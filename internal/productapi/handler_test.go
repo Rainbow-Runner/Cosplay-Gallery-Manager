@@ -82,6 +82,40 @@ func TestHandlerServesPathFreeBrowseContract(t *testing.T) {
 	}
 }
 
+func TestReplaceGalleryTagsGraphQLUsesNarrowRevisionGuardedMutation(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 16, 10, 0, 0, 0, time.UTC)
+	record, err := database.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Tag edit"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tag, err := database.CoreEntities().CreateTag(ctx, productdb.CreateTagInput{
+		CreateNamedEntityInput: productdb.CreateNamedEntityInput{Name: "Portrait"}, UseInRecommendation: true,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := fmt.Sprintf(`{"query":%q}`, fmt.Sprintf(`mutation { replaceGalleryTags(setID:%q,expectedMetadataRevision:%d,tags:[{tagUUID:%q,position:"1024"}]) { metadataRevision tags { uuid name } } }`, record.SetID, record.MetadataRevision, tag.UUID))
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	NewHandler(database, func(*http.Request) bool { return true }).ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) {
+		t.Fatalf("replace Gallery Tags response = %d %s", response.Code, response.Body.String())
+	}
+	if !bytes.Contains(response.Body.Bytes(), []byte(`"name":"Portrait"`)) || !bytes.Contains(response.Body.Bytes(), []byte(`"metadataRevision":2`)) {
+		t.Fatalf("replace Gallery Tags response = %s", response.Body.String())
+	}
+	current, err := database.Galleries().Find(ctx, record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.State != gallery.StateDraft || current.MetadataRevision != record.MetadataRevision+1 {
+		t.Fatalf("Gallery after Tag edit = %#v", current)
+	}
+}
+
 func TestLibraryAutomationGraphQLQueuesAndCancelsPersistentRun(t *testing.T) {
 	database := openTestDatabase(t)
 	ctx := context.Background()

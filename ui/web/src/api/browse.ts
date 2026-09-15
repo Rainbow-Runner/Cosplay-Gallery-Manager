@@ -67,10 +67,27 @@ export const GALLERY_DETAIL = gql`
   query GalleryDetail($slug: String!) {
     galleryDetail(slug: $slug, scope: ALL) {
       card { ...GalleryCardFields }
-      description photographerName studioName availableBytes mediaParentDirectories redirected
+      metadataRevision description photographerName studioName availableBytes mediaParentDirectories redirected
       credits { coser { uuid name avatarURL } characters { uuid name } works { uuid name } }
       tags { uuid name }
       externalLinks { uuid type label url }
+    }
+  }
+`;
+
+export const BROWSE_TAG_OPTIONS = gql`
+  query BrowseTagOptions($query: String!, $limit: Int!) {
+    manageCoreEntityOptions(kind: TAG, query: $query, limit: $limit) {
+      uuid name aliases
+    }
+  }
+`;
+
+export const REPLACE_GALLERY_TAGS = gql`
+  mutation ReplaceGalleryTags($setID: ID!, $expectedMetadataRevision: Int64!, $tags: [ReplaceGalleryTagInput!]!) {
+    replaceGalleryTags(setID: $setID, expectedMetadataRevision: $expectedMetadataRevision, tags: $tags) {
+      metadataRevision
+      tags { uuid name }
     }
   }
 `;

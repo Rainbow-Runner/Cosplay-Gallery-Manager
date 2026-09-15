@@ -84,6 +84,7 @@ type ExternalLink { uuid: ID! type: String! label: String! url: String! }
 
 type GalleryDetail {
   card: BrowseGalleryCard!
+  metadataRevision: Int64!
   description: String!
   photographerName: String!
   studioName: String!
@@ -93,6 +94,11 @@ type GalleryDetail {
   tags: [EntitySummary!]!
   externalLinks: [ExternalLink!]!
   redirected: Boolean!
+}
+
+type GalleryTagEditResult {
+  metadataRevision: Int64!
+  tags: [EntitySummary!]!
 }
 
 type GalleryMember {
@@ -548,6 +554,7 @@ type Mutation {
   mergeCoreEntities(kind: SearchEntityKind!, sourceUUID: ID!, targetUUID: ID!, expectedSourceRevision: Int64!, expectedTargetRevision: Int64!): ManageCoreEntityMergeResult!
   deleteCoreEntity(kind: SearchEntityKind!, uuid: ID!, expectedMetadataRevision: Int64!): Boolean!
   deleteGallery(setID: ID!, expectedMetadataRevision: Int64!, password: String!, confirmation: String!): Boolean!
+  replaceGalleryTags(setID: ID!, expectedMetadataRevision: Int64!, tags: [ReplaceGalleryTagInput!]!): GalleryTagEditResult!
   replaceGalleryRelations(setID: ID!, expectedMetadataRevision: Int64!, input: ReplaceGalleryRelationsInput!): ManageGalleryDetail!
   addGalleryExternalLink(setID: ID!, expectedMetadataRevision: Int64!, input: GalleryExternalLinkInput!): ManageGalleryDetail!
   pushGalleryManifest(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryManifestState!

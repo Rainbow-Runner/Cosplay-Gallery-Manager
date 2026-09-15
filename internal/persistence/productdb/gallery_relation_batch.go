@@ -29,6 +29,58 @@ type ReplaceGalleryRelationsInput struct {
 	Tags    []ReplaceGalleryTagInput
 }
 
+// ReplaceTags is the narrow Gallery Tag editing transaction used by Browse.
+// Tags are not activation facts, so this operation deliberately preserves the
+// Gallery lifecycle state even when another, unrelated activation fact has
+// changed since the Gallery became ACTIVE.
+func (s *GalleryStore) ReplaceTags(ctx context.Context, galleryID, expectedRevision int64, tags []ReplaceGalleryTagInput, now time.Time) error {
+	if len(tags) > 200 {
+		return errors.New("Gallery direct Tag limit exceeds 200")
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	current, err := findGallery(ctx, tx, galleryID)
+	if err != nil {
+		return err
+	}
+	if current.MetadataRevision != expectedRevision {
+		return ErrMetadataRevisionConflict
+	}
+	seen := make(map[string]struct{}, len(tags))
+	positions := make(map[int64]struct{}, len(tags))
+	for _, tag := range tags {
+		if tag.Position <= 0 {
+			return errors.New("invalid GalleryTag position")
+		}
+		if _, duplicate := seen[tag.TagUUID]; duplicate {
+			return errors.New("duplicate GalleryTag")
+		}
+		if _, duplicate := positions[tag.Position]; duplicate {
+			return errors.New("duplicate GalleryTag position")
+		}
+		seen[tag.TagUUID] = struct{}{}
+		positions[tag.Position] = struct{}{}
+		if err := requireActivePortableKind(ctx, tx, tag.TagUUID, portableid.KindTag); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM gallery_tags WHERE gallery_id=?`, galleryID); err != nil {
+		return err
+	}
+	for _, tag := range tags {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO gallery_tags(gallery_id,tag_uuid,position) VALUES(?,?,?)`, galleryID, tag.TagUUID, tag.Position); err != nil {
+			return err
+		}
+	}
+	if err := touchGalleryMetadata(ctx, tx, galleryID, expectedRevision, now); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 // ReplaceRelations is one Gallery-scoped atomic save. It never creates core
 // entities and therefore cannot silently accept discovery suggestions.
 func (s *GalleryStore) ReplaceRelations(ctx context.Context, galleryID, expectedRevision int64, input ReplaceGalleryRelationsInput, now time.Time) error {

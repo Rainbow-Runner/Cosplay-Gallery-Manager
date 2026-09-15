@@ -1,5 +1,7 @@
 # 本机实际业务应用测试部署
 
+- 2026-09-15从清洁提交`243d18a3216fc03697a8a940bb7ca7fafa4184fc`部署后台帮助页与媒体库自动化入口语义澄清。正式三标签单文件SHA-256为`6d6b63117db5d83b0ac0e8c4ed481fda1377cf445813fa84f73928563b5840b4`且`vcs.modified=false`；停服回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-help-243d18a-SV1wNr`的schema v11数据库副本`integrity_check=ok`。本次无schema迁移；配置哈希、数据库inode及`135/108/697/6/6/322`业务计数不变。服务active、Health/Ready为204，Root与Help深链为200，About精确对应源码。原生备份CLI因所有者重新认证门禁被拒绝且未留下备份，随后使用上述已复验回滚目录完成部署保护。
+
 - 2026-09-09从清洁提交`b477ddc`部署可移植元数据迁移基础闭环。停服后创建并实际解包复验0600完整回滚包`/home/rainbowrunner/cos/bk/cgm-predeploy-20260909T120810Z-b477ddc.tar.gz`，SHA-256为`aeda830f024c7aba2a1b4e72cd4918e9e2288acb959211cc4f79d143c3419c00`；包内schema v8数据库、旧二进制、配置、systemd单元和Coser托管资源逐项一致，不含媒体、缓存或日志。新构建SHA-256为`3365d282fd9b69a35169b446b3f4736bc471fad24c715e44cd87644488db40fd`，正式库自动升级到schema v10，自动v8快照和新库均`integrity_check=ok`，迁移前后业务计数一致。服务一次启动后保持`active/running`、`NRestarts=0`，Health/Ready为204，Root/Legal/Session为200，启动日志无错误。
 
 ### 2026-09-06 Character跨Work迁移与合并归属增量部署

@@ -2118,4 +2118,8 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 保持策略保存与任务执行两个显式动作。新增未保存策略门禁：任何表单改动都会禁用执行按钮并提示先保存，防止用户看到新值、后台却按旧快照运行；MANUAL模式仍不能入队，同库单活动任务和取消逻辑不变。
 - Manage侧栏新增独立“帮助”页，采用可扩展的主题索引与正文结构。首篇“媒体库与导入”对照三种执行入口、媒体库发现与Gallery来源扫描、不同Gallery状态处理结果，并提供Libraries及自动扫描设置直达入口；明确显式自动化不扫描ACTIVE来源，而计划任务会在独立来源对账阶段覆盖ACTIVE。
 - 帮助页和新增内容提供完整中英文消息，使用语义化标题、导航、表格和安全门禁列表，并针对窄屏把主题区和操作卡片收为单列。新增页面回归锁定两层扫描、ACTIVE差异、入口链接和显式执行语义。
-- 本轮仅调整Web交互、帮助内容与文案，不改变GraphQL、后台队列、自动扫描调度、数据库schema、媒体或Manifest。Web 33文件112项测试、TypeScript检查及683模块生产构建通过；帮助页保持独立懒加载chunk，构建仅保留既有共享chunk超过500KiB提示。`git diff --check`通过；尚未提交或部署。
+- 本轮仅调整Web交互、帮助内容与文案，不改变GraphQL、后台队列、自动扫描调度、数据库schema、媒体或Manifest。Web 33文件112项测试、TypeScript检查及683模块生产构建通过；帮助页保持独立懒加载chunk，构建仅保留既有共享chunk超过500KiB提示。部署前`git diff --check`通过。
+- 功能与部署前记录提交为`243d18a3216fc03697a8a940bb7ca7fafa4184fc`（`Clarify library automation and add Manage help`）。清洁提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，二进制报告完整提交及`vcs.modified=false`，SHA-256为`6d6b63117db5d83b0ac0e8c4ed481fda1377cf445813fa84f73928563b5840b4`。
+- 首次尝试CGM原生完整备份时，CLI按设计因缺少所有者重新认证返回`CGM_OWNER_REAUTH_FAILED`；没有生成备份、登记记录或替换文件，保护脚本恢复服务。随后停服建立额外回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-help-243d18a-SV1wNr`，包含SQLite一致副本、完整Coser托管根、旧二进制、配置和用户systemd单元；数据库副本SHA-256为`b8a018543dd0a143ebd91b329b101cfa4267fcd3cbe2cde39e3b3299d5f7b313`，`integrity_check=ok`、schema v11且业务计数为`135/108/697/6/6/322`。目录权限0700、敏感文件0600，Coser根部署时为空且源/备份逐项一致。
+- 原子替换正式二进制并启动后，Health/Ready为204，Root和`/manage/help`深链为200；About精确报告上述提交且`exactSourceAvailable=true`。服务保持`active/running`、`NRestarts=0`，Worker、LibRaw、FFmpeg和FFprobe正常启动，日志无WARN、ERROR、FAILED、panic或fatal。
+- 本次无schema迁移；正式库仍为schema v11、`integrity_check=ok`及`135/108/697/6/6/322`业务计数，数据库inode保持`19679716`，配置SHA-256保持`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`。未修改媒体、Manifest或缓存，未执行远端推送。

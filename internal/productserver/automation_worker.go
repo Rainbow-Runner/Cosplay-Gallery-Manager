@@ -50,6 +50,8 @@ func (s *Server) runAutomationWorkerLoop(ctx context.Context) {
 			default:
 				slog.Error("CGM_LIBRARY_AUTOMATION_TERMINAL_STATE_INVALID", "run_id", run.ID)
 			}
+		} else if !waitAutomationWorker(ctx, 500*time.Millisecond) {
+			return
 		}
 	}
 }

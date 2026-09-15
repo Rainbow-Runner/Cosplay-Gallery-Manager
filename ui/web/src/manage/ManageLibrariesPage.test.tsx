@@ -140,6 +140,7 @@ describe("ManageLibrariesPage recognition rules", () => {
     const assistedPolicy = { ...manualAutomation.policy, mode: "ASSISTED", revision: 3 };
     const assistedAutomation = { ...manualAutomation, policy: assistedPolicy };
     const queuedRun = { __typename: "ManageLibraryAutomationRun", id: 12, libraryID: 2, policyRevision: 3, mode: "ASSISTED", status: "QUEUED", cancellationRequested: false,
+      phase: "QUEUED", processedTargets: 0, totalTargets: 0, currentGalleryTitle: "",
       candidatesSeen: 0, draftsCreated: 0, scanned: 0, activated: 0, needsReview: 0, issueCount: 0, errorCode: "", startedAt: null, completedAt: null };
     renderPage([
       { request: { query: MANAGE_LIBRARIES }, result: { data: { manageLibraries: [library] } } },
@@ -162,6 +163,7 @@ describe("ManageLibrariesPage recognition rules", () => {
 
   it("shows background progress and requests cancellation", async () => {
     const activeRun = { __typename: "ManageLibraryAutomationRun", id: 9, libraryID: 2, policyRevision: 1, mode: "ASSISTED", status: "RUNNING", cancellationRequested: false,
+      phase: "WAITING_FOR_MEDIA", processedTargets: 12, totalTargets: 30, currentGalleryTitle: "Miku Set",
       candidatesSeen: 50, draftsCreated: 30, scanned: 12, activated: 0, needsReview: 12, issueCount: 2, errorCode: "", startedAt: "2026-08-29T06:00:00Z", completedAt: null };
     const activeState = { ...manualAutomation, policy: { ...manualAutomation.policy, mode: "ASSISTED", revision: 1 }, recentRuns: [activeRun] };
     renderPage([
@@ -173,8 +175,15 @@ describe("ManageLibrariesPage recognition rules", () => {
     ]);
 
     expect(await screen.findByText("Last run: RUNNING · scanned 12 · activated 0 · Gallery review 12", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.getByText("Waiting for base previews")).toBeInTheDocument();
+    expect(screen.getByText("12 of 30 Galleries")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Automation progress" })).toHaveAttribute("aria-valuenow", "12");
+    const classification = screen.getByLabelText("Accept deterministic media classification suggestions");
+    fireEvent.click(classification);
+    expect(classification).toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: "Cancel run" }));
     expect(await screen.findByText("Cancellation requested.")).toBeInTheDocument();
+    expect(classification).toBeChecked();
   });
 
   it("loads an existing rule into the editor and saves all deterministic fields", async () => {

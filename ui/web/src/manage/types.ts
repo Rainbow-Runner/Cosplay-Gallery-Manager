@@ -41,7 +41,7 @@ export interface ManageDiscoverySnapshot {
   coverageDiagnostics: { path: string; entryKind: "DIRECTORY" | "ARCHIVE"; reasonCode: string; fileCount: number; byteSize: number }[];
 }
 export interface ManageLibraryAutomationPolicy { libraryID: number; mode: "MANUAL" | "ASSISTED" | "TRUSTED"; defaultContentRating?: "NON_ADULT" | "ADULT" | null; excludeNewRootMedia: boolean; autoImportArchives: boolean; autoAcceptUniqueEntities: boolean; autoAcceptMediaClassification: boolean; autoActivate: boolean; revision: number }
-export interface ManageLibraryAutomationRun { id: number; libraryID: number; policyRevision: number; mode: string; status: string; cancellationRequested: boolean; candidatesSeen: number; draftsCreated: number; scanned: number; activated: number; needsReview: number; issueCount: number; errorCode: string; startedAt: string; completedAt?: string | null }
+export interface ManageLibraryAutomationRun { id: number; libraryID: number; policyRevision: number; mode: string; status: string; phase: string; processedTargets: number; totalTargets: number; currentGalleryTitle: string; cancellationRequested: boolean; candidatesSeen: number; draftsCreated: number; scanned: number; activated: number; needsReview: number; issueCount: number; errorCode: string; startedAt: string; completedAt?: string | null }
 export interface ManageLibraryAutomation { policy: ManageLibraryAutomationPolicy; preview: { candidateCount: number; autoCreateEligible: number; draftCount: number; activationReady: number; needsReview: number }; recentRuns: ManageLibraryAutomationRun[] }
 export interface ManageRuntimeSettings {
   settingsRevision: number; homeScope: "LIST" | "MAGIC" | "ALL"; galleryCardScrubberEnabled: boolean; galleryDetailMediaFilterEnabled: boolean;

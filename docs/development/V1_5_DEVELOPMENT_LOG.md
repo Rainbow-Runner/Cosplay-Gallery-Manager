@@ -2123,3 +2123,11 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 首次尝试CGM原生完整备份时，CLI按设计因缺少所有者重新认证返回`CGM_OWNER_REAUTH_FAILED`；没有生成备份、登记记录或替换文件，保护脚本恢复服务。随后停服建立额外回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-help-243d18a-SV1wNr`，包含SQLite一致副本、完整Coser托管根、旧二进制、配置和用户systemd单元；数据库副本SHA-256为`b8a018543dd0a143ebd91b329b101cfa4267fcd3cbe2cde39e3b3299d5f7b313`，`integrity_check=ok`、schema v11且业务计数为`135/108/697/6/6/322`。目录权限0700、敏感文件0600，Coser根部署时为空且源/备份逐项一致。
 - 原子替换正式二进制并启动后，Health/Ready为204，Root和`/manage/help`深链为200；About精确报告上述提交且`exactSourceAvailable=true`。服务保持`active/running`、`NRestarts=0`，Worker、LibRaw、FFmpeg和FFprobe正常启动，日志无WARN、ERROR、FAILED、panic或fatal。
 - 本次无schema迁移；正式库仍为schema v11、`integrity_check=ok`及`135/108/697/6/6/322`业务计数，数据库inode保持`19679716`，配置SHA-256保持`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`。未修改媒体、Manifest或缓存，未执行远端推送。
+
+# 2026-09-15 自动化派生等待、进度展示与稳定轮询
+
+- 修复TRUSTED自动化扫描与媒体派生任务之间的竞态：来源扫描只负责原子登记Item并排队基础派生，若当前Gallery仍存在`PENDING/RUNNING/RETRY_WAIT`任务，运行现在保留游标、释放租约并进入`WAITING_FOR_MEDIA`，由独立媒体Worker继续处理；任务成功或重试耗尽后再运行现有完整激活门禁，不再把瞬时`DISPLAYABLE_ITEM_REQUIRED`误记为人工问题。PAUSED/FAILED/CANCELLED不伪装成可自动推进状态，真正的Credit、分级、来源等阻断仍进入待复核。
+- 运行阶段、已处理目标、动态总目标和当前Gallery全部由既有持久运行游标、Gallery及任务状态重建，进程重启后仍可恢复；没有增加数据库字段或schema版本。自动化Worker每次重排后让出500ms，避免等待媒体时热循环争用SQLite。
+- Manage Libraries新增队列、发现、等待基础预览、应用策略、收尾和取消阶段，以及可访问的确定/不确定进度条、目标计数与当前Gallery标题。Apollo轮询只在首次无数据时显示加载占位，同revision响应不再覆盖本地策略草稿，因此页面不会每1.5秒整体闪跳，用户未保存的编辑也不会丢失。
+- Archive外部路径/文件名实体建议新增保守展示名拆分：仅识别带空格的横线、竖线和中英文方括号边界，保留完整片段，不做任意空格切词、模糊或子串匹配。下一次显式自动化还会为完全没有Credit且没有待审实体建议的既有Archive草稿补算一次，使此前已创建的草稿也能受益；自动接受仍要求唯一精确Coser与Character，Work可选且必须唯一。
+- 帮助页同步说明运行期进度与可信激活等待边界。后端`productdb/productserver/productapi`测试通过；Web 33文件112项测试、TypeScript检查及683模块生产构建通过，仅保留既有共享chunk超过500KiB提示。`git diff --check`通过。本段未新增schema、未提交、未部署，也未直接修改正式业务数据；现有已完成运行不会被后台静默重放，部署后须由所有者再次显式执行对应媒体库自动化。

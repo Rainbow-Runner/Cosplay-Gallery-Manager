@@ -602,6 +602,60 @@ func TestMarkerImportUsesFolderTitleAndOffersExistingEntityMatches(t *testing.T)
 	}
 }
 
+func TestArchiveEntitySuggestionsSplitPresentationNameSafely(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 15, 16, 0, 0, 0, time.UTC)
+	library := createTestLibrary(t, db, now)
+	if _, err := db.CoreEntities().CreateCoser(ctx, CreateCoserInput{
+		CreateNamedEntityInput: CreateNamedEntityInput{Name: "渡久山"},
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+	work, err := db.CoreEntities().CreateWork(ctx, CreateNamedEntityInput{Name: "绝区零"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.CoreEntities().CreateCharacter(ctx, work.UUID, CreateNamedEntityInput{Name: "星见雅"}, now); err != nil {
+		t.Fatal(err)
+	}
+
+	archivePath := filepath.Join(library.RootPath, "[Fantasy Factory] 渡久山 - 星见雅 [102P 1V].7z")
+	suggestions, err := archiveEntitySuggestions(ctx, db, library.RootPath, archivePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, suggestion := range suggestions {
+		got[suggestion.Field] = suggestion.Value
+	}
+	if got["coser"] != "渡久山" || got["character"] != "星见雅" || got["work"] != "" {
+		t.Fatalf("archive suggestions = %#v", suggestions)
+	}
+
+	created, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "Existing archive DRAFT"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Galleries().AddSource(ctx, created.ID, CreateSourceInput{LibraryID: &library.ID,
+		Type: gallery.SourceTypeArchive, Path: archivePath, Availability: gallery.AvailabilityAvailable}, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Automation().ensureArchiveIdentitySuggestions(ctx, created.ID, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Automation().ensureArchiveIdentitySuggestions(ctx, created.ID, now.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	pending, err := loadPendingIdentitySuggestions(ctx, db.DB, created.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pending["COSER"]) != 1 || len(pending["CHARACTER"]) != 1 {
+		t.Fatalf("backfilled archive suggestions = %#v", pending)
+	}
+}
+
 func TestBoundAndIgnoredSourcesOutrankAutomaticRules(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

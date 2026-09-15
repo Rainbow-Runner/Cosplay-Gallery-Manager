@@ -493,10 +493,12 @@ func archiveEntitySuggestions(ctx context.Context, db discoveryQueryer, libraryR
 		return nil, nil
 	}
 	parts[len(parts)-1] = archivefile.BaseName(parts[len(parts)-1])
-	tokens := make(map[string]struct{}, len(parts))
+	tokens := make(map[string]struct{}, len(parts)*3)
 	for _, part := range parts {
-		if key := normalizedKey(part); key != "" {
-			tokens[key] = struct{}{}
+		for _, token := range archiveEntityNameTokens(part) {
+			if key := normalizedKey(token); key != "" {
+				tokens[key] = struct{}{}
+			}
 		}
 	}
 	if len(tokens) == 0 {
@@ -543,6 +545,71 @@ func archiveEntitySuggestions(ctx context.Context, db discoveryQueryer, libraryR
 		}
 	}
 	return result, nil
+}
+
+// archiveEntityNameTokens expands only explicit presentation separators and
+// bracket boundaries. It does not split ordinary whitespace or use substring
+// matching, so automatic acceptance remains exact and conservative while
+// common names such as "Coser - Character [100P]" become independently
+// matchable.
+func archiveEntityNameTokens(value string) []string {
+	segments := []string{value}
+	var outside strings.Builder
+	var bracket strings.Builder
+	depth := 0
+	flushBracket := func() {
+		if text := strings.TrimSpace(bracket.String()); text != "" {
+			segments = append(segments, text)
+		}
+		bracket.Reset()
+	}
+	for _, r := range value {
+		switch r {
+		case '[', '【':
+			if depth == 0 {
+				flushBracket()
+			}
+			depth++
+		case ']', '】':
+			if depth > 0 {
+				depth--
+				if depth == 0 {
+					flushBracket()
+				}
+			} else {
+				outside.WriteRune(r)
+			}
+		default:
+			if depth > 0 {
+				bracket.WriteRune(r)
+			} else {
+				outside.WriteRune(r)
+			}
+		}
+	}
+	flushBracket()
+	if text := strings.TrimSpace(outside.String()); text != "" {
+		segments = append(segments, text)
+	}
+
+	result := make([]string, 0, len(segments)*2)
+	seen := map[string]struct{}{}
+	for _, segment := range segments {
+		expanded := strings.NewReplacer(" - ", "\x00", " – ", "\x00", " — ", "\x00", " | ", "\x00", " ｜ ", "\x00").Replace(segment)
+		for _, token := range strings.Split(expanded, "\x00") {
+			token = strings.TrimSpace(token)
+			if token == "" {
+				continue
+			}
+			key := normalizedKey(token)
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			result = append(result, token)
+		}
+	}
+	return result
 }
 
 func observeArchiveCandidate(libraryRoot, filename string, limits archivecheck.Limits) (ObservedDirectory, string) {

@@ -391,6 +391,7 @@ func manageAutomationRun(value productdb.AutomationRun) *ManageLibraryAutomation
 	result := &ManageLibraryAutomationRun{ID: value.ID, LibraryID: value.LibraryID, PolicyRevision: value.PolicyRevision,
 		Mode: string(value.Mode), Status: value.Status, CandidatesSeen: value.CandidatesSeen, DraftsCreated: value.DraftsCreated,
 		Scanned: value.Scanned, Activated: value.Activated, NeedsReview: value.NeedsReview, IssueCount: value.IssueCount, ErrorCode: value.ErrorCode,
+		Phase: value.Phase, ProcessedTargets: value.ProcessedTargets, TotalTargets: value.TotalTargets, CurrentGalleryTitle: value.CurrentGalleryTitle,
 		CancellationRequested: value.CancellationRequested, StartedAt: value.StartedAtUTC.Format(time.RFC3339Nano)}
 	if value.CompletedAtUTC != nil {
 		completed := value.CompletedAtUTC.Format(time.RFC3339Nano)

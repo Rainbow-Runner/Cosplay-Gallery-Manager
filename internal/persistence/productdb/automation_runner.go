@@ -113,6 +113,18 @@ func (s *AutomationStore) ProcessClaimedRunBatch(ctx context.Context, runID int6
 			}
 		}
 		if !needsReview && policy.Mode == AutomationTrusted && policy.AutoActivate {
+			pending, pendingErr := galleryMediaPreparationPending(ctx, s.db, target.GalleryID)
+			if pendingErr != nil {
+				return fail("MEDIA_PROGRESS_READ_FAILED", pendingErr)
+			}
+			if pending {
+				// A scan only queues base derivatives. Keep this Gallery as the
+				// current target until a worker produces a displayable item (or
+				// exhausts the jobs), instead of recording a premature activation
+				// review that the owner cannot act on.
+				requeued, err := s.RequeueRun(ctx, run, owner, time.Now())
+				return requeued, false, err
+			}
 			value, err := (&GalleryStore{db: s.db}).Find(ctx, target.GalleryID)
 			if err == nil {
 				_, err = (&GalleryStore{db: s.db}).SetState(ctx, value.ID, value.MetadataRevision, gallery.StateActive, time.Now())
@@ -148,6 +160,13 @@ func (s *AutomationStore) ProcessClaimedRunBatch(ctx context.Context, runID int6
 	}
 	requeued, err := s.RequeueRun(ctx, run, owner, time.Now())
 	return requeued, false, err
+}
+
+func galleryMediaPreparationPending(ctx context.Context, db *sql.DB, galleryID int64) (bool, error) {
+	var pending int
+	err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM processing_jobs job
+		WHERE job.gallery_id=? AND job.status IN ('PENDING','RUNNING','RETRY_WAIT'))`, galleryID).Scan(&pending)
+	return pending == 1, err
 }
 
 // startAutomationRunHeartbeat keeps a claimed run leased while filesystem or
@@ -243,6 +262,9 @@ func (s *AutomationStore) applyAutomationPolicy(ctx context.Context, galleryID i
 		}
 	}
 	if policy.AutoAcceptUniqueEntities {
+		if err := s.ensureArchiveIdentitySuggestions(ctx, galleryID, now); err != nil {
+			return err
+		}
 		if err := s.acceptUniqueIdentityPair(ctx, value, now); err != nil {
 			return err
 		}
@@ -253,6 +275,54 @@ func (s *AutomationStore) applyAutomationPolicy(ctx context.Context, galleryID i
 		}
 	}
 	return nil
+}
+
+// ensureArchiveIdentitySuggestions lets a later explicit automation pass
+// benefit from improved archive-name parsing. It only fills a completely empty
+// suggestion/credit state and therefore never competes with owner review.
+func (s *AutomationStore) ensureArchiveIdentitySuggestions(ctx context.Context, galleryID int64, now time.Time) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	var existing int
+	if err := tx.QueryRowContext(ctx, `SELECT
+		(SELECT COUNT(*) FROM gallery_credits WHERE gallery_id=?) +
+		(SELECT COUNT(*) FROM gallery_identity_suggestions WHERE gallery_id=? AND status='PENDING')`,
+		galleryID, galleryID).Scan(&existing); err != nil || existing > 0 {
+		if err != nil {
+			return err
+		}
+		return tx.Commit()
+	}
+	var libraryRoot, archivePath string
+	err = tx.QueryRowContext(ctx, `SELECT library.root_path,source.source_path
+		FROM gallery_sources source JOIN media_libraries library ON library.id=source.library_id
+		WHERE source.gallery_id=? AND source.source_type='ARCHIVE' ORDER BY source.id LIMIT 1`, galleryID).
+		Scan(&libraryRoot, &archivePath)
+	if errors.Is(err, sql.ErrNoRows) {
+		return tx.Commit()
+	}
+	if err != nil {
+		return err
+	}
+	suggestions, err := archiveEntitySuggestions(ctx, tx, libraryRoot, archivePath)
+	if err != nil {
+		return err
+	}
+	timestamp := formatTime(normalisedTime(now))
+	for _, suggestion := range suggestions {
+		if suggestion.Field != "coser" && suggestion.Field != "work" && suggestion.Field != "character" {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO gallery_identity_suggestions
+			(gallery_id,suggestion_kind,value,status,created_at_utc) VALUES (?,upper(?),?,'PENDING',?)`,
+			galleryID, suggestion.Field, suggestion.Value, timestamp); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (s *AutomationStore) acceptClassificationSuggestions(ctx context.Context, galleryID int64, now time.Time) error {

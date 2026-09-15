@@ -581,6 +581,7 @@ type ComplexityRoot struct {
 		CancellationRequested func(childComplexity int) int
 		CandidatesSeen        func(childComplexity int) int
 		CompletedAt           func(childComplexity int) int
+		CurrentGalleryTitle   func(childComplexity int) int
 		DraftsCreated         func(childComplexity int) int
 		ErrorCode             func(childComplexity int) int
 		ID                    func(childComplexity int) int
@@ -588,10 +589,13 @@ type ComplexityRoot struct {
 		LibraryID             func(childComplexity int) int
 		Mode                  func(childComplexity int) int
 		NeedsReview           func(childComplexity int) int
+		Phase                 func(childComplexity int) int
 		PolicyRevision        func(childComplexity int) int
+		ProcessedTargets      func(childComplexity int) int
 		Scanned               func(childComplexity int) int
 		StartedAt             func(childComplexity int) int
 		Status                func(childComplexity int) int
+		TotalTargets          func(childComplexity int) int
 	}
 
 	ManageLibraryChangePreview struct {
@@ -4015,6 +4019,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageLibraryAutomationRun.CompletedAt(childComplexity), true
 
+	case "ManageLibraryAutomationRun.currentGalleryTitle":
+		if e.complexity.ManageLibraryAutomationRun.CurrentGalleryTitle == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryAutomationRun.CurrentGalleryTitle(childComplexity), true
+
 	case "ManageLibraryAutomationRun.draftsCreated":
 		if e.complexity.ManageLibraryAutomationRun.DraftsCreated == nil {
 			break
@@ -4064,12 +4075,26 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageLibraryAutomationRun.NeedsReview(childComplexity), true
 
+	case "ManageLibraryAutomationRun.phase":
+		if e.complexity.ManageLibraryAutomationRun.Phase == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryAutomationRun.Phase(childComplexity), true
+
 	case "ManageLibraryAutomationRun.policyRevision":
 		if e.complexity.ManageLibraryAutomationRun.PolicyRevision == nil {
 			break
 		}
 
 		return e.complexity.ManageLibraryAutomationRun.PolicyRevision(childComplexity), true
+
+	case "ManageLibraryAutomationRun.processedTargets":
+		if e.complexity.ManageLibraryAutomationRun.ProcessedTargets == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryAutomationRun.ProcessedTargets(childComplexity), true
 
 	case "ManageLibraryAutomationRun.scanned":
 		if e.complexity.ManageLibraryAutomationRun.Scanned == nil {
@@ -4091,6 +4116,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageLibraryAutomationRun.Status(childComplexity), true
+
+	case "ManageLibraryAutomationRun.totalTargets":
+		if e.complexity.ManageLibraryAutomationRun.TotalTargets == nil {
+			break
+		}
+
+		return e.complexity.ManageLibraryAutomationRun.TotalTargets(childComplexity), true
 
 	case "ManageLibraryChangePreview.activeRunCount":
 		if e.complexity.ManageLibraryChangePreview.ActiveRunCount == nil {
@@ -31222,6 +31254,14 @@ func (ec *executionContext) fieldContext_ManageLibraryAutomation_recentRuns(_ co
 				return ec.fieldContext_ManageLibraryAutomationRun_mode(ctx, field)
 			case "status":
 				return ec.fieldContext_ManageLibraryAutomationRun_status(ctx, field)
+			case "phase":
+				return ec.fieldContext_ManageLibraryAutomationRun_phase(ctx, field)
+			case "processedTargets":
+				return ec.fieldContext_ManageLibraryAutomationRun_processedTargets(ctx, field)
+			case "totalTargets":
+				return ec.fieldContext_ManageLibraryAutomationRun_totalTargets(ctx, field)
+			case "currentGalleryTitle":
+				return ec.fieldContext_ManageLibraryAutomationRun_currentGalleryTitle(ctx, field)
 			case "cancellationRequested":
 				return ec.fieldContext_ManageLibraryAutomationRun_cancellationRequested(ctx, field)
 			case "candidatesSeen":
@@ -32070,6 +32110,182 @@ func (ec *executionContext) _ManageLibraryAutomationRun_status(ctx context.Conte
 }
 
 func (ec *executionContext) fieldContext_ManageLibraryAutomationRun_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryAutomationRun",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryAutomationRun_phase(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryAutomationRun) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryAutomationRun_phase(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Phase, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryAutomationRun_phase(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryAutomationRun",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryAutomationRun_processedTargets(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryAutomationRun) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryAutomationRun_processedTargets(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ProcessedTargets, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryAutomationRun_processedTargets(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryAutomationRun",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryAutomationRun_totalTargets(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryAutomationRun) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryAutomationRun_totalTargets(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TotalTargets, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryAutomationRun_totalTargets(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibraryAutomationRun",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibraryAutomationRun_currentGalleryTitle(ctx context.Context, field graphql.CollectedField, obj *ManageLibraryAutomationRun) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibraryAutomationRun_currentGalleryTitle(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CurrentGalleryTitle, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibraryAutomationRun_currentGalleryTitle(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ManageLibraryAutomationRun",
 		Field:      field,
@@ -48909,6 +49125,14 @@ func (ec *executionContext) fieldContext_Mutation_runLibraryAutomation(ctx conte
 				return ec.fieldContext_ManageLibraryAutomationRun_mode(ctx, field)
 			case "status":
 				return ec.fieldContext_ManageLibraryAutomationRun_status(ctx, field)
+			case "phase":
+				return ec.fieldContext_ManageLibraryAutomationRun_phase(ctx, field)
+			case "processedTargets":
+				return ec.fieldContext_ManageLibraryAutomationRun_processedTargets(ctx, field)
+			case "totalTargets":
+				return ec.fieldContext_ManageLibraryAutomationRun_totalTargets(ctx, field)
+			case "currentGalleryTitle":
+				return ec.fieldContext_ManageLibraryAutomationRun_currentGalleryTitle(ctx, field)
 			case "cancellationRequested":
 				return ec.fieldContext_ManageLibraryAutomationRun_cancellationRequested(ctx, field)
 			case "candidatesSeen":
@@ -48996,6 +49220,14 @@ func (ec *executionContext) fieldContext_Mutation_cancelLibraryAutomation(ctx co
 				return ec.fieldContext_ManageLibraryAutomationRun_mode(ctx, field)
 			case "status":
 				return ec.fieldContext_ManageLibraryAutomationRun_status(ctx, field)
+			case "phase":
+				return ec.fieldContext_ManageLibraryAutomationRun_phase(ctx, field)
+			case "processedTargets":
+				return ec.fieldContext_ManageLibraryAutomationRun_processedTargets(ctx, field)
+			case "totalTargets":
+				return ec.fieldContext_ManageLibraryAutomationRun_totalTargets(ctx, field)
+			case "currentGalleryTitle":
+				return ec.fieldContext_ManageLibraryAutomationRun_currentGalleryTitle(ctx, field)
 			case "cancellationRequested":
 				return ec.fieldContext_ManageLibraryAutomationRun_cancellationRequested(ctx, field)
 			case "candidatesSeen":
@@ -66502,6 +66734,26 @@ func (ec *executionContext) _ManageLibraryAutomationRun(ctx context.Context, sel
 			}
 		case "status":
 			out.Values[i] = ec._ManageLibraryAutomationRun_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "phase":
+			out.Values[i] = ec._ManageLibraryAutomationRun_phase(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "processedTargets":
+			out.Values[i] = ec._ManageLibraryAutomationRun_processedTargets(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalTargets":
+			out.Values[i] = ec._ManageLibraryAutomationRun_totalTargets(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "currentGalleryTitle":
+			out.Values[i] = ec._ManageLibraryAutomationRun_currentGalleryTitle(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

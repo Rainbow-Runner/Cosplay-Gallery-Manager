@@ -598,6 +598,10 @@ type ManageLibraryAutomationRun struct {
 	PolicyRevision        int64   `json:"policyRevision"`
 	Mode                  string  `json:"mode"`
 	Status                string  `json:"status"`
+	Phase                 string  `json:"phase"`
+	ProcessedTargets      int     `json:"processedTargets"`
+	TotalTargets          int     `json:"totalTargets"`
+	CurrentGalleryTitle   string  `json:"currentGalleryTitle"`
 	CancellationRequested bool    `json:"cancellationRequested"`
 	CandidatesSeen        int     `json:"candidatesSeen"`
 	DraftsCreated         int     `json:"draftsCreated"`

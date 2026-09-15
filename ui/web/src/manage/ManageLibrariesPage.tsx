@@ -342,20 +342,24 @@ function LibraryAutomationPanel({ libraryID, report }: { libraryID: number; repo
   const [cancel, cancelState] = useMutation(CANCEL_LIBRARY_AUTOMATION);
   const [draft, setDraft] = useState<ManageLibraryAutomationPolicy | null>(null);
   const [savedPolicy, setSavedPolicy] = useState<ManageLibraryAutomationPolicy | null>(null);
+  const loadedPolicyRevision = useRef<number | null>(null);
   useEffect(() => {
-    if (query.data?.manageLibraryAutomation.policy) {
-      setDraft(query.data.manageLibraryAutomation.policy);
-      setSavedPolicy(query.data.manageLibraryAutomation.policy);
+    const policy = query.data?.manageLibraryAutomation.policy;
+    if (policy && loadedPolicyRevision.current !== policy.revision) {
+      loadedPolicyRevision.current = policy.revision;
+      setDraft(policy);
+      setSavedPolicy(policy);
     }
-  }, [query.data]);
+  }, [query.data?.manageLibraryAutomation.policy]);
   const activeRun = query.data?.manageLibraryAutomation.recentRuns.find((value) => value.status === "QUEUED" || value.status === "RUNNING") ?? null;
   useEffect(() => {
     if (activeRun) query.startPolling(1500);
     else query.stopPolling();
     return () => query.stopPolling();
   }, [activeRun?.id, activeRun?.status, query.startPolling, query.stopPolling]);
-  if (query.loading || draft === null) return <section className="rule-section automation-section"><p>{f("manage.automation.loading")}</p></section>;
-  if (query.error) return <section className="rule-section automation-section"><p role="alert">{query.error.message}</p></section>;
+  if (draft === null && query.loading) return <section className="rule-section automation-section"><p>{f("manage.automation.loading")}</p></section>;
+  if (draft === null && query.error) return <section className="rule-section automation-section"><p role="alert">{query.error.message}</p></section>;
+  if (draft === null) return null;
   const state = query.data?.manageLibraryAutomation;
   async function savePolicy(event: FormEvent) {
     event.preventDefault();
@@ -368,6 +372,7 @@ function LibraryAutomationPanel({ libraryID, report }: { libraryID: number; repo
         autoActivate: draft.mode === "TRUSTED" ? draft.autoActivate : false };
       const result = await save({ variables: { libraryID, expectedRevision: draft.revision, input } });
       if (result.data) {
+        loadedPolicyRevision.current = result.data.saveLibraryAutomationPolicy.policy.revision;
         setDraft(result.data.saveLibraryAutomationPolicy.policy);
         setSavedPolicy(result.data.saveLibraryAutomationPolicy.policy);
       }
@@ -404,6 +409,9 @@ function LibraryAutomationPanel({ libraryID, report }: { libraryID: number; repo
   const hasUnsavedChanges = savedPolicy === null || comparablePolicy(draft) !== comparablePolicy(savedPolicy);
   const canRun = draft.revision > 0 && draft.mode !== "MANUAL" && !hasUnsavedChanges && activeRun === null;
   const autoActivationValid = draft.mode !== "TRUSTED" || !draft.autoActivate || Boolean(draft.defaultContentRating);
+  const progressTotal = activeRun?.totalTargets ?? 0;
+  const progressProcessed = activeRun?.processedTargets ?? 0;
+  const progressPercent = progressTotal > 0 ? Math.min(100, Math.round(progressProcessed * 100 / progressTotal)) : 0;
   return <section className="rule-section automation-section">
     <header><div><h3>{f("manage.automation.title")}</h3><p>{f("manage.automation.help")}</p></div><div className="automation-actions"><button type="button" disabled={!canRun || runState.loading} onClick={runNow}>{runState.loading ? f("manage.automation.queueing") : f("manage.automation.run")}</button>{activeRun ? <button type="button" disabled={cancelState.loading || activeRun.cancellationRequested} onClick={cancelRun}>{activeRun.cancellationRequested ? f("manage.automation.cancelling") : f("manage.automation.cancel")}</button> : null}</div></header>
     <form className="automation-form" onSubmit={savePolicy}>
@@ -418,6 +426,11 @@ function LibraryAutomationPanel({ libraryID, report }: { libraryID: number; repo
       <button type="submit" disabled={!autoActivationValid || saveState.loading}>{saveState.loading ? f("manage.library.saving") : f("manage.automation.save")}</button>
     </form>
     <p className="automation-last-run">{hasUnsavedChanges ? f("manage.automation.unsaved") : draft.mode === "MANUAL" ? f("manage.automation.manualRunDisabled") : f("manage.automation.explicitRun")}</p>
+    {activeRun ? <div className="automation-progress" aria-live="polite">
+      <div className="automation-progress__heading"><strong>{f(`manage.automation.phase.${activeRun.phase || activeRun.status}`)}</strong><span>{progressTotal > 0 ? f("manage.automation.progressCount", { processed: progressProcessed, total: progressTotal }) : f("manage.automation.progressPreparing")}</span></div>
+      <div className={`automation-progress__track${progressTotal === 0 ? " is-indeterminate" : ""}`} role="progressbar" aria-label={f("manage.automation.progressLabel")} aria-valuemin={0} aria-valuemax={progressTotal || undefined} aria-valuenow={progressTotal > 0 ? progressProcessed : undefined}><span style={progressTotal > 0 ? { width: `${progressPercent}%` } : undefined} /></div>
+      {activeRun.currentGalleryTitle ? <p>{f("manage.automation.currentGallery", { title: activeRun.currentGalleryTitle })}</p> : null}
+    </div> : null}
     {state ? <div className="automation-summary"><span>{f("manage.automation.candidates", { count: state.preview.candidateCount })}</span><span>{f("manage.automation.drafts", { count: state.preview.draftCount })}</span><span>{f("manage.automation.ready", { count: state.preview.activationReady })}</span><span>{f("manage.automation.review", { count: state.preview.needsReview })}</span></div> : null}
     {state?.recentRuns[0] ? <p className="automation-last-run" role="status">{f("manage.automation.lastRun", { status: state.recentRuns[0].status, scanned: state.recentRuns[0].scanned, activated: state.recentRuns[0].activated, review: state.recentRuns[0].needsReview })}</p> : null}
   </section>;

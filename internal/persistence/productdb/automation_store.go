@@ -59,6 +59,10 @@ type AutomationRun struct {
 	LeaseOwner                                        string
 	LeaseExpiresAtUTC                                 *time.Time
 	LastHeartbeatAtUTC                                *time.Time
+	Phase                                             string
+	ProcessedTargets                                  int
+	TotalTargets                                      int
+	CurrentGalleryTitle                               string
 }
 
 type AutomationStore struct{ db *sql.DB }
@@ -340,12 +344,19 @@ func (s *AutomationStore) RequestCancel(ctx context.Context, id int64, now time.
 }
 
 func (s *AutomationStore) FindRun(ctx context.Context, id int64) (AutomationRun, error) {
-	return scanAutomationRun(s.db.QueryRowContext(ctx, `SELECT id,library_id,policy_revision,mode,status,candidates_seen,
+	result, err := scanAutomationRun(s.db.QueryRowContext(ctx, `SELECT id,library_id,policy_revision,mode,status,candidates_seen,
 		drafts_created,scanned,activated,needs_review,error_code,started_at_utc,completed_at_utc,discovery_completed,
 		cursor_gallery_id,cancellation_requested,lease_owner,lease_expires_at_utc,last_heartbeat_at_utc,
 		default_content_rating,exclude_new_root_media,auto_import_archives,auto_accept_unique_entities,auto_accept_media_classification,auto_activate,
 		(SELECT COUNT(*) FROM library_automation_run_issues issue WHERE issue.run_id=library_automation_runs.id)
 		FROM library_automation_runs WHERE id=?`, id))
+	if err != nil {
+		return AutomationRun{}, err
+	}
+	if err := s.populateRunProgress(ctx, &result); err != nil {
+		return AutomationRun{}, err
+	}
+	return result, nil
 }
 
 func (s *AutomationStore) FindActiveRun(ctx context.Context, libraryID int64) (*AutomationRun, error) {
@@ -384,7 +395,71 @@ func (s *AutomationStore) RecentRuns(ctx context.Context, libraryID int64, limit
 		}
 		result = append(result, value)
 	}
-	return result, rows.Err()
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for index := range result {
+		if err := s.populateRunProgress(ctx, &result[index]); err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+// populateRunProgress derives presentation-only progress from durable run and
+// Gallery state. It deliberately avoids another schema field: queued/restarted
+// runs can reconstruct the same phase and counts after a process restart.
+func (s *AutomationStore) populateRunProgress(ctx context.Context, run *AutomationRun) error {
+	run.ProcessedTargets = run.Activated + run.NeedsReview
+	if run.Status == "COMPLETED" || run.Status == "FAILED" || run.Status == "CANCELLED" {
+		run.Phase = run.Status
+		run.TotalTargets = run.ProcessedTargets
+		return nil
+	}
+	if run.CancellationRequested {
+		run.Phase = "CANCELLING"
+	} else if !run.DiscoveryCompleted {
+		if run.Status == "QUEUED" {
+			run.Phase = "QUEUED"
+		} else {
+			run.Phase = "DISCOVERING"
+		}
+		return nil
+	}
+
+	var remaining int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(DISTINCT gallery.id)
+		FROM galleries gallery JOIN gallery_sources source ON source.gallery_id=gallery.id
+		WHERE source.library_id=? AND gallery.state='DRAFT'`, run.LibraryID).Scan(&remaining); err != nil {
+		return err
+	}
+	run.TotalTargets = run.Activated + remaining
+	var galleryID int64
+	err := s.db.QueryRowContext(ctx, `SELECT gallery.id,gallery.title
+		FROM galleries gallery JOIN gallery_sources source ON source.gallery_id=gallery.id
+		WHERE source.library_id=? AND gallery.state='DRAFT' AND gallery.id>?
+		ORDER BY gallery.id,source.id LIMIT 1`, run.LibraryID, run.CursorGalleryID).
+		Scan(&galleryID, &run.CurrentGalleryTitle)
+	if errors.Is(err, sql.ErrNoRows) {
+		run.Phase = "FINALIZING"
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	pending, err := galleryMediaPreparationPending(ctx, s.db, galleryID)
+	if err != nil {
+		return err
+	}
+	if pending {
+		run.Phase = "WAITING_FOR_MEDIA"
+	} else {
+		run.Phase = "PROCESSING_GALLERIES"
+	}
+	return nil
 }
 
 func scanAutomationRun(row rowScanner) (AutomationRun, error) {

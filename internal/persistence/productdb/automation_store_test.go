@@ -326,7 +326,10 @@ func TestTrustedAutomationKeepsBlockedGalleryDraftAndRecordsIssue(t *testing.T) 
 	if err := os.WriteFile(filepath.Join(root, ".cosplay-root"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "01.jpg"), []byte("not-decoded-by-source-scan"), 0o600); err != nil {
+	if err := os.Mkdir(filepath.Join(root, "images"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "images", "01.jpg"), []byte("\xff\xd8\xff stable content"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.RecognitionRules().Create(ctx, CreateRecognitionRuleInput{
@@ -354,8 +357,25 @@ func TestTrustedAutomationKeepsBlockedGalleryDraftAndRecordsIssue(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	if done || run.Status != "QUEUED" || run.Phase != "WAITING_FOR_MEDIA" || run.Scanned != 1 || run.NeedsReview != 0 {
+		t.Fatalf("automation did not wait for media preparation: %#v", run)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE gallery_items SET processing_state='ERROR'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE processing_jobs SET status='FAILED',last_error_code='TEST_DECODE_FAILED'`); err != nil {
+		t.Fatal(err)
+	}
+	claimed, err = db.Automation().ClaimNextRun(ctx, "test-worker", time.Hour, now.Add(2*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	run, done, err = db.Automation().ProcessClaimedRunBatch(ctx, claimed.ID, "test-worker", 25, time.Hour, now.Add(2*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !done {
-		t.Fatal("single Gallery automation run did not complete")
+		t.Fatal("automation run did not complete after media processing became terminal")
 	}
 	if run.Status != "COMPLETED" || run.CandidatesSeen != 1 || run.DraftsCreated != 1 || run.Scanned != 1 || run.Activated != 0 || run.NeedsReview != 1 || run.IssueCount != 1 {
 		t.Fatalf("automation run = %#v", run)
@@ -366,7 +386,7 @@ func TestTrustedAutomationKeepsBlockedGalleryDraftAndRecordsIssue(t *testing.T) 
 		Scan(&state, &title, &rating, &reconcile); err != nil {
 		t.Fatal(err)
 	}
-	if state != "DRAFT" || title != "Miku Set" || rating != "NON_ADULT" || reconcile != "IN_SYNC" {
+	if state != "DRAFT" || title != "images" || rating != "NON_ADULT" || reconcile != "IN_SYNC" {
 		t.Fatalf("automated gallery = state=%q title=%q rating=%q reconcile=%q", state, title, rating, reconcile)
 	}
 }

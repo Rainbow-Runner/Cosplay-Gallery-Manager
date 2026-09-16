@@ -12,7 +12,7 @@
 
 ## 已完成
 
-- 1.5（Browse Gallery快捷Tag编辑，源码完成、未部署）：Gallery详情“更多详情”内新增Stash式多选Tag控件，聚焦展开现有Tag、按名称/Alias实时筛选、选择生成可删除气泡，并以草稿显式保存/取消；不在Browse创建Tag实体。新增专用`replaceGalleryTags`乐观锁事务，只原子替换直接Tag、递增Gallery revision、标记Manifest `DB_DIRTY`并审计，不回传Credit/Cast、不运行激活降级，ACTIVE/DRAFT/ARCHIVED状态严格保持。无数据库schema变化；正式标签产品数据库/API/Server/CMD测试、Web 33文件113项测试、TypeScript及684模块生产构建通过，尚未提交或部署。详细记录见[1.5开发日志](V1_5_DEVELOPMENT_LOG.md)。
+- 1.5（Browse Gallery快捷Tag编辑，已部署）：Gallery详情“更多详情”内新增Stash式多选Tag控件，聚焦展开现有Tag、按名称/Alias实时筛选、选择生成可删除气泡，并以草稿显式保存/取消；不在Browse创建Tag实体。新增专用`replaceGalleryTags`乐观锁事务，只原子替换直接Tag、递增Gallery revision、标记Manifest `DB_DIRTY`并审计，不回传Credit/Cast、不运行激活降级，ACTIVE/DRAFT/ARCHIVED状态严格保持。无数据库schema变化；正式标签产品数据库/API/Server/CMD测试、Web 33文件113项测试、TypeScript及684模块生产构建通过。2026-09-16从清洁提交`65dfa74`完成独立回滚备份保护下的本机增量部署，服务、探针、静态资源、数据库完整性和业务计数复核通过。详细记录见[1.5开发日志](V1_5_DEVELOPMENT_LOG.md)。
 - 1.5（自动化派生等待、进度与稳定轮询，已部署）：TRUSTED运行扫描后如仍有可执行基础派生任务，不再立即把`DISPLAYABLE_ITEM_REQUIRED`记为人工复核，而是保持当前Gallery游标并进入可恢复的`WAITING_FOR_MEDIA`阶段；任务成功或耗尽后再执行完整激活门禁。Manage Libraries新增发现、等待预览、应用策略、收尾等实时阶段、目标计数、当前Gallery和进度条；轮询保留已有页面与未保存策略草稿，不再反复切换加载态造成闪跳。Archive组合文件名按显式分隔符/括号边界拆分后仍只做精确唯一实体匹配；既有无Credit/无待审建议的Archive草稿可在下一次显式自动化中安全补算。进度完全由持久状态推导，无新增schema。2026-09-15从清洁提交`ab2dc80`完成独立回滚备份保护下的正式增量部署，服务、探针、日志、数据库完整性和业务计数复核通过。
 - 1.5（后台帮助页及媒体库自动化语义澄清，已部署）：Manage新增可持续扩展的“帮助”入口和主题索引，首篇“媒体库与导入”说明仅扫描检查、显式自动化和计划扫描三种入口，以及媒体库发现/Gallery来源对账两层扫描和新根、既有DRAFT、ACTIVE的不同处理范围。Libraries页同步把普通发现操作明确为“仅扫描并检查”，把自动化操作明确为“扫描并按已保存规则自动处理”。策略仍须显式保存、任务仍须显式执行，且表单存在未保存改动时禁止入队，避免任务静默使用旧策略快照；MANUAL模式、单库单活动任务、取消能力与全部激活门禁保持不变。无后端、数据库schema或自动调度语义变化；Web 33文件112项测试、TypeScript及683模块生产构建通过。2026-09-15从清洁提交`243d18a`完成独立回滚备份保护下的无schema增量部署，服务、深链、About、数据库完整性和业务计数复核通过。
 

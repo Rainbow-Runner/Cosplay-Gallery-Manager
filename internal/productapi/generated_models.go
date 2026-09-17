@@ -51,15 +51,17 @@ type CharacterDetail struct {
 }
 
 type CoreEntityInput struct {
-	Kind                SearchEntityKind `json:"kind"`
-	Name                string           `json:"name"`
-	SortName            string           `json:"sortName"`
-	Aliases             []string         `json:"aliases"`
-	WorkUUID            *string          `json:"workUUID,omitempty"`
-	ProfileSummary      string           `json:"profileSummary"`
-	Biography           string           `json:"biography"`
-	CountryOrRegion     string           `json:"countryOrRegion"`
-	UseInRecommendation bool             `json:"useInRecommendation"`
+	Kind                      SearchEntityKind `json:"kind"`
+	Name                      string           `json:"name"`
+	SortName                  string           `json:"sortName"`
+	Aliases                   []string         `json:"aliases"`
+	WorkUUID                  *string          `json:"workUUID,omitempty"`
+	TagParentUUID             *string          `json:"tagParentUUID,omitempty"`
+	ExpectedTagParentRevision *int64           `json:"expectedTagParentRevision,omitempty"`
+	ProfileSummary            string           `json:"profileSummary"`
+	Biography                 string           `json:"biography"`
+	CountryOrRegion           string           `json:"countryOrRegion"`
+	UseInRecommendation       bool             `json:"useInRecommendation"`
 }
 
 type CoserDetail struct {
@@ -1013,6 +1015,16 @@ type ManageSocialAccount struct {
 type ManageSuggestion struct {
 	Field string `json:"field"`
 	Value string `json:"value"`
+}
+
+type ManageTagTreeItem struct {
+	UUID             string   `json:"uuid"`
+	Name             string   `json:"name"`
+	Aliases          []string `json:"aliases"`
+	ParentUUIDs      []string `json:"parentUUIDs"`
+	MetadataRevision int64    `json:"metadataRevision"`
+	ChildCount       int      `json:"childCount"`
+	GalleryCount     int      `json:"galleryCount"`
 }
 
 type ManageUnassignedDiagnostic struct {

@@ -360,7 +360,9 @@ func (s *CoreEntityStore) UpdateCharacter(ctx context.Context, uuid, workUUID st
 
 type CreateTagInput struct {
 	CreateNamedEntityInput
-	UseInRecommendation bool
+	UseInRecommendation    bool
+	ParentUUID             string
+	ExpectedParentRevision int64
 }
 
 func (s *CoreEntityStore) CreateTag(ctx context.Context, input CreateTagInput, now time.Time) (coreentity.Tag, error) {
@@ -372,6 +374,23 @@ func (s *CoreEntityStore) CreateTag(ctx context.Context, input CreateTagInput, n
 		return coreentity.Tag{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if input.ParentUUID != "" {
+		if input.ExpectedParentRevision <= 0 {
+			return coreentity.Tag{}, errors.New("Tag parent revision is required")
+		}
+		if err := requireActivePortableKind(ctx, tx, input.ParentUUID, portableid.KindTag); err != nil {
+			return coreentity.Tag{}, err
+		}
+		var parentRevision int64
+		if err := tx.QueryRowContext(ctx, `SELECT metadata_revision FROM tags WHERE uuid=?`, input.ParentUUID).Scan(&parentRevision); err != nil {
+			return coreentity.Tag{}, err
+		}
+		if parentRevision != input.ExpectedParentRevision {
+			return coreentity.Tag{}, ErrCoreMetadataRevisionConflict
+		}
+	} else if input.ExpectedParentRevision != 0 {
+		return coreentity.Tag{}, errors.New("Tag parent UUID is required")
+	}
 	allNames := append([]string{input.Name}, input.Aliases...)
 	localNames := make(map[string]struct{}, len(allNames))
 	for _, name := range allNames {
@@ -402,6 +421,18 @@ func (s *CoreEntityStore) CreateTag(ctx context.Context, input CreateTagInput, n
 	}
 	if err := insertAliases(ctx, tx, "tag_aliases", "tag_uuid", entityUUID, input.Aliases); err != nil {
 		return coreentity.Tag{}, err
+	}
+	if input.ParentUUID != "" {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO tag_edges(parent_uuid,child_uuid,position) VALUES(?,?,1024)`, input.ParentUUID, entityUUID); err != nil {
+			return coreentity.Tag{}, err
+		}
+		result, err := tx.ExecContext(ctx, `UPDATE tags SET metadata_revision=metadata_revision+1,updated_at_utc=? WHERE uuid=? AND metadata_revision=?`, timestamp, input.ParentUUID, input.ExpectedParentRevision)
+		if err != nil {
+			return coreentity.Tag{}, err
+		}
+		if affected, err := result.RowsAffected(); err != nil || affected != 1 {
+			return coreentity.Tag{}, ErrCoreMetadataRevisionConflict
+		}
 	}
 	result, err := findTag(ctx, tx, entityUUID)
 	if err != nil {

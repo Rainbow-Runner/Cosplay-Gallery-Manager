@@ -7,7 +7,7 @@ import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CREATE_CORE_ENTITY, MANAGE_CORE_ENTITIES, MANAGE_CORE_ENTITY, MANAGE_CORE_ENTITY_NAME_CONFLICTS, MANAGE_CORE_ENTITY_OPTIONS, MANAGE_COSER_NAME_CONFLICTS, MANAGE_WORK_CHARACTERS, PREVIEW_CORE_ENTITY_DELETE, UPDATE_CORE_ENTITY } from "../api/manage";
+import { CREATE_CORE_ENTITY, MANAGE_CORE_ENTITIES, MANAGE_CORE_ENTITY, MANAGE_CORE_ENTITY_NAME_CONFLICTS, MANAGE_CORE_ENTITY_OPTIONS, MANAGE_COSER_NAME_CONFLICTS, MANAGE_TAG_TREE, MANAGE_WORK_CHARACTERS, PREVIEW_CORE_ENTITY_DELETE, UPDATE_CORE_ENTITY } from "../api/manage";
 import { messages } from "../i18n/messages";
 import { ManageCoreEntitiesPage, parseAliases, socialPlatformOptions } from "./ManageCoreEntitiesPage";
 import type { ManageCoreEntity } from "./types";
@@ -30,6 +30,20 @@ function renderPage(mocks: ReadonlyArray<MockedResponse>, initialEntry: string, 
 }
 
 describe("ManageCoreEntitiesPage validation", () => {
+  it("defaults Tag management to the hierarchy and prepares a child under its selected parent", async () => {
+    const parent = { uuid: "018f4c8e-7a9b-7def-8123-456789abcde0", name: "Costume", aliases: [], parentUUIDs: [], metadataRevision: 3, childCount: 0, galleryCount: 0 };
+    renderPage([
+      { request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("TAG") }, result: { data: { manageCoreEntities: { ...emptyPage, pageSize: 60 } } } },
+      { request: { query: MANAGE_TAG_TREE }, result: { data: { manageTagTree: [parent] } } },
+    ], "/manage/entities?kind=TAG");
+    fireEvent.click(await screen.findByRole("button", { name: "New child Tag under Costume" }));
+    expect(screen.getByText("New child Tag under Costume")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Clear parent" }));
+    expect(screen.queryByText("New child Tag under Costume")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "List" }));
+    expect(screen.getByRole("combobox", { name: "Items per page" })).toBeInTheDocument();
+  });
   it("requires review of exact Coser identity matches and can open the existing entity", async () => {
     const existing = {
       __typename: "ManageCoreEntity", kind: "COSER", uuid: "018f4c8e-7a9b-7def-8123-456789abcdea", name: "Alice", sortName: "", aliases: ["Alicia"], slug: "alice", metadataRevision: 3,

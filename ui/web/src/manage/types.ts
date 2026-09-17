@@ -97,6 +97,7 @@ export interface ManageCoreEntity { kind: "COSER" | "WORK" | "CHARACTER" | "TAG"
 export interface ManageCoserNameConflict { coser: ManageCoreEntity; matchedValues: string[]; galleryCount: number }
 export interface ManageCoreEntityNameConflict { entity: ManageCoreEntity; matchedValues: string[]; galleryCount: number; workName: string; primaryNameMatch: boolean }
 export interface ManageCoreEntityPage { items: ManageCoreEntity[]; page: number; pageSize: number; totalItems: number; totalPages: number }
+export interface ManageTagTreeItem { uuid: string; name: string; aliases: string[]; parentUUIDs: string[]; metadataRevision: number; childCount: number; galleryCount: number }
 export interface ManageCoreEntityMergePreview {
   kind: ManageCoreEntity["kind"]; sourceUUID: string; targetUUID: string; sourceRevision: number; targetRevision: number;
   affectedGalleryIDs: number[]; conflicts: { code: string; details: string }[]; canMerge: boolean;

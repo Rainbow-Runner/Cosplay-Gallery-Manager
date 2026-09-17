@@ -999,6 +999,16 @@ type ComplexityRoot struct {
 		Value func(childComplexity int) int
 	}
 
+	ManageTagTreeItem struct {
+		Aliases          func(childComplexity int) int
+		ChildCount       func(childComplexity int) int
+		GalleryCount     func(childComplexity int) int
+		MetadataRevision func(childComplexity int) int
+		Name             func(childComplexity int) int
+		ParentUUIDs      func(childComplexity int) int
+		UUID             func(childComplexity int) int
+	}
+
 	ManageUnassignedDiagnostic struct {
 		MediaCount func(childComplexity int) int
 		ParentPath func(childComplexity int) int
@@ -1194,6 +1204,7 @@ type ComplexityRoot struct {
 		ManagePortableMigration              func(childComplexity int, importID *string, mergeID *string) int
 		ManageProcessingJobs                 func(childComplexity int, status string, page int) int
 		ManageRuntimeSettings                func(childComplexity int) int
+		ManageTagTree                        func(childComplexity int) int
 		ManageVideoDependencyStatus          func(childComplexity int) int
 		ManageWorkCharacters                 func(childComplexity int, workUUID string) int
 		MediaDetail                          func(childComplexity int, itemUUID string) int
@@ -1414,6 +1425,7 @@ type QueryResolver interface {
 	ManagePortableMigration(ctx context.Context, importID *string, mergeID *string) (*ManagePortableMigrationSnapshot, error)
 	ManageAudit(ctx context.Context, page int) (*ManageAuditPage, error)
 	ManageCoreEntities(ctx context.Context, kind SearchEntityKind, page int, pageSize int, query string, coserAssetFilter ManageCoserAssetFilter) (*ManageCoreEntityPage, error)
+	ManageTagTree(ctx context.Context) ([]*ManageTagTreeItem, error)
 	ManageCoreEntity(ctx context.Context, kind SearchEntityKind, uuid string) (*ManageCoreEntity, error)
 	ManageWorkCharacters(ctx context.Context, workUUID string) ([]*ManageCoreEntity, error)
 	ManageCoreEntityOptions(ctx context.Context, kind SearchEntityKind, query string, limit int) ([]*ManageCoreEntity, error)
@@ -6162,6 +6174,55 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageSuggestion.Value(childComplexity), true
 
+	case "ManageTagTreeItem.aliases":
+		if e.complexity.ManageTagTreeItem.Aliases == nil {
+			break
+		}
+
+		return e.complexity.ManageTagTreeItem.Aliases(childComplexity), true
+
+	case "ManageTagTreeItem.childCount":
+		if e.complexity.ManageTagTreeItem.ChildCount == nil {
+			break
+		}
+
+		return e.complexity.ManageTagTreeItem.ChildCount(childComplexity), true
+
+	case "ManageTagTreeItem.galleryCount":
+		if e.complexity.ManageTagTreeItem.GalleryCount == nil {
+			break
+		}
+
+		return e.complexity.ManageTagTreeItem.GalleryCount(childComplexity), true
+
+	case "ManageTagTreeItem.metadataRevision":
+		if e.complexity.ManageTagTreeItem.MetadataRevision == nil {
+			break
+		}
+
+		return e.complexity.ManageTagTreeItem.MetadataRevision(childComplexity), true
+
+	case "ManageTagTreeItem.name":
+		if e.complexity.ManageTagTreeItem.Name == nil {
+			break
+		}
+
+		return e.complexity.ManageTagTreeItem.Name(childComplexity), true
+
+	case "ManageTagTreeItem.parentUUIDs":
+		if e.complexity.ManageTagTreeItem.ParentUUIDs == nil {
+			break
+		}
+
+		return e.complexity.ManageTagTreeItem.ParentUUIDs(childComplexity), true
+
+	case "ManageTagTreeItem.uuid":
+		if e.complexity.ManageTagTreeItem.UUID == nil {
+			break
+		}
+
+		return e.complexity.ManageTagTreeItem.UUID(childComplexity), true
+
 	case "ManageUnassignedDiagnostic.mediaCount":
 		if e.complexity.ManageUnassignedDiagnostic.MediaCount == nil {
 			break
@@ -7782,6 +7843,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.ManageRuntimeSettings(childComplexity), true
+
+	case "Query.manageTagTree":
+		if e.complexity.Query.ManageTagTree == nil {
+			break
+		}
+
+		return e.complexity.Query.ManageTagTree(childComplexity), true
 
 	case "Query.manageVideoDependencyStatus":
 		if e.complexity.Query.ManageVideoDependencyStatus == nil {
@@ -45813,6 +45881,314 @@ func (ec *executionContext) fieldContext_ManageSuggestion_value(_ context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageTagTreeItem_uuid(ctx context.Context, field graphql.CollectedField, obj *ManageTagTreeItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageTagTreeItem_uuid(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageTagTreeItem_uuid(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageTagTreeItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageTagTreeItem_name(ctx context.Context, field graphql.CollectedField, obj *ManageTagTreeItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageTagTreeItem_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageTagTreeItem_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageTagTreeItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageTagTreeItem_aliases(ctx context.Context, field graphql.CollectedField, obj *ManageTagTreeItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageTagTreeItem_aliases(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Aliases, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageTagTreeItem_aliases(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageTagTreeItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageTagTreeItem_parentUUIDs(ctx context.Context, field graphql.CollectedField, obj *ManageTagTreeItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageTagTreeItem_parentUUIDs(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ParentUUIDs, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNID2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageTagTreeItem_parentUUIDs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageTagTreeItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageTagTreeItem_metadataRevision(ctx context.Context, field graphql.CollectedField, obj *ManageTagTreeItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageTagTreeItem_metadataRevision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MetadataRevision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageTagTreeItem_metadataRevision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageTagTreeItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageTagTreeItem_childCount(ctx context.Context, field graphql.CollectedField, obj *ManageTagTreeItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageTagTreeItem_childCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ChildCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageTagTreeItem_childCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageTagTreeItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageTagTreeItem_galleryCount(ctx context.Context, field graphql.CollectedField, obj *ManageTagTreeItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageTagTreeItem_galleryCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageTagTreeItem_galleryCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageTagTreeItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageUnassignedDiagnostic_parentPath(ctx context.Context, field graphql.CollectedField, obj *ManageUnassignedDiagnostic) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageUnassignedDiagnostic_parentPath(ctx, field)
 	if err != nil {
@@ -56442,6 +56818,66 @@ func (ec *executionContext) fieldContext_Query_manageCoreEntities(ctx context.Co
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_manageTagTree(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_manageTagTree(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ManageTagTree(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageTagTreeItem)
+	fc.Result = res
+	return ec.marshalNManageTagTreeItem2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageTagTreeItemᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_manageTagTree(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "uuid":
+				return ec.fieldContext_ManageTagTreeItem_uuid(ctx, field)
+			case "name":
+				return ec.fieldContext_ManageTagTreeItem_name(ctx, field)
+			case "aliases":
+				return ec.fieldContext_ManageTagTreeItem_aliases(ctx, field)
+			case "parentUUIDs":
+				return ec.fieldContext_ManageTagTreeItem_parentUUIDs(ctx, field)
+			case "metadataRevision":
+				return ec.fieldContext_ManageTagTreeItem_metadataRevision(ctx, field)
+			case "childCount":
+				return ec.fieldContext_ManageTagTreeItem_childCount(ctx, field)
+			case "galleryCount":
+				return ec.fieldContext_ManageTagTreeItem_galleryCount(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageTagTreeItem", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_manageCoreEntity(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_manageCoreEntity(ctx, field)
 	if err != nil {
@@ -61784,7 +62220,7 @@ func (ec *executionContext) unmarshalInputCoreEntityInput(ctx context.Context, o
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"kind", "name", "sortName", "aliases", "workUUID", "profileSummary", "biography", "countryOrRegion", "useInRecommendation"}
+	fieldsInOrder := [...]string{"kind", "name", "sortName", "aliases", "workUUID", "tagParentUUID", "expectedTagParentRevision", "profileSummary", "biography", "countryOrRegion", "useInRecommendation"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -61826,6 +62262,20 @@ func (ec *executionContext) unmarshalInputCoreEntityInput(ctx context.Context, o
 				return it, err
 			}
 			it.WorkUUID = data
+		case "tagParentUUID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tagParentUUID"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.TagParentUUID = data
+		case "expectedTagParentRevision":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedTagParentRevision"))
+			data, err := ec.unmarshalOInt642ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ExpectedTagParentRevision = data
 		case "profileSummary":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("profileSummary"))
 			data, err := ec.unmarshalNString2string(ctx, v)
@@ -69818,6 +70268,75 @@ func (ec *executionContext) _ManageSuggestion(ctx context.Context, sel ast.Selec
 	return out
 }
 
+var manageTagTreeItemImplementors = []string{"ManageTagTreeItem"}
+
+func (ec *executionContext) _ManageTagTreeItem(ctx context.Context, sel ast.SelectionSet, obj *ManageTagTreeItem) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageTagTreeItemImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageTagTreeItem")
+		case "uuid":
+			out.Values[i] = ec._ManageTagTreeItem_uuid(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._ManageTagTreeItem_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "aliases":
+			out.Values[i] = ec._ManageTagTreeItem_aliases(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "parentUUIDs":
+			out.Values[i] = ec._ManageTagTreeItem_parentUUIDs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "metadataRevision":
+			out.Values[i] = ec._ManageTagTreeItem_metadataRevision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "childCount":
+			out.Values[i] = ec._ManageTagTreeItem_childCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryCount":
+			out.Values[i] = ec._ManageTagTreeItem_galleryCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var manageUnassignedDiagnosticImplementors = []string{"ManageUnassignedDiagnostic"}
 
 func (ec *executionContext) _ManageUnassignedDiagnostic(ctx context.Context, sel ast.SelectionSet, obj *ManageUnassignedDiagnostic) graphql.Marshaler {
@@ -71931,6 +72450,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_manageCoreEntities(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "manageTagTree":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_manageTagTree(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -76534,6 +77075,60 @@ func (ec *executionContext) marshalNManageSuggestion2ᚖgithubᚗcomᚋstashapp�
 		return graphql.Null
 	}
 	return ec._ManageSuggestion(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageTagTreeItem2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageTagTreeItemᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageTagTreeItem) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageTagTreeItem2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageTagTreeItem(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageTagTreeItem2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageTagTreeItem(ctx context.Context, sel ast.SelectionSet, v *ManageTagTreeItem) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageTagTreeItem(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNManageUnassignedDiagnostic2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageUnassignedDiagnosticᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageUnassignedDiagnostic) graphql.Marshaler {

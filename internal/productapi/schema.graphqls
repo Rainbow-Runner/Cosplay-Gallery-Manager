@@ -410,6 +410,7 @@ type ManageCoreEntity {
   socialAccounts: [ManageSocialAccount!]! parents: [ManageCoreEntityRef!]!
 }
 type ManageCoreEntityPage { items: [ManageCoreEntity!]! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
+type ManageTagTreeItem { uuid: ID! name: String! aliases: [String!]! parentUUIDs: [ID!]! metadataRevision: Int64! childCount: Int! galleryCount: Int! }
 enum ManageCoserAssetFilter { ALL MISSING_AVATAR MISSING_BANNER INCOMPLETE COMPLETE }
 type ManageCoserNameConflict { coser: ManageCoreEntity! matchedValues: [String!]! galleryCount: Int! }
 type ManageCoreEntityNameConflict { entity: ManageCoreEntity! matchedValues: [String!]! galleryCount: Int! workName: String! primaryNameMatch: Boolean! }
@@ -428,7 +429,7 @@ type ManageGalleryDeletePreview {
   setID: ID! state: GalleryState! metadataRevision: Int64! itemCount: Int64!
   externalLinkCount: Int64! executableJobCount: Int64! ignoredSourceWillBeCreated: Boolean! canDelete: Boolean!
 }
-input CoreEntityInput { kind: SearchEntityKind! name: String! sortName: String! aliases: [String!]! workUUID: ID profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean! }
+input CoreEntityInput { kind: SearchEntityKind! name: String! sortName: String! aliases: [String!]! workUUID: ID tagParentUUID: ID expectedTagParentRevision: Int64 profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean! }
 input SocialAccountInput { platformKey: String! label: String! handle: String! url: String! status: String! visible: Boolean! position: String! }
 input ReplaceTagParentInput { uuid: ID! position: String! }
 input ExpectedTagRevisionInput { uuid: ID! metadataRevision: Int64! }
@@ -478,6 +479,7 @@ type Query {
   managePortableMigration(importID: ID, mergeID: ID): ManagePortableMigrationSnapshot!
   manageAudit(page: Int! = 1): ManageAuditPage!
   manageCoreEntities(kind: SearchEntityKind!, page: Int! = 1, pageSize: Int! = 0, query: String! = "", coserAssetFilter: ManageCoserAssetFilter! = ALL): ManageCoreEntityPage!
+  manageTagTree: [ManageTagTreeItem!]!
   manageCoreEntity(kind: SearchEntityKind!, uuid: ID!): ManageCoreEntity!
   manageWorkCharacters(workUUID: ID!): [ManageCoreEntity!]!
   manageCoreEntityOptions(kind: SearchEntityKind!, query: String! = "", limit: Int! = 20): [ManageCoreEntity!]!

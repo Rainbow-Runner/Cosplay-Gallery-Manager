@@ -502,6 +502,32 @@ func TestManageCoreEntityNameConflictsExposeCharacterWorkContext(t *testing.T) {
 	}
 }
 
+func TestManageTagTreeAndAtomicChildCreateGraphQL(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	parent, err := database.CoreEntities().CreateTag(ctx, productdb.CreateTagInput{CreateNamedEntityInput: productdb.CreateNamedEntityInput{Name: "Parent", Aliases: []string{"Parent Alias"}}, UseInRecommendation: true}, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(database, func(*http.Request) bool { return true })
+	query := `{"query":"query { manageTagTree { uuid name aliases parentUUIDs metadataRevision childCount galleryCount } }"}`
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(query))
+	request.Header.Set("Content-Type", "application/json")
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) || !bytes.Contains(response.Body.Bytes(), []byte(`"Parent Alias"`)) {
+		t.Fatalf("tree query: %d %s", response.Code, response.Body.String())
+	}
+	mutation := fmt.Sprintf(`{"query":"mutation { createCoreEntity(input:{kind:TAG,name:\"Child\",sortName:\"\",aliases:[],tagParentUUID:\"%s\",expectedTagParentRevision:1,profileSummary:\"\",biography:\"\",countryOrRegion:\"\",useInRecommendation:true}) { uuid name parents { uuid } } }"}`, parent.UUID)
+	response = httptest.NewRecorder()
+	request = httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(mutation))
+	request.Header.Set("Content-Type", "application/json")
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) || !bytes.Contains(response.Body.Bytes(), []byte(parent.UUID)) {
+		t.Fatalf("child mutation: %d %s", response.Code, response.Body.String())
+	}
+}
+
 func TestManageWorkCharactersReturnsOnlyTheSelectedWorksCharacters(t *testing.T) {
 	database := openTestDatabase(t)
 	ctx := context.Background()

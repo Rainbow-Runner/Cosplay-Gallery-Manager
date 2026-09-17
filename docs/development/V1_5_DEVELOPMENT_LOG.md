@@ -2145,3 +2145,9 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 2026-09-16 08:49 CST停服并确认`MainPID=0`后，创建权限0700的独立回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-tag-editor-65dfa74-20260916T084935`，保存schema v11 SQLite一致副本、旧二进制、配置、用户systemd单元及完整Coser托管目录。数据库副本与正式来源SHA-256均为`9b41f1e1de3c81deee42528f299def3e1b15aabd8d66c287b68a6053e88daa3f`，旧二进制SHA-256为`087c9070c56fc9d871e2b5d5fc48c3790faf34ef7a891a79fabb89213a36724a`；配置、单元和Coser目录逐项一致。
 - 本次无schema迁移，只原子替换正式二进制并启动服务一次。新二进制SHA-256为`b034d34e4d26464c51cc6ad7ab5d735fae14c54e542c476cb3e8b9c7ec035154`，About精确报告提交`65dfa746e3561ccf058ce439b3a4e4e0617b93c3`、`buildTime=2026-09-15T16:43:34Z`及`exactSourceAvailable=true`。服务保持`active/running`、`NRestarts=0`，Health/Ready为204，首页、Gallery深链及新JS/CSS资源均为200；2个Worker与LibRaw、FFmpeg、FFprobe正常启用，启动日志未检出WARN、ERROR、FAILED、panic、fatal或迁移错误。
 - 部署后正式库仍为schema v11、`integrity_check=ok`，Coser/Work/Character/Tag/Gallery/Source/Item计数保持`135/108/697/0/8/8/570`；配置、媒体、Manifest和缓存均未替换，本次未执行远端推送。真实浏览器中的Tag候选筛选、气泡增删和ACTIVE状态保持仍待所有者业务验收。
+
+# 2026-09-17 Tag层级管理UI
+
+- 参考Billfish与Lightroom Classic的标签/关键词树，并借鉴Eagle的标签组筛选和快速检索，但保持CGM已确认的多父DAG数据模型。Manage核心实体中的Tag默认显示树形层级，仍可切回原分页列表；树节点展开/折叠、根/未归类筛选、名称/Alias搜索及全部上级路径定位、直接子Tag数/直接关联Gallery数均可查看。同一UUID的多父Tag可在各父路径下出现，右侧只保留一个实体编辑入口；不采用含义含混的拖拽迁移。
+- 新增只读、认证的轻量`manageTagTree`查询，返回UUID、名称、Alias、直接父UUID、revision及直接计数，不返回完整实体编辑数据。投影设置20,000 Tag硬保护上限，超过即显式失败，不截断成假树；既有平铺列表仍服务端分页。树上“新建子Tag”向现有创建输入可选传入父UUID和预期父revision，数据库在单事务内校验活动父身份与版本、创建Tag和父子边、递增父revision；冲突或约束失败整体回滚。普通创建及已存在Tag父关系修改沿用原语义。
+- 数据库回归覆盖原子子Tag创建、父版本递增、树投影Alias/父边/直接计数和过期版本无残留；GraphQL回归覆盖查询与创建契约。前端回归覆盖多父双位置、Alias搜索展开双路径、子Tag入口及列表切换；正式三标签产品数据库/API/Server/CMD测试与Go Vet、Web 34文件116项测试、TypeScript及685模块生产构建通过，仅保留既有共享chunk超过500KiB提示。`git diff --check`通过。本轮无schema迁移，未修改正式数据库、媒体或Manifest；源码未提交、未部署。

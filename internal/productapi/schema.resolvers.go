@@ -848,6 +848,12 @@ func (r *mutationResolver) RunPortableMigration(ctx context.Context, input Porta
 
 // CreateCoreEntity is the resolver for the createCoreEntity field.
 func (r *mutationResolver) CreateCoreEntity(ctx context.Context, input CoreEntityInput) (*ManageCoreEntity, error) {
+	if input.Kind != SearchEntityKindTag && (input.TagParentUUID != nil || input.ExpectedTagParentRevision != nil) {
+		return nil, manageError(errors.New("Tag parent is only valid for Tag creation"))
+	}
+	if input.Kind == SearchEntityKindTag && (input.TagParentUUID == nil) != (input.ExpectedTagParentRevision == nil) {
+		return nil, manageError(errors.New("Tag parent UUID and revision must be provided together"))
+	}
 	named := productdb.CreateNamedEntityInput{Name: input.Name, SortName: input.SortName, Aliases: input.Aliases}
 	var uuid string
 	var err error
@@ -871,7 +877,15 @@ func (r *mutationResolver) CreateCoreEntity(ctx context.Context, input CoreEntit
 		uuid = value.UUID
 	case SearchEntityKindTag:
 		var value coreentity.Tag
-		value, err = r.Database.CoreEntities().CreateTag(ctx, productdb.CreateTagInput{CreateNamedEntityInput: named, UseInRecommendation: input.UseInRecommendation}, time.Now())
+		parentUUID := ""
+		parentRevision := int64(0)
+		if input.TagParentUUID != nil {
+			parentUUID = *input.TagParentUUID
+		}
+		if input.ExpectedTagParentRevision != nil {
+			parentRevision = *input.ExpectedTagParentRevision
+		}
+		value, err = r.Database.CoreEntities().CreateTag(ctx, productdb.CreateTagInput{CreateNamedEntityInput: named, UseInRecommendation: input.UseInRecommendation, ParentUUID: parentUUID, ExpectedParentRevision: parentRevision}, time.Now())
 		uuid = value.UUID
 	default:
 		err = errors.New("unsupported core entity kind")
@@ -891,6 +905,9 @@ func (r *mutationResolver) CreateCoreEntity(ctx context.Context, input CoreEntit
 
 // UpdateCoreEntity is the resolver for the updateCoreEntity field.
 func (r *mutationResolver) UpdateCoreEntity(ctx context.Context, uuid string, expectedMetadataRevision int64, input CoreEntityInput) (*ManageCoreEntity, error) {
+	if input.TagParentUUID != nil || input.ExpectedTagParentRevision != nil {
+		return nil, manageError(errors.New("Tag parents must be changed using the parent relation mutation"))
+	}
 	named := productdb.UpdateNamedEntityInput{Name: input.Name, SortName: input.SortName, Aliases: input.Aliases}
 	var err error
 	auditEvent := "CORE_ENTITY_UPDATE"
@@ -1820,6 +1837,21 @@ func (r *queryResolver) ManageCoreEntities(ctx context.Context, kind SearchEntit
 		return nil, manageError(err)
 	}
 	return manageCoreEntityPage(value), nil
+}
+
+// ManageTagTree is the resolver for the manageTagTree field.
+func (r *queryResolver) ManageTagTree(ctx context.Context) ([]*ManageTagTreeItem, error) {
+	values, err := r.Database.CoreEntities().ManageTagTree(ctx)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	result := make([]*ManageTagTreeItem, 0, len(values))
+	for _, value := range values {
+		result = append(result, &ManageTagTreeItem{UUID: value.UUID, Name: value.Name,
+			Aliases: value.Aliases, ParentUUIDs: value.ParentUUIDs,
+			MetadataRevision: value.MetadataRevision, ChildCount: value.ChildCount, GalleryCount: value.GalleryCount})
+	}
+	return result, nil
 }
 
 // ManageCoreEntity is the resolver for the manageCoreEntity field.

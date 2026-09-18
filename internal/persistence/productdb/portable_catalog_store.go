@@ -379,18 +379,20 @@ func loadPortableCharacters(ctx context.Context, tx *sql.Tx, aliases map[string]
 }
 
 func loadPortableTags(ctx context.Context, tx *sql.Tx, aliases map[string][]string, result *PortableCatalogSnapshot) error {
-	rows, err := tx.QueryContext(ctx, `SELECT uuid,name,sort_name,slug,use_in_recommendation,metadata_revision,created_at_utc,updated_at_utc FROM tags ORDER BY uuid`)
+	rows, err := tx.QueryContext(ctx, `SELECT uuid,name,sort_name,slug,use_in_recommendation,allow_direct_assignment,metadata_revision,created_at_utc,updated_at_utc FROM tags ORDER BY uuid`)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var value portablecatalog.Tag
-		var recommendation int
-		if err := rows.Scan(&value.UUID, &value.Name, &value.SortName, &value.Slug, &recommendation, &value.MetadataRevision, &value.CreatedAt, &value.UpdatedAt); err != nil {
+		var recommendation, assignable int
+		if err := rows.Scan(&value.UUID, &value.Name, &value.SortName, &value.Slug, &recommendation, &assignable, &value.MetadataRevision, &value.CreatedAt, &value.UpdatedAt); err != nil {
 			return err
 		}
 		value.UseInRecommendation = recommendation == 1
+		allowed := assignable == 1
+		value.AllowDirectAssignment = &allowed
 		value.Aliases = append([]string{}, aliases[value.UUID]...)
 		result.Bundle.Catalog.Tags = append(result.Bundle.Catalog.Tags, value)
 	}

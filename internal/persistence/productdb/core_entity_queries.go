@@ -93,18 +93,19 @@ func findCharacter(ctx context.Context, queryer galleryQueryer, uuid string) (co
 
 func findTag(ctx context.Context, queryer galleryQueryer, uuid string) (coreentity.Tag, error) {
 	var result coreentity.Tag
-	var recommendation int
+	var recommendation, assignable int
 	var createdAt, updatedAt string
 	err := queryer.QueryRowContext(ctx, `
-		SELECT uuid, name, sort_name, slug, use_in_recommendation,
+		SELECT uuid, name, sort_name, slug, use_in_recommendation, allow_direct_assignment,
 			metadata_revision, created_at_utc, updated_at_utc
 		FROM tags WHERE uuid = ?
 	`, uuid).Scan(&result.UUID, &result.Name, &result.SortName, &result.Slug,
-		&recommendation, &result.MetadataRevision, &createdAt, &updatedAt)
+		&recommendation, &assignable, &result.MetadataRevision, &createdAt, &updatedAt)
 	if err != nil {
 		return coreentity.Tag{}, err
 	}
 	result.UseInRecommendation = recommendation == 1
+	result.AllowDirectAssignment = assignable == 1
 	result.CreatedAtUTC, err = parseTime(createdAt)
 	if err != nil {
 		return coreentity.Tag{}, err

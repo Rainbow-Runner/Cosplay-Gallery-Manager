@@ -8,19 +8,20 @@ import (
 // ManageTagTreeItem is the lightweight, owner-only hierarchy projection.
 // A Tag may occur beneath more than one parent; the UUID remains its identity.
 type ManageTagTreeItem struct {
-	UUID             string
-	Name             string
-	MetadataRevision int64
-	Aliases          []string
-	ParentUUIDs      []string
-	ChildCount       int
-	GalleryCount     int
+	UUID                  string
+	Name                  string
+	MetadataRevision      int64
+	Aliases               []string
+	ParentUUIDs           []string
+	ChildCount            int
+	GalleryCount          int
+	AllowDirectAssignment bool
 }
 
 func (s *CoreEntityStore) ManageTagTree(ctx context.Context) ([]ManageTagTreeItem, error) {
 	rows, err := s.db.QueryContext(ctx, `WITH children AS (SELECT parent_uuid,COUNT(*) count FROM tag_edges GROUP BY parent_uuid),
 		gallery_counts AS (SELECT tag_uuid,COUNT(*) count FROM gallery_tags GROUP BY tag_uuid)
-		SELECT tag.uuid,tag.name,tag.metadata_revision,COALESCE(children.count,0),COALESCE(gallery_counts.count,0)
+		SELECT tag.uuid,tag.name,tag.metadata_revision,COALESCE(children.count,0),COALESCE(gallery_counts.count,0),tag.allow_direct_assignment
 		FROM tags tag LEFT JOIN children ON children.parent_uuid=tag.uuid
 		LEFT JOIN gallery_counts ON gallery_counts.tag_uuid=tag.uuid
 		ORDER BY COALESCE(NULLIF(tag.sort_name,''),tag.name),tag.uuid LIMIT 20001`)
@@ -31,7 +32,7 @@ func (s *CoreEntityStore) ManageTagTree(ctx context.Context) ([]ManageTagTreeIte
 	index := make(map[string]int)
 	for rows.Next() {
 		var item ManageTagTreeItem
-		if err := rows.Scan(&item.UUID, &item.Name, &item.MetadataRevision, &item.ChildCount, &item.GalleryCount); err != nil {
+		if err := rows.Scan(&item.UUID, &item.Name, &item.MetadataRevision, &item.ChildCount, &item.GalleryCount, &item.AllowDirectAssignment); err != nil {
 			rows.Close()
 			return nil, err
 		}

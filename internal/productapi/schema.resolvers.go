@@ -885,7 +885,7 @@ func (r *mutationResolver) CreateCoreEntity(ctx context.Context, input CoreEntit
 		if input.ExpectedTagParentRevision != nil {
 			parentRevision = *input.ExpectedTagParentRevision
 		}
-		value, err = r.Database.CoreEntities().CreateTag(ctx, productdb.CreateTagInput{CreateNamedEntityInput: named, UseInRecommendation: input.UseInRecommendation, ParentUUID: parentUUID, ExpectedParentRevision: parentRevision}, time.Now())
+		value, err = r.Database.CoreEntities().CreateTag(ctx, productdb.CreateTagInput{CreateNamedEntityInput: named, UseInRecommendation: input.UseInRecommendation, AllowDirectAssignment: input.AllowDirectAssignment, ParentUUID: parentUUID, ExpectedParentRevision: parentRevision}, time.Now())
 		uuid = value.UUID
 	default:
 		err = errors.New("unsupported core entity kind")
@@ -935,7 +935,7 @@ func (r *mutationResolver) UpdateCoreEntity(ctx context.Context, uuid string, ex
 		}
 		_, err = r.Database.CoreEntities().UpdateCharacter(ctx, uuid, *input.WorkUUID, expectedMetadataRevision, named, time.Now())
 	case SearchEntityKindTag:
-		_, err = r.Database.CoreEntities().UpdateTag(ctx, uuid, expectedMetadataRevision, productdb.UpdateTagInput{UpdateNamedEntityInput: named, UseInRecommendation: input.UseInRecommendation}, time.Now())
+		_, err = r.Database.CoreEntities().UpdateTag(ctx, uuid, expectedMetadataRevision, productdb.UpdateTagInput{UpdateNamedEntityInput: named, UseInRecommendation: input.UseInRecommendation, AllowDirectAssignment: input.AllowDirectAssignment}, time.Now())
 	default:
 		return nil, manageError(errors.New("unsupported core entity kind"))
 	}
@@ -1849,7 +1849,7 @@ func (r *queryResolver) ManageTagTree(ctx context.Context) ([]*ManageTagTreeItem
 	for _, value := range values {
 		result = append(result, &ManageTagTreeItem{UUID: value.UUID, Name: value.Name,
 			Aliases: value.Aliases, ParentUUIDs: value.ParentUUIDs,
-			MetadataRevision: value.MetadataRevision, ChildCount: value.ChildCount, GalleryCount: value.GalleryCount})
+			MetadataRevision: value.MetadataRevision, ChildCount: value.ChildCount, GalleryCount: value.GalleryCount, AllowDirectAssignment: value.AllowDirectAssignment})
 	}
 	return result, nil
 }
@@ -1877,8 +1877,9 @@ func (r *queryResolver) ManageWorkCharacters(ctx context.Context, workUUID strin
 }
 
 // ManageCoreEntityOptions is the resolver for the manageCoreEntityOptions field.
-func (r *queryResolver) ManageCoreEntityOptions(ctx context.Context, kind SearchEntityKind, query string, limit int) ([]*ManageCoreEntity, error) {
-	values, err := r.Database.CoreEntities().ManageOptions(ctx, string(kind), query, limit)
+func (r *queryResolver) ManageCoreEntityOptions(ctx context.Context, kind SearchEntityKind, query string, limit int, assignableOnly *bool) ([]*ManageCoreEntity, error) {
+	filter := assignableOnly != nil && *assignableOnly
+	values, err := r.Database.CoreEntities().ManageOptions(ctx, string(kind), query, limit, filter)
 	if err != nil {
 		return nil, manageError(err)
 	}

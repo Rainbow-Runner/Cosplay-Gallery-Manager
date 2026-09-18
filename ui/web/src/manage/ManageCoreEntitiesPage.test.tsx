@@ -36,6 +36,10 @@ describe("ManageCoreEntitiesPage validation", () => {
       { request: { query: MANAGE_CORE_ENTITIES, variables: listVariables("TAG") }, result: { data: { manageCoreEntities: { ...emptyPage, pageSize: 60 } } } },
       { request: { query: MANAGE_TAG_TREE }, result: { data: { manageTagTree: [parent] } } },
     ], "/manage/entities?kind=TAG");
+    const directAssignment = screen.getByRole("checkbox", { name: "Allow direct assignment to Galleries" });
+    expect(directAssignment).toBeChecked();
+    fireEvent.click(directAssignment);
+    expect(directAssignment).not.toBeChecked();
     fireEvent.click(await screen.findByRole("button", { name: "New child Tag under Costume" }));
     expect(screen.getByText("New child Tag under Costume")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();

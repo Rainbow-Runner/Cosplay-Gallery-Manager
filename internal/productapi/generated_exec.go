@@ -264,25 +264,26 @@ type ComplexityRoot struct {
 	}
 
 	ManageCoreEntity struct {
-		Aliases             func(childComplexity int) int
-		AvatarCrop          func(childComplexity int) int
-		AvatarURL           func(childComplexity int) int
-		BannerFocalPoint    func(childComplexity int) int
-		BannerURL           func(childComplexity int) int
-		Biography           func(childComplexity int) int
-		CountryOrRegion     func(childComplexity int) int
-		Kind                func(childComplexity int) int
-		MetadataRevision    func(childComplexity int) int
-		Name                func(childComplexity int) int
-		Parents             func(childComplexity int) int
-		ProfileSummary      func(childComplexity int) int
-		Slug                func(childComplexity int) int
-		SocialAccounts      func(childComplexity int) int
-		SortName            func(childComplexity int) int
-		UUID                func(childComplexity int) int
-		UseInRecommendation func(childComplexity int) int
-		WorkName            func(childComplexity int) int
-		WorkUUID            func(childComplexity int) int
+		Aliases               func(childComplexity int) int
+		AllowDirectAssignment func(childComplexity int) int
+		AvatarCrop            func(childComplexity int) int
+		AvatarURL             func(childComplexity int) int
+		BannerFocalPoint      func(childComplexity int) int
+		BannerURL             func(childComplexity int) int
+		Biography             func(childComplexity int) int
+		CountryOrRegion       func(childComplexity int) int
+		Kind                  func(childComplexity int) int
+		MetadataRevision      func(childComplexity int) int
+		Name                  func(childComplexity int) int
+		Parents               func(childComplexity int) int
+		ProfileSummary        func(childComplexity int) int
+		Slug                  func(childComplexity int) int
+		SocialAccounts        func(childComplexity int) int
+		SortName              func(childComplexity int) int
+		UUID                  func(childComplexity int) int
+		UseInRecommendation   func(childComplexity int) int
+		WorkName              func(childComplexity int) int
+		WorkUUID              func(childComplexity int) int
 	}
 
 	ManageCoreEntityDeleteBlocker struct {
@@ -1000,13 +1001,14 @@ type ComplexityRoot struct {
 	}
 
 	ManageTagTreeItem struct {
-		Aliases          func(childComplexity int) int
-		ChildCount       func(childComplexity int) int
-		GalleryCount     func(childComplexity int) int
-		MetadataRevision func(childComplexity int) int
-		Name             func(childComplexity int) int
-		ParentUUIDs      func(childComplexity int) int
-		UUID             func(childComplexity int) int
+		Aliases               func(childComplexity int) int
+		AllowDirectAssignment func(childComplexity int) int
+		ChildCount            func(childComplexity int) int
+		GalleryCount          func(childComplexity int) int
+		MetadataRevision      func(childComplexity int) int
+		Name                  func(childComplexity int) int
+		ParentUUIDs           func(childComplexity int) int
+		UUID                  func(childComplexity int) int
 	}
 
 	ManageUnassignedDiagnostic struct {
@@ -1186,7 +1188,7 @@ type ComplexityRoot struct {
 		ManageCoreEntities                   func(childComplexity int, kind SearchEntityKind, page int, pageSize int, query string, coserAssetFilter ManageCoserAssetFilter) int
 		ManageCoreEntity                     func(childComplexity int, kind SearchEntityKind, uuid string) int
 		ManageCoreEntityNameConflicts        func(childComplexity int, kind SearchEntityKind, name string, limit int) int
-		ManageCoreEntityOptions              func(childComplexity int, kind SearchEntityKind, query string, limit int) int
+		ManageCoreEntityOptions              func(childComplexity int, kind SearchEntityKind, query string, limit int, assignableOnly *bool) int
 		ManageCoserManifest                  func(childComplexity int, coserUUID string) int
 		ManageCoserNameConflicts             func(childComplexity int, name string, limit int) int
 		ManageDiscovery                      func(childComplexity int, libraryID int64) int
@@ -1428,7 +1430,7 @@ type QueryResolver interface {
 	ManageTagTree(ctx context.Context) ([]*ManageTagTreeItem, error)
 	ManageCoreEntity(ctx context.Context, kind SearchEntityKind, uuid string) (*ManageCoreEntity, error)
 	ManageWorkCharacters(ctx context.Context, workUUID string) ([]*ManageCoreEntity, error)
-	ManageCoreEntityOptions(ctx context.Context, kind SearchEntityKind, query string, limit int) ([]*ManageCoreEntity, error)
+	ManageCoreEntityOptions(ctx context.Context, kind SearchEntityKind, query string, limit int, assignableOnly *bool) ([]*ManageCoreEntity, error)
 	ManageCoserNameConflicts(ctx context.Context, name string, limit int) ([]*ManageCoserNameConflict, error)
 	ManageCoreEntityNameConflicts(ctx context.Context, kind SearchEntityKind, name string, limit int) ([]*ManageCoreEntityNameConflict, error)
 	PreviewCoreEntityMerge(ctx context.Context, kind SearchEntityKind, sourceUUID string, targetUUID string) (*ManageCoreEntityMergePreview, error)
@@ -2498,6 +2500,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageCoreEntity.Aliases(childComplexity), true
+
+	case "ManageCoreEntity.allowDirectAssignment":
+		if e.complexity.ManageCoreEntity.AllowDirectAssignment == nil {
+			break
+		}
+
+		return e.complexity.ManageCoreEntity.AllowDirectAssignment(childComplexity), true
 
 	case "ManageCoreEntity.avatarCrop":
 		if e.complexity.ManageCoreEntity.AvatarCrop == nil {
@@ -6181,6 +6190,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageTagTreeItem.Aliases(childComplexity), true
 
+	case "ManageTagTreeItem.allowDirectAssignment":
+		if e.complexity.ManageTagTreeItem.AllowDirectAssignment == nil {
+			break
+		}
+
+		return e.complexity.ManageTagTreeItem.AllowDirectAssignment(childComplexity), true
+
 	case "ManageTagTreeItem.childCount":
 		if e.complexity.ManageTagTreeItem.ChildCount == nil {
 			break
@@ -7653,7 +7669,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.ManageCoreEntityOptions(childComplexity, args["kind"].(SearchEntityKind), args["query"].(string), args["limit"].(int)), true
+		return e.complexity.Query.ManageCoreEntityOptions(childComplexity, args["kind"].(SearchEntityKind), args["query"].(string), args["limit"].(int), args["assignableOnly"].(*bool)), true
 
 	case "Query.manageCoserManifest":
 		if e.complexity.Query.ManageCoserManifest == nil {
@@ -13548,6 +13564,11 @@ func (ec *executionContext) field_Query_manageCoreEntityOptions_args(ctx context
 		return nil, err
 	}
 	args["limit"] = arg2
+	arg3, err := ec.field_Query_manageCoreEntityOptions_argsAssignableOnly(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["assignableOnly"] = arg3
 	return args, nil
 }
 func (ec *executionContext) field_Query_manageCoreEntityOptions_argsKind(
@@ -13601,6 +13622,24 @@ func (ec *executionContext) field_Query_manageCoreEntityOptions_argsLimit(
 	}
 
 	var zeroVal int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_manageCoreEntityOptions_argsAssignableOnly(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*bool, error) {
+	if _, ok := rawArgs["assignableOnly"]; !ok {
+		var zeroVal *bool
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("assignableOnly"))
+	if tmp, ok := rawArgs["assignableOnly"]; ok {
+		return ec.unmarshalOBoolean2ᚖbool(ctx, tmp)
+	}
+
+	var zeroVal *bool
 	return zeroVal, nil
 }
 
@@ -22503,6 +22542,50 @@ func (ec *executionContext) fieldContext_ManageCoreEntity_useInRecommendation(_ 
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageCoreEntity_allowDirectAssignment(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntity) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageCoreEntity_allowDirectAssignment(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AllowDirectAssignment, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageCoreEntity_allowDirectAssignment(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageCoreEntity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageCoreEntity_avatarURL(ctx context.Context, field graphql.CollectedField, obj *ManageCoreEntity) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
 	if err != nil {
@@ -23664,6 +23747,8 @@ func (ec *executionContext) fieldContext_ManageCoreEntityMergeResult_target(_ co
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "allowDirectAssignment":
+				return ec.fieldContext_ManageCoreEntity_allowDirectAssignment(ctx, field)
 			case "avatarURL":
 				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
 			case "bannerURL":
@@ -23851,6 +23936,8 @@ func (ec *executionContext) fieldContext_ManageCoreEntityNameConflict_entity(_ c
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "allowDirectAssignment":
+				return ec.fieldContext_ManageCoreEntity_allowDirectAssignment(ctx, field)
 			case "avatarURL":
 				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
 			case "bannerURL":
@@ -24111,6 +24198,8 @@ func (ec *executionContext) fieldContext_ManageCoreEntityPage_items(_ context.Co
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "allowDirectAssignment":
+				return ec.fieldContext_ManageCoreEntity_allowDirectAssignment(ctx, field)
 			case "avatarURL":
 				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
 			case "bannerURL":
@@ -24733,6 +24822,8 @@ func (ec *executionContext) fieldContext_ManageCoserNameConflict_coser(_ context
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "allowDirectAssignment":
+				return ec.fieldContext_ManageCoreEntity_allowDirectAssignment(ctx, field)
 			case "avatarURL":
 				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
 			case "bannerURL":
@@ -46189,6 +46280,50 @@ func (ec *executionContext) fieldContext_ManageTagTreeItem_galleryCount(_ contex
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageTagTreeItem_allowDirectAssignment(ctx context.Context, field graphql.CollectedField, obj *ManageTagTreeItem) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageTagTreeItem_allowDirectAssignment(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AllowDirectAssignment, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageTagTreeItem_allowDirectAssignment(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageTagTreeItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageUnassignedDiagnostic_parentPath(ctx context.Context, field graphql.CollectedField, obj *ManageUnassignedDiagnostic) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageUnassignedDiagnostic_parentPath(ctx, field)
 	if err != nil {
@@ -51911,6 +52046,8 @@ func (ec *executionContext) fieldContext_Mutation_createCoreEntity(ctx context.C
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "allowDirectAssignment":
+				return ec.fieldContext_ManageCoreEntity_allowDirectAssignment(ctx, field)
 			case "avatarURL":
 				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
 			case "bannerURL":
@@ -52006,6 +52143,8 @@ func (ec *executionContext) fieldContext_Mutation_updateCoreEntity(ctx context.C
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "allowDirectAssignment":
+				return ec.fieldContext_ManageCoreEntity_allowDirectAssignment(ctx, field)
 			case "avatarURL":
 				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
 			case "bannerURL":
@@ -52101,6 +52240,8 @@ func (ec *executionContext) fieldContext_Mutation_addCoserSocialAccount(ctx cont
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "allowDirectAssignment":
+				return ec.fieldContext_ManageCoreEntity_allowDirectAssignment(ctx, field)
 			case "avatarURL":
 				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
 			case "bannerURL":
@@ -52196,6 +52337,8 @@ func (ec *executionContext) fieldContext_Mutation_replaceTagParents(ctx context.
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "allowDirectAssignment":
+				return ec.fieldContext_ManageCoreEntity_allowDirectAssignment(ctx, field)
 			case "avatarURL":
 				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
 			case "bannerURL":
@@ -56871,6 +57014,8 @@ func (ec *executionContext) fieldContext_Query_manageTagTree(_ context.Context, 
 				return ec.fieldContext_ManageTagTreeItem_childCount(ctx, field)
 			case "galleryCount":
 				return ec.fieldContext_ManageTagTreeItem_galleryCount(ctx, field)
+			case "allowDirectAssignment":
+				return ec.fieldContext_ManageTagTreeItem_allowDirectAssignment(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageTagTreeItem", field.Name)
 		},
@@ -56943,6 +57088,8 @@ func (ec *executionContext) fieldContext_Query_manageCoreEntity(ctx context.Cont
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "allowDirectAssignment":
+				return ec.fieldContext_ManageCoreEntity_allowDirectAssignment(ctx, field)
 			case "avatarURL":
 				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
 			case "bannerURL":
@@ -57038,6 +57185,8 @@ func (ec *executionContext) fieldContext_Query_manageWorkCharacters(ctx context.
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "allowDirectAssignment":
+				return ec.fieldContext_ManageCoreEntity_allowDirectAssignment(ctx, field)
 			case "avatarURL":
 				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
 			case "bannerURL":
@@ -57082,7 +57231,7 @@ func (ec *executionContext) _Query_manageCoreEntityOptions(ctx context.Context, 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().ManageCoreEntityOptions(rctx, fc.Args["kind"].(SearchEntityKind), fc.Args["query"].(string), fc.Args["limit"].(int))
+		return ec.resolvers.Query().ManageCoreEntityOptions(rctx, fc.Args["kind"].(SearchEntityKind), fc.Args["query"].(string), fc.Args["limit"].(int), fc.Args["assignableOnly"].(*bool))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -57133,6 +57282,8 @@ func (ec *executionContext) fieldContext_Query_manageCoreEntityOptions(ctx conte
 				return ec.fieldContext_ManageCoreEntity_countryOrRegion(ctx, field)
 			case "useInRecommendation":
 				return ec.fieldContext_ManageCoreEntity_useInRecommendation(ctx, field)
+			case "allowDirectAssignment":
+				return ec.fieldContext_ManageCoreEntity_allowDirectAssignment(ctx, field)
 			case "avatarURL":
 				return ec.fieldContext_ManageCoreEntity_avatarURL(ctx, field)
 			case "bannerURL":
@@ -62220,7 +62371,7 @@ func (ec *executionContext) unmarshalInputCoreEntityInput(ctx context.Context, o
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"kind", "name", "sortName", "aliases", "workUUID", "tagParentUUID", "expectedTagParentRevision", "profileSummary", "biography", "countryOrRegion", "useInRecommendation"}
+	fieldsInOrder := [...]string{"kind", "name", "sortName", "aliases", "workUUID", "tagParentUUID", "expectedTagParentRevision", "profileSummary", "biography", "countryOrRegion", "useInRecommendation", "allowDirectAssignment"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -62304,6 +62455,13 @@ func (ec *executionContext) unmarshalInputCoreEntityInput(ctx context.Context, o
 				return it, err
 			}
 			it.UseInRecommendation = data
+		case "allowDirectAssignment":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("allowDirectAssignment"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AllowDirectAssignment = data
 		}
 	}
 
@@ -65397,6 +65555,11 @@ func (ec *executionContext) _ManageCoreEntity(ctx context.Context, sel ast.Selec
 			}
 		case "useInRecommendation":
 			out.Values[i] = ec._ManageCoreEntity_useInRecommendation(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "allowDirectAssignment":
+			out.Values[i] = ec._ManageCoreEntity_allowDirectAssignment(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -70311,6 +70474,11 @@ func (ec *executionContext) _ManageTagTreeItem(ctx context.Context, sel ast.Sele
 			}
 		case "galleryCount":
 			out.Values[i] = ec._ManageTagTreeItem_galleryCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "allowDirectAssignment":
+			out.Values[i] = ec._ManageTagTreeItem_allowDirectAssignment(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

@@ -77,7 +77,7 @@ export const GALLERY_DETAIL = gql`
 
 export const BROWSE_TAG_OPTIONS = gql`
   query BrowseTagOptions($query: String!, $limit: Int!) {
-    manageCoreEntityOptions(kind: TAG, query: $query, limit: $limit) {
+    manageCoreEntityOptions(kind: TAG, query: $query, limit: $limit, assignableOnly: true) {
       uuid name aliases
     }
   }

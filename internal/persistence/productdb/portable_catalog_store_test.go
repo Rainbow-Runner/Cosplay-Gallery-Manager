@@ -47,7 +47,8 @@ func TestPortableCatalogSnapshotIncludesCoreRelationshipsWithoutLocalPaths(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	parent, err := store.CreateTag(ctx, CreateTagInput{CreateNamedEntityInput: CreateNamedEntityInput{Name: "Parent"}, UseInRecommendation: true}, now)
+	category := false
+	parent, err := store.CreateTag(ctx, CreateTagInput{CreateNamedEntityInput: CreateNamedEntityInput{Name: "Parent"}, UseInRecommendation: true, AllowDirectAssignment: &category}, now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,6 +70,13 @@ func TestPortableCatalogSnapshotIncludesCoreRelationshipsWithoutLocalPaths(t *te
 	}
 	if len(snapshot.Bundle.Catalog.Cosers) != 1 || len(snapshot.Bundle.Catalog.Works) != 1 || len(snapshot.Bundle.Catalog.Characters) != 1 || len(snapshot.Bundle.Catalog.Tags) != 2 || len(snapshot.Bundle.Catalog.Accounts) != 1 || len(snapshot.Bundle.Catalog.TagEdges) != 1 || len(snapshot.Bundle.Catalog.SlugRedirects) != 1 {
 		t.Fatalf("unexpected portable catalog counts: %+v", snapshot.Bundle.Catalog)
+	}
+	policies := map[string]bool{}
+	for _, value := range snapshot.Bundle.Catalog.Tags {
+		policies[value.Name] = value.DirectAssignmentAllowed()
+	}
+	if !policies["Child"] || policies["Parent"] {
+		t.Fatalf("portable Tag assignment policy was not preserved: %#v", snapshot.Bundle.Catalog.Tags)
 	}
 	if snapshot.Bundle.Catalog.Accounts[0].UUID != account.UUID || snapshot.Bundle.Catalog.Characters[0].UUID != character.UUID || snapshot.Bundle.Catalog.Characters[0].WorkUUID != work.UUID {
 		t.Fatal("portable relationships were not preserved")

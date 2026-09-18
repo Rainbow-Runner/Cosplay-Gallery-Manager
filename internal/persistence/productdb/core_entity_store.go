@@ -361,6 +361,7 @@ func (s *CoreEntityStore) UpdateCharacter(ctx context.Context, uuid, workUUID st
 type CreateTagInput struct {
 	CreateNamedEntityInput
 	UseInRecommendation    bool
+	AllowDirectAssignment  *bool
 	ParentUUID             string
 	ExpectedParentRevision int64
 }
@@ -410,13 +411,17 @@ func (s *CoreEntityStore) CreateTag(ctx context.Context, input CreateTagInput, n
 		return coreentity.Tag{}, err
 	}
 	timestamp := formatTime(normalisedTime(now))
+	assignable := true
+	if input.AllowDirectAssignment != nil {
+		assignable = *input.AllowDirectAssignment
+	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO tags (uuid, name, normalized_name, sort_name, slug,
-			use_in_recommendation, created_at_utc, updated_at_utc)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			use_in_recommendation, allow_direct_assignment, created_at_utc, updated_at_utc)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, entityUUID, normalizedDisplay(input.Name), normalizedKey(input.Name),
 		normalizedDisplay(input.SortName), slug.FromName(input.Name, entityUUID),
-		input.UseInRecommendation, timestamp, timestamp); err != nil {
+		input.UseInRecommendation, assignable, timestamp, timestamp); err != nil {
 		return coreentity.Tag{}, err
 	}
 	if err := insertAliases(ctx, tx, "tag_aliases", "tag_uuid", entityUUID, input.Aliases); err != nil {
@@ -446,7 +451,8 @@ func (s *CoreEntityStore) CreateTag(ctx context.Context, input CreateTagInput, n
 
 type UpdateTagInput struct {
 	UpdateNamedEntityInput
-	UseInRecommendation bool
+	UseInRecommendation   bool
+	AllowDirectAssignment *bool
 }
 
 func (s *CoreEntityStore) UpdateTag(ctx context.Context, uuid string, expectedRevision int64, input UpdateTagInput, now time.Time) (coreentity.Tag, error) {
@@ -474,12 +480,29 @@ func (s *CoreEntityStore) UpdateTag(ctx context.Context, uuid string, expectedRe
 			return coreentity.Tag{}, ErrTagNameAmbiguous
 		}
 	}
+	assignable := true
+	if input.AllowDirectAssignment == nil {
+		if err := tx.QueryRowContext(ctx, `SELECT allow_direct_assignment FROM tags WHERE uuid=?`, uuid).Scan(&assignable); err != nil {
+			return coreentity.Tag{}, err
+		}
+	} else {
+		assignable = *input.AllowDirectAssignment
+	}
+	if !assignable {
+		var directCount int
+		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_tags WHERE tag_uuid=?`, uuid).Scan(&directCount); err != nil {
+			return coreentity.Tag{}, err
+		}
+		if directCount > 0 {
+			return coreentity.Tag{}, ErrTagHasDirectGalleries
+		}
+	}
 	result, err := tx.ExecContext(ctx, `
-		UPDATE tags SET name = ?, normalized_name = ?, sort_name = ?, use_in_recommendation = ?,
+		UPDATE tags SET name = ?, normalized_name = ?, sort_name = ?, use_in_recommendation = ?, allow_direct_assignment = ?,
 			metadata_revision = metadata_revision + 1, updated_at_utc = ?
 		WHERE uuid = ? AND metadata_revision = ?
 	`, normalizedDisplay(input.Name), normalizedKey(input.Name), normalizedDisplay(input.SortName),
-		input.UseInRecommendation, formatTime(normalisedTime(now)), uuid, expectedRevision)
+		input.UseInRecommendation, assignable, formatTime(normalisedTime(now)), uuid, expectedRevision)
 	if err != nil {
 		return coreentity.Tag{}, err
 	}

@@ -9,7 +9,7 @@ import { ManageTagHierarchy } from "./ManageTagHierarchy";
 import type { ManageTagTreeItem } from "./types";
 
 const items: ManageTagTreeItem[] = [
-  { uuid: "root-a", name: "Costume", aliases: [], parentUUIDs: [], metadataRevision: 2, childCount: 1, galleryCount: 0 },
+  { uuid: "root-a", name: "Costume", aliases: [], parentUUIDs: [], metadataRevision: 2, childCount: 1, galleryCount: 0, allowDirectAssignment: false },
   { uuid: "root-b", name: "Portrait", aliases: [], parentUUIDs: [], metadataRevision: 2, childCount: 1, galleryCount: 0 },
   { uuid: "child", name: "Uniform", aliases: ["School outfit"], parentUUIDs: ["root-a", "root-b"], metadataRevision: 3, childCount: 0, galleryCount: 4 },
 ];
@@ -41,5 +41,11 @@ describe("ManageTagHierarchy", () => {
     expect(screen.getAllByRole("button", { name: "Uniform" })).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Costume" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Portrait" })).toBeInTheDocument();
+  });
+
+  it("marks category-only Tags without hiding them from the hierarchy", () => {
+    show();
+    expect(screen.getByRole("button", { name: "Costume" })).toBeInTheDocument();
+    expect(screen.getByText("Category")).toBeInTheDocument();
   });
 });

@@ -405,12 +405,12 @@ type ManageAvatarCrop { x: Float! y: Float! size: Float! }
 type ManageFocalPoint { x: Float! y: Float! }
 type ManageCoreEntity {
   kind: SearchEntityKind! uuid: ID! name: String! sortName: String! aliases: [String!]! slug: String! metadataRevision: Int64!
-  workUUID: ID workName: String! profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean!
+  workUUID: ID workName: String! profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean! allowDirectAssignment: Boolean!
   avatarURL: String bannerURL: String avatarCrop: ManageAvatarCrop bannerFocalPoint: ManageFocalPoint
   socialAccounts: [ManageSocialAccount!]! parents: [ManageCoreEntityRef!]!
 }
 type ManageCoreEntityPage { items: [ManageCoreEntity!]! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
-type ManageTagTreeItem { uuid: ID! name: String! aliases: [String!]! parentUUIDs: [ID!]! metadataRevision: Int64! childCount: Int! galleryCount: Int! }
+type ManageTagTreeItem { uuid: ID! name: String! aliases: [String!]! parentUUIDs: [ID!]! metadataRevision: Int64! childCount: Int! galleryCount: Int! allowDirectAssignment: Boolean! }
 enum ManageCoserAssetFilter { ALL MISSING_AVATAR MISSING_BANNER INCOMPLETE COMPLETE }
 type ManageCoserNameConflict { coser: ManageCoreEntity! matchedValues: [String!]! galleryCount: Int! }
 type ManageCoreEntityNameConflict { entity: ManageCoreEntity! matchedValues: [String!]! galleryCount: Int! workName: String! primaryNameMatch: Boolean! }
@@ -429,7 +429,7 @@ type ManageGalleryDeletePreview {
   setID: ID! state: GalleryState! metadataRevision: Int64! itemCount: Int64!
   externalLinkCount: Int64! executableJobCount: Int64! ignoredSourceWillBeCreated: Boolean! canDelete: Boolean!
 }
-input CoreEntityInput { kind: SearchEntityKind! name: String! sortName: String! aliases: [String!]! workUUID: ID tagParentUUID: ID expectedTagParentRevision: Int64 profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean! }
+input CoreEntityInput { kind: SearchEntityKind! name: String! sortName: String! aliases: [String!]! workUUID: ID tagParentUUID: ID expectedTagParentRevision: Int64 profileSummary: String! biography: String! countryOrRegion: String! useInRecommendation: Boolean! allowDirectAssignment: Boolean }
 input SocialAccountInput { platformKey: String! label: String! handle: String! url: String! status: String! visible: Boolean! position: String! }
 input ReplaceTagParentInput { uuid: ID! position: String! }
 input ExpectedTagRevisionInput { uuid: ID! metadataRevision: Int64! }
@@ -482,7 +482,7 @@ type Query {
   manageTagTree: [ManageTagTreeItem!]!
   manageCoreEntity(kind: SearchEntityKind!, uuid: ID!): ManageCoreEntity!
   manageWorkCharacters(workUUID: ID!): [ManageCoreEntity!]!
-  manageCoreEntityOptions(kind: SearchEntityKind!, query: String! = "", limit: Int! = 20): [ManageCoreEntity!]!
+  manageCoreEntityOptions(kind: SearchEntityKind!, query: String! = "", limit: Int! = 20, assignableOnly: Boolean = false): [ManageCoreEntity!]!
   manageCoserNameConflicts(name: String!, limit: Int! = 10): [ManageCoserNameConflict!]!
   manageCoreEntityNameConflicts(kind: SearchEntityKind!, name: String!, limit: Int! = 10): [ManageCoreEntityNameConflict!]!
   previewCoreEntityMerge(kind: SearchEntityKind!, sourceUUID: ID!, targetUUID: ID!): ManageCoreEntityMergePreview!

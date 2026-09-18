@@ -297,7 +297,7 @@ func mergePortableCatalogReviewed(ctx context.Context, tx *sql.Tx, catalog porta
 			continue
 		}
 		if found {
-			if _, err := tx.ExecContext(ctx, `UPDATE tags SET name=?,normalized_name=?,sort_name=?,slug=?,use_in_recommendation=?,metadata_revision=?,updated_at_utc=? WHERE uuid=?`, value.Name, normalizedKey(value.Name), value.SortName, value.Slug, value.UseInRecommendation, value.MetadataRevision, value.UpdatedAt, value.UUID); err != nil {
+			if _, err := tx.ExecContext(ctx, `UPDATE tags SET name=?,normalized_name=?,sort_name=?,slug=?,use_in_recommendation=?,allow_direct_assignment=?,metadata_revision=?,updated_at_utc=? WHERE uuid=?`, value.Name, normalizedKey(value.Name), value.SortName, value.Slug, value.UseInRecommendation, value.DirectAssignmentAllowed(), value.MetadataRevision, value.UpdatedAt, value.UUID); err != nil {
 				return err
 			}
 			if _, err := tx.ExecContext(ctx, `DELETE FROM tag_aliases WHERE tag_uuid=?`, value.UUID); err != nil {
@@ -308,7 +308,7 @@ func mergePortableCatalogReviewed(ctx context.Context, tx *sql.Tx, catalog porta
 			}
 			continue
 		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO tags(uuid,name,normalized_name,sort_name,slug,use_in_recommendation,metadata_revision,created_at_utc,updated_at_utc) VALUES(?,?,?,?,?,?,?,?,?)`, value.UUID, value.Name, normalizedKey(value.Name), value.SortName, value.Slug, value.UseInRecommendation, value.MetadataRevision, value.CreatedAt, value.UpdatedAt); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO tags(uuid,name,normalized_name,sort_name,slug,use_in_recommendation,allow_direct_assignment,metadata_revision,created_at_utc,updated_at_utc) VALUES(?,?,?,?,?,?,?,?,?,?)`, value.UUID, value.Name, normalizedKey(value.Name), value.SortName, value.Slug, value.UseInRecommendation, value.DirectAssignmentAllowed(), value.MetadataRevision, value.CreatedAt, value.UpdatedAt); err != nil {
 			return err
 		}
 		if err := insertAliases(ctx, tx, "tag_aliases", "tag_uuid", value.UUID, value.Aliases); err != nil {

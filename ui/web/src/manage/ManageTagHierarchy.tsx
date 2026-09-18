@@ -63,6 +63,7 @@ export function ManageTagHierarchy({ items, selected, query, onSelect, onCreateC
       <div className={`manage-tag-tree__row${selected === item.uuid ? " is-active" : ""}`}>
         <button type="button" className="manage-tag-tree__expand" disabled={!childItems.length || scope === "ROOT"} aria-label={f(open ? "collapse" : "expand", { name: item.name })} aria-expanded={childItems.length && scope !== "ROOT" ? open : undefined} onClick={() => setExpanded((previous) => { const next = new Set(previous); if (next.has(item.uuid)) next.delete(item.uuid); else next.add(item.uuid); return next; })}>{childItems.length && scope !== "ROOT" ? open ? "▾" : "▸" : "·"}</button>
         <button type="button" className="manage-tag-tree__name" onClick={() => onSelect(item.uuid)} title={item.name}>{item.name}</button>
+        {item.allowDirectAssignment === false ? <span className="manage-tag-tree__category" title={f("categoryHint")}>{f("category")}</span> : null}
         <span className="manage-tag-tree__counts" title={f("counts")}>{item.childCount} / {item.galleryCount}</span>
         <button type="button" className="manage-tag-tree__add" aria-label={f("newChildOf", { name: item.name })} title={f("newChild") } onClick={() => onCreateChild(item)}>＋</button>
       </div>

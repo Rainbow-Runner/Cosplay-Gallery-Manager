@@ -14,25 +14,26 @@ import (
 )
 
 type ManageCoreEntity struct {
-	Kind                string
-	UUID                string
-	Name                string
-	SortName            string
-	Aliases             []string
-	Slug                string
-	MetadataRevision    int64
-	WorkUUID            string
-	WorkName            string
-	UseInRecommendation bool
-	ProfileSummary      string
-	Biography           string
-	CountryOrRegion     string
-	AvatarPath          string
-	BannerPath          string
-	AvatarCrop          *coreentity.AvatarCrop
-	BannerFocalPoint    *coreentity.FocalPoint
-	SocialAccounts      []coreentity.SocialAccount
-	Parents             []ManageCoreEntityRef
+	Kind                  string
+	UUID                  string
+	Name                  string
+	SortName              string
+	Aliases               []string
+	Slug                  string
+	MetadataRevision      int64
+	WorkUUID              string
+	WorkName              string
+	UseInRecommendation   bool
+	AllowDirectAssignment bool
+	ProfileSummary        string
+	Biography             string
+	CountryOrRegion       string
+	AvatarPath            string
+	BannerPath            string
+	AvatarCrop            *coreentity.AvatarCrop
+	BannerFocalPoint      *coreentity.FocalPoint
+	SocialAccounts        []coreentity.SocialAccount
+	Parents               []ManageCoreEntityRef
 }
 
 type ManageCoreEntityRef struct {
@@ -241,7 +242,7 @@ func (s *CoreEntityStore) ManageCoreEntityNameConflicts(ctx context.Context, kin
 // ManageOptions searches every entity of a kind, including standalone Cosers
 // and entities without a currently browsable Gallery. It is intentionally a
 // Manage-only selector and never inherits a Browse scope.
-func (s *CoreEntityStore) ManageOptions(ctx context.Context, kind, query string, limit int) ([]ManageCoreEntity, error) {
+func (s *CoreEntityStore) ManageOptions(ctx context.Context, kind, query string, limit int, assignableOnly ...bool) ([]ManageCoreEntity, error) {
 	table, _, err := manageEntityTable(kind)
 	if err != nil {
 		return nil, err
@@ -254,9 +255,18 @@ func (s *CoreEntityStore) ManageOptions(ctx context.Context, kind, query string,
 	if len([]rune(query)) > 300 || limit < 1 || limit > 50 {
 		return nil, errors.New("invalid core entity option search")
 	}
+	filter := ""
+	entityFilter := ""
+	if len(assignableOnly) > 0 && assignableOnly[0] {
+		if kind != "TAG" {
+			return nil, errors.New("assignable-only filter applies only to Tags")
+		}
+		filter = " WHERE allow_direct_assignment=1"
+		entityFilter = " WHERE entity.allow_direct_assignment=1"
+	}
 	var rows queryRows
 	if query == "" {
-		rows, err = s.db.QueryContext(ctx, `SELECT uuid FROM `+table+` ORDER BY COALESCE(NULLIF(sort_name,''),name),uuid LIMIT ?`, limit)
+		rows, err = s.db.QueryContext(ctx, `SELECT uuid FROM `+table+filter+` ORDER BY COALESCE(NULLIF(sort_name,''),name),uuid LIMIT ?`, limit)
 	} else {
 		prefix, contains := literalLike(query)+"%", "%"+literalLike(query)+"%"
 		rows, err = s.db.QueryContext(ctx, `WITH names AS (
@@ -265,7 +275,7 @@ func (s *CoreEntityStore) ManageOptions(ctx context.Context, kind, query string,
 			SELECT `+aliasKey+`,alias,1 FROM `+aliasTable+`), matches AS (
 			SELECT uuid,MIN(CASE WHEN lower(value)=lower(?) THEN 1+is_alias WHEN value LIKE ? ESCAPE '\' THEN 3+is_alias ELSE 5+is_alias END) rank
 			FROM names WHERE value LIKE ? ESCAPE '\' GROUP BY uuid)
-			SELECT entity.uuid FROM matches JOIN `+table+` entity ON entity.uuid=matches.uuid
+			SELECT entity.uuid FROM matches JOIN `+table+` entity ON entity.uuid=matches.uuid`+entityFilter+`
 			ORDER BY matches.rank,COALESCE(NULLIF(entity.sort_name,''),entity.name),entity.uuid LIMIT ?`, query, prefix, contains, limit)
 	}
 	if err != nil {
@@ -545,7 +555,7 @@ func (s *CoreEntityStore) ManageFind(ctx context.Context, kind, uuid string) (Ma
 		if err != nil {
 			return ManageCoreEntity{}, err
 		}
-		result := ManageCoreEntity{Kind: kind, UUID: value.UUID, Name: value.Name, SortName: value.SortName, Aliases: value.Aliases, Slug: value.Slug, MetadataRevision: value.MetadataRevision, UseInRecommendation: value.UseInRecommendation}
+		result := ManageCoreEntity{Kind: kind, UUID: value.UUID, Name: value.Name, SortName: value.SortName, Aliases: value.Aliases, Slug: value.Slug, MetadataRevision: value.MetadataRevision, UseInRecommendation: value.UseInRecommendation, AllowDirectAssignment: value.AllowDirectAssignment}
 		rows, err := s.db.QueryContext(ctx, `SELECT parent.uuid,parent.name,parent.metadata_revision FROM tag_edges edge JOIN tags parent ON parent.uuid=edge.parent_uuid WHERE edge.child_uuid=? ORDER BY edge.position,parent.uuid`, uuid)
 		if err != nil {
 			return ManageCoreEntity{}, err

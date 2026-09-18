@@ -36,6 +36,9 @@ func (s *GalleryStore) AddTag(
 	if err := requireActivePortableKind(ctx, tx, tagUUID, portableid.KindTag); err != nil {
 		return err
 	}
+	if err := requireDirectAssignableTag(ctx, tx, tagUUID); err != nil {
+		return err
+	}
 	var count int
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_tags WHERE gallery_id = ?`, galleryID).Scan(&count); err != nil {
 		return err

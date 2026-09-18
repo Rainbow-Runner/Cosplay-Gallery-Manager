@@ -66,6 +66,9 @@ func (s *GalleryStore) ReplaceTags(ctx context.Context, galleryID, expectedRevis
 		if err := requireActivePortableKind(ctx, tx, tag.TagUUID, portableid.KindTag); err != nil {
 			return err
 		}
+		if err := requireDirectAssignableTag(ctx, tx, tag.TagUUID); err != nil {
+			return err
+		}
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM gallery_tags WHERE gallery_id=?`, galleryID); err != nil {
 		return err
@@ -120,6 +123,9 @@ func (s *GalleryStore) ReplaceRelations(ctx context.Context, galleryID, expected
 			return errors.New("invalid GalleryTag position")
 		}
 		if err := requireActivePortableKind(ctx, tx, tag.TagUUID, portableid.KindTag); err != nil {
+			return err
+		}
+		if err := requireDirectAssignableTag(ctx, tx, tag.TagUUID); err != nil {
 			return err
 		}
 	}

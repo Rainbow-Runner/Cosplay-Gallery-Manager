@@ -2161,3 +2161,9 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 仅前端改动，不新增API、schema或迁移，不触碰正式业务数据。Web 34文件119项Vitest、TypeScript检查及685模块生产构建通过；构建仅有既存共享chunk超过500KiB提示。源码提交为`987e48eda922fe13a948bc09a054bd5ece0f26a1`。
 - 2026-09-18 20:02 CST停服并确认`MainPID=0`，在独立0700目录`/home/rainbowrunner/cos/bk/cgm-pre-inline-tags-987e48e-20260918T2002`备份schema v11 SQLite一致副本、旧二进制、配置、用户systemd单元及完整Coser托管目录，原件与副本逐项一致。备份数据库`PRAGMA integrity_check=ok`，Coser/Work/Character/Tag/Gallery/Source/Item计数为`135/108/697/18/8/8/570`；备份数据库SHA-256为`e9f10055122444904c7fcb7cce89758efc48ea2bb04a3043d53e626e46459958`，旧二进制为`16fd3115d4682e6391fbf43bc38465ab4ade620d7989c03eefca3234100eb410`。
 - 从清洁提交按正式三标签重建内嵌Web二进制，Go构建信息确认`vcs.modified=false`；原子替换并启动一次，新二进制SHA-256为`f3e37e91f15064f769977e33e1c14803e0764032e6bb8ee778893bfeddc275ed`。`/about.json`精确报告提交`987e48eda922fe13a948bc09a054bd5ece0f26a1`、`buildTime=2026-09-18T12:01:36Z`、`exactSourceAvailable=true`。服务`active/running`且`NRestarts=0`，Health/Ready均204，首页、Gallery/Tag深链及新JS/CSS资源均200；两个Worker与LibRaw、FFmpeg、FFprobe正常启用，启动日志未见错误。部署后正式库仍为schema v11、`integrity_check=ok`，上述业务计数不变；配置、媒体、Manifest和缓存均未替换，未执行远端推送。真实浏览器中的`+TAG`编辑与按Tag跳转待所有者业务验收。
+
+# 2026-09-18 Tag分类容器与数据迁移兼容
+
+- Tag 新增独立的`allow_direct_assignment`策略，不借用`use_in_recommendation`。新建Tag默认允许直接关联，旧数据经产品库schema v11→v12迁移后也统一默认允许；分类Tag仍可作为层级节点、承载子Tag并通过现有Tag详情汇总后代Gallery。Manage Tag编辑显示开关和直接关联计数，树上显示“分类”标识；Browse及Manage的Gallery Tag候选只列可直接关联者。关闭开关前必须清除直接Gallery关系；事务入口及SQLite触发器共同阻断绕过UI的直接写入。
+- 可移植元数据包的Tag记录新增可选布尔属性，但保持现有包格式版本；导出总是记录实际值，导入、合并按该值写入。旧包缺少该属性时视为`true`，读取时在校验原始压缩包校验和之后归一化，以免合并将语义等价的旧包与本地数据误判为内容冲突。完整数据库备份仍按已有机制保存整个SQLite文件；将来恢复到新版本时自动执行v12升级。没有改变Gallery Manifest格式或媒体根目录路径逻辑。
+- 源码回归：产品库v11→v12迁移与旧Tag默认值、Browse/Manage/原始SQL三层关联门禁、已有关系的关闭限制、可移植导出/导入和旧包读取通过；正式三标签产品数据库/API/可移植包/Server测试通过。Web TypeScript、34文件120项Vitest及685模块生产构建通过，仅见既存主chunk大小提示。此阶段尚未部署或迁移正式业务库；正式库仍为schema v11。部署前须先做一致性备份，并在升级后检查数据库完整性、Tag数量及可移植迁移模拟。

@@ -553,7 +553,7 @@ func manageAuditPage(value productdb.AuditPage) *ManageAuditPage {
 
 func manageCoreEntity(value productdb.ManageCoreEntity) *ManageCoreEntity {
 	result := &ManageCoreEntity{Kind: SearchEntityKind(value.Kind), UUID: value.UUID, Name: value.Name, SortName: value.SortName, Aliases: value.Aliases, Slug: value.Slug,
-		MetadataRevision: value.MetadataRevision, WorkName: value.WorkName, ProfileSummary: value.ProfileSummary, Biography: value.Biography, CountryOrRegion: value.CountryOrRegion, UseInRecommendation: value.UseInRecommendation}
+		MetadataRevision: value.MetadataRevision, WorkName: value.WorkName, ProfileSummary: value.ProfileSummary, Biography: value.Biography, CountryOrRegion: value.CountryOrRegion, UseInRecommendation: value.UseInRecommendation, AllowDirectAssignment: value.AllowDirectAssignment}
 	if value.AvatarPath != "" {
 		url := coserAssetResourceURL(value.UUID, value.MetadataRevision, "avatar-480")
 		result.AvatarURL = &url

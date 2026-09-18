@@ -62,6 +62,7 @@ type CoreEntityInput struct {
 	Biography                 string           `json:"biography"`
 	CountryOrRegion           string           `json:"countryOrRegion"`
 	UseInRecommendation       bool             `json:"useInRecommendation"`
+	AllowDirectAssignment     *bool            `json:"allowDirectAssignment,omitempty"`
 }
 
 type CoserDetail struct {
@@ -282,25 +283,26 @@ type ManageCandidate struct {
 }
 
 type ManageCoreEntity struct {
-	Kind                SearchEntityKind       `json:"kind"`
-	UUID                string                 `json:"uuid"`
-	Name                string                 `json:"name"`
-	SortName            string                 `json:"sortName"`
-	Aliases             []string               `json:"aliases"`
-	Slug                string                 `json:"slug"`
-	MetadataRevision    int64                  `json:"metadataRevision"`
-	WorkUUID            *string                `json:"workUUID,omitempty"`
-	WorkName            string                 `json:"workName"`
-	ProfileSummary      string                 `json:"profileSummary"`
-	Biography           string                 `json:"biography"`
-	CountryOrRegion     string                 `json:"countryOrRegion"`
-	UseInRecommendation bool                   `json:"useInRecommendation"`
-	AvatarURL           *string                `json:"avatarURL,omitempty"`
-	BannerURL           *string                `json:"bannerURL,omitempty"`
-	AvatarCrop          *ManageAvatarCrop      `json:"avatarCrop,omitempty"`
-	BannerFocalPoint    *ManageFocalPoint      `json:"bannerFocalPoint,omitempty"`
-	SocialAccounts      []*ManageSocialAccount `json:"socialAccounts"`
-	Parents             []*ManageCoreEntityRef `json:"parents"`
+	Kind                  SearchEntityKind       `json:"kind"`
+	UUID                  string                 `json:"uuid"`
+	Name                  string                 `json:"name"`
+	SortName              string                 `json:"sortName"`
+	Aliases               []string               `json:"aliases"`
+	Slug                  string                 `json:"slug"`
+	MetadataRevision      int64                  `json:"metadataRevision"`
+	WorkUUID              *string                `json:"workUUID,omitempty"`
+	WorkName              string                 `json:"workName"`
+	ProfileSummary        string                 `json:"profileSummary"`
+	Biography             string                 `json:"biography"`
+	CountryOrRegion       string                 `json:"countryOrRegion"`
+	UseInRecommendation   bool                   `json:"useInRecommendation"`
+	AllowDirectAssignment bool                   `json:"allowDirectAssignment"`
+	AvatarURL             *string                `json:"avatarURL,omitempty"`
+	BannerURL             *string                `json:"bannerURL,omitempty"`
+	AvatarCrop            *ManageAvatarCrop      `json:"avatarCrop,omitempty"`
+	BannerFocalPoint      *ManageFocalPoint      `json:"bannerFocalPoint,omitempty"`
+	SocialAccounts        []*ManageSocialAccount `json:"socialAccounts"`
+	Parents               []*ManageCoreEntityRef `json:"parents"`
 }
 
 type ManageCoreEntityDeleteBlocker struct {
@@ -1018,13 +1020,14 @@ type ManageSuggestion struct {
 }
 
 type ManageTagTreeItem struct {
-	UUID             string   `json:"uuid"`
-	Name             string   `json:"name"`
-	Aliases          []string `json:"aliases"`
-	ParentUUIDs      []string `json:"parentUUIDs"`
-	MetadataRevision int64    `json:"metadataRevision"`
-	ChildCount       int      `json:"childCount"`
-	GalleryCount     int      `json:"galleryCount"`
+	UUID                  string   `json:"uuid"`
+	Name                  string   `json:"name"`
+	Aliases               []string `json:"aliases"`
+	ParentUUIDs           []string `json:"parentUUIDs"`
+	MetadataRevision      int64    `json:"metadataRevision"`
+	ChildCount            int      `json:"childCount"`
+	GalleryCount          int      `json:"galleryCount"`
+	AllowDirectAssignment bool     `json:"allowDirectAssignment"`
 }
 
 type ManageUnassignedDiagnostic struct {

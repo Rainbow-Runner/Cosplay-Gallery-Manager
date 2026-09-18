@@ -93,11 +93,11 @@ export interface ManageCoserAssetReview {
 export interface ManageCoserAssetCleanupResult {
   deleted_group_count: number; deleted_file_count: number; deleted_byte_size: number; review: ManageCoserAssetReview;
 }
-export interface ManageCoreEntity { kind: "COSER" | "WORK" | "CHARACTER" | "TAG"; uuid: string; name: string; sortName: string; aliases: string[]; slug: string; metadataRevision: number; workUUID?: string | null; workName?: string; profileSummary: string; biography: string; countryOrRegion: string; useInRecommendation: boolean; avatarURL?: string | null; bannerURL?: string | null; avatarCrop?: { x: number; y: number; size: number } | null; bannerFocalPoint?: { x: number; y: number } | null; socialAccounts: { uuid: string; platformKey: string; label: string; handle: string; url: string; status: string; visible: boolean; position: string }[]; parents: { uuid: string; name: string; metadataRevision: number }[] }
+export interface ManageCoreEntity { kind: "COSER" | "WORK" | "CHARACTER" | "TAG"; uuid: string; name: string; sortName: string; aliases: string[]; slug: string; metadataRevision: number; workUUID?: string | null; workName?: string; profileSummary: string; biography: string; countryOrRegion: string; useInRecommendation: boolean; allowDirectAssignment?: boolean; avatarURL?: string | null; bannerURL?: string | null; avatarCrop?: { x: number; y: number; size: number } | null; bannerFocalPoint?: { x: number; y: number } | null; socialAccounts: { uuid: string; platformKey: string; label: string; handle: string; url: string; status: string; visible: boolean; position: string }[]; parents: { uuid: string; name: string; metadataRevision: number }[] }
 export interface ManageCoserNameConflict { coser: ManageCoreEntity; matchedValues: string[]; galleryCount: number }
 export interface ManageCoreEntityNameConflict { entity: ManageCoreEntity; matchedValues: string[]; galleryCount: number; workName: string; primaryNameMatch: boolean }
 export interface ManageCoreEntityPage { items: ManageCoreEntity[]; page: number; pageSize: number; totalItems: number; totalPages: number }
-export interface ManageTagTreeItem { uuid: string; name: string; aliases: string[]; parentUUIDs: string[]; metadataRevision: number; childCount: number; galleryCount: number }
+export interface ManageTagTreeItem { uuid: string; name: string; aliases: string[]; parentUUIDs: string[]; metadataRevision: number; childCount: number; galleryCount: number; allowDirectAssignment?: boolean }
 export interface ManageCoreEntityMergePreview {
   kind: ManageCoreEntity["kind"]; sourceUUID: string; targetUUID: string; sourceRevision: number; targetRevision: number;
   affectedGalleryIDs: number[]; conflicts: { code: string; details: string }[]; canMerge: boolean;

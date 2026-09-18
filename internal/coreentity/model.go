@@ -55,15 +55,16 @@ type Character struct {
 }
 
 type Tag struct {
-	UUID                string
-	Name                string
-	SortName            string
-	Aliases             []string
-	Slug                string
-	UseInRecommendation bool
-	MetadataRevision    int64
-	CreatedAtUTC        time.Time
-	UpdatedAtUTC        time.Time
+	UUID                  string
+	Name                  string
+	SortName              string
+	Aliases               []string
+	Slug                  string
+	UseInRecommendation   bool
+	AllowDirectAssignment bool
+	MetadataRevision      int64
+	CreatedAtUTC          time.Time
+	UpdatedAtUTC          time.Time
 }
 
 type SocialAccount struct {

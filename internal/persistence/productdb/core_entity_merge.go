@@ -209,15 +209,18 @@ func mergeConflicts(ctx context.Context, queryer mergeQueryer, kind portableid.K
 			return nil, err
 		}
 	case portableid.KindTag:
-		var sourceRecommendation, targetRecommendation bool
-		if err := queryer.QueryRowContext(ctx, `SELECT use_in_recommendation FROM tags WHERE uuid=?`, sourceUUID).Scan(&sourceRecommendation); err != nil {
+		var sourceRecommendation, targetRecommendation, sourceAssignable, targetAssignable bool
+		if err := queryer.QueryRowContext(ctx, `SELECT use_in_recommendation,allow_direct_assignment FROM tags WHERE uuid=?`, sourceUUID).Scan(&sourceRecommendation, &sourceAssignable); err != nil {
 			return nil, err
 		}
-		if err := queryer.QueryRowContext(ctx, `SELECT use_in_recommendation FROM tags WHERE uuid=?`, targetUUID).Scan(&targetRecommendation); err != nil {
+		if err := queryer.QueryRowContext(ctx, `SELECT use_in_recommendation,allow_direct_assignment FROM tags WHERE uuid=?`, targetUUID).Scan(&targetRecommendation, &targetAssignable); err != nil {
 			return nil, err
 		}
 		if sourceRecommendation != targetRecommendation {
 			conflicts = append(conflicts, CoreEntityMergeConflict{Code: "TAG_RECOMMENDATION", Details: "recommendation flags differ"})
+		}
+		if sourceAssignable != targetAssignable {
+			conflicts = append(conflicts, CoreEntityMergeConflict{Code: "TAG_DIRECT_ASSIGNMENT", Details: "direct Gallery assignment flags differ"})
 		}
 		if err := addCountConflict("DUPLICATE_GALLERY_TAG", `SELECT COUNT(*) FROM gallery_tags s JOIN gallery_tags t ON t.gallery_id=s.gallery_id WHERE s.tag_uuid=? AND t.tag_uuid=?`, sourceUUID, targetUUID); err != nil {
 			return nil, err

@@ -21,6 +21,8 @@ func TestImportPortableCorePreservesCoreAndReservesGalleryIdentities(t *testing.
 	defer db.Close()
 
 	bundle, identities := portableCoreImportFixture()
+	categoryOnly := false
+	bundle.Catalog.Tags[0].AllowDirectAssignment = &categoryOnly
 	importID := "99999999-9999-4999-8999-999999999999"
 	createPortableImportTestSession(t, db, importID, len(identities), 6, 1, 1, 1)
 	if err := db.BeginPortableImport(ctx, importID, time.Now()); err != nil {
@@ -38,6 +40,13 @@ func TestImportPortableCorePreservesCoreAndReservesGalleryIdentities(t *testing.
 		if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM `+table).Scan(&got); err != nil || got != want {
 			t.Fatalf("%s count=%d want=%d err=%v", table, got, want, err)
 		}
+	}
+	var assignable bool
+	if err := db.QueryRowContext(ctx, `SELECT allow_direct_assignment FROM tags WHERE uuid=?`, bundle.Catalog.Tags[0].UUID).Scan(&assignable); err != nil || assignable {
+		t.Fatalf("category-only Tag was not imported: %v, %v", assignable, err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT allow_direct_assignment FROM tags WHERE uuid=?`, bundle.Catalog.Tags[1].UUID).Scan(&assignable); err != nil || !assignable {
+		t.Fatalf("old-package Tag default was not preserved: %v, %v", assignable, err)
 	}
 	var state string
 	if err := db.QueryRowContext(ctx, `SELECT state FROM portable_import_sessions WHERE import_id=?`, importID).Scan(&state); err != nil || state != "CORE_IMPORTED" {

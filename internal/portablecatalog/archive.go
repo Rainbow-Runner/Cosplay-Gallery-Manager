@@ -418,6 +418,14 @@ func InspectFile(ctx context.Context, filename string) (Inspection, error) {
 	if result.Manifest.IdentityCount != identityCount || result.Manifest.CoserCount != len(result.Bundle.Catalog.Cosers) || result.Manifest.WorkCount != len(result.Bundle.Catalog.Works) || result.Manifest.CharacterCount != len(result.Bundle.Catalog.Characters) || result.Manifest.TagCount != len(result.Bundle.Catalog.Tags) || result.Manifest.AccountCount != len(result.Bundle.Catalog.Accounts) || result.Manifest.GalleryCount != len(result.Bundle.Gallery.Galleries) || result.Manifest.AssetCount != len(result.Checksums.Files)-len(requiredPayload)-ownerEntries {
 		return Inspection{}, errors.New("portable metadata package count mismatch")
 	}
+	// Older packages omit this field. Normalize only after the original bytes
+	// have passed checksum validation, so Merge compares equivalent semantics.
+	for index := range result.Bundle.Catalog.Tags {
+		if result.Bundle.Catalog.Tags[index].AllowDirectAssignment == nil {
+			allowed := true
+			result.Bundle.Catalog.Tags[index].AllowDirectAssignment = &allowed
+		}
+	}
 	return result, nil
 }
 

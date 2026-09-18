@@ -124,6 +124,12 @@ type Character struct {
 type Tag struct {
 	NamedEntity
 	UseInRecommendation bool `json:"use_in_recommendation"`
+	// Missing in older packages means the former directly assignable behavior.
+	AllowDirectAssignment *bool `json:"allow_direct_assignment,omitempty"`
+}
+
+func (t Tag) DirectAssignmentAllowed() bool {
+	return t.AllowDirectAssignment == nil || *t.AllowDirectAssignment
 }
 
 type AssetRef struct {

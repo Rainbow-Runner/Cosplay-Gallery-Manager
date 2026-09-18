@@ -59,6 +59,23 @@ func TestPortablePackageRoundTripIsDeterministic(t *testing.T) {
 	}
 }
 
+func TestPortableInspectorDefaultsLegacyTagAssignmentPolicy(t *testing.T) {
+	bundle := validBundle()
+	bundle.Catalog.Cosers[0].Avatar = nil
+	bundle.Catalog.Tags[0].AllowDirectAssignment = nil // older packages omit this field
+	filename := filepath.Join(t.TempDir(), "legacy-tags.cgm-portable.zip")
+	if err := WriteFileAtomic(filename, bundle, nil); err != nil {
+		t.Fatal(err)
+	}
+	inspection, err := InspectFile(context.Background(), filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy := inspection.Bundle.Catalog.Tags[0].AllowDirectAssignment; policy == nil || !*policy {
+		t.Fatalf("legacy Tag should remain directly assignable: %v", policy)
+	}
+}
+
 func TestPortableInspectorContinuesToReadFormatV1WithoutOwnerFields(t *testing.T) {
 	bundle := validBundle()
 	bundle.Catalog.Cosers[0].Avatar = nil

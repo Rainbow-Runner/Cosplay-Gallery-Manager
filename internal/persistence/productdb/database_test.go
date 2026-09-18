@@ -678,7 +678,7 @@ func TestOpenMigratesSchemaV10AutomaticScanScheduleDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if db.Identity().DatabaseSchemaVersion != 11 || runtime.AutomaticScanOnStartup || runtime.AutomaticScanIntervalMinutes != 1440 {
+	if db.Identity().DatabaseSchemaVersion != 12 || runtime.AutomaticScanOnStartup || runtime.AutomaticScanIntervalMinutes != 1440 {
 		t.Fatalf("migrated identity/settings=%#v/%#v", db.Identity(), runtime)
 	}
 	if err := validateIntegrity(ctx, db.DB); err != nil {

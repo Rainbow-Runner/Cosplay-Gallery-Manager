@@ -132,7 +132,7 @@ function GalleryEntityDetail() {
   const detail = result.data?.tagDetail;
   useCanonicalDetail(detail, route.slug, "tag", route.navigate); if (result.loading) return <Loading />; if (!detail || result.error) return <ErrorState />;
   return <main className="browse-main"><TextDetailHeading scope={route.scope} name={detail.entity.name} />
-    <GalleryResults title={detail.entity.name} scope={route.scope} onScope={route.setScope} page={detail.galleries} /></main>;
+    <GalleryResults title={detail.entity.name} scope={route.scope} onScope={route.setScope} onPage={route.setPage} page={detail.galleries} /></main>;
 }
 
 function GalleryResults({ title, scope, onScope, onPage, page, className = "", hideHeading = false, toolbarControl, toolbarAction, compactCards = false }: {

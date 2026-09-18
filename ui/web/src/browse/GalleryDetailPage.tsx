@@ -382,6 +382,11 @@ export function GalleryDetailPage() {
             {detail.card.shootDate ? <time title={intl.formatMessage({ id: "gallery.shootDate" })} aria-label={`${intl.formatMessage({ id: "gallery.shootDate" })}: ${detail.card.shootDate}`}><Icon name="calendar" />{detail.card.shootDate}</time> : null}
             <time className="gallery-detail__added" title={intl.formatMessage({ id: "gallery.addedAt" })} aria-label={`${intl.formatMessage({ id: "gallery.addedAt" })}: ${detail.card.addedAtUTC}`}>＋ {new Date(detail.card.addedAtUTC).toLocaleDateString()}</time>
           </div>
+          <GalleryTagEditor setID={setID} metadataRevision={metadataRevision} tags={galleryTags} onSaved={(tags, revision) => {
+            setGalleryTags(tags);
+            setMetadataRevision(revision);
+            void relatedQuery.refetch();
+          }} />
         </div>
         <div className="gallery-detail__actions">
           {settings?.cardFavoriteControlVisible ? <button className={galleryFavorite ? "is-active" : ""} type="button" aria-label={intl.formatMessage({ id: galleryFavorite ? "gallery.unfavorite" : "gallery.favorite" })} aria-pressed={galleryFavorite} onClick={toggleGalleryFavorite}><Icon name="heart" /></button> : null}
@@ -399,11 +404,6 @@ export function GalleryDetailPage() {
                 ))}
               </div>
               {detail.description ? <p className="gallery-description">{detail.description}</p> : null}
-              <GalleryTagEditor setID={setID} metadataRevision={metadataRevision} tags={galleryTags} onSaved={(tags, revision) => {
-                setGalleryTags(tags);
-                setMetadataRevision(revision);
-                void relatedQuery.refetch();
-              }} />
               <dl className="gallery-facts">
                 {detail.photographerName ? <><dt>{intl.formatMessage({ id: "gallery.photographer" })}</dt><dd>{detail.photographerName}</dd></> : null}
                 {detail.studioName ? <><dt>{intl.formatMessage({ id: "gallery.studio" })}</dt><dd>{detail.studioName}</dd></> : null}

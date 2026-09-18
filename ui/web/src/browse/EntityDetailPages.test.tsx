@@ -5,9 +5,9 @@ import { IntlProvider } from "react-intl";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { COSER_DETAIL } from "../api/browse";
+import { COSER_DETAIL, TAG_DETAIL } from "../api/browse";
 import { messages } from "../i18n/messages";
-import { CoserDetailPage, ModelDetailPage } from "./EntityDetailPages";
+import { CoserDetailPage, ModelDetailPage, TagDetailPage } from "./EntityDetailPages";
 
 afterEach(cleanup);
 
@@ -123,5 +123,33 @@ describe("CoserDetailPage", () => {
     expect(screen.getByRole("navigation", { name: "Breadcrumb" })).toHaveTextContent("HomeModelsAlice");
     expect(document.querySelector(".coser-profile")).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Work type" })).not.toBeInTheDocument();
+  });
+});
+
+describe("TagDetailPage", () => {
+  it("defaults to all galleries and preserves the selected scope when paging", async () => {
+    const mocks: MockedResponse[] = [1, 2].map((page) => ({
+      request: { query: TAG_DETAIL, variables: { slug: "tag-1", scope: "ALL", page } },
+      result: { data: { tagDetail: {
+        entity: { kind: "TAG", uuid: "tag-1", slug: "tag-1", name: "Outdoor", aliases: [] },
+        galleries: { page, pageSize: 24, totalItems: 30, totalPages: 2, items: [] },
+        redirected: false,
+      } } },
+    }));
+    render(
+      <IntlProvider locale="en-GB" messages={messages["en-GB"]}>
+        <MockedProvider mocks={mocks}>
+          <MemoryRouter initialEntries={["/tag/tag-1"]}>
+            <Routes><Route path="/tag/:slug" element={<TagDetailPage />} /></Routes>
+            <LocationProbe />
+          </MemoryRouter>
+        </MockedProvider>
+      </IntlProvider>,
+    );
+    expect(await screen.findByRole("group", { name: "Scope" })).toContainElement(screen.getByRole("button", { name: "ALL" }));
+    expect(screen.getByRole("button", { name: "ALL" })).toHaveClass("is-active");
+    fireEvent.click(screen.getByRole("button", { name: "2" }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/tag/tag-1?scope=ALL&page=2"));
+    expect(await screen.findByRole("button", { name: "2" })).toHaveAttribute("aria-current", "page");
   });
 });

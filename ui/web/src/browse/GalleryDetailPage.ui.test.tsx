@@ -102,6 +102,29 @@ describe("GalleryDetailPage presentation and media actions", () => {
     expect(document.querySelectorAll(".media-tile__cover")).toHaveLength(1);
   });
 
+  it("shows linked tags below the gallery stats with all-scope tag browsing", async () => {
+    renderPage(queryMocks());
+    const heading = await screen.findByRole("heading", { name: "Gallery one" });
+    const title = heading.closest(".gallery-detail__title") as HTMLElement;
+    const stats = title.querySelector(".gallery-detail__stats");
+    const tags = within(title).getByLabelText("Tags");
+    expect(stats?.nextElementSibling).toContainElement(tags);
+    expect(within(tags).getByRole("link", { name: "Outdoor" })).toHaveAttribute("href", "/tag/tag-1");
+    expect(within(tags).getByRole("button", { name: "Edit tags" })).toHaveTextContent("+TAG");
+    expect(tags.lastElementChild).toBe(within(tags).getByRole("button", { name: "Edit tags" }));
+  });
+
+  it("keeps the inline Tag editor available when the gallery has no tags", async () => {
+    const mocks = queryMocks();
+    mocks[0] = { request: { query: GALLERY_DETAIL, variables: { slug: "gallery-one" } }, result: { data: { galleryDetail: { ...detail(), tags: [] } } } };
+    renderPage(mocks);
+    const tags = await screen.findByLabelText("Tags");
+    expect(within(tags).queryAllByRole("link")).toHaveLength(0);
+    fireEvent.click(within(tags).getByRole("button", { name: "Edit tags" }));
+    expect(await screen.findByRole("combobox", { name: "Search tags by name or alias" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save tags" })).toBeDisabled();
+  });
+
   it("persists a media favourite from the tile control", async () => {
     const mocks = queryMocks();
     mocks.push({ request: { query: SET_ITEM_FAVORITE, variables: { itemUUID: "photo-1", favorite: true } }, result: { data: { setItemFavorite: { metadataRevision: 7 } } } });
@@ -170,8 +193,9 @@ describe("GalleryDetailPage presentation and media actions", () => {
       { request: { query: RELATED_GALLERIES, variables: { setID: "gallery-1" } }, result: { data: { relatedGalleries: [] } } },
     );
     renderPage(mocks);
-    fireEvent.click(await screen.findByText("More details"));
-    fireEvent.click(await screen.findByRole("button", { name: "Edit tags" }));
+    const moreDetails = (await screen.findByText("More details")).closest("details") as HTMLDetailsElement;
+    fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
+    expect(moreDetails).not.toHaveAttribute("open");
     const input = await screen.findByRole("combobox", { name: "Search tags by name or alias" });
     fireEvent.change(input, { target: { value: "por" } });
     const option = await screen.findByRole("option", { name: /Portrait/ });
@@ -179,7 +203,8 @@ describe("GalleryDetailPage presentation and media actions", () => {
     expect(document.querySelectorAll(".gallery-tag-editor__chip")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Save tags" }));
     expect(await screen.findByText("Tags saved. The Gallery state was not changed.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "#Portrait" })).toBeInTheDocument();
+    expect(within(screen.getByLabelText("Tags")).getByRole("link", { name: "Portrait" })).toHaveAttribute("href", "/tag/tag-2");
+    expect(screen.getByRole("button", { name: "Edit tags" })).toHaveTextContent("+TAG");
   });
 
   it("opens a deep-linked item and removes the dialog when it is closed", async () => {

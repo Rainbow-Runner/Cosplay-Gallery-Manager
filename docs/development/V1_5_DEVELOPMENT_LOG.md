@@ -2153,3 +2153,9 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 数据库回归覆盖原子子Tag创建、父版本递增、树投影Alias/父边/直接计数和过期版本无残留；GraphQL回归覆盖查询与创建契约。前端回归覆盖多父双位置、Alias搜索展开双路径、子Tag入口及列表切换；正式三标签产品数据库/API/Server/CMD测试与Go Vet、Web 34文件116项测试、TypeScript及685模块生产构建通过，仅保留既有共享chunk超过500KiB提示。`git diff --check`通过。本轮无schema迁移，未修改媒体或Manifest。源码提交为`420bfce3d268b6f9253efa48aa3c919cb443e42b`。
 - 2026-09-17 22:38 CST停服并确认`MainPID=0`，在独立0700目录`/home/rainbowrunner/cos/bk/cgm-pre-tag-tree-420bfce-20260917T2238`保存schema v11 SQLite一致副本、旧二进制、配置、用户systemd单元及完整Coser托管目录；原件与副本逐项一致。备份数据库`PRAGMA integrity_check=ok`，Coser/Work/Character/Tag/Gallery/Source/Item计数为`135/108/697/2/8/8/570`。备份数据库SHA-256为`eea4550d9935da4f4476baaf74c6536f30ef8ee02da13e617fcf2883785c19e1`，旧二进制为`b034d34e4d26464c51cc6ad7ab5d735fae14c54e542c476cb3e8b9c7ec035154`。
 - 从清洁提交按正式三标签重新构建内嵌Web二进制，Go构建信息确认`vcs.modified=false`；原子替换并启动一次，新二进制SHA-256为`16fd3115d4682e6391fbf43bc38465ab4ade620d7989c03eefca3234100eb410`。`/about.json`精确报告提交`420bfce3d268b6f9253efa48aa3c919cb443e42b`、`buildTime=2026-09-17T14:36:43Z`、`exactSourceAvailable=true`。服务`active/running`且`NRestarts=0`，Health/Ready均204，首页、Tag管理深链和本次JS/CSS资源均200；两个Worker与LibRaw、FFmpeg、FFprobe正常启用，启动日志未见错误。部署后正式库仍为schema v11、`integrity_check=ok`，上述业务计数不变；未执行远端推送。真实浏览器中的多父Tag树与子Tag创建交互待所有者业务验收。
+
+# 2026-09-18 Browse Gallery详情Tag展示与跳转
+
+- Gallery详情标题中的媒体数量、拍摄/加入时间下方新增Tag行。参考`https://www.wn10.cfd/photos-index-aid-385692.html`公开HTML/CSS中的`.addtags`/`.tagshow`：白底深灰字、12px/20px小矩形、悬浮蓝底白字；因CGM正文为白底，增加细边框确保普通态可辨识。多Tag自动换行，长名称可断行。
+- 每个Tag以UUID链接至现有`/tag/:slug`详情页，其默认Scope为ALL，即全部图集；末尾`+TAG`仿照参考页作为编辑按钮，即使无Tag也常显。按钮展开原有搜索、气泡选择与显式保存面板；保存后标题Tag行即时同步。移除“更多详情”中重复的编辑器，避免两个入口分别持有未保存草稿。Tag详情页原本虽请求分页数据但未传分页回调，本次补齐分页控件，切页时保留当前Scope。
+- 仅前端改动，不新增API、schema或迁移，不触碰正式业务数据。Web 34文件119项Vitest、TypeScript检查及685模块生产构建通过；构建仅有既存共享chunk超过500KiB提示。正式服务继续运行上一提交，本阶段未提交、未部署。

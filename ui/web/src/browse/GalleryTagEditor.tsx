@@ -105,15 +105,13 @@ export function GalleryTagEditor({ setID, metadataRevision, tags, onSaved }: {
     }
   }
 
-  if (!editing) return <div className="gallery-tag-editor">
-    <div className="tag-row">
-      {tags.map((tag) => <Link key={tag.uuid} to={`/tag/${encodeURIComponent(tag.uuid)}`}>#{tag.name}</Link>)}
-      <button type="button" className="gallery-tag-editor__trigger" onClick={beginEdit}>{intl.formatMessage({ id: "gallery.editTags" })}</button>
+  return <div className={`gallery-tag-editor gallery-tag-editor--header${editing ? " is-editing" : ""}`} ref={editorRef}>
+    <div className="gallery-detail__tags" aria-label={intl.formatMessage({ id: "gallery.tags" })}>
+      <span>{intl.formatMessage({ id: "gallery.tags" })}:</span>
+      {tags.map((tag) => <Link key={tag.uuid} to={`/tag/${encodeURIComponent(tag.uuid)}`} className="gallery-detail__tag">{tag.name}</Link>)}
+      {!editing ? <button type="button" className="gallery-detail__tag gallery-detail__tag--edit" aria-label={intl.formatMessage({ id: "gallery.editTags" })} aria-expanded={false} onClick={beginEdit}>+TAG</button> : null}
     </div>
-    {message ? <p className="gallery-tag-editor__message" role="status">{message}</p> : null}
-  </div>;
-
-  return <div className="gallery-tag-editor is-editing" ref={editorRef}>
+    {editing ? <div className="gallery-tag-editor__panel">
     <div className="gallery-tag-editor__control" onClick={() => inputRef.current?.focus()}>
       {selected.map((tag) => <span className="gallery-tag-editor__chip" key={tag.uuid}>
         <span>{tag.name}</span>
@@ -157,6 +155,7 @@ export function GalleryTagEditor({ setID, metadataRevision, tags, onSaved }: {
       <button type="button" onClick={cancel}>{intl.formatMessage({ id: "gallery.cancelTags" })}</button>
       <button type="button" disabled={!dirty || replaceState.loading} onClick={() => void save()}>{intl.formatMessage({ id: replaceState.loading ? "gallery.savingTags" : "gallery.saveTags" })}</button>
     </div>
-    {message ? <p className="gallery-tag-editor__message" role="alert">{message}</p> : null}
+    </div> : null}
+    {message ? <p className="gallery-tag-editor__message" role={editing ? "alert" : "status"}>{message}</p> : null}
   </div>;
 }

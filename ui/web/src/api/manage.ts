@@ -15,10 +15,12 @@ const MANAGE_GALLERY_DETAIL = gql`
 
 export const MANAGE_GALLERIES = gql`
   query ManageGalleries($page: Int!, $issue: String!) { manageGalleries(page: $page, issue: $issue) {
-    page pageSize totalItems totalPages summary { all draft overLimit unavailable blocking processingError missingGallery }
-    items { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues lastScanErrorCode lastScanCompleted }
+    page pageSize totalItems totalPages summary { all draft overLimit unavailable blocking processingError missingGallery manifestAttention }
+    items { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues lastScanErrorCode lastScanCompleted manifestStatus manifestCheckedAt }
   } }
 `;
+export const PREVIEW_GALLERY_MANIFEST_BATCH_PUSH = gql`query PreviewGalleryManifestPush($setIDs: [ID!]!) { previewGalleryManifestPush(setIDs: $setIDs) { setID title status metadataRevision path fileHash databaseContentChanged localFileChanged blockReason } }`;
+export const PUSH_GALLERY_MANIFESTS = gql`mutation PushGalleryManifests($items: [GalleryManifestBatchPushInput!]!, $overwriteLocal: Boolean!) { pushGalleryManifests(items: $items, overwriteLocal: $overwriteLocal) { setID outcome reason } }`;
 export const MANAGE_GALLERY = gql`
   ${MANAGE_GALLERY_DETAIL}
   query ManageGallery($setID: ID!) { manageGallery(setID: $setID) {

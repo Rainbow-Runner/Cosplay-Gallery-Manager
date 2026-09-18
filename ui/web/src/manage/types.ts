@@ -1,9 +1,11 @@
 export interface ManageGalleryRow {
   setID: string; slug: string; state: "DRAFT" | "ACTIVE" | "ARCHIVED"; title: string; contentRating?: "NON_ADULT" | "ADULT" | null;
   metadataRevision: number; scanRevision: number; browsable: boolean; sourceType: string; sourcePath: string; sourceAvailability: string;
-  reconcileState: string; overLimit: boolean; itemCount: number; missingCount: number; pendingCount: number; errorCount: number; blockingIssues: number; lastScanErrorCode: string; lastScanCompleted: string;
+  reconcileState: string; overLimit: boolean; itemCount: number; missingCount: number; pendingCount: number; errorCount: number; blockingIssues: number; lastScanErrorCode: string; lastScanCompleted: string; manifestStatus: string; manifestCheckedAt: string;
 }
-export interface ManageGalleryPage { items: ManageGalleryRow[]; summary: { all: number; draft: number; overLimit: number; unavailable: number; blocking: number; processingError: number; missingGallery: number }; page: number; pageSize: number; totalItems: number; totalPages: number }
+export interface ManageGalleryPage { items: ManageGalleryRow[]; summary: { all: number; draft: number; overLimit: number; unavailable: number; blocking: number; processingError: number; missingGallery: number; manifestAttention: number }; page: number; pageSize: number; totalItems: number; totalPages: number }
+export interface ManageGalleryManifestBatchPreview { setID: string; title: string; status: string; metadataRevision: number; path: string; fileHash: string; databaseContentChanged: boolean; localFileChanged: boolean; blockReason: string }
+export interface ManageGalleryManifestBatchResult { setID: string; outcome: string; reason: string }
 export interface ManageGalleryItem { uuid: string; relativePath: string; mediaKind: string; contentFormat: string; imageCategory?: string | null; position: string; caption: string; excluded: boolean; availability: string; processingState: string; byteSize: number; videoProbeState: string; videoErrorCode: string; videoContainer: string; videoDurationSeconds: number; videoWidth: number; videoHeight: number; videoCodec: string; audioCodec: string }
 export interface ManageGalleryCast { characterUUID: string; characterName: string; workUUID: string; workName: string; position: string }
 export interface ManageGalleryCredit { coserUUID: string; coserName: string; position: string; cast: ManageGalleryCast[] }

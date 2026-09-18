@@ -1204,6 +1204,43 @@ func (r *mutationResolver) PushGalleryManifest(ctx context.Context, setID string
 	return r.manageGalleryManifestState(ctx, state)
 }
 
+// PushGalleryManifests is the resolver for the pushGalleryManifests field.
+func (r *mutationResolver) PushGalleryManifests(ctx context.Context, items []*GalleryManifestBatchPushInput, overwriteLocal bool) ([]*ManageGalleryManifestBatchResult, error) {
+	if len(items) < 1 || len(items) > 100 {
+		return nil, errors.New("select between 1 and 100 Galleries")
+	}
+	seen := map[string]bool{}
+	results := make([]*ManageGalleryManifestBatchResult, 0, len(items))
+	counts := map[string]int{}
+	for _, item := range items {
+		if item == nil || seen[item.SetID] {
+			return nil, errors.New("invalid or duplicate Gallery selection")
+		}
+		seen[item.SetID] = true
+		galleryID, err := r.Database.Manage().GalleryID(ctx, item.SetID)
+		if err != nil {
+			results = append(results, &ManageGalleryManifestBatchResult{SetID: item.SetID, Outcome: "FAILED", Reason: "GALLERY_NOT_FOUND"})
+			counts["FAILED"]++
+			continue
+		}
+		result, err := r.Database.Manifests().PushGalleryBatchItem(ctx, productdb.GalleryManifestBatchDecision{
+			GalleryID: galleryID, ExpectedRevision: item.ExpectedMetadataRevision,
+			ExpectedPath: item.ExpectedPath, ExpectedFileHash: item.ExpectedFileHash,
+		}, overwriteLocal, time.Now())
+		if err != nil {
+			result = productdb.GalleryManifestBatchResult{SetID: item.SetID, Outcome: "FAILED", Reason: "PUSH_FAILED"}
+		}
+		results = append(results, &ManageGalleryManifestBatchResult{SetID: item.SetID, Outcome: result.Outcome, Reason: result.Reason})
+		counts[result.Outcome]++
+	}
+	var auditErr error
+	if counts["FAILED"] > 0 {
+		auditErr = errors.New("one or more Gallery Manifest Pushes failed")
+	}
+	r.auditManage(ctx, "GALLERY_MANIFEST_BATCH_PUSH", "GALLERY", "", "MANIFEST_BATCH_PARTIAL_FAILURE", auditErr, map[string]any{"selected": len(items), "pushed": counts["PUSHED"], "skipped": counts["SKIPPED"], "failed": counts["FAILED"], "overwrite_local": overwriteLocal})
+	return results, nil
+}
+
 // PullGalleryManifest is the resolver for the pullGalleryManifest field.
 func (r *mutationResolver) PullGalleryManifest(ctx context.Context, setID string, expectedMetadataRevision int64) (*ManageGalleryManifestState, error) {
 	galleryID, err := r.Database.Manage().GalleryID(ctx, setID)
@@ -1566,6 +1603,34 @@ func (r *queryResolver) ManageGalleries(ctx context.Context, page int, issue str
 		return nil, manageError(err)
 	}
 	return manageGalleryPage(value), nil
+}
+
+// PreviewGalleryManifestPush is the resolver for the previewGalleryManifestPush field.
+func (r *queryResolver) PreviewGalleryManifestPush(ctx context.Context, setIDs []string) ([]*ManageGalleryManifestBatchPreview, error) {
+	if len(setIDs) < 1 || len(setIDs) > 100 {
+		return nil, errors.New("select between 1 and 100 Galleries")
+	}
+	seen := map[string]bool{}
+	results := make([]*ManageGalleryManifestBatchPreview, 0, len(setIDs))
+	for _, setID := range setIDs {
+		if seen[setID] {
+			return nil, errors.New("duplicate Gallery selection")
+		}
+		seen[setID] = true
+		galleryID, err := r.Database.Manage().GalleryID(ctx, setID)
+		if err != nil {
+			return nil, manageError(err)
+		}
+		preview, err := r.Database.Manifests().PreviewGalleryBatchPush(ctx, galleryID, time.Now())
+		if err != nil {
+			return nil, manageError(err)
+		}
+		results = append(results, &ManageGalleryManifestBatchPreview{SetID: preview.SetID, Title: preview.Title,
+			Status: string(preview.Status), MetadataRevision: preview.MetadataRevision, Path: preview.Path,
+			FileHash: preview.FileHash, DatabaseContentChanged: preview.DatabaseContentChanged,
+			LocalFileChanged: preview.LocalFileChanged, BlockReason: preview.BlockReason})
+	}
+	return results, nil
 }
 
 // ManageGallery is the resolver for the manageGallery field.

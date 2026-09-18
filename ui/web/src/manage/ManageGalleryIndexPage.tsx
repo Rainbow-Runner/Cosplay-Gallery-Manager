@@ -1,7 +1,8 @@
-import { useQuery } from "@apollo/client/react";
+import { useLazyQuery, useMutation, useQuery } from "@apollo/client/react";
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { MANAGE_GALLERIES } from "../api/manage";
-import type { ManageGalleryPage } from "./types";
+import { MANAGE_GALLERIES, PREVIEW_GALLERY_MANIFEST_BATCH_PUSH, PUSH_GALLERY_MANIFESTS } from "../api/manage";
+import type { ManageGalleryManifestBatchPreview, ManageGalleryManifestBatchResult, ManageGalleryPage } from "./types";
 
 const filters = [
   { issue: "ALL", label: "全部 / All", count: "all" },
@@ -11,6 +12,7 @@ const filters = [
   { issue: "BLOCKING", label: "阻断问题 / Blocking", count: "blocking" },
   { issue: "MISSING", label: "缺失媒体 / Missing", count: "missingGallery" },
   { issue: "PROCESSING_ERROR", label: "处理失败 / Processing error", count: "processingError" },
+  { issue: "MANIFEST", label: "Manifest 待处理", count: "manifestAttention" },
 ] as const;
 
 export function ManageGalleryIndexPage() {
@@ -18,7 +20,40 @@ export function ManageGalleryIndexPage() {
   const page = Math.max(1, Number(parameters.get("page")) || 1);
   const issue = parameters.get("issue") || "ALL";
   const query = useQuery<{ manageGalleries: ManageGalleryPage }>(MANAGE_GALLERIES, { variables: { page, issue } });
+  const [loadPreview, previewState] = useLazyQuery<{ previewGalleryManifestPush: ManageGalleryManifestBatchPreview[] }>(PREVIEW_GALLERY_MANIFEST_BATCH_PUSH, { fetchPolicy: "network-only" });
+  const [pushBatch, pushState] = useMutation<{ pushGalleryManifests: ManageGalleryManifestBatchResult[] }>(PUSH_GALLERY_MANIFESTS);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [preview, setPreview] = useState<ManageGalleryManifestBatchPreview[] | null>(null);
+  const [results, setResults] = useState<ManageGalleryManifestBatchResult[] | null>(null);
+  const [message, setMessage] = useState("");
   const data = query.data?.manageGalleries;
+  const selectedOnPage = data?.items.filter((row) => selected.includes(row.setID)).length || 0;
+
+  function toggle(setID: string) {
+    setSelected((current) => current.includes(setID) ? current.filter((value) => value !== setID) : current.length < 100 ? [...current, setID] : current);
+  }
+  async function previewBatch() {
+    if (!selected.length) return;
+    setMessage(""); setResults(null);
+    try {
+      const response = await loadPreview({ variables: { setIDs: selected } });
+      if (!response.data) throw new Error("No preview returned");
+      setPreview(response.data.previewGalleryManifestPush);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Preview failed"); }
+  }
+  async function execute(overwriteLocal: boolean) {
+    if (!preview || pushState.loading) return;
+    const overwriteCount = preview.filter((item) => item.localFileChanged && !item.blockReason).length;
+    if (overwriteLocal && overwriteCount > 0 && !window.confirm(`Overwrite ${overwriteCount} locally changed Manifest file(s)? This cannot be undone without a separate backup.`)) return;
+    setMessage("");
+    try {
+      const response = await pushBatch({ variables: { items: preview.map((item) => ({ setID: item.setID, expectedMetadataRevision: item.metadataRevision, expectedPath: item.path, expectedFileHash: item.fileHash })), overwriteLocal } });
+      if (!response.data) throw new Error("No batch result returned");
+      setResults(response.data.pushGalleryManifests);
+      setPreview(null); setSelected([]);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Batch Push failed"); }
+    try { await query.refetch(); } catch { /* Keep the confirmed write result visible if refreshing the list fails. */ }
+  }
 
   return <main className="manage-page"><header className="manage-heading"><div><p>GALLERY ROOT</p><h2>Gallery</h2></div><button type="button">＋ Import</button></header>
     {data ? <nav className="issue-summary" aria-label="作品集筛选 / Gallery filters">
@@ -27,10 +62,15 @@ export function ManageGalleryIndexPage() {
         <span>{filter.label}</span><strong>{data.summary[filter.count]}</strong>
       </button>)}
     </nav> : null}
+    <div className="manage-panel-actions"><button type="button" disabled={!selected.length || previewState.loading} onClick={previewBatch}>批量 Push Manifest / Batch Push ({selected.length}/100)</button><span>先预览，写入前重新校验文件和数据库。</span></div>
+    {message ? <p role="alert" className="manage-error">{message}</p> : null}
     {query.error ? <p role="alert">Unable to load Manage data.</p> : null}
-    {data ? <><div className="manage-table-wrap"><table className="manage-table"><thead><tr><th>State</th><th>Title</th><th>Source</th><th>Items</th><th>Missing</th><th>Process</th><th>Issues</th></tr></thead><tbody>
-      {data.items.map((row) => <tr key={row.setID} className={row.blockingIssues || row.overLimit || row.missingCount || row.errorCount || row.sourceAvailability !== "AVAILABLE" ? "has-issue" : ""}><td><span className={`state state--${row.state.toLowerCase()}`}>{row.state}</span></td>
+    {data ? <><div className="manage-table-wrap"><table className="manage-table"><thead><tr><th><input type="checkbox" aria-label="Select all Galleries on this page" checked={data.items.length > 0 && selectedOnPage === data.items.length} onChange={(event) => setSelected((current) => event.target.checked ? Array.from(new Set([...current, ...data.items.map((row) => row.setID)])).slice(0, 100) : current.filter((id) => !data.items.some((row) => row.setID === id)))} /></th><th>State</th><th>Title</th><th>Source</th><th>Items</th><th>Missing</th><th>Process</th><th>Issues</th><th>Manifest</th></tr></thead><tbody>
+      {data.items.map((row) => <tr key={row.setID} className={row.blockingIssues || row.overLimit || row.missingCount || row.errorCount || row.sourceAvailability !== "AVAILABLE" || ["FILE_DIRTY", "CONFLICT", "ERROR", "MISSING"].includes(row.manifestStatus) ? "has-issue" : ""}><td><input type="checkbox" aria-label={`Select ${row.title}`} checked={selected.includes(row.setID)} onChange={() => toggle(row.setID)} /></td><td><span className={`state state--${row.state.toLowerCase()}`}>{row.state}</span></td>
         <td><Link to={`/manage/gallery/${row.setID}`}>{row.title}</Link><small>{row.contentRating || "UNRATED"}</small></td><td title={row.sourcePath}>{row.sourceAvailability} · {row.reconcileState}{row.lastScanErrorCode ? <small>{row.lastScanErrorCode}</small> : null}</td>
-        <td>{row.itemCount}</td><td>{row.missingCount}</td><td>{row.pendingCount} / {row.errorCount}</td><td>{row.blockingIssues}</td></tr>)}</tbody></table></div>
-      {data.totalPages > 1 ? <nav className="manage-pagination" aria-label="Pagination"><button disabled={page <= 1} onClick={() => setParameters({ page: String(page - 1), ...(issue === "ALL" ? {} : { issue }) })}>Previous</button><span>{page} / {data.totalPages}</span><button disabled={page >= data.totalPages} onClick={() => setParameters({ page: String(page + 1), ...(issue === "ALL" ? {} : { issue }) })}>Next</button></nav> : null}</> : null}</main>;
+        <td>{row.itemCount}</td><td>{row.missingCount}</td><td>{row.pendingCount} / {row.errorCount}</td><td>{row.blockingIssues}</td><td><Link to={`/manage/gallery/${row.setID}?tab=manifest`}>{row.manifestStatus || "UNCHECKED"}</Link>{row.manifestCheckedAt ? <small>Checked {row.manifestCheckedAt}</small> : <small>Not checked yet</small>}</td></tr>)}</tbody></table></div>
+      {data.totalPages > 1 ? <nav className="manage-pagination" aria-label="Pagination"><button disabled={page <= 1} onClick={() => setParameters({ page: String(page - 1), ...(issue === "ALL" ? {} : { issue }) })}>Previous</button><span>{page} / {data.totalPages}</span><button disabled={page >= data.totalPages} onClick={() => setParameters({ page: String(page + 1), ...(issue === "ALL" ? {} : { issue }) })}>Next</button></nav> : null}</> : null}
+    {preview ? <div className="manage-modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Batch Manifest Push preview" className="manage-panel manage-batch-manifest-dialog"><h3>批量 Push 预览 / Batch Push preview</h3><p>数据库更新可正常写回；只有本地文件改动的项目需要选择覆盖或跳过。错误、离线和只读项目始终跳过。</p><div className="manage-table-wrap"><table className="manage-table"><thead><tr><th>Gallery</th><th>Manifest</th><th>DB content</th><th>Local file</th><th>Decision</th></tr></thead><tbody>{preview.map((item) => <tr key={item.setID}><td>{item.title}</td><td>{item.status}</td><td>{item.databaseContentChanged ? "Changed" : "Unchanged"}</td><td>{item.localFileChanged ? "Changed" : "Unchanged"}</td><td>{item.blockReason || (item.localFileChanged ? "Overwrite or skip" : item.databaseContentChanged || item.status === "MISSING" ? "Push" : "No rewrite")}</td></tr>)}</tbody></table></div><div className="manage-panel-actions"><button type="button" onClick={() => setPreview(null)}>Cancel</button><button type="button" disabled={pushState.loading} onClick={() => execute(false)}>跳过本地改动 / Skip changed files</button><button type="button" disabled={pushState.loading} onClick={() => execute(true)}>覆盖本地改动 / Overwrite changed files</button></div></section></div> : null}
+    {results ? <div className="manage-modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Batch Manifest Push result" className="manage-panel manage-batch-manifest-dialog"><h3>批量 Push 结果 / Batch Push result</h3><p>{results.filter((item) => item.outcome === "PUSHED").length} pushed · {results.filter((item) => item.outcome === "SKIPPED").length} skipped · {results.filter((item) => item.outcome === "FAILED").length} failed</p><ul>{results.map((item) => <li key={item.setID}>{item.setID}: {item.outcome}{item.reason ? ` · ${item.reason}` : ""}</li>)}</ul><button type="button" onClick={() => setResults(null)}>Close</button></section></div> : null}
+  </main>;
 }

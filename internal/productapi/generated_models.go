@@ -164,6 +164,13 @@ type GalleryExternalLinkInput struct {
 	Position string `json:"position"`
 }
 
+type GalleryManifestBatchPushInput struct {
+	SetID                    string `json:"setID"`
+	ExpectedMetadataRevision int64  `json:"expectedMetadataRevision"`
+	ExpectedPath             string `json:"expectedPath"`
+	ExpectedFileHash         string `json:"expectedFileHash"`
+}
+
 type GalleryMember struct {
 	ItemUUID        string            `json:"itemUUID"`
 	MediaKind       MediaKind         `json:"mediaKind"`
@@ -473,6 +480,24 @@ type ManageGalleryItem struct {
 	AudioCodec           string          `json:"audioCodec"`
 }
 
+type ManageGalleryManifestBatchPreview struct {
+	SetID                  string `json:"setID"`
+	Title                  string `json:"title"`
+	Status                 string `json:"status"`
+	MetadataRevision       int64  `json:"metadataRevision"`
+	Path                   string `json:"path"`
+	FileHash               string `json:"fileHash"`
+	DatabaseContentChanged bool   `json:"databaseContentChanged"`
+	LocalFileChanged       bool   `json:"localFileChanged"`
+	BlockReason            string `json:"blockReason"`
+}
+
+type ManageGalleryManifestBatchResult struct {
+	SetID   string `json:"setID"`
+	Outcome string `json:"outcome"`
+	Reason  string `json:"reason"`
+}
+
 type ManageGalleryManifestState struct {
 	Status           string                    `json:"status"`
 	Path             string                    `json:"path"`
@@ -515,6 +540,8 @@ type ManageGalleryRow struct {
 	BlockingIssues     int            `json:"blockingIssues"`
 	LastScanErrorCode  string         `json:"lastScanErrorCode"`
 	LastScanCompleted  string         `json:"lastScanCompleted"`
+	ManifestStatus     string         `json:"manifestStatus"`
+	ManifestCheckedAt  string         `json:"manifestCheckedAt"`
 }
 
 type ManageGalleryScanRun struct {
@@ -556,14 +583,15 @@ type ManageIgnoredSourceRemovalPreview struct {
 }
 
 type ManageIssueSummary struct {
-	All             int `json:"all"`
-	Draft           int `json:"draft"`
-	OverLimit       int `json:"overLimit"`
-	Unavailable     int `json:"unavailable"`
-	Blocking        int `json:"blocking"`
-	ProcessingError int `json:"processingError"`
-	MissingGallery  int `json:"missingGallery"`
-	MissingItem     int `json:"missingItem"`
+	All               int `json:"all"`
+	Draft             int `json:"draft"`
+	OverLimit         int `json:"overLimit"`
+	Unavailable       int `json:"unavailable"`
+	Blocking          int `json:"blocking"`
+	ProcessingError   int `json:"processingError"`
+	MissingGallery    int `json:"missingGallery"`
+	MissingItem       int `json:"missingItem"`
+	ManifestAttention int `json:"manifestAttention"`
 }
 
 type ManageLibrary struct {

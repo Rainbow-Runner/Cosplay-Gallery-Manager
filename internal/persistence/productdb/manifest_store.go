@@ -93,6 +93,16 @@ func (s *ManifestStore) PreviewGalleryPush(ctx context.Context, galleryID int64)
 }
 
 func (s *ManifestStore) CheckGallery(ctx context.Context, galleryID int64, now time.Time) (GalleryManifestState, error) {
+	state, err := s.checkGallery(ctx, galleryID, now)
+	if state.Status != "" {
+		if recordErr := s.recordGalleryInspection(ctx, galleryID, state, err, now); recordErr != nil && err == nil {
+			return state, recordErr
+		}
+	}
+	return state, err
+}
+
+func (s *ManifestStore) checkGallery(ctx context.Context, galleryID int64, now time.Time) (GalleryManifestState, error) {
 	source, err := findGallerySourceByGallery(ctx, s.db, galleryID)
 	if err != nil {
 		return GalleryManifestState{GalleryID: galleryID, Status: ManifestNone}, nil
@@ -126,6 +136,14 @@ func (s *ManifestStore) CheckGallery(ctx context.Context, galleryID int64, now t
 		return state, readErr
 	}
 	if !found {
+		document, parseErr := manifest.ParseGallery(bytesReader(data))
+		if parseErr != nil || document.SetID != mustGallerySetID(ctx, s.db, galleryID) {
+			state.Status = ManifestError
+			if parseErr != nil {
+				return state, parseErr
+			}
+			return state, errors.New("Manifest set_id does not match Gallery")
+		}
 		state.Status = ManifestFileDirty
 		state.FileHash = currentHash
 		return state, nil
@@ -181,6 +199,19 @@ func (s *ManifestStore) PushGallery(
 	expectedMetadataRevision int64,
 	now time.Time,
 ) (GalleryManifestState, error) {
+	return s.pushGallery(ctx, galleryID, expectedMetadataRevision, false, "", now)
+}
+
+// PushGalleryOverwritingFile is available only to an explicitly confirmed
+// batch operation. The file must still match the hash shown in its preview.
+func (s *ManifestStore) PushGalleryOverwritingFile(ctx context.Context, galleryID int64, expectedMetadataRevision int64, expectedFileHash string, now time.Time) (GalleryManifestState, error) {
+	if expectedFileHash == "" {
+		return GalleryManifestState{}, ErrManifestFileDirty
+	}
+	return s.pushGallery(ctx, galleryID, expectedMetadataRevision, true, expectedFileHash, now)
+}
+
+func (s *ManifestStore) pushGallery(ctx context.Context, galleryID int64, expectedMetadataRevision int64, overwrite bool, expectedFileHash string, now time.Time) (GalleryManifestState, error) {
 	current, err := findGallery(ctx, s.db, galleryID)
 	if err != nil {
 		return GalleryManifestState{}, err
@@ -210,15 +241,23 @@ func (s *ManifestStore) PushGallery(
 		return GalleryManifestState{}, err
 	}
 	if data, hash, readErr := manifest.ReadFile(path, manifest.MaxGalleryBytes); readErr == nil {
-		_ = data
-		if !found {
+		if overwrite {
+			if hash != expectedFileHash {
+				return GalleryManifestState{}, ErrManifestFileDirty
+			}
+			document, parseErr := manifest.ParseGallery(bytesReader(data))
+			if parseErr != nil || document.SetID != current.SetID {
+				return GalleryManifestState{}, errors.New("cannot overwrite an invalid or different Gallery Manifest")
+			}
+		} else if !found {
 			return GalleryManifestState{}, ErrUntrackedManifest
-		}
-		if hash != state.FileHash {
+		} else if hash != state.FileHash {
 			return GalleryManifestState{}, ErrManifestFileDirty
 		}
 	} else if !errors.Is(readErr, os.ErrNotExist) {
 		return GalleryManifestState{}, readErr
+	} else if overwrite {
+		return GalleryManifestState{}, ErrManifestFileDirty
 	} else if found && state.Status != ManifestMissing {
 		// A previously synchronized file disappeared. Push remains explicit and
 		// may recreate it; its previous baseline is retained below.
@@ -239,6 +278,12 @@ func (s *ManifestStore) PushGallery(
 		return GalleryManifestState{}, err
 	}
 	data = append(data, '\n')
+	if overwrite {
+		_, currentHash, readErr := manifest.ReadFile(path, manifest.MaxGalleryBytes)
+		if readErr != nil || currentHash != expectedFileHash {
+			return GalleryManifestState{}, ErrManifestFileDirty
+		}
+	}
 	fileHash, err := manifest.WriteAtomic(path, data, manifest.MaxGalleryBytes)
 	if err != nil {
 		return GalleryManifestState{}, err

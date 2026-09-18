@@ -886,6 +886,8 @@ a { color: inherit; text-decoration: none; }
 .backup-table td:last-child button:disabled { opacity: .3; cursor: default; }
 .audit-table code { display: block; max-width: 24rem; overflow: hidden; color: #bfb4ad; font-size: .58rem; text-overflow: ellipsis; white-space: nowrap; }
 .operation-confirm-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 1rem; background: rgb(4 3 4 / 85%); }
+.manage-modal-backdrop { position: fixed; z-index: 120; inset: 0; display: grid; place-items: center; padding: 1rem; background: rgb(4 3 4 / 65%); }
+.manage-batch-manifest-dialog { width: min(60rem, 100%); max-height: min(85vh, 55rem); overflow: auto; background: #fff; color: #262626; box-shadow: 0 1rem 3rem rgb(0 0 0 / 25%); }
 .operation-confirm { width: min(38rem, 100%); padding: 1.5rem; border: 1px solid #e5a1aa; border-radius: var(--cgm-radius-lg); background: var(--cgm-surface); color: var(--cgm-foreground); box-shadow: 0 2rem 5rem rgb(0 0 0 / 25%); color-scheme: light; }
 .operation-confirm > p { color: #e68592; font-size: .58rem; letter-spacing: .12em; }
 .operation-confirm h3 { margin: .4rem 0 1rem; font: 600 1.35rem var(--cgm-font-sans); overflow-wrap: anywhere; }

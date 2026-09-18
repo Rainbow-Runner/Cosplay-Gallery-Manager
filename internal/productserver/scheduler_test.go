@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 )
 
@@ -89,6 +91,64 @@ func TestAutomaticScanIsOptInPersistentAndRunsDiscovery(t *testing.T) {
 	}
 	if err := server.RunAutomaticScanOnce(ctx, now.Add(time.Hour)); !errors.Is(err, productdb.ErrScheduledOperationNotDue) {
 		t.Fatalf("automatic scan lease/due guard = %v", err)
+	}
+}
+
+func TestAutomaticScanInspectsManifestWithoutWritingIt(t *testing.T) {
+	server := testServer(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 18, 15, 0, 0, 0, time.UTC)
+	root := t.TempDir()
+	sourcePath := filepath.Join(root, "gallery")
+	if err := os.Mkdir(sourcePath, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	library, err := server.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{Name: "Inspection", RootPath: root, Enabled: true, CaptureTimezone: "UTC"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created, err := server.Database.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Inspection", ContentRating: gallery.ContentRatingNonAdult}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = server.Database.Galleries().AddSource(ctx, created.ID, productdb.CreateSourceInput{LibraryID: &library.ID, Type: gallery.SourceTypeDirectory, Path: sourcePath, Availability: gallery.AvailabilityAvailable}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err := server.Database.Galleries().Find(ctx, created.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := server.Database.Manifests().PushGallery(ctx, created.ID, current.MetadataRevision, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	original, err := os.ReadFile(state.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	modified := append(append([]byte(nil), original...), '\n')
+	if err := os.WriteFile(state.Path, modified, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	runtime, err := server.Database.Settings().Find(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime.AutomaticScanEnabled = true
+	if _, err := server.Database.Settings().Update(ctx, runtime.Revision, runtime, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.RunAutomaticScanOnce(ctx, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	inspection, err := server.Database.Manifests().Inspection(ctx, created.ID)
+	if err != nil || inspection.Status != "FILE_DIRTY" {
+		t.Fatalf("scheduled inspection = %#v, %v", inspection, err)
+	}
+	actual, err := os.ReadFile(state.Path)
+	if err != nil || string(actual) != string(modified) {
+		t.Fatalf("scheduled scan wrote Manifest: %v", err)
 	}
 }
 

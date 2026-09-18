@@ -285,7 +285,7 @@ func manageError(err error) error {
 
 func manageGalleryPage(value manage.GalleryPage) *ManageGalleryPage {
 	result := &ManageGalleryPage{Page: value.Page, PageSize: value.PageSize, TotalItems: value.TotalItems, TotalPages: value.TotalPages,
-		Summary: &ManageIssueSummary{All: value.Summary.All, Draft: value.Summary.Draft, OverLimit: value.Summary.OverLimit, Unavailable: value.Summary.Unavailable, Blocking: value.Summary.Blocking, ProcessingError: value.Summary.ProcessingError, MissingGallery: value.Summary.MissingGallery, MissingItem: value.Summary.MissingItem}}
+		Summary: &ManageIssueSummary{All: value.Summary.All, Draft: value.Summary.Draft, OverLimit: value.Summary.OverLimit, Unavailable: value.Summary.Unavailable, Blocking: value.Summary.Blocking, ProcessingError: value.Summary.ProcessingError, MissingGallery: value.Summary.MissingGallery, MissingItem: value.Summary.MissingItem, ManifestAttention: value.Summary.ManifestAttention}}
 	for _, row := range value.Items {
 		result.Items = append(result.Items, manageGalleryRow(row))
 	}
@@ -305,7 +305,7 @@ func manageGalleryRow(value manage.GalleryRow) *ManageGalleryRow {
 		MetadataRevision: value.MetadataRevision, ScanRevision: value.ScanRevision, Browsable: value.Browsable, SourceType: string(value.SourceType), SourcePath: value.SourcePath,
 		SourceAvailability: string(value.SourceAvailability), ReconcileState: string(value.ReconcileState), OverLimit: value.OverLimit, ItemCount: value.ItemCount,
 		MissingCount: value.MissingCount, PendingCount: value.PendingCount, ErrorCount: value.ErrorCount, BlockingIssues: value.BlockingIssues,
-		LastScanErrorCode: value.LastScanErrorCode, LastScanCompleted: value.LastScanCompleted}
+		LastScanErrorCode: value.LastScanErrorCode, LastScanCompleted: value.LastScanCompleted, ManifestStatus: value.ManifestStatus, ManifestCheckedAt: value.ManifestCheckedAt}
 }
 func manageGalleryDetail(value manage.GalleryDetail) *ManageGalleryDetail {
 	precision := ShootDatePrecisionUnknown

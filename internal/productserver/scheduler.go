@@ -295,11 +295,39 @@ func (s *Server) runAutomaticScanOnce(ctx context.Context, now time.Time, startu
 			scanned++
 		}
 	}
+	// This phase only observes Manifest files. It never Pushes, Pulls or
+	// resolves a conflict. The persisted cursor bounds work for large libraries.
+	manifestChecked, manifestFailures := 0, 0
+	targets, inspectionErr := s.Database.Manifests().ScheduledInspectionTargets(ctx, 100)
+	if inspectionErr != nil {
+		manifestFailures++
+	} else {
+		deadline := time.Now().Add(30 * time.Second)
+		for _, target := range targets {
+			if ctx.Err() != nil || time.Now().After(deadline) {
+				break
+			}
+			if !target.Available {
+				inspectionErr = s.Database.Manifests().RecordUnavailableGallery(ctx, target.GalleryID, now)
+			} else {
+				_, inspectionErr = s.Database.Manifests().CheckGallery(ctx, target.GalleryID, now)
+			}
+			if inspectionErr != nil {
+				manifestFailures++
+			} else {
+				manifestChecked++
+			}
+			if err := s.Database.Manifests().AdvanceInspectionCursor(ctx, target.GalleryID); err != nil {
+				manifestFailures++
+				break
+			}
+		}
+	}
 	if err := s.Database.Operations().CompleteScheduled(ctx, automaticScanTaskKey, owner, now); err != nil {
 		return err
 	}
-	summary := map[string]any{"libraries_discovered": discovered, "automation_queued": automationQueued, "discovery_failures": discoveryFailures, "sources_scanned": scanned, "scan_failures": scanFailures}
-	if discoveryFailures > 0 || scanFailures > 0 {
+	summary := map[string]any{"libraries_discovered": discovered, "automation_queued": automationQueued, "discovery_failures": discoveryFailures, "sources_scanned": scanned, "scan_failures": scanFailures, "manifests_checked": manifestChecked, "manifest_failures": manifestFailures}
+	if discoveryFailures > 0 || scanFailures > 0 || manifestFailures > 0 {
 		_ = s.Database.Operations().Audit(ctx, "SCHEDULED_TASK", "SCAN", "", "FAILURE", "AUTO_SCAN_PARTIAL_FAILURE", summary, now)
 		return errors.New("automatic scan completed with failures")
 	}

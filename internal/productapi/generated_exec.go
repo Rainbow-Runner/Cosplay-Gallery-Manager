@@ -454,6 +454,24 @@ type ComplexityRoot struct {
 		VideoWidth           func(childComplexity int) int
 	}
 
+	ManageGalleryManifestBatchPreview struct {
+		BlockReason            func(childComplexity int) int
+		DatabaseContentChanged func(childComplexity int) int
+		FileHash               func(childComplexity int) int
+		LocalFileChanged       func(childComplexity int) int
+		MetadataRevision       func(childComplexity int) int
+		Path                   func(childComplexity int) int
+		SetID                  func(childComplexity int) int
+		Status                 func(childComplexity int) int
+		Title                  func(childComplexity int) int
+	}
+
+	ManageGalleryManifestBatchResult struct {
+		Outcome func(childComplexity int) int
+		Reason  func(childComplexity int) int
+		SetID   func(childComplexity int) int
+	}
+
 	ManageGalleryManifestState struct {
 		Conflicts        func(childComplexity int) int
 		ManifestRevision func(childComplexity int) int
@@ -483,6 +501,8 @@ type ComplexityRoot struct {
 		ItemCount          func(childComplexity int) int
 		LastScanCompleted  func(childComplexity int) int
 		LastScanErrorCode  func(childComplexity int) int
+		ManifestCheckedAt  func(childComplexity int) int
+		ManifestStatus     func(childComplexity int) int
 		MetadataRevision   func(childComplexity int) int
 		MissingCount       func(childComplexity int) int
 		OverLimit          func(childComplexity int) int
@@ -537,14 +557,15 @@ type ComplexityRoot struct {
 	}
 
 	ManageIssueSummary struct {
-		All             func(childComplexity int) int
-		Blocking        func(childComplexity int) int
-		Draft           func(childComplexity int) int
-		MissingGallery  func(childComplexity int) int
-		MissingItem     func(childComplexity int) int
-		OverLimit       func(childComplexity int) int
-		ProcessingError func(childComplexity int) int
-		Unavailable     func(childComplexity int) int
+		All               func(childComplexity int) int
+		Blocking          func(childComplexity int) int
+		Draft             func(childComplexity int) int
+		ManifestAttention func(childComplexity int) int
+		MissingGallery    func(childComplexity int) int
+		MissingItem       func(childComplexity int) int
+		OverLimit         func(childComplexity int) int
+		ProcessingError   func(childComplexity int) int
+		Unavailable       func(childComplexity int) int
 	}
 
 	ManageLibrary struct {
@@ -1096,6 +1117,7 @@ type ComplexityRoot struct {
 		PullGalleryManifest                    func(childComplexity int, setID string, expectedMetadataRevision int64) int
 		PushCoserManifest                      func(childComplexity int, coserUUID string, expectedMetadataRevision int64) int
 		PushGalleryManifest                    func(childComplexity int, setID string, expectedMetadataRevision int64) int
+		PushGalleryManifests                   func(childComplexity int, items []*GalleryManifestBatchPushInput, overwriteLocal bool) int
 		RecordGalleryView                      func(childComplexity int, setID string, itemUUID *string) int
 		ReorderGalleryItems                    func(childComplexity int, setID string, itemUUIDs []string, expectedMetadataRevision int64) int
 		ReplaceGalleryRelations                func(childComplexity int, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) int
@@ -1214,6 +1236,7 @@ type ComplexityRoot struct {
 		PreviewCoreEntityDelete              func(childComplexity int, kind SearchEntityKind, uuid string) int
 		PreviewCoreEntityMerge               func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string) int
 		PreviewGalleryDelete                 func(childComplexity int, setID string) int
+		PreviewGalleryManifestPush           func(childComplexity int, setIDs []string) int
 		PreviewIgnoredSourceRemoval          func(childComplexity int, id int64) int
 		PreviewMediaLibraryChange            func(childComplexity int, libraryID int64, newRoot string) int
 		RandomMedia                          func(childComplexity int, scope BrowseScope, filter RandomMediaFilter) int
@@ -1376,6 +1399,7 @@ type MutationResolver interface {
 	ReplaceGalleryRelations(ctx context.Context, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) (*ManageGalleryDetail, error)
 	AddGalleryExternalLink(ctx context.Context, setID string, expectedMetadataRevision int64, input GalleryExternalLinkInput) (*ManageGalleryDetail, error)
 	PushGalleryManifest(ctx context.Context, setID string, expectedMetadataRevision int64) (*ManageGalleryManifestState, error)
+	PushGalleryManifests(ctx context.Context, items []*GalleryManifestBatchPushInput, overwriteLocal bool) ([]*ManageGalleryManifestBatchResult, error)
 	PullGalleryManifest(ctx context.Context, setID string, expectedMetadataRevision int64) (*ManageGalleryManifestState, error)
 	ResolveGalleryManifest(ctx context.Context, setID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) (*ManageGalleryManifestState, error)
 	PushCoserManifest(ctx context.Context, coserUUID string, expectedMetadataRevision int64) (*ManageCoserManifestState, error)
@@ -1405,6 +1429,7 @@ type QueryResolver interface {
 	GalleryHistory(ctx context.Context, scope BrowseScope, page int) (*GalleryPage, error)
 	FavoriteMedia(ctx context.Context, scope BrowseScope, page int, ratingSort bool) (*MediaPage, error)
 	ManageGalleries(ctx context.Context, page int, issue string) (*ManageGalleryPage, error)
+	PreviewGalleryManifestPush(ctx context.Context, setIDs []string) ([]*ManageGalleryManifestBatchPreview, error)
 	ManageGallery(ctx context.Context, setID string) (*ManageGalleryDetail, error)
 	ManageGalleryManifest(ctx context.Context, setID string) (*ManageGalleryManifestState, error)
 	ManageCoserManifest(ctx context.Context, coserUUID string) (*ManageCoserManifestState, error)
@@ -3411,6 +3436,90 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageGalleryItem.VideoWidth(childComplexity), true
 
+	case "ManageGalleryManifestBatchPreview.blockReason":
+		if e.complexity.ManageGalleryManifestBatchPreview.BlockReason == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryManifestBatchPreview.BlockReason(childComplexity), true
+
+	case "ManageGalleryManifestBatchPreview.databaseContentChanged":
+		if e.complexity.ManageGalleryManifestBatchPreview.DatabaseContentChanged == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryManifestBatchPreview.DatabaseContentChanged(childComplexity), true
+
+	case "ManageGalleryManifestBatchPreview.fileHash":
+		if e.complexity.ManageGalleryManifestBatchPreview.FileHash == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryManifestBatchPreview.FileHash(childComplexity), true
+
+	case "ManageGalleryManifestBatchPreview.localFileChanged":
+		if e.complexity.ManageGalleryManifestBatchPreview.LocalFileChanged == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryManifestBatchPreview.LocalFileChanged(childComplexity), true
+
+	case "ManageGalleryManifestBatchPreview.metadataRevision":
+		if e.complexity.ManageGalleryManifestBatchPreview.MetadataRevision == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryManifestBatchPreview.MetadataRevision(childComplexity), true
+
+	case "ManageGalleryManifestBatchPreview.path":
+		if e.complexity.ManageGalleryManifestBatchPreview.Path == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryManifestBatchPreview.Path(childComplexity), true
+
+	case "ManageGalleryManifestBatchPreview.setID":
+		if e.complexity.ManageGalleryManifestBatchPreview.SetID == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryManifestBatchPreview.SetID(childComplexity), true
+
+	case "ManageGalleryManifestBatchPreview.status":
+		if e.complexity.ManageGalleryManifestBatchPreview.Status == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryManifestBatchPreview.Status(childComplexity), true
+
+	case "ManageGalleryManifestBatchPreview.title":
+		if e.complexity.ManageGalleryManifestBatchPreview.Title == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryManifestBatchPreview.Title(childComplexity), true
+
+	case "ManageGalleryManifestBatchResult.outcome":
+		if e.complexity.ManageGalleryManifestBatchResult.Outcome == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryManifestBatchResult.Outcome(childComplexity), true
+
+	case "ManageGalleryManifestBatchResult.reason":
+		if e.complexity.ManageGalleryManifestBatchResult.Reason == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryManifestBatchResult.Reason(childComplexity), true
+
+	case "ManageGalleryManifestBatchResult.setID":
+		if e.complexity.ManageGalleryManifestBatchResult.SetID == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryManifestBatchResult.SetID(childComplexity), true
+
 	case "ManageGalleryManifestState.conflicts":
 		if e.complexity.ManageGalleryManifestState.Conflicts == nil {
 			break
@@ -3564,6 +3673,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageGalleryRow.LastScanErrorCode(childComplexity), true
+
+	case "ManageGalleryRow.manifestCheckedAt":
+		if e.complexity.ManageGalleryRow.ManifestCheckedAt == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryRow.ManifestCheckedAt(childComplexity), true
+
+	case "ManageGalleryRow.manifestStatus":
+		if e.complexity.ManageGalleryRow.ManifestStatus == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryRow.ManifestStatus(childComplexity), true
 
 	case "ManageGalleryRow.metadataRevision":
 		if e.complexity.ManageGalleryRow.MetadataRevision == nil {
@@ -3837,6 +3960,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageIssueSummary.Draft(childComplexity), true
+
+	case "ManageIssueSummary.manifestAttention":
+		if e.complexity.ManageIssueSummary.ManifestAttention == nil {
+			break
+		}
+
+		return e.complexity.ManageIssueSummary.ManifestAttention(childComplexity), true
 
 	case "ManageIssueSummary.missingGallery":
 		if e.complexity.ManageIssueSummary.MissingGallery == nil {
@@ -6830,6 +6960,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.PushGalleryManifest(childComplexity, args["setID"].(string), args["expectedMetadataRevision"].(int64)), true
 
+	case "Mutation.pushGalleryManifests":
+		if e.complexity.Mutation.PushGalleryManifests == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_pushGalleryManifests_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.PushGalleryManifests(childComplexity, args["items"].([]*GalleryManifestBatchPushInput), args["overwriteLocal"].(bool)), true
+
 	case "Mutation.recordGalleryView":
 		if e.complexity.Mutation.RecordGalleryView == nil {
 			break
@@ -7946,6 +8088,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.PreviewGalleryDelete(childComplexity, args["setID"].(string)), true
 
+	case "Query.previewGalleryManifestPush":
+		if e.complexity.Query.PreviewGalleryManifestPush == nil {
+			break
+		}
+
+		args, err := ec.field_Query_previewGalleryManifestPush_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.PreviewGalleryManifestPush(childComplexity, args["setIDs"].([]string)), true
+
 	case "Query.previewIgnoredSourceRemoval":
 		if e.complexity.Query.PreviewIgnoredSourceRemoval == nil {
 			break
@@ -8440,6 +8594,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateRecognitionRuleInput,
 		ec.unmarshalInputExpectedTagRevisionInput,
 		ec.unmarshalInputGalleryExternalLinkInput,
+		ec.unmarshalInputGalleryManifestBatchPushInput,
 		ec.unmarshalInputLibraryAutomationPolicyInput,
 		ec.unmarshalInputManifestConflictChoiceInput,
 		ec.unmarshalInputMediaClassificationRuleInput,
@@ -10102,6 +10257,57 @@ func (ec *executionContext) field_Mutation_pushGalleryManifest_argsExpectedMetad
 	}
 
 	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_pushGalleryManifests_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_pushGalleryManifests_argsItems(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["items"] = arg0
+	arg1, err := ec.field_Mutation_pushGalleryManifests_argsOverwriteLocal(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["overwriteLocal"] = arg1
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_pushGalleryManifests_argsItems(
+	ctx context.Context,
+	rawArgs map[string]any,
+) ([]*GalleryManifestBatchPushInput, error) {
+	if _, ok := rawArgs["items"]; !ok {
+		var zeroVal []*GalleryManifestBatchPushInput
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("items"))
+	if tmp, ok := rawArgs["items"]; ok {
+		return ec.unmarshalNGalleryManifestBatchPushInput2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐGalleryManifestBatchPushInputᚄ(ctx, tmp)
+	}
+
+	var zeroVal []*GalleryManifestBatchPushInput
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_pushGalleryManifests_argsOverwriteLocal(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (bool, error) {
+	if _, ok := rawArgs["overwriteLocal"]; !ok {
+		var zeroVal bool
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("overwriteLocal"))
+	if tmp, ok := rawArgs["overwriteLocal"]; ok {
+		return ec.unmarshalNBoolean2bool(ctx, tmp)
+	}
+
+	var zeroVal bool
 	return zeroVal, nil
 }
 
@@ -14527,6 +14733,34 @@ func (ec *executionContext) field_Query_previewGalleryDelete_argsSetID(
 	}
 
 	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_previewGalleryManifestPush_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_previewGalleryManifestPush_argsSetIDs(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["setIDs"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Query_previewGalleryManifestPush_argsSetIDs(
+	ctx context.Context,
+	rawArgs map[string]any,
+) ([]string, error) {
+	if _, ok := rawArgs["setIDs"]; !ok {
+		var zeroVal []string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("setIDs"))
+	if tmp, ok := rawArgs["setIDs"]; ok {
+		return ec.unmarshalNID2ᚕstringᚄ(ctx, tmp)
+	}
+
+	var zeroVal []string
 	return zeroVal, nil
 }
 
@@ -26230,6 +26464,10 @@ func (ec *executionContext) fieldContext_ManageGalleryDetail_row(_ context.Conte
 				return ec.fieldContext_ManageGalleryRow_lastScanErrorCode(ctx, field)
 			case "lastScanCompleted":
 				return ec.fieldContext_ManageGalleryRow_lastScanCompleted(ctx, field)
+			case "manifestStatus":
+				return ec.fieldContext_ManageGalleryRow_manifestStatus(ctx, field)
+			case "manifestCheckedAt":
+				return ec.fieldContext_ManageGalleryRow_manifestCheckedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryRow", field.Name)
 		},
@@ -28178,6 +28416,534 @@ func (ec *executionContext) fieldContext_ManageGalleryItem_audioCodec(_ context.
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageGalleryManifestBatchPreview_setID(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryManifestBatchPreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryManifestBatchPreview_setID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SetID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryManifestBatchPreview_setID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryManifestBatchPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryManifestBatchPreview_title(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryManifestBatchPreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryManifestBatchPreview_title(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Title, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryManifestBatchPreview_title(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryManifestBatchPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryManifestBatchPreview_status(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryManifestBatchPreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryManifestBatchPreview_status(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Status, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryManifestBatchPreview_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryManifestBatchPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryManifestBatchPreview_metadataRevision(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryManifestBatchPreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryManifestBatchPreview_metadataRevision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MetadataRevision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryManifestBatchPreview_metadataRevision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryManifestBatchPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryManifestBatchPreview_path(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryManifestBatchPreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryManifestBatchPreview_path(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Path, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryManifestBatchPreview_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryManifestBatchPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryManifestBatchPreview_fileHash(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryManifestBatchPreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryManifestBatchPreview_fileHash(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FileHash, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryManifestBatchPreview_fileHash(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryManifestBatchPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryManifestBatchPreview_databaseContentChanged(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryManifestBatchPreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryManifestBatchPreview_databaseContentChanged(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DatabaseContentChanged, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryManifestBatchPreview_databaseContentChanged(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryManifestBatchPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryManifestBatchPreview_localFileChanged(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryManifestBatchPreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryManifestBatchPreview_localFileChanged(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LocalFileChanged, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryManifestBatchPreview_localFileChanged(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryManifestBatchPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryManifestBatchPreview_blockReason(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryManifestBatchPreview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryManifestBatchPreview_blockReason(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BlockReason, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryManifestBatchPreview_blockReason(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryManifestBatchPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryManifestBatchResult_setID(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryManifestBatchResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryManifestBatchResult_setID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SetID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryManifestBatchResult_setID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryManifestBatchResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryManifestBatchResult_outcome(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryManifestBatchResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryManifestBatchResult_outcome(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Outcome, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryManifestBatchResult_outcome(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryManifestBatchResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryManifestBatchResult_reason(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryManifestBatchResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryManifestBatchResult_reason(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Reason, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryManifestBatchResult_reason(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryManifestBatchResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageGalleryManifestState_status(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryManifestState) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageGalleryManifestState_status(ctx, field)
 	if err != nil {
@@ -28663,6 +29429,10 @@ func (ec *executionContext) fieldContext_ManageGalleryPage_items(_ context.Conte
 				return ec.fieldContext_ManageGalleryRow_lastScanErrorCode(ctx, field)
 			case "lastScanCompleted":
 				return ec.fieldContext_ManageGalleryRow_lastScanCompleted(ctx, field)
+			case "manifestStatus":
+				return ec.fieldContext_ManageGalleryRow_manifestStatus(ctx, field)
+			case "manifestCheckedAt":
+				return ec.fieldContext_ManageGalleryRow_manifestCheckedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryRow", field.Name)
 		},
@@ -28725,6 +29495,8 @@ func (ec *executionContext) fieldContext_ManageGalleryPage_summary(_ context.Con
 				return ec.fieldContext_ManageIssueSummary_missingGallery(ctx, field)
 			case "missingItem":
 				return ec.fieldContext_ManageIssueSummary_missingItem(ctx, field)
+			case "manifestAttention":
+				return ec.fieldContext_ManageIssueSummary_manifestAttention(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageIssueSummary", field.Name)
 		},
@@ -29773,6 +30545,94 @@ func (ec *executionContext) _ManageGalleryRow_lastScanCompleted(ctx context.Cont
 }
 
 func (ec *executionContext) fieldContext_ManageGalleryRow_lastScanCompleted(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryRow",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryRow_manifestStatus(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryRow) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryRow_manifestStatus(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ManifestStatus, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryRow_manifestStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryRow",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryRow_manifestCheckedAt(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryRow) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryRow_manifestCheckedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ManifestCheckedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryRow_manifestCheckedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ManageGalleryRow",
 		Field:      field,
@@ -31159,6 +32019,50 @@ func (ec *executionContext) _ManageIssueSummary_missingItem(ctx context.Context,
 }
 
 func (ec *executionContext) fieldContext_ManageIssueSummary_missingItem(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageIssueSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageIssueSummary_manifestAttention(ctx context.Context, field graphql.CollectedField, obj *ManageIssueSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageIssueSummary_manifestAttention(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ManifestAttention, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageIssueSummary_manifestAttention(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ManageIssueSummary",
 		Field:      field,
@@ -52844,6 +53748,69 @@ func (ec *executionContext) fieldContext_Mutation_pushGalleryManifest(ctx contex
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_pushGalleryManifests(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_pushGalleryManifests(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().PushGalleryManifests(rctx, fc.Args["items"].([]*GalleryManifestBatchPushInput), fc.Args["overwriteLocal"].(bool))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageGalleryManifestBatchResult)
+	fc.Result = res
+	return ec.marshalNManageGalleryManifestBatchResult2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryManifestBatchResultᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_pushGalleryManifests(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "setID":
+				return ec.fieldContext_ManageGalleryManifestBatchResult_setID(ctx, field)
+			case "outcome":
+				return ec.fieldContext_ManageGalleryManifestBatchResult_outcome(ctx, field)
+			case "reason":
+				return ec.fieldContext_ManageGalleryManifestBatchResult_reason(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryManifestBatchResult", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_pushGalleryManifests_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_pullGalleryManifest(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_pullGalleryManifest(ctx, field)
 	if err != nil {
@@ -55351,6 +56318,81 @@ func (ec *executionContext) fieldContext_Query_manageGalleries(ctx context.Conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_manageGalleries_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_previewGalleryManifestPush(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_previewGalleryManifestPush(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().PreviewGalleryManifestPush(rctx, fc.Args["setIDs"].([]string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageGalleryManifestBatchPreview)
+	fc.Result = res
+	return ec.marshalNManageGalleryManifestBatchPreview2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryManifestBatchPreviewᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_previewGalleryManifestPush(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "setID":
+				return ec.fieldContext_ManageGalleryManifestBatchPreview_setID(ctx, field)
+			case "title":
+				return ec.fieldContext_ManageGalleryManifestBatchPreview_title(ctx, field)
+			case "status":
+				return ec.fieldContext_ManageGalleryManifestBatchPreview_status(ctx, field)
+			case "metadataRevision":
+				return ec.fieldContext_ManageGalleryManifestBatchPreview_metadataRevision(ctx, field)
+			case "path":
+				return ec.fieldContext_ManageGalleryManifestBatchPreview_path(ctx, field)
+			case "fileHash":
+				return ec.fieldContext_ManageGalleryManifestBatchPreview_fileHash(ctx, field)
+			case "databaseContentChanged":
+				return ec.fieldContext_ManageGalleryManifestBatchPreview_databaseContentChanged(ctx, field)
+			case "localFileChanged":
+				return ec.fieldContext_ManageGalleryManifestBatchPreview_localFileChanged(ctx, field)
+			case "blockReason":
+				return ec.fieldContext_ManageGalleryManifestBatchPreview_blockReason(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryManifestBatchPreview", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_previewGalleryManifestPush_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -62681,6 +63723,54 @@ func (ec *executionContext) unmarshalInputGalleryExternalLinkInput(ctx context.C
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputGalleryManifestBatchPushInput(ctx context.Context, obj any) (GalleryManifestBatchPushInput, error) {
+	var it GalleryManifestBatchPushInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"setID", "expectedMetadataRevision", "expectedPath", "expectedFileHash"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "setID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("setID"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SetID = data
+		case "expectedMetadataRevision":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedMetadataRevision"))
+			data, err := ec.unmarshalNInt642int64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ExpectedMetadataRevision = data
+		case "expectedPath":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedPath"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ExpectedPath = data
+		case "expectedFileHash":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedFileHash"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ExpectedFileHash = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputLibraryAutomationPolicyInput(ctx context.Context, obj any) (LibraryAutomationPolicyInput, error) {
 	var it LibraryAutomationPolicyInput
 	asMap := map[string]any{}
@@ -66799,6 +67889,134 @@ func (ec *executionContext) _ManageGalleryItem(ctx context.Context, sel ast.Sele
 	return out
 }
 
+var manageGalleryManifestBatchPreviewImplementors = []string{"ManageGalleryManifestBatchPreview"}
+
+func (ec *executionContext) _ManageGalleryManifestBatchPreview(ctx context.Context, sel ast.SelectionSet, obj *ManageGalleryManifestBatchPreview) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageGalleryManifestBatchPreviewImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageGalleryManifestBatchPreview")
+		case "setID":
+			out.Values[i] = ec._ManageGalleryManifestBatchPreview_setID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "title":
+			out.Values[i] = ec._ManageGalleryManifestBatchPreview_title(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._ManageGalleryManifestBatchPreview_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "metadataRevision":
+			out.Values[i] = ec._ManageGalleryManifestBatchPreview_metadataRevision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "path":
+			out.Values[i] = ec._ManageGalleryManifestBatchPreview_path(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "fileHash":
+			out.Values[i] = ec._ManageGalleryManifestBatchPreview_fileHash(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "databaseContentChanged":
+			out.Values[i] = ec._ManageGalleryManifestBatchPreview_databaseContentChanged(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "localFileChanged":
+			out.Values[i] = ec._ManageGalleryManifestBatchPreview_localFileChanged(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "blockReason":
+			out.Values[i] = ec._ManageGalleryManifestBatchPreview_blockReason(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageGalleryManifestBatchResultImplementors = []string{"ManageGalleryManifestBatchResult"}
+
+func (ec *executionContext) _ManageGalleryManifestBatchResult(ctx context.Context, sel ast.SelectionSet, obj *ManageGalleryManifestBatchResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageGalleryManifestBatchResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageGalleryManifestBatchResult")
+		case "setID":
+			out.Values[i] = ec._ManageGalleryManifestBatchResult_setID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outcome":
+			out.Values[i] = ec._ManageGalleryManifestBatchResult_outcome(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "reason":
+			out.Values[i] = ec._ManageGalleryManifestBatchResult_reason(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var manageGalleryManifestStateImplementors = []string{"ManageGalleryManifestState"}
 
 func (ec *executionContext) _ManageGalleryManifestState(ctx context.Context, sel ast.SelectionSet, obj *ManageGalleryManifestState) graphql.Marshaler {
@@ -67047,6 +68265,16 @@ func (ec *executionContext) _ManageGalleryRow(ctx context.Context, sel ast.Selec
 			}
 		case "lastScanCompleted":
 			out.Values[i] = ec._ManageGalleryRow_lastScanCompleted(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "manifestStatus":
+			out.Values[i] = ec._ManageGalleryRow_manifestStatus(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "manifestCheckedAt":
+			out.Values[i] = ec._ManageGalleryRow_manifestCheckedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -67400,6 +68628,11 @@ func (ec *executionContext) _ManageIssueSummary(ctx context.Context, sel ast.Sel
 			}
 		case "missingItem":
 			out.Values[i] = ec._ManageIssueSummary_missingItem(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "manifestAttention":
+			out.Values[i] = ec._ManageIssueSummary_manifestAttention(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -71392,6 +72625,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "pushGalleryManifests":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_pushGalleryManifests(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "pullGalleryManifest":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_pullGalleryManifest(ctx, field)
@@ -72134,6 +73374,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_manageGalleries(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "previewGalleryManifestPush":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_previewGalleryManifestPush(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -74260,6 +75522,26 @@ func (ec *executionContext) unmarshalNGalleryExternalLinkInput2githubᚗcomᚋst
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNGalleryManifestBatchPushInput2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐGalleryManifestBatchPushInputᚄ(ctx context.Context, v any) ([]*GalleryManifestBatchPushInput, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*GalleryManifestBatchPushInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNGalleryManifestBatchPushInput2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐGalleryManifestBatchPushInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalNGalleryManifestBatchPushInput2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐGalleryManifestBatchPushInput(ctx context.Context, v any) (*GalleryManifestBatchPushInput, error) {
+	res, err := ec.unmarshalInputGalleryManifestBatchPushInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNGalleryMember2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐGalleryMemberᚄ(ctx context.Context, sel ast.SelectionSet, v []*GalleryMember) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -75479,6 +76761,114 @@ func (ec *executionContext) marshalNManageGalleryItem2ᚖgithubᚗcomᚋstashapp
 		return graphql.Null
 	}
 	return ec._ManageGalleryItem(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageGalleryManifestBatchPreview2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryManifestBatchPreviewᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageGalleryManifestBatchPreview) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageGalleryManifestBatchPreview2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryManifestBatchPreview(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageGalleryManifestBatchPreview2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryManifestBatchPreview(ctx context.Context, sel ast.SelectionSet, v *ManageGalleryManifestBatchPreview) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageGalleryManifestBatchPreview(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageGalleryManifestBatchResult2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryManifestBatchResultᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageGalleryManifestBatchResult) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageGalleryManifestBatchResult2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryManifestBatchResult(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageGalleryManifestBatchResult2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryManifestBatchResult(ctx context.Context, sel ast.SelectionSet, v *ManageGalleryManifestBatchResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageGalleryManifestBatchResult(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNManageGalleryManifestState2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryManifestState(ctx context.Context, sel ast.SelectionSet, v ManageGalleryManifestState) graphql.Marshaler {

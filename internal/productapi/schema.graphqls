@@ -248,12 +248,13 @@ type MediaPage {
 
 type PersonalStateResult { metadataRevision: Int64! }
 
-type ManageIssueSummary { all: Int! draft: Int! overLimit: Int! unavailable: Int! blocking: Int! processingError: Int! missingGallery: Int! missingItem: Int! }
+type ManageIssueSummary { all: Int! draft: Int! overLimit: Int! unavailable: Int! blocking: Int! processingError: Int! missingGallery: Int! missingItem: Int! manifestAttention: Int! }
 type ManageGalleryRow {
   setID: ID! slug: String! state: GalleryState! title: String! contentRating: ContentRating
   metadataRevision: Int64! scanRevision: Int64! browsable: Boolean!
   sourceType: String! sourcePath: String! sourceAvailability: String! reconcileState: String! overLimit: Boolean!
   itemCount: Int! missingCount: Int! pendingCount: Int! errorCount: Int! blockingIssues: Int! lastScanErrorCode: String! lastScanCompleted: String!
+  manifestStatus: String! manifestCheckedAt: String!
 }
 type ManageGalleryPage { items: [ManageGalleryRow!]! summary: ManageIssueSummary! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }
 type ManageGalleryItem {
@@ -275,6 +276,9 @@ type ManageGalleryTag { uuid: ID! name: String! position: String! }
 type ManageGalleryExternalLink { uuid: ID! type: String! label: String! url: String! position: String! }
 type ManageManifestConflict { path: String! baselineJSON: String! databaseJSON: String! fileJSON: String! }
 type ManageGalleryManifestState { status: String! path: String! manifestRevision: Int! metadataRevision: Int64! pushAdded: Int! pushRemoved: Int! pushRetained: Int! pushUpdated: Int! conflicts: [ManageManifestConflict!]! }
+type ManageGalleryManifestBatchPreview { setID: ID! title: String! status: String! metadataRevision: Int64! path: String! fileHash: String! databaseContentChanged: Boolean! localFileChanged: Boolean! blockReason: String! }
+input GalleryManifestBatchPushInput { setID: ID! expectedMetadataRevision: Int64! expectedPath: String! expectedFileHash: String! }
+type ManageGalleryManifestBatchResult { setID: ID! outcome: String! reason: String! }
 type ManageCoserManifestState { status: String! path: String! manifestRevision: Int! metadataRevision: Int64! conflicts: [ManageManifestConflict!]! }
 input UpdateGalleryMetadataInput {
   title: String! aliases: [String!]! description: String! shootDate: String! shootDatePrecision: ShootDatePrecision!
@@ -457,6 +461,7 @@ type Query {
   galleryHistory(scope: BrowseScope! = LIST, page: Int! = 1): GalleryPage!
   favoriteMedia(scope: BrowseScope! = LIST, page: Int! = 1, ratingSort: Boolean! = false): MediaPage!
   manageGalleries(page: Int! = 1, issue: String! = "ALL"): ManageGalleryPage!
+  previewGalleryManifestPush(setIDs: [ID!]!): [ManageGalleryManifestBatchPreview!]!
   manageGallery(setID: ID!): ManageGalleryDetail!
   manageGalleryManifest(setID: ID!): ManageGalleryManifestState!
   manageCoserManifest(coserUUID: ID!): ManageCoserManifestState!
@@ -560,6 +565,7 @@ type Mutation {
   replaceGalleryRelations(setID: ID!, expectedMetadataRevision: Int64!, input: ReplaceGalleryRelationsInput!): ManageGalleryDetail!
   addGalleryExternalLink(setID: ID!, expectedMetadataRevision: Int64!, input: GalleryExternalLinkInput!): ManageGalleryDetail!
   pushGalleryManifest(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryManifestState!
+  pushGalleryManifests(items: [GalleryManifestBatchPushInput!]!, overwriteLocal: Boolean!): [ManageGalleryManifestBatchResult!]!
   pullGalleryManifest(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryManifestState!
   resolveGalleryManifest(setID: ID!, expectedMetadataRevision: Int64!, choices: [ManifestConflictChoiceInput!]!): ManageGalleryManifestState!
   pushCoserManifest(coserUUID: ID!, expectedMetadataRevision: Int64!): ManageCoserManifestState!

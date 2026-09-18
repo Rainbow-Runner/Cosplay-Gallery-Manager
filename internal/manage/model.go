@@ -3,14 +3,15 @@ package manage
 import "github.com/stashapp/stash/internal/gallery"
 
 type IssueSummary struct {
-	All             int
-	Draft           int
-	OverLimit       int
-	Unavailable     int
-	Blocking        int
-	ProcessingError int
-	MissingGallery  int
-	MissingItem     int
+	All               int
+	Draft             int
+	OverLimit         int
+	Unavailable       int
+	Blocking          int
+	ProcessingError   int
+	MissingGallery    int
+	MissingItem       int
+	ManifestAttention int
 }
 
 type GalleryRow struct {
@@ -34,6 +35,8 @@ type GalleryRow struct {
 	BlockingIssues     int
 	LastScanErrorCode  string
 	LastScanCompleted  string
+	ManifestStatus     string
+	ManifestCheckedAt  string
 }
 
 type GalleryPage struct {

@@ -1,6 +1,6 @@
 # 可移植元数据迁移操作手册
 
-> 适用版本：CGM 1.5，portable package format v2（继续兼容读取 v1）；以下日期重建流程要求代码与产品数据库 schema v15，正式业务部署仍待执行
+> 适用版本：CGM 1.5，portable package format v2（继续兼容读取 v1）；日期重建流程要求代码与产品数据库 schema v15，已于2026-09-19在正式业务库部署
 > 平台：当前正式支持 Linux/容器；Windows 首版延期
 
 ## 1. 选择迁移方式

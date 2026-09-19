@@ -2271,3 +2271,10 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 阶段验证：正式三标签下产品库、ProductServer、GraphQL API、ProcessingWorker、媒体处理和`cmd/cgm`测试通过；同范围Go Vet通过。TypeScript类型检查、Web 35文件133项测试与685模块生产构建通过（只有既存主chunk超过500KiB提示），`git diff --check`通过。新增回归覆盖v14→v15保留手工日期、日期冲突不覆盖/明确决定、空日期自动取最早值、目标机迁移重新排队及视频时区解析与无mtime兜底。列表待复核入口随后追加，最终复测结果见本节后续记录。
 - 复核收尾：Gallery列表新增待复核卡后，产品库/API/Server测试、TypeScript与Web 35文件133项测试再次通过，差异检查无空白错误；新增产品库断言覆盖待复核计数、筛选与“保留手工值”后退出待处理队列。列表九卡改为桌面3×3布局，移动端继续两列。正式业务服务与库保持旧版未动。
 - 边界补充：当来源重扫引入未提取完的当前媒体，或媒体被排除/删除时，重算当前有效媒体集合；旧AUTO排序日期在证据未齐时暂时清空，不把已过期结果继续用于时间线。手工日期不受此清空逻辑影响。针对新增媒体使AUTO日期暂时清空的数据库测试通过。
+
+### schema v15提交、完整备份与正式部署
+
+- 功能源码提交为`242ad15728ec923b4469bcda5f099b444fcb97fd`（`Extract media capture dates with owner review`）。正式三标签`cgm_web_embed cgm_galleryepic cgm_moegirl`下产品库、服务端、GraphQL、worker、媒体处理及CLI测试通过；同范围Go Vet、TypeScript检查、Web 35文件133项测试、685模块生产构建及差异检查通过。清洁提交构建的Go VCS元数据为该提交且`vcs.modified=false`；候选SHA-256为`02ddaedea254991c86f4d01f47d8ac58e7b41d85af341af004b0b29bc32c961c`。
+- 部署前正式服务`active/running`、Health/Ready均204，数据库schema v14、`integrity_check=ok`，Coser/Work/Character/Tag/Gallery/Source/Item实时计数为`135/108/697/23/9/9/600`。2026-09-19 23:24 CST停服确认`MainPID=0`，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-capture-v15-242ad15-Ec8t52`保存数据库一致副本、旧程序、配置、用户systemd单元及完整Coser托管资源；文件逐项`cmp`/递归`diff`一致。备份库schema v14、完整性`ok`、业务计数同上；备份库SHA-256为`bbdc43f803b3712e466f4215f488cd1a34d57ce308e0339ca072d3a87d15fad3`，旧程序为`f60484e8c861c581ae1fcf208dab859e56317084ef0204e42ea52dde80921e7c`。备份不包含原始媒体、缓存或日志。
+- 候选程序逐字节核对后原子替换，23:25 CST启动一次。正式库自动升级为schema v15，`integrity_check=ok`且上述7类业务计数不变；两个日期新表可访问。自动迁移前快照`product.sqlite.pre-schema-v14-1789831546422515817.bak`另行检查为schema v14、完整性`ok`。服务`active/running`、`NRestarts=0`，Health/Ready均204，首页、Browse和Manage Gallery深链均200；About精确报告提交`242ad15`且`exactSourceAvailable=true`。两个worker、LibRaw、FFmpeg和FFprobe正常启用，启动至23:27 CST无WARN、ERROR、panic或日期任务失败日志。配置SHA-256仍为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`；未修改原始媒体、Manifest或正式配置，缓存未随程序替换，也未远端推送。
+- 日期回填在服务启动后按每分钟25项安全批次排队；正式库当时有582个符合条件的未排除/可用静态图片和视频，23:27 CST已完成50项且均为无可信日期标签的`NONE`，无复核冲突。后台将继续自动补齐，Gallery日期与前端复核交互需在回填结束后由所有者结合真实文件验收；此项不是部署失败，也不要求人工再执行来源扫描。

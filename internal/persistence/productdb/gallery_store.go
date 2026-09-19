@@ -188,6 +188,7 @@ func (s *GalleryStore) UpdateMetadata(
 		UPDATE galleries SET
 			title = ?, description = ?, shoot_date = NULLIF(?, ''),
 			shoot_date_precision = NULLIF(?, ''), content_rating = NULLIF(?, ''),
+			shoot_date_origin = CASE WHEN COALESCE(shoot_date,'')=? AND COALESCE(shoot_date_precision,'')=? THEN shoot_date_origin ELSE 'MANUAL' END,
 			photographer_name = ?, studio_name = ?, updated_at_utc = ?,
 			metadata_revision = metadata_revision + 1
 		WHERE id = ? AND metadata_revision = ?
@@ -197,6 +198,8 @@ func (s *GalleryStore) UpdateMetadata(
 		input.ShootDate,
 		input.ShootDatePrecision,
 		input.ContentRating,
+		input.ShootDate,
+		input.ShootDatePrecision,
 		input.PhotographerName,
 		input.StudioName,
 		formatTime(normalisedTime(now)),
@@ -209,7 +212,11 @@ func (s *GalleryStore) UpdateMetadata(
 	if err := requireOneRevisionRow(result); err != nil {
 		return gallery.Gallery{}, err
 	}
+	if _,err:=tx.ExecContext(ctx,`DELETE FROM gallery_capture_date_reviews WHERE gallery_id=? AND manual_date<>COALESCE((SELECT shoot_date FROM galleries WHERE id=?),'')`,id,id);err!=nil{return gallery.Gallery{},err}
 	if err := markGalleryManifestDBDirty(ctx, tx, id); err != nil {
+		return gallery.Gallery{}, err
+	}
+	if err := reconcileGalleryCaptureDate(ctx, tx, id, now); err != nil {
 		return gallery.Gallery{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM gallery_aliases WHERE gallery_id = ?`, id); err != nil {

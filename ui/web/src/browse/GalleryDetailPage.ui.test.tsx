@@ -49,6 +49,7 @@ function card(coverItemUUID = "photo-1"): BrowseGalleryCard {
 function detail(coverItemUUID = "photo-1"): GalleryDetail {
   return {
     card: card(coverItemUUID), metadataRevision: 7, description: "Description", photographerName: "Photographer", studioName: "Studio", availableBytes: 4096,
+    imageCaptureStart: "", imageCaptureEnd: "", videoCaptureStart: "", videoCaptureEnd: "",
     mediaParentDirectories: ["/media/Gallery one", "/media/Gallery one/Disc 2"],
     credits: [{ coser: { uuid: "coser-1", name: "Alice", avatarURL: null }, characters: [{ uuid: "character-1", name: "Saber" }], works: [{ uuid: "work-1", name: "Fate" }] }],
     tags: [{ uuid: "tag-1", name: "Outdoor" }], externalLinks: [], redirected: false,
@@ -112,6 +113,19 @@ describe("GalleryDetailPage presentation and media actions", () => {
     expect(within(tags).getByRole("link", { name: "Outdoor" })).toHaveAttribute("href", "/tag/tag-1");
     expect(within(tags).getByRole("button", { name: "Edit tags" })).toHaveTextContent("+TAG");
     expect(tags.lastElementChild).toBe(within(tags).getByRole("button", { name: "Edit tags" }));
+  });
+
+  it("shows separate image and video dates on one stats row and omits the timeline date", async () => {
+    const mocks = queryMocks();
+    mocks[0] = { request: { query: GALLERY_DETAIL, variables: { slug: "gallery-one" } }, result: { data: { galleryDetail: {
+      ...detail(), imageCaptureStart: "2024-05-12", imageCaptureEnd: "2024-05-15", videoCaptureStart: "2024-06-01", videoCaptureEnd: "2024-06-01",
+    } } } };
+    renderPage(mocks);
+    const heading = await screen.findByRole("heading", { name: "Gallery one" });
+    const stats = heading.closest(".gallery-detail__title")?.querySelector(".gallery-detail__stats") as HTMLElement;
+    expect(within(stats).getByLabelText("Photo capture date: 2024-05-12 – 2024-05-15")).toBeInTheDocument();
+    expect(within(stats).getByLabelText("Video capture date: 2024-06-01")).toBeInTheDocument();
+    expect(stats).not.toHaveTextContent("2026-07");
   });
 
   it("keeps the inline Tag editor available when the gallery has no tags", async () => {

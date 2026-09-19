@@ -75,6 +75,10 @@ export interface GalleryCreditDetail {
 
 export interface GalleryDetail {
   card: BrowseGalleryCard;
+  imageCaptureStart: string;
+  imageCaptureEnd: string;
+  videoCaptureStart: string;
+  videoCaptureEnd: string;
   metadataRevision: number;
   description: string;
   photographerName: string;

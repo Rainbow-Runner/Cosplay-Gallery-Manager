@@ -379,7 +379,8 @@ export function GalleryDetailPage() {
           <h1>{detail.card.title}</h1>
           <div className="gallery-detail__stats">
             {mediaCount ? <span>{mediaCount}</span> : null}
-            {detail.card.shootDate ? <time title={intl.formatMessage({ id: "gallery.shootDate" })} aria-label={`${intl.formatMessage({ id: "gallery.shootDate" })}: ${detail.card.shootDate}`}><Icon name="calendar" />{detail.card.shootDate}</time> : null}
+            {detail.imageCaptureStart ? <time title={intl.formatMessage({ id: "gallery.imageCaptureDate" })} aria-label={`${intl.formatMessage({ id: "gallery.imageCaptureDate" })}: ${detail.imageCaptureStart}${detail.imageCaptureEnd !== detail.imageCaptureStart ? ` – ${detail.imageCaptureEnd}` : ""}`}><Icon name="images" />{detail.imageCaptureStart}{detail.imageCaptureEnd !== detail.imageCaptureStart ? ` – ${detail.imageCaptureEnd}` : ""}</time> : null}
+            {detail.videoCaptureStart ? <time title={intl.formatMessage({ id: "gallery.videoCaptureDate" })} aria-label={`${intl.formatMessage({ id: "gallery.videoCaptureDate" })}: ${detail.videoCaptureStart}${detail.videoCaptureEnd !== detail.videoCaptureStart ? ` – ${detail.videoCaptureEnd}` : ""}`}><Icon name="video" />{detail.videoCaptureStart}{detail.videoCaptureEnd !== detail.videoCaptureStart ? ` – ${detail.videoCaptureEnd}` : ""}</time> : null}
             <time className="gallery-detail__added" title={intl.formatMessage({ id: "gallery.addedAt" })} aria-label={`${intl.formatMessage({ id: "gallery.addedAt" })}: ${detail.card.addedAtUTC}`}>＋ {new Date(detail.card.addedAtUTC).toLocaleDateString()}</time>
           </div>
           <GalleryTagEditor setID={setID} metadataRevision={metadataRevision} tags={galleryTags} onSaved={(tags, revision) => {

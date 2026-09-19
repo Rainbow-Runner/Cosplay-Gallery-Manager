@@ -2259,3 +2259,15 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 功能与部署前记录提交为`e9ec40c1eb088066d0d6cec18f46778c15b35bea`（`Show Gallery covers in search result rows`）。正式`cgm_web_embed cgm_galleryepic cgm_moegirl`三标签候选的Go VCS元数据确认revision一致且`vcs.modified=false`，同时注入About提交及构建时间。候选及最终正式程序SHA-256为`f60484e8c861c581ae1fcf208dab859e56317084ef0204e42ea52dde80921e7c`。
 - 停服并确认`MainPID=0`后，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-search-results-e9ec40c-oGuBJq`保存SQLite一致副本、旧二进制、配置、用户systemd单元和完整Coser托管目录；原件与副本逐项比较一致。备份库`integrity_check=ok`，SHA-256为`5ba2c2f318b078657e3a1c509000473316886515ac3977749bbfb9ddf5d3e71e`；旧二进制SHA-256为`517c68b0b4eda8f060438ad4ce1fd501ed2b0606faab96eca1d1518ebeda300d`。备份不含原始媒体、缓存或日志。
 - 候选在正式程序同目录逐字节校验并原子替换后启动一次。服务`active/running`、`NRestarts=0`，Health/Ready均204，`/search`、新版SearchPage JS和CSS资源均200；About精确报告上述提交、`buildTime=2026-09-19T10:09:34Z`及`exactSourceAvailable=true`。正式库`integrity_check=ok`，备份与部署后Coser/Work/Character/Tag/Gallery/Source/Item计数均为`135/108/697/23/8/8/570`；近四分钟服务日志没有warning以上条目。未迁移schema，未替换正式配置、原始媒体、Manifest或缓存；未远端推送。真实浏览器搜索交互待所有者验收。
+
+# 2026-09-19 媒体拍摄日期提取与手工值复核（开发完成，待部署）
+
+- 产品库schema v15新增逐Item当前内容修订的拍摄日期证据、Gallery日期来源（MANUAL/AUTO）和手工日期冲突复核记录。既有v14的`shoot_date`原值保留并默认标记MANUAL，迁移前快照仍按现有数据库升级流程创建；未在正式业务库执行迁移。
+- 来源发现扫描只识别Gallery根，来源扫描仍负责登记媒体Item；逐文件读取交给既有有界worker队列，后台启动及每分钟分批排队。静态图片只采用EXIF `DateTimeOriginal`；视频只采用FFprobe的QuickTime/容器/流`creation_time`或`com.apple.quicktime.creationdate`，按媒体库`capture_timezone`转换有时区的时间。无可信标签记为NONE，不使用目录命名或文件mtime。FFprobe不可用时不排视频任务；工具恢复后正常调度。错误任务保留失败状态，不在高频循环中无限重试。
+- 当前非排除且可用的图片/视频Item都完成日期提取后，分别统计图片和视频的最小/最大日期；同一天只显示单日，否则显示区间。Browse Gallery详情同一行以图片/视频图标+日期呈现，不再把Gallery排序用`shoot_date`当作媒体拍摄日期展示。Gallery排序值仍为全部有效媒体中的最早日期；已有手工值冲突时完全不覆盖，由Manage → Gallery → Basic显示两值，所有者明确选择保留手工值或采用提取值。自动写入后Manifest标记DB_DIRTY，仍需显式Push。
+- 可移植元数据包不新增源机日期证据或绝对路径；目标机从Manifest恢复原日期，重建来源扫描后立即为该Gallery排队（一次最多500项，其余按调度补齐），与手工值冲突仍进入复核。迁移手册新增目标机核查步骤。数据库升级测试、自动/冲突日期测试、跨机重建保留手工日期及排队测试已添加。
+- 后台Gallery列表新增“拍摄时间待复核 / Date review”计数卡、筛选条件和行内直达Basic页的提示，避免大量Gallery时必须逐个打开寻找冲突；只有PENDING计入，明确选择保留手工值后不再占用待复核计数。
+- 本轮仅修改开发工作区，未提交、未备份、未迁移或部署正式业务库；后续部署必须按schema升级门禁先停服与完整备份，再验证v14→v15、业务计数、健康探针和任务/复核结果。
+- 阶段验证：正式三标签下产品库、ProductServer、GraphQL API、ProcessingWorker、媒体处理和`cmd/cgm`测试通过；同范围Go Vet通过。TypeScript类型检查、Web 35文件133项测试与685模块生产构建通过（只有既存主chunk超过500KiB提示），`git diff --check`通过。新增回归覆盖v14→v15保留手工日期、日期冲突不覆盖/明确决定、空日期自动取最早值、目标机迁移重新排队及视频时区解析与无mtime兜底。列表待复核入口随后追加，最终复测结果见本节后续记录。
+- 复核收尾：Gallery列表新增待复核卡后，产品库/API/Server测试、TypeScript与Web 35文件133项测试再次通过，差异检查无空白错误；新增产品库断言覆盖待复核计数、筛选与“保留手工值”后退出待处理队列。列表九卡改为桌面3×3布局，移动端继续两列。正式业务服务与库保持旧版未动。
+- 边界补充：当来源重扫引入未提取完的当前媒体，或媒体被排除/删除时，重算当前有效媒体集合；旧AUTO排序日期在证据未齐时暂时清空，不把已过期结果继续用于时间线。手工日期不受此清空逻辑影响。针对新增媒体使AUTO日期暂时清空的数据库测试通过。

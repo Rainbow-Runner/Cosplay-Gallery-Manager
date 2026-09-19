@@ -22,7 +22,8 @@ export type IconName =
   | "shuffle"
   | "sparkles"
   | "tags"
-  | "user";
+  | "user"
+  | "video";
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, "children"> {
   name: IconName;
@@ -30,6 +31,7 @@ interface IconProps extends Omit<SVGProps<SVGSVGElement>, "children"> {
 }
 
 const paths: Record<IconName, ReactNode> = {
+  video: <><rect x="2.5" y="5" width="19" height="14" rx="2" /><path d="m10 9 5 3-5 3Z" /></>,
   book: (
     <>
       <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5Z" />

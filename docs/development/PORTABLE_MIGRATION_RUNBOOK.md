@@ -1,6 +1,6 @@
 # 可移植元数据迁移操作手册
 
-> 适用版本：CGM 1.5，portable package format v2（继续兼容读取 v1），产品数据库 schema v10
+> 适用版本：CGM 1.5，portable package format v2（继续兼容读取 v1）；以下日期重建流程要求代码与产品数据库 schema v15，正式业务部署仍待执行
 > 平台：当前正式支持 Linux/容器；Windows 首版延期
 
 ## 1. 选择迁移方式
@@ -78,6 +78,8 @@ cgm -config /absolute/path/cgm.json -rebuild-portable-galleries <workflow-uuid>
 
 每个逻辑媒体库必须映射到本机已启用媒体库，或明确跳过。预检要求目标来源、Manifest 摘要/revision、相对成员路径和待接管 UUID 全部一致。正式重建要求 `REBUILD`，只创建 DRAFT Gallery；无法安全接管时保留稳定问题码和声明，不能生成替代 UUID 假装成功。
 
+`shoot_date`仍由每个Gallery的Manifest恢复，旧机器的逐媒体拍摄日期证据和绝对路径不进入可移植包。目标机重建来源扫描与Manifest应用完成后，为可处理媒体排入有界日期提取队列；超过单次500项的部分由正常服务调度继续补齐。目标机重新读取图片EXIF和视频容器日期标签，全部当前媒体提取完成后才计算最早日期。若该结果与恢复的手工`shoot_date`不同，保持原值并在Manage → Gallery → Basic显式复核；不会因为迁移自动改写排序日期。FFprobe不可用时视频任务等待工具恢复后的调度，不从路径或文件修改时间猜测日期。
+
 若源包包含并确实需要恢复可选所有者连续性，必须在全部 Gallery 完成重建后单独执行：
 
 ```bash
@@ -100,6 +102,7 @@ cgm -config /absolute/path/cgm.json -apply-owner-continuity <workflow-uuid>
 2. 检查数据库 `integrity_check=ok`，并核对核心实体、Gallery 和 Item 数量。
 3. 抽样核对 Coser 头像/Banner/帐号、Character→Work、Tag层级以及 Gallery Cast/Credit/封面/排序。
 4. 确认重建 Gallery 为 DRAFT，并逐项通过当前内容分级和可展示媒体激活门禁。
-5. 保留导出包、应用前完整安全备份及其校验和，直到业务验收结束。
+5. 等待目标机日期后台任务结束后抽样核对图片/视频时间；逐项处理Manage → Gallery → Basic中的拍摄日期冲突，并在需要时显式Push Manifest。
+6. 保留导出包、应用前完整安全备份及其校验和，直到业务验收结束。
 
 Web 与 CLI 共用同一套迁移服务和持久化会话。真实 Linux→Docker 跨机演练仍须在独立目标环境执行后，才能把产品化迁移门禁标记为完全通过。

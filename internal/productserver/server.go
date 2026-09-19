@@ -277,6 +277,7 @@ func (s *Server) startWorkers(ctx context.Context) error {
 		ProbeUnavailableCode: s.VideoTools.FFprobe.ErrorCode, FFmpegUnavailableCode: s.VideoTools.FFmpeg.ErrorCode}
 	if s.VideoTools.FFprobe.Available {
 		worker.VideoProbe = mediaprocessing.ProbeAdapter{Executable: s.VideoTools.FFprobe.Path, Version: s.VideoTools.FFprobe.Version}
+		worker.CaptureProbe = mediaprocessing.ProbeAdapter{Executable: s.VideoTools.FFprobe.Path, Version: s.VideoTools.FFprobe.Version}
 	}
 	workerContext, cancel := context.WithCancel(ctx)
 	s.workerCancel = cancel
@@ -363,9 +364,16 @@ func logMediaJobResult(job mediaprocessing.Job, success bool, errorCode string, 
 		event = "CGM_MEDIA_JOB_FAILED"
 	}
 	if job.Kind == mediaprocessing.JobItemTechnicalMetadata {
-		event = "CGM_VIDEO_PROBE_COMPLETED"
-		if !success {
-			event = "CGM_VIDEO_PROBE_FAILED"
+		if job.Variant == productdb.CaptureDateVariant {
+			event = "CGM_CAPTURE_DATE_COMPLETED"
+			if !success {
+				event = "CGM_CAPTURE_DATE_FAILED"
+			}
+		} else {
+			event = "CGM_VIDEO_PROBE_COMPLETED"
+			if !success {
+				event = "CGM_VIDEO_PROBE_FAILED"
+			}
 		}
 	} else if job.Variant == mediaprocessing.VariantStaticPoster {
 		event = "CGM_VIDEO_POSTER_COMPLETED"

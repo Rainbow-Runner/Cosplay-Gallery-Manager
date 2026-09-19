@@ -291,6 +291,12 @@ func TestPortableGalleryRebuildPreservesDirectoryIdentitiesAtNewRoot(t *testing.
 	if err := source.Database.Scans().Run(ctx, gallerySource.ID, archivecheck.DefaultLimits(), now); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := source.Database.ExecContext(ctx, `UPDATE gallery_items SET excluded=0 WHERE gallery_id=?`, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := source.Database.ExecContext(ctx, `UPDATE galleries SET shoot_date='2024-05-20',shoot_date_precision='DAY' WHERE id=?`, created.ID); err != nil {
+		t.Fatal(err)
+	}
 	var sourceItemUUID string
 	if err := source.Database.QueryRowContext(ctx, `SELECT item_uuid FROM gallery_items WHERE gallery_id=?`, created.ID).Scan(&sourceItemUUID); err != nil {
 		t.Fatal(err)
@@ -390,6 +396,14 @@ func TestPortableGalleryRebuildPreservesDirectoryIdentitiesAtNewRoot(t *testing.
 	if state != "DRAFT" || title != "Moved Set" {
 		t.Fatalf("rebuilt Gallery state/title=%q/%q", state, title)
 	}
+	var migratedDate, origin string
+	if err := target.Database.QueryRowContext(ctx, `SELECT shoot_date,shoot_date_origin FROM galleries WHERE id=?`, targetGalleryID).Scan(&migratedDate, &origin); err != nil || migratedDate != "2024-05-20" || origin != "MANUAL" {
+		t.Fatalf("migrated shoot date=%q origin=%q err=%v", migratedDate, origin, err)
+	}
+	var dateJobs int
+	if err := target.Database.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_jobs WHERE gallery_id=? AND variant='CAPTURE_DATE'`, targetGalleryID).Scan(&dateJobs); err != nil || dateJobs != 1 {
+		t.Fatalf("target capture date jobs=%d err=%v", dateJobs, err)
+	}
 	var targetItemUUID, targetLinkUUID, targetSourcePath string
 	if err := target.Database.QueryRowContext(ctx, `SELECT item_uuid FROM gallery_items WHERE gallery_id=?`, targetGalleryID).Scan(&targetItemUUID); err != nil {
 		t.Fatal(err)
@@ -402,6 +416,17 @@ func TestPortableGalleryRebuildPreservesDirectoryIdentitiesAtNewRoot(t *testing.
 	}
 	if targetItemUUID != sourceItemUUID || targetLinkUUID != link.UUID || targetSourcePath != targetSetPath {
 		t.Fatalf("identity/path changed: item=%q link=%q source=%q", targetItemUUID, targetLinkUUID, targetSourcePath)
+	}
+	var targetContentRevision int64
+	if err := target.Database.QueryRowContext(ctx, `SELECT content_revision FROM gallery_items WHERE item_uuid=?`, targetItemUUID).Scan(&targetContentRevision); err != nil {
+		t.Fatal(err)
+	}
+	if err := target.Database.CaptureDates().Publish(ctx, targetItemUUID, targetContentRevision, "2024-05-12", "exif.DateTimeOriginal", now); err != nil {
+		t.Fatal(err)
+	}
+	dateSummary, err := target.Database.CaptureDates().Summary(ctx, targetGalleryID)
+	if err != nil || dateSummary.ReviewStatus != "PENDING" || dateSummary.Manual != "2024-05-20" || dateSummary.Candidate != "2024-05-12" {
+		t.Fatalf("rebuilt date review=%+v err=%v", dateSummary, err)
 	}
 	var sessionState string
 	if err := target.Database.QueryRowContext(ctx, `SELECT state FROM portable_import_sessions WHERE import_id=?`, imported.ImportID).Scan(&sessionState); err != nil || sessionState != "GALLERIES_REBUILT" {

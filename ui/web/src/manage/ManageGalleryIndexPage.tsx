@@ -13,6 +13,7 @@ const filters = [
   { issue: "MISSING", label: "缺失媒体 / Missing", count: "missingGallery" },
   { issue: "PROCESSING_ERROR", label: "处理失败 / Processing error", count: "processingError" },
   { issue: "MANIFEST", label: "Manifest 待处理", count: "manifestAttention" },
+  { issue: "CAPTURE_DATE", label: "拍摄时间待复核 / Date review", count: "captureDateAttention" },
 ] as const;
 
 const manifestReasons: Record<string, string> = {
@@ -117,7 +118,7 @@ export function ManageGalleryIndexPage() {
     {query.error ? <p role="alert">Unable to load Manage data.</p> : null}
     {data ? <><div className="manage-table-wrap"><table className="manage-table"><thead><tr><th><input type="checkbox" aria-label="Select all Galleries on this page" checked={data.items.length > 0 && selectedOnPage === data.items.length} onChange={(event) => setSelected((current) => event.target.checked ? Array.from(new Set([...current, ...data.items.map((row) => row.setID)])).slice(0, 100) : current.filter((id) => !data.items.some((row) => row.setID === id)))} /></th><th>State</th><th>Title</th><th>Source</th><th>Items</th><th>Missing</th><th>Process</th><th>Issues</th><th>Manifest</th></tr></thead><tbody>
       {data.items.map((row) => <tr key={row.setID} className={row.blockingIssues || row.overLimit || row.missingCount || row.errorCount || row.sourceAvailability !== "AVAILABLE" || ["FILE_DIRTY", "CONFLICT", "ERROR", "MISSING"].includes(row.manifestStatus) ? "has-issue" : ""}><td><input type="checkbox" aria-label={`Select ${row.title}`} checked={selected.includes(row.setID)} onChange={() => toggle(row.setID)} /></td><td><span className={`state state--${row.state.toLowerCase()}`}>{row.state}</span></td>
-        <td><Link to={`/manage/gallery/${row.setID}`}>{row.title}</Link><small>{row.contentRating || "UNRATED"}</small></td><td title={row.sourcePath}>{row.sourceAvailability} · {row.reconcileState}{row.lastScanErrorCode ? <small>{row.lastScanErrorCode}</small> : null}</td>
+        <td><Link to={`/manage/gallery/${row.setID}`}>{row.title}</Link><small>{row.contentRating || "UNRATED"}</small>{row.captureDateReviewStatus === "PENDING" ? <small><Link to={`/manage/gallery/${row.setID}?tab=basic`}>拍摄时间待复核 / Date review</Link></small> : null}</td><td title={row.sourcePath}>{row.sourceAvailability} · {row.reconcileState}{row.lastScanErrorCode ? <small>{row.lastScanErrorCode}</small> : null}</td>
         <td>{row.itemCount}</td><td>{row.missingCount}</td><td>{row.pendingCount} / {row.errorCount}</td><td>{row.blockingIssues}</td><td><Link to={`/manage/gallery/${row.setID}?tab=manifest`}>{row.manifestStatus || "UNCHECKED"}</Link>{row.manifestCheckedAt ? <small>Checked {row.manifestCheckedAt}</small> : <small>Not checked yet</small>}</td></tr>)}</tbody></table></div>
       {data.totalItems === 0 ? <p className="manage-gallery-empty">没有匹配的作品集 / No matching Galleries.</p> : null}
       {data.totalPages > 1 ? <nav className="manage-pagination" aria-label="Pagination"><button disabled={page <= 1} onClick={() => changePage(page - 1)}>Previous</button><span>{page} / {data.totalPages}</span><button disabled={page >= data.totalPages} onClick={() => changePage(page + 1)}>Next</button></nav> : null}</> : null}

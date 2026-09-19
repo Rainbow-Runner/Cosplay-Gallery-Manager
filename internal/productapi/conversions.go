@@ -101,6 +101,7 @@ func personSummaries(values []browse.PersonSummary) []*PersonSummary {
 func galleryDetail(value browse.GalleryDetail) *GalleryDetail {
 	result := &GalleryDetail{Card: galleryCard(value.Card), MetadataRevision: value.MetadataRevision, Description: value.Description, PhotographerName: value.PhotographerName,
 		StudioName: value.StudioName, AvailableBytes: value.AvailableBytes, MediaParentDirectories: value.MediaParentDirectories,
+		ImageCaptureStart: value.ImageCaptureStart, ImageCaptureEnd: value.ImageCaptureEnd, VideoCaptureStart: value.VideoCaptureStart, VideoCaptureEnd: value.VideoCaptureEnd,
 		Tags: entitySummaries(value.Tags), Redirected: value.Redirected}
 	for _, credit := range value.Credits {
 		result.Credits = append(result.Credits, &GalleryCreditDetail{Coser: personSummary(credit.Coser),
@@ -285,7 +286,7 @@ func manageError(err error) error {
 
 func manageGalleryPage(value manage.GalleryPage) *ManageGalleryPage {
 	result := &ManageGalleryPage{Page: value.Page, PageSize: value.PageSize, TotalItems: value.TotalItems, TotalPages: value.TotalPages,
-		Summary: &ManageIssueSummary{All: value.Summary.All, Draft: value.Summary.Draft, OverLimit: value.Summary.OverLimit, Unavailable: value.Summary.Unavailable, Blocking: value.Summary.Blocking, ProcessingError: value.Summary.ProcessingError, MissingGallery: value.Summary.MissingGallery, MissingItem: value.Summary.MissingItem, ManifestAttention: value.Summary.ManifestAttention}}
+		Summary: &ManageIssueSummary{All: value.Summary.All, Draft: value.Summary.Draft, OverLimit: value.Summary.OverLimit, Unavailable: value.Summary.Unavailable, Blocking: value.Summary.Blocking, ProcessingError: value.Summary.ProcessingError, MissingGallery: value.Summary.MissingGallery, MissingItem: value.Summary.MissingItem, ManifestAttention: value.Summary.ManifestAttention, CaptureDateAttention: value.Summary.CaptureDateAttention}}
 	for _, row := range value.Items {
 		result.Items = append(result.Items, manageGalleryRow(row))
 	}
@@ -305,7 +306,7 @@ func manageGalleryRow(value manage.GalleryRow) *ManageGalleryRow {
 		MetadataRevision: value.MetadataRevision, ScanRevision: value.ScanRevision, Browsable: value.Browsable, SourceType: string(value.SourceType), SourcePath: value.SourcePath,
 		SourceAvailability: string(value.SourceAvailability), ReconcileState: string(value.ReconcileState), OverLimit: value.OverLimit, ItemCount: value.ItemCount,
 		MissingCount: value.MissingCount, PendingCount: value.PendingCount, ErrorCount: value.ErrorCount, BlockingIssues: value.BlockingIssues,
-		LastScanErrorCode: value.LastScanErrorCode, LastScanCompleted: value.LastScanCompleted, ManifestStatus: value.ManifestStatus, ManifestCheckedAt: value.ManifestCheckedAt}
+		LastScanErrorCode: value.LastScanErrorCode, LastScanCompleted: value.LastScanCompleted, ManifestStatus: value.ManifestStatus, ManifestCheckedAt: value.ManifestCheckedAt, CaptureDateReviewStatus: value.CaptureDateReviewStatus}
 }
 func manageGalleryDetail(value manage.GalleryDetail) *ManageGalleryDetail {
 	precision := ShootDatePrecisionUnknown
@@ -313,7 +314,9 @@ func manageGalleryDetail(value manage.GalleryDetail) *ManageGalleryDetail {
 		precision = ShootDatePrecision(value.ShootDatePrecision)
 	}
 	result := &ManageGalleryDetail{Row: manageGalleryRow(value.Row), Aliases: value.Aliases, Description: value.Description, ShootDate: value.ShootDate,
-		ShootDatePrecision: precision, PhotographerName: value.PhotographerName, StudioName: value.StudioName}
+		ShootDatePrecision: precision, PhotographerName: value.PhotographerName, StudioName: value.StudioName,
+		ImageCaptureStart: value.ImageCaptureStart, ImageCaptureEnd: value.ImageCaptureEnd, VideoCaptureStart: value.VideoCaptureStart, VideoCaptureEnd: value.VideoCaptureEnd,
+		CaptureDateCandidate: value.CaptureDateCandidate, CaptureDateReviewStatus: value.CaptureDateReviewStatus}
 	for _, item := range value.Items {
 		var category *ImageCategory
 		if item.ImageCategory != "" {

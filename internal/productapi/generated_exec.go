@@ -147,12 +147,16 @@ type ComplexityRoot struct {
 		Credits                func(childComplexity int) int
 		Description            func(childComplexity int) int
 		ExternalLinks          func(childComplexity int) int
+		ImageCaptureEnd        func(childComplexity int) int
+		ImageCaptureStart      func(childComplexity int) int
 		MediaParentDirectories func(childComplexity int) int
 		MetadataRevision       func(childComplexity int) int
 		PhotographerName       func(childComplexity int) int
 		Redirected             func(childComplexity int) int
 		StudioName             func(childComplexity int) int
 		Tags                   func(childComplexity int) int
+		VideoCaptureEnd        func(childComplexity int) int
+		VideoCaptureStart      func(childComplexity int) int
 	}
 
 	GalleryMember struct {
@@ -400,19 +404,25 @@ type ComplexityRoot struct {
 	}
 
 	ManageGalleryDetail struct {
-		Aliases            func(childComplexity int) int
-		Credits            func(childComplexity int) int
-		Description        func(childComplexity int) int
-		ExternalLinks      func(childComplexity int) int
-		FolderMatches      func(childComplexity int) int
-		Items              func(childComplexity int) int
-		PhotographerName   func(childComplexity int) int
-		Row                func(childComplexity int) int
-		ScanRuns           func(childComplexity int) int
-		ShootDate          func(childComplexity int) int
-		ShootDatePrecision func(childComplexity int) int
-		StudioName         func(childComplexity int) int
-		Tags               func(childComplexity int) int
+		Aliases                 func(childComplexity int) int
+		CaptureDateCandidate    func(childComplexity int) int
+		CaptureDateReviewStatus func(childComplexity int) int
+		Credits                 func(childComplexity int) int
+		Description             func(childComplexity int) int
+		ExternalLinks           func(childComplexity int) int
+		FolderMatches           func(childComplexity int) int
+		ImageCaptureEnd         func(childComplexity int) int
+		ImageCaptureStart       func(childComplexity int) int
+		Items                   func(childComplexity int) int
+		PhotographerName        func(childComplexity int) int
+		Row                     func(childComplexity int) int
+		ScanRuns                func(childComplexity int) int
+		ShootDate               func(childComplexity int) int
+		ShootDatePrecision      func(childComplexity int) int
+		StudioName              func(childComplexity int) int
+		Tags                    func(childComplexity int) int
+		VideoCaptureEnd         func(childComplexity int) int
+		VideoCaptureStart       func(childComplexity int) int
 	}
 
 	ManageGalleryExternalLink struct {
@@ -494,28 +504,29 @@ type ComplexityRoot struct {
 	}
 
 	ManageGalleryRow struct {
-		BlockingIssues     func(childComplexity int) int
-		Browsable          func(childComplexity int) int
-		ContentRating      func(childComplexity int) int
-		ErrorCount         func(childComplexity int) int
-		ItemCount          func(childComplexity int) int
-		LastScanCompleted  func(childComplexity int) int
-		LastScanErrorCode  func(childComplexity int) int
-		ManifestCheckedAt  func(childComplexity int) int
-		ManifestStatus     func(childComplexity int) int
-		MetadataRevision   func(childComplexity int) int
-		MissingCount       func(childComplexity int) int
-		OverLimit          func(childComplexity int) int
-		PendingCount       func(childComplexity int) int
-		ReconcileState     func(childComplexity int) int
-		ScanRevision       func(childComplexity int) int
-		SetID              func(childComplexity int) int
-		Slug               func(childComplexity int) int
-		SourceAvailability func(childComplexity int) int
-		SourcePath         func(childComplexity int) int
-		SourceType         func(childComplexity int) int
-		State              func(childComplexity int) int
-		Title              func(childComplexity int) int
+		BlockingIssues          func(childComplexity int) int
+		Browsable               func(childComplexity int) int
+		CaptureDateReviewStatus func(childComplexity int) int
+		ContentRating           func(childComplexity int) int
+		ErrorCount              func(childComplexity int) int
+		ItemCount               func(childComplexity int) int
+		LastScanCompleted       func(childComplexity int) int
+		LastScanErrorCode       func(childComplexity int) int
+		ManifestCheckedAt       func(childComplexity int) int
+		ManifestStatus          func(childComplexity int) int
+		MetadataRevision        func(childComplexity int) int
+		MissingCount            func(childComplexity int) int
+		OverLimit               func(childComplexity int) int
+		PendingCount            func(childComplexity int) int
+		ReconcileState          func(childComplexity int) int
+		ScanRevision            func(childComplexity int) int
+		SetID                   func(childComplexity int) int
+		Slug                    func(childComplexity int) int
+		SourceAvailability      func(childComplexity int) int
+		SourcePath              func(childComplexity int) int
+		SourceType              func(childComplexity int) int
+		State                   func(childComplexity int) int
+		Title                   func(childComplexity int) int
 	}
 
 	ManageGalleryScanRun struct {
@@ -557,15 +568,16 @@ type ComplexityRoot struct {
 	}
 
 	ManageIssueSummary struct {
-		All               func(childComplexity int) int
-		Blocking          func(childComplexity int) int
-		Draft             func(childComplexity int) int
-		ManifestAttention func(childComplexity int) int
-		MissingGallery    func(childComplexity int) int
-		MissingItem       func(childComplexity int) int
-		OverLimit         func(childComplexity int) int
-		ProcessingError   func(childComplexity int) int
-		Unavailable       func(childComplexity int) int
+		All                  func(childComplexity int) int
+		Blocking             func(childComplexity int) int
+		CaptureDateAttention func(childComplexity int) int
+		Draft                func(childComplexity int) int
+		ManifestAttention    func(childComplexity int) int
+		MissingGallery       func(childComplexity int) int
+		MissingItem          func(childComplexity int) int
+		OverLimit            func(childComplexity int) int
+		ProcessingError      func(childComplexity int) int
+		Unavailable          func(childComplexity int) int
 	}
 
 	ManageLibrary struct {
@@ -1131,6 +1143,7 @@ type ComplexityRoot struct {
 		RequestItemVideoPlayback               func(childComplexity int, itemUUID string) int
 		ResetGalleryCover                      func(childComplexity int, setID string, expectedMetadataRevision int64) int
 		ResolveCoserManifest                   func(childComplexity int, coserUUID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
+		ResolveGalleryCaptureDate              func(childComplexity int, setID string, expectedMetadataRevision int64, candidate string, decision string) int
 		ResolveGalleryManifest                 func(childComplexity int, setID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
 		ResolveMediaClassificationSuggestion   func(childComplexity int, id int64, accept bool, expectedGalleryRevision int64) int
 		ResolveMediaExclusionDecision          func(childComplexity int, id int64, accept bool, expectedGalleryRevision int64) int
@@ -1348,6 +1361,7 @@ type MutationResolver interface {
 	RequestItemAnimatedPreview(ctx context.Context, itemUUID string) (*OnDemandResource, error)
 	RequestItemVideoPlayback(ctx context.Context, itemUUID string) (*VideoPlaybackStatus, error)
 	UpdateGalleryMetadata(ctx context.Context, setID string, expectedMetadataRevision int64, input UpdateGalleryMetadataInput) (*ManageGalleryDetail, error)
+	ResolveGalleryCaptureDate(ctx context.Context, setID string, expectedMetadataRevision int64, candidate string, decision string) (*ManageGalleryDetail, error)
 	SetGalleryState(ctx context.Context, setID string, expectedMetadataRevision int64, state GalleryState) (*ManageGalleryDetail, error)
 	UpdateGalleryItem(ctx context.Context, setID string, itemUUID string, expectedMetadataRevision int64, input UpdateGalleryItemInput) (*ManageGalleryDetail, error)
 	SetGalleryItemExcluded(ctx context.Context, setID string, itemUUID string, excluded bool, expectedMetadataRevision int64) (*ManageGalleryDetail, error)
@@ -1978,6 +1992,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.GalleryDetail.ExternalLinks(childComplexity), true
 
+	case "GalleryDetail.imageCaptureEnd":
+		if e.complexity.GalleryDetail.ImageCaptureEnd == nil {
+			break
+		}
+
+		return e.complexity.GalleryDetail.ImageCaptureEnd(childComplexity), true
+
+	case "GalleryDetail.imageCaptureStart":
+		if e.complexity.GalleryDetail.ImageCaptureStart == nil {
+			break
+		}
+
+		return e.complexity.GalleryDetail.ImageCaptureStart(childComplexity), true
+
 	case "GalleryDetail.mediaParentDirectories":
 		if e.complexity.GalleryDetail.MediaParentDirectories == nil {
 			break
@@ -2019,6 +2047,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.GalleryDetail.Tags(childComplexity), true
+
+	case "GalleryDetail.videoCaptureEnd":
+		if e.complexity.GalleryDetail.VideoCaptureEnd == nil {
+			break
+		}
+
+		return e.complexity.GalleryDetail.VideoCaptureEnd(childComplexity), true
+
+	case "GalleryDetail.videoCaptureStart":
+		if e.complexity.GalleryDetail.VideoCaptureStart == nil {
+			break
+		}
+
+		return e.complexity.GalleryDetail.VideoCaptureStart(childComplexity), true
 
 	case "GalleryMember.caption":
 		if e.complexity.GalleryMember.Caption == nil {
@@ -3147,6 +3189,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageGalleryDetail.Aliases(childComplexity), true
 
+	case "ManageGalleryDetail.captureDateCandidate":
+		if e.complexity.ManageGalleryDetail.CaptureDateCandidate == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDetail.CaptureDateCandidate(childComplexity), true
+
+	case "ManageGalleryDetail.captureDateReviewStatus":
+		if e.complexity.ManageGalleryDetail.CaptureDateReviewStatus == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDetail.CaptureDateReviewStatus(childComplexity), true
+
 	case "ManageGalleryDetail.credits":
 		if e.complexity.ManageGalleryDetail.Credits == nil {
 			break
@@ -3174,6 +3230,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageGalleryDetail.FolderMatches(childComplexity), true
+
+	case "ManageGalleryDetail.imageCaptureEnd":
+		if e.complexity.ManageGalleryDetail.ImageCaptureEnd == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDetail.ImageCaptureEnd(childComplexity), true
+
+	case "ManageGalleryDetail.imageCaptureStart":
+		if e.complexity.ManageGalleryDetail.ImageCaptureStart == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDetail.ImageCaptureStart(childComplexity), true
 
 	case "ManageGalleryDetail.items":
 		if e.complexity.ManageGalleryDetail.Items == nil {
@@ -3230,6 +3300,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageGalleryDetail.Tags(childComplexity), true
+
+	case "ManageGalleryDetail.videoCaptureEnd":
+		if e.complexity.ManageGalleryDetail.VideoCaptureEnd == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDetail.VideoCaptureEnd(childComplexity), true
+
+	case "ManageGalleryDetail.videoCaptureStart":
+		if e.complexity.ManageGalleryDetail.VideoCaptureStart == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDetail.VideoCaptureStart(childComplexity), true
 
 	case "ManageGalleryExternalLink.label":
 		if e.complexity.ManageGalleryExternalLink.Label == nil {
@@ -3644,6 +3728,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageGalleryRow.Browsable(childComplexity), true
 
+	case "ManageGalleryRow.captureDateReviewStatus":
+		if e.complexity.ManageGalleryRow.CaptureDateReviewStatus == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryRow.CaptureDateReviewStatus(childComplexity), true
+
 	case "ManageGalleryRow.contentRating":
 		if e.complexity.ManageGalleryRow.ContentRating == nil {
 			break
@@ -3958,6 +4049,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageIssueSummary.Blocking(childComplexity), true
+
+	case "ManageIssueSummary.captureDateAttention":
+		if e.complexity.ManageIssueSummary.CaptureDateAttention == nil {
+			break
+		}
+
+		return e.complexity.ManageIssueSummary.CaptureDateAttention(childComplexity), true
 
 	case "ManageIssueSummary.draft":
 		if e.complexity.ManageIssueSummary.Draft == nil {
@@ -7122,6 +7220,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.ResolveCoserManifest(childComplexity, args["coserUUID"].(string), args["expectedMetadataRevision"].(int64), args["choices"].([]*ManifestConflictChoiceInput)), true
+
+	case "Mutation.resolveGalleryCaptureDate":
+		if e.complexity.Mutation.ResolveGalleryCaptureDate == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_resolveGalleryCaptureDate_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ResolveGalleryCaptureDate(childComplexity, args["setID"].(string), args["expectedMetadataRevision"].(int64), args["candidate"].(string), args["decision"].(string)), true
 
 	case "Mutation.resolveGalleryManifest":
 		if e.complexity.Mutation.ResolveGalleryManifest == nil {
@@ -11045,6 +11155,103 @@ func (ec *executionContext) field_Mutation_resolveCoserManifest_argsChoices(
 	}
 
 	var zeroVal []*ManifestConflictChoiceInput
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_resolveGalleryCaptureDate_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_resolveGalleryCaptureDate_argsSetID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["setID"] = arg0
+	arg1, err := ec.field_Mutation_resolveGalleryCaptureDate_argsExpectedMetadataRevision(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["expectedMetadataRevision"] = arg1
+	arg2, err := ec.field_Mutation_resolveGalleryCaptureDate_argsCandidate(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["candidate"] = arg2
+	arg3, err := ec.field_Mutation_resolveGalleryCaptureDate_argsDecision(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["decision"] = arg3
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_resolveGalleryCaptureDate_argsSetID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["setID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("setID"))
+	if tmp, ok := rawArgs["setID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_resolveGalleryCaptureDate_argsExpectedMetadataRevision(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int64, error) {
+	if _, ok := rawArgs["expectedMetadataRevision"]; !ok {
+		var zeroVal int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedMetadataRevision"))
+	if tmp, ok := rawArgs["expectedMetadataRevision"]; ok {
+		return ec.unmarshalNInt642int64(ctx, tmp)
+	}
+
+	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_resolveGalleryCaptureDate_argsCandidate(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["candidate"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("candidate"))
+	if tmp, ok := rawArgs["candidate"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_resolveGalleryCaptureDate_argsDecision(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["decision"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("decision"))
+	if tmp, ok := rawArgs["decision"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
+	}
+
+	var zeroVal string
 	return zeroVal, nil
 }
 
@@ -18549,6 +18756,182 @@ func (ec *executionContext) fieldContext_GalleryDetail_card(_ context.Context, f
 				return ec.fieldContext_BrowseGalleryCard_scrubberRevision(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type BrowseGalleryCard", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GalleryDetail_imageCaptureStart(ctx context.Context, field graphql.CollectedField, obj *GalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryDetail_imageCaptureStart(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ImageCaptureStart, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryDetail_imageCaptureStart(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GalleryDetail_imageCaptureEnd(ctx context.Context, field graphql.CollectedField, obj *GalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryDetail_imageCaptureEnd(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ImageCaptureEnd, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryDetail_imageCaptureEnd(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GalleryDetail_videoCaptureStart(ctx context.Context, field graphql.CollectedField, obj *GalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryDetail_videoCaptureStart(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoCaptureStart, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryDetail_videoCaptureStart(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GalleryDetail_videoCaptureEnd(ctx context.Context, field graphql.CollectedField, obj *GalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryDetail_videoCaptureEnd(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoCaptureEnd, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryDetail_videoCaptureEnd(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -26603,6 +26986,8 @@ func (ec *executionContext) fieldContext_ManageGalleryDetail_row(_ context.Conte
 				return ec.fieldContext_ManageGalleryRow_manifestStatus(ctx, field)
 			case "manifestCheckedAt":
 				return ec.fieldContext_ManageGalleryRow_manifestCheckedAt(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryRow_captureDateReviewStatus(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryRow", field.Name)
 		},
@@ -26781,6 +27166,270 @@ func (ec *executionContext) fieldContext_ManageGalleryDetail_shootDatePrecision(
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type ShootDatePrecision does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryDetail_imageCaptureStart(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ImageCaptureStart, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDetail_imageCaptureStart(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryDetail_imageCaptureEnd(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ImageCaptureEnd, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDetail_imageCaptureEnd(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryDetail_videoCaptureStart(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoCaptureStart, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDetail_videoCaptureStart(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryDetail_videoCaptureEnd(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoCaptureEnd, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDetail_videoCaptureEnd(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryDetail_captureDateCandidate(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CaptureDateCandidate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDetail_captureDateCandidate(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryDetail_captureDateReviewStatus(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CaptureDateReviewStatus, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDetail_captureDateReviewStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -29568,6 +30217,8 @@ func (ec *executionContext) fieldContext_ManageGalleryPage_items(_ context.Conte
 				return ec.fieldContext_ManageGalleryRow_manifestStatus(ctx, field)
 			case "manifestCheckedAt":
 				return ec.fieldContext_ManageGalleryRow_manifestCheckedAt(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryRow_captureDateReviewStatus(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryRow", field.Name)
 		},
@@ -29632,6 +30283,8 @@ func (ec *executionContext) fieldContext_ManageGalleryPage_summary(_ context.Con
 				return ec.fieldContext_ManageIssueSummary_missingItem(ctx, field)
 			case "manifestAttention":
 				return ec.fieldContext_ManageIssueSummary_manifestAttention(ctx, field)
+			case "captureDateAttention":
+				return ec.fieldContext_ManageIssueSummary_captureDateAttention(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageIssueSummary", field.Name)
 		},
@@ -30768,6 +31421,50 @@ func (ec *executionContext) _ManageGalleryRow_manifestCheckedAt(ctx context.Cont
 }
 
 func (ec *executionContext) fieldContext_ManageGalleryRow_manifestCheckedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryRow",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryRow_captureDateReviewStatus(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryRow) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryRow_captureDateReviewStatus(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CaptureDateReviewStatus, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryRow_captureDateReviewStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ManageGalleryRow",
 		Field:      field,
@@ -32198,6 +32895,50 @@ func (ec *executionContext) _ManageIssueSummary_manifestAttention(ctx context.Co
 }
 
 func (ec *executionContext) fieldContext_ManageIssueSummary_manifestAttention(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageIssueSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageIssueSummary_captureDateAttention(ctx context.Context, field graphql.CollectedField, obj *ManageIssueSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageIssueSummary_captureDateAttention(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CaptureDateAttention, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageIssueSummary_captureDateAttention(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ManageIssueSummary",
 		Field:      field,
@@ -49034,6 +49775,18 @@ func (ec *executionContext) fieldContext_Mutation_forgetGalleryItem(ctx context.
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -49117,6 +49870,18 @@ func (ec *executionContext) fieldContext_Mutation_forgetMissingGalleryItems(ctx 
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -49200,6 +49965,18 @@ func (ec *executionContext) fieldContext_Mutation_replaceMissingGalleryItem(ctx 
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -49283,6 +50060,18 @@ func (ec *executionContext) fieldContext_Mutation_confirmGallerySourceRebind(ctx
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -49852,6 +50641,18 @@ func (ec *executionContext) fieldContext_Mutation_updateGalleryMetadata(ctx cont
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -49880,6 +50681,101 @@ func (ec *executionContext) fieldContext_Mutation_updateGalleryMetadata(ctx cont
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_updateGalleryMetadata_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_resolveGalleryCaptureDate(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_resolveGalleryCaptureDate(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().ResolveGalleryCaptureDate(rctx, fc.Args["setID"].(string), fc.Args["expectedMetadataRevision"].(int64), fc.Args["candidate"].(string), fc.Args["decision"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageGalleryDetail)
+	fc.Result = res
+	return ec.marshalNManageGalleryDetail2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryDetail(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_resolveGalleryCaptureDate(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "row":
+				return ec.fieldContext_ManageGalleryDetail_row(ctx, field)
+			case "aliases":
+				return ec.fieldContext_ManageGalleryDetail_aliases(ctx, field)
+			case "description":
+				return ec.fieldContext_ManageGalleryDetail_description(ctx, field)
+			case "shootDate":
+				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
+			case "shootDatePrecision":
+				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
+			case "photographerName":
+				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
+			case "studioName":
+				return ec.fieldContext_ManageGalleryDetail_studioName(ctx, field)
+			case "items":
+				return ec.fieldContext_ManageGalleryDetail_items(ctx, field)
+			case "credits":
+				return ec.fieldContext_ManageGalleryDetail_credits(ctx, field)
+			case "tags":
+				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
+			case "externalLinks":
+				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
+			case "scanRuns":
+				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_resolveGalleryCaptureDate_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -49935,6 +50831,18 @@ func (ec *executionContext) fieldContext_Mutation_setGalleryState(ctx context.Co
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -50018,6 +50926,18 @@ func (ec *executionContext) fieldContext_Mutation_updateGalleryItem(ctx context.
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -50101,6 +51021,18 @@ func (ec *executionContext) fieldContext_Mutation_setGalleryItemExcluded(ctx con
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -50184,6 +51116,18 @@ func (ec *executionContext) fieldContext_Mutation_moveGalleryItem(ctx context.Co
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -50267,6 +51211,18 @@ func (ec *executionContext) fieldContext_Mutation_reorderGalleryItems(ctx contex
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -50350,6 +51306,18 @@ func (ec *executionContext) fieldContext_Mutation_setGalleryCoverItem(ctx contex
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -50433,6 +51401,18 @@ func (ec *executionContext) fieldContext_Mutation_resetGalleryCover(ctx context.
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -52550,6 +53530,18 @@ func (ec *executionContext) fieldContext_Mutation_importGalleryCandidate(ctx con
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -52633,6 +53625,18 @@ func (ec *executionContext) fieldContext_Mutation_scanGallerySource(ctx context.
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -53858,6 +54862,18 @@ func (ec *executionContext) fieldContext_Mutation_replaceGalleryRelations(ctx co
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -53941,6 +54957,18 @@ func (ec *executionContext) fieldContext_Mutation_addGalleryExternalLink(ctx con
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -55386,6 +56414,14 @@ func (ec *executionContext) fieldContext_Query_galleryDetail(ctx context.Context
 			switch field.Name {
 			case "card":
 				return ec.fieldContext_GalleryDetail_card(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_GalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_GalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_GalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_GalleryDetail_videoCaptureEnd(ctx, field)
 			case "metadataRevision":
 				return ec.fieldContext_GalleryDetail_metadataRevision(ctx, field)
 			case "description":
@@ -56750,6 +57786,18 @@ func (ec *executionContext) fieldContext_Query_manageGallery(ctx context.Context
 				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
 			case "shootDatePrecision":
 				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
 			case "photographerName":
 				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
 			case "studioName":
@@ -66125,6 +67173,26 @@ func (ec *executionContext) _GalleryDetail(ctx context.Context, sel ast.Selectio
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "imageCaptureStart":
+			out.Values[i] = ec._GalleryDetail_imageCaptureStart(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "imageCaptureEnd":
+			out.Values[i] = ec._GalleryDetail_imageCaptureEnd(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoCaptureStart":
+			out.Values[i] = ec._GalleryDetail_videoCaptureStart(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoCaptureEnd":
+			out.Values[i] = ec._GalleryDetail_videoCaptureEnd(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "metadataRevision":
 			out.Values[i] = ec._GalleryDetail_metadataRevision(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -67950,6 +69018,36 @@ func (ec *executionContext) _ManageGalleryDetail(ctx context.Context, sel ast.Se
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "imageCaptureStart":
+			out.Values[i] = ec._ManageGalleryDetail_imageCaptureStart(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "imageCaptureEnd":
+			out.Values[i] = ec._ManageGalleryDetail_imageCaptureEnd(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoCaptureStart":
+			out.Values[i] = ec._ManageGalleryDetail_videoCaptureStart(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoCaptureEnd":
+			out.Values[i] = ec._ManageGalleryDetail_videoCaptureEnd(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "captureDateCandidate":
+			out.Values[i] = ec._ManageGalleryDetail_captureDateCandidate(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "captureDateReviewStatus":
+			out.Values[i] = ec._ManageGalleryDetail_captureDateReviewStatus(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "photographerName":
 			out.Values[i] = ec._ManageGalleryDetail_photographerName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -68651,6 +69749,11 @@ func (ec *executionContext) _ManageGalleryRow(ctx context.Context, sel ast.Selec
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "captureDateReviewStatus":
+			out.Values[i] = ec._ManageGalleryRow_captureDateReviewStatus(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -69006,6 +70109,11 @@ func (ec *executionContext) _ManageIssueSummary(ctx context.Context, sel ast.Sel
 			}
 		case "manifestAttention":
 			out.Values[i] = ec._ManageIssueSummary_manifestAttention(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "captureDateAttention":
+			out.Values[i] = ec._ManageIssueSummary_captureDateAttention(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -72619,6 +73727,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "updateGalleryMetadata":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateGalleryMetadata(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resolveGalleryCaptureDate":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_resolveGalleryCaptureDate(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

@@ -232,6 +232,10 @@ type ExternalLink struct {
 
 type GalleryDetail struct {
 	Card                   GalleryCard
+	ImageCaptureStart      string
+	ImageCaptureEnd        string
+	VideoCaptureStart      string
+	VideoCaptureEnd        string
 	MetadataRevision       int64
 	Description            string
 	PhotographerName       string

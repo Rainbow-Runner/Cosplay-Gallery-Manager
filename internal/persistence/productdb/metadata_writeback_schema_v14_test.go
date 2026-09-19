@@ -40,7 +40,8 @@ func TestSchemaV13MigratesExistingLibraryWritebackPolicy(t *testing.T) {
 	if _, err := legacy.ExecContext(ctx, `UPDATE media_libraries SET read_only=0 WHERE id=?`, oldWritable.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := legacy.ExecContext(ctx, `ALTER TABLE media_libraries DROP COLUMN metadata_writeback_enabled;
+	if _, err := legacy.ExecContext(ctx, `DROP TABLE item_capture_dates; DROP TABLE gallery_capture_date_reviews; ALTER TABLE galleries DROP COLUMN shoot_date_origin;
+		ALTER TABLE media_libraries DROP COLUMN metadata_writeback_enabled;
 		UPDATE cgm_product_identity SET database_schema_version=13 WHERE singleton_id=1`); err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +53,7 @@ func TestSchemaV13MigratesExistingLibraryWritebackPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer migrated.Close()
-	if migrated.Identity().DatabaseSchemaVersion != 14 {
+	if migrated.Identity().DatabaseSchemaVersion != 15 {
 		t.Fatalf("schema=%d", migrated.Identity().DatabaseSchemaVersion)
 	}
 	for _, check := range []struct {

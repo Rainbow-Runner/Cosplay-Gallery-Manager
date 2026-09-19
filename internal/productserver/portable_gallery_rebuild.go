@@ -282,6 +282,10 @@ func (s *Server) RebuildPortableGalleries(ctx context.Context, importID string) 
 			_ = s.Database.SetPortableGalleryRebuildIssue(ctx, importID, rebuild.SetID, "PORTABLE_MANIFEST_APPLY_FAILED", time.Now())
 			return preflight, err
 		}
+		if _, err := s.Database.CaptureDates().EnqueueGallery(ctx, galleryID, s.VideoTools.FFprobe.Available, time.Now()); err != nil {
+			_ = s.Database.SetPortableGalleryRebuildIssue(ctx, importID, rebuild.SetID, "PORTABLE_CAPTURE_DATE_QUEUE_FAILED", time.Now())
+			return preflight, err
+		}
 		if err := s.Database.FinishPortableGalleryRebuild(ctx, importID, rebuild.SetID, galleryID, sourceID, time.Now()); err != nil {
 			return preflight, err
 		}

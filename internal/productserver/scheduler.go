@@ -22,6 +22,7 @@ func (s *Server) runSchedulerLoop(ctx context.Context) {
 	s.runAutomaticStartupScan(ctx, time.Now())
 	s.runCacheMaintenance(ctx, time.Now())
 	s.runVideoProbeBackfill(ctx, time.Now())
+	s.runCaptureDateBackfill(ctx, time.Now())
 	hourly := time.NewTicker(time.Hour)
 	scanTicker := time.NewTicker(time.Minute)
 	cacheTicker := time.NewTicker(time.Minute)
@@ -39,7 +40,21 @@ func (s *Server) runSchedulerLoop(ctx context.Context) {
 		case now := <-cacheTicker.C:
 			s.runCacheMaintenance(ctx, now)
 			s.runVideoProbeBackfill(ctx, now)
+			s.runCaptureDateBackfill(ctx, now)
 		}
+	}
+}
+
+func (s *Server) runCaptureDateBackfill(ctx context.Context, now time.Time) {
+	count, err := s.Database.CaptureDates().EnqueueBackfill(ctx, 25, s.VideoTools.FFprobe.Available, now)
+	if err != nil {
+		if ctx.Err() == nil {
+			slog.Error("CGM_CAPTURE_DATE_BACKFILL_FAILED", "error", err)
+		}
+		return
+	}
+	if count > 0 {
+		slog.Info("CGM_CAPTURE_DATE_BACKFILL_QUEUED", "item_count", count)
 	}
 }
 

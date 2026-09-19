@@ -3,40 +3,42 @@ package manage
 import "github.com/stashapp/stash/internal/gallery"
 
 type IssueSummary struct {
-	All               int
-	Draft             int
-	OverLimit         int
-	Unavailable       int
-	Blocking          int
-	ProcessingError   int
-	MissingGallery    int
-	MissingItem       int
-	ManifestAttention int
+	All                  int
+	Draft                int
+	OverLimit            int
+	Unavailable          int
+	Blocking             int
+	ProcessingError      int
+	MissingGallery       int
+	MissingItem          int
+	ManifestAttention    int
+	CaptureDateAttention int
 }
 
 type GalleryRow struct {
-	SetID              string
-	Slug               string
-	State              gallery.State
-	Title              string
-	ContentRating      gallery.ContentRating
-	MetadataRevision   int64
-	ScanRevision       int64
-	Browsable          bool
-	SourceType         gallery.SourceType
-	SourcePath         string
-	SourceAvailability gallery.AvailabilityState
-	ReconcileState     gallery.ReconcileState
-	OverLimit          bool
-	ItemCount          int
-	MissingCount       int
-	PendingCount       int
-	ErrorCount         int
-	BlockingIssues     int
-	LastScanErrorCode  string
-	LastScanCompleted  string
-	ManifestStatus     string
-	ManifestCheckedAt  string
+	SetID                   string
+	Slug                    string
+	State                   gallery.State
+	Title                   string
+	ContentRating           gallery.ContentRating
+	MetadataRevision        int64
+	ScanRevision            int64
+	Browsable               bool
+	SourceType              gallery.SourceType
+	SourcePath              string
+	SourceAvailability      gallery.AvailabilityState
+	ReconcileState          gallery.ReconcileState
+	OverLimit               bool
+	ItemCount               int
+	MissingCount            int
+	PendingCount            int
+	ErrorCount              int
+	BlockingIssues          int
+	LastScanErrorCode       string
+	LastScanCompleted       string
+	ManifestStatus          string
+	ManifestCheckedAt       string
+	CaptureDateReviewStatus string
 }
 
 type GalleryPage struct {
@@ -71,19 +73,25 @@ type GalleryItem struct {
 }
 
 type GalleryDetail struct {
-	Row                GalleryRow
-	Aliases            []string
-	Description        string
-	ShootDate          string
-	ShootDatePrecision gallery.ShootDatePrecision
-	PhotographerName   string
-	StudioName         string
-	Items              []GalleryItem
-	Credits            []GalleryCredit
-	Tags               []GalleryTag
-	ExternalLinks      []GalleryExternalLink
-	FolderMatches      []GalleryFolderMatch
-	ScanRuns           []GalleryScanRun
+	Row                     GalleryRow
+	ImageCaptureStart       string
+	ImageCaptureEnd         string
+	VideoCaptureStart       string
+	VideoCaptureEnd         string
+	CaptureDateCandidate    string
+	CaptureDateReviewStatus string
+	Aliases                 []string
+	Description             string
+	ShootDate               string
+	ShootDatePrecision      gallery.ShootDatePrecision
+	PhotographerName        string
+	StudioName              string
+	Items                   []GalleryItem
+	Credits                 []GalleryCredit
+	Tags                    []GalleryTag
+	ExternalLinks           []GalleryExternalLink
+	FolderMatches           []GalleryFolderMatch
+	ScanRuns                []GalleryScanRun
 }
 
 type GalleryScanRun struct {

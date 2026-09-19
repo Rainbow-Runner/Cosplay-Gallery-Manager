@@ -4,9 +4,11 @@ import type { MockedResponse } from "@apollo/client/testing";
 import { MockedProvider } from "@apollo/client/testing/react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { MANAGE_GALLERY, MANAGE_GALLERY_MANIFEST } from "../api/manage";
+import { messages } from "../i18n/messages";
 import { ManageGalleryEditorPage } from "./ManageGalleryEditorPage";
 
 afterEach(cleanup);
@@ -22,6 +24,7 @@ const gallery = {
     pendingCount: 0, errorCount: 0, blockingIssues: 0, lastScanErrorCode: "", lastScanCompleted: "",
   },
   aliases: [], description: "", shootDate: "", shootDatePrecision: "UNKNOWN",
+  imageCaptureStart: "", imageCaptureEnd: "", videoCaptureStart: "", videoCaptureEnd: "", captureDateCandidate: "", captureDateReviewStatus: "",
   photographerName: "", studioName: "", items: [], tags: [], externalLinks: [],
   credits: [{
     coserUUID: "coser-1", coserName: "Alice", position: "1024",
@@ -36,14 +39,21 @@ const gallery = {
 };
 
 function renderPage(mocks: ReadonlyArray<MockedResponse>, tab = "cast") {
-  return render(<MemoryRouter initialEntries={[`/manage/gallery/${setID}?tab=${tab}`]}>
+  return render(<IntlProvider locale="en-GB" messages={messages["en-GB"]}><MemoryRouter initialEntries={[`/manage/gallery/${setID}?tab=${tab}`]}>
     <MockedProvider mocks={mocks}>
       <Routes><Route path="/manage/gallery/:setID" element={<ManageGalleryEditorPage />} /></Routes>
     </MockedProvider>
-  </MemoryRouter>);
+  </MemoryRouter></IntlProvider>);
 }
 
 describe("ManageGalleryEditorPage relations", () => {
+  it("requires an explicit decision when extracted and manual shoot dates differ", async () => {
+    const conflict = { ...gallery, shootDate: "2024-05-20", shootDatePrecision: "DAY", imageCaptureStart: "2024-05-12", imageCaptureEnd: "2024-05-15", captureDateCandidate: "2024-05-12", captureDateReviewStatus: "PENDING" };
+    renderPage([{ request: { query: MANAGE_GALLERY, variables: { setID } }, result: { data: { manageGallery: conflict } } }], "basic");
+    expect(await screen.findByText(/Manual shoot date 2024-05-20 differs/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Keep manual date" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Use extracted date" })).toBeEnabled();
+  });
   it("loads persisted Credit/Cast from the server and marks matching folder hints as saved", async () => {
     renderPage([{
       request: { query: MANAGE_GALLERY, variables: { setID } },

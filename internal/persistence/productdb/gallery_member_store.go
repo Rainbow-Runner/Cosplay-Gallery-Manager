@@ -90,6 +90,9 @@ func (s *GalleryStore) SetItemExcluded(
 	if err := touchGalleryMetadata(ctx, tx, item.GalleryID, expectedRevision, now); err != nil {
 		return gallery.Item{}, err
 	}
+	if err := reconcileGalleryCaptureDate(ctx, tx, item.GalleryID, now); err != nil {
+		return gallery.Item{}, err
+	}
 	if err := demoteInvalidActiveGallery(ctx, tx, item.GalleryID); err != nil {
 		return gallery.Item{}, err
 	}
@@ -256,6 +259,9 @@ func (s *GalleryStore) ForgetItem(
 	if _, err := tx.ExecContext(ctx, `UPDATE galleries SET scan_revision=scan_revision+1,scrubber_revision=scrubber_revision+1 WHERE id=?`, item.GalleryID); err != nil {
 		return err
 	}
+	if err := reconcileGalleryCaptureDate(ctx, tx, item.GalleryID, now); err != nil {
+		return err
+	}
 	if err := demoteInvalidActiveGallery(ctx, tx, item.GalleryID); err != nil {
 		return err
 	}
@@ -325,6 +331,9 @@ func (s *GalleryStore) ForgetMissingItems(ctx context.Context, galleryID int64, 
 		return 0, err
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE galleries SET scan_revision=scan_revision+1,scrubber_revision=scrubber_revision+1 WHERE id=?`, galleryID); err != nil {
+		return 0, err
+	}
+	if err := reconcileGalleryCaptureDate(ctx, tx, galleryID, now); err != nil {
 		return 0, err
 	}
 	if err := demoteInvalidActiveGallery(ctx, tx, galleryID); err != nil {
@@ -453,6 +462,9 @@ func (s *GalleryStore) ReplaceMissingItem(
 		return err
 	}
 	if err := enqueueScanProcessingJobs(ctx, tx, missing.GalleryID, now); err != nil {
+		return err
+	}
+	if err := reconcileGalleryCaptureDate(ctx, tx, missing.GalleryID, now); err != nil {
 		return err
 	}
 	if err := demoteInvalidActiveGallery(ctx, tx, missing.GalleryID); err != nil {

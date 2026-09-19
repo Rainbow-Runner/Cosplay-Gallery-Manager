@@ -1,9 +1,9 @@
 export interface ManageGalleryRow {
   setID: string; slug: string; state: "DRAFT" | "ACTIVE" | "ARCHIVED"; title: string; contentRating?: "NON_ADULT" | "ADULT" | null;
   metadataRevision: number; scanRevision: number; browsable: boolean; sourceType: string; sourcePath: string; sourceAvailability: string;
-  reconcileState: string; overLimit: boolean; itemCount: number; missingCount: number; pendingCount: number; errorCount: number; blockingIssues: number; lastScanErrorCode: string; lastScanCompleted: string; manifestStatus: string; manifestCheckedAt: string;
+  reconcileState: string; overLimit: boolean; itemCount: number; missingCount: number; pendingCount: number; errorCount: number; blockingIssues: number; lastScanErrorCode: string; lastScanCompleted: string; manifestStatus: string; manifestCheckedAt: string; captureDateReviewStatus: string;
 }
-export interface ManageGalleryPage { items: ManageGalleryRow[]; summary: { all: number; draft: number; overLimit: number; unavailable: number; blocking: number; processingError: number; missingGallery: number; manifestAttention: number }; page: number; pageSize: number; totalItems: number; totalPages: number }
+export interface ManageGalleryPage { items: ManageGalleryRow[]; summary: { all: number; draft: number; overLimit: number; unavailable: number; blocking: number; processingError: number; missingGallery: number; manifestAttention: number; captureDateAttention: number }; page: number; pageSize: number; totalItems: number; totalPages: number }
 export interface ManageGalleryManifestBatchPreview { setID: string; title: string; status: string; metadataRevision: number; path: string; fileHash: string; databaseContentChanged: boolean; localFileChanged: boolean; blockReason: string }
 export interface ManageGalleryManifestBatchResult { setID: string; outcome: string; reason: string }
 export interface ManageGalleryItem { uuid: string; relativePath: string; mediaKind: string; contentFormat: string; imageCategory?: string | null; position: string; caption: string; excluded: boolean; availability: string; processingState: string; byteSize: number; videoProbeState: string; videoErrorCode: string; videoContainer: string; videoDurationSeconds: number; videoWidth: number; videoHeight: number; videoCodec: string; audioCodec: string }
@@ -16,6 +16,8 @@ export interface ManageGalleryManifestState { status: "NONE" | "CLEAN" | "DB_DIR
 export type ManageCoserManifestState = ManageGalleryManifestState;
 export interface ManageGalleryDetail {
   row: ManageGalleryRow; aliases: string[]; description: string; shootDate: string; shootDatePrecision: "DAY" | "MONTH" | "UNKNOWN";
+  imageCaptureStart: string; imageCaptureEnd: string; videoCaptureStart: string; videoCaptureEnd: string;
+  captureDateCandidate: string; captureDateReviewStatus: string;
   photographerName: string; studioName: string; items: ManageGalleryItem[]; credits: ManageGalleryCredit[]; tags: ManageGalleryTag[]; externalLinks: ManageGalleryExternalLink[];
   folderMatches: ManageGalleryFolderMatch[];
   scanRuns: { id: string; status: string; startedAt: string; completedAt: string; errorCode: string }[];

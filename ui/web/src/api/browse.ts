@@ -68,6 +68,7 @@ export const GALLERY_DETAIL = gql`
     galleryDetail(slug: $slug, scope: ALL) {
       card { ...GalleryCardFields }
       metadataRevision description photographerName studioName availableBytes mediaParentDirectories redirected
+      imageCaptureStart imageCaptureEnd videoCaptureStart videoCaptureEnd
       credits { coser { uuid name avatarURL } characters { uuid name } works { uuid name } }
       tags { uuid name }
       externalLinks { uuid type label url }

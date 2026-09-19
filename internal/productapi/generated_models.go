@@ -145,6 +145,10 @@ type GalleryCreditDetail struct {
 
 type GalleryDetail struct {
 	Card                   *BrowseGalleryCard     `json:"card"`
+	ImageCaptureStart      string                 `json:"imageCaptureStart"`
+	ImageCaptureEnd        string                 `json:"imageCaptureEnd"`
+	VideoCaptureStart      string                 `json:"videoCaptureStart"`
+	VideoCaptureEnd        string                 `json:"videoCaptureEnd"`
 	MetadataRevision       int64                  `json:"metadataRevision"`
 	Description            string                 `json:"description"`
 	PhotographerName       string                 `json:"photographerName"`
@@ -426,19 +430,25 @@ type ManageGalleryDeletePreview struct {
 }
 
 type ManageGalleryDetail struct {
-	Row                *ManageGalleryRow            `json:"row"`
-	Aliases            []string                     `json:"aliases"`
-	Description        string                       `json:"description"`
-	ShootDate          string                       `json:"shootDate"`
-	ShootDatePrecision ShootDatePrecision           `json:"shootDatePrecision"`
-	PhotographerName   string                       `json:"photographerName"`
-	StudioName         string                       `json:"studioName"`
-	Items              []*ManageGalleryItem         `json:"items"`
-	Credits            []*ManageGalleryCredit       `json:"credits"`
-	Tags               []*ManageGalleryTag          `json:"tags"`
-	ExternalLinks      []*ManageGalleryExternalLink `json:"externalLinks"`
-	FolderMatches      []*ManageGalleryFolderMatch  `json:"folderMatches"`
-	ScanRuns           []*ManageGalleryScanRun      `json:"scanRuns"`
+	Row                     *ManageGalleryRow            `json:"row"`
+	Aliases                 []string                     `json:"aliases"`
+	Description             string                       `json:"description"`
+	ShootDate               string                       `json:"shootDate"`
+	ShootDatePrecision      ShootDatePrecision           `json:"shootDatePrecision"`
+	ImageCaptureStart       string                       `json:"imageCaptureStart"`
+	ImageCaptureEnd         string                       `json:"imageCaptureEnd"`
+	VideoCaptureStart       string                       `json:"videoCaptureStart"`
+	VideoCaptureEnd         string                       `json:"videoCaptureEnd"`
+	CaptureDateCandidate    string                       `json:"captureDateCandidate"`
+	CaptureDateReviewStatus string                       `json:"captureDateReviewStatus"`
+	PhotographerName        string                       `json:"photographerName"`
+	StudioName              string                       `json:"studioName"`
+	Items                   []*ManageGalleryItem         `json:"items"`
+	Credits                 []*ManageGalleryCredit       `json:"credits"`
+	Tags                    []*ManageGalleryTag          `json:"tags"`
+	ExternalLinks           []*ManageGalleryExternalLink `json:"externalLinks"`
+	FolderMatches           []*ManageGalleryFolderMatch  `json:"folderMatches"`
+	ScanRuns                []*ManageGalleryScanRun      `json:"scanRuns"`
 }
 
 type ManageGalleryExternalLink struct {
@@ -520,28 +530,29 @@ type ManageGalleryPage struct {
 }
 
 type ManageGalleryRow struct {
-	SetID              string         `json:"setID"`
-	Slug               string         `json:"slug"`
-	State              GalleryState   `json:"state"`
-	Title              string         `json:"title"`
-	ContentRating      *ContentRating `json:"contentRating,omitempty"`
-	MetadataRevision   int64          `json:"metadataRevision"`
-	ScanRevision       int64          `json:"scanRevision"`
-	Browsable          bool           `json:"browsable"`
-	SourceType         string         `json:"sourceType"`
-	SourcePath         string         `json:"sourcePath"`
-	SourceAvailability string         `json:"sourceAvailability"`
-	ReconcileState     string         `json:"reconcileState"`
-	OverLimit          bool           `json:"overLimit"`
-	ItemCount          int            `json:"itemCount"`
-	MissingCount       int            `json:"missingCount"`
-	PendingCount       int            `json:"pendingCount"`
-	ErrorCount         int            `json:"errorCount"`
-	BlockingIssues     int            `json:"blockingIssues"`
-	LastScanErrorCode  string         `json:"lastScanErrorCode"`
-	LastScanCompleted  string         `json:"lastScanCompleted"`
-	ManifestStatus     string         `json:"manifestStatus"`
-	ManifestCheckedAt  string         `json:"manifestCheckedAt"`
+	SetID                   string         `json:"setID"`
+	Slug                    string         `json:"slug"`
+	State                   GalleryState   `json:"state"`
+	Title                   string         `json:"title"`
+	ContentRating           *ContentRating `json:"contentRating,omitempty"`
+	MetadataRevision        int64          `json:"metadataRevision"`
+	ScanRevision            int64          `json:"scanRevision"`
+	Browsable               bool           `json:"browsable"`
+	SourceType              string         `json:"sourceType"`
+	SourcePath              string         `json:"sourcePath"`
+	SourceAvailability      string         `json:"sourceAvailability"`
+	ReconcileState          string         `json:"reconcileState"`
+	OverLimit               bool           `json:"overLimit"`
+	ItemCount               int            `json:"itemCount"`
+	MissingCount            int            `json:"missingCount"`
+	PendingCount            int            `json:"pendingCount"`
+	ErrorCount              int            `json:"errorCount"`
+	BlockingIssues          int            `json:"blockingIssues"`
+	LastScanErrorCode       string         `json:"lastScanErrorCode"`
+	LastScanCompleted       string         `json:"lastScanCompleted"`
+	ManifestStatus          string         `json:"manifestStatus"`
+	ManifestCheckedAt       string         `json:"manifestCheckedAt"`
+	CaptureDateReviewStatus string         `json:"captureDateReviewStatus"`
 }
 
 type ManageGalleryScanRun struct {
@@ -583,15 +594,16 @@ type ManageIgnoredSourceRemovalPreview struct {
 }
 
 type ManageIssueSummary struct {
-	All               int `json:"all"`
-	Draft             int `json:"draft"`
-	OverLimit         int `json:"overLimit"`
-	Unavailable       int `json:"unavailable"`
-	Blocking          int `json:"blocking"`
-	ProcessingError   int `json:"processingError"`
-	MissingGallery    int `json:"missingGallery"`
-	MissingItem       int `json:"missingItem"`
-	ManifestAttention int `json:"manifestAttention"`
+	All                  int `json:"all"`
+	Draft                int `json:"draft"`
+	OverLimit            int `json:"overLimit"`
+	Unavailable          int `json:"unavailable"`
+	Blocking             int `json:"blocking"`
+	ProcessingError      int `json:"processingError"`
+	MissingGallery       int `json:"missingGallery"`
+	MissingItem          int `json:"missingItem"`
+	ManifestAttention    int `json:"manifestAttention"`
+	CaptureDateAttention int `json:"captureDateAttention"`
 }
 
 type ManageLibrary struct {

@@ -211,6 +211,22 @@ func (r *mutationResolver) UpdateGalleryMetadata(ctx context.Context, setID stri
 	return manageGalleryDetail(value), nil
 }
 
+// ResolveGalleryCaptureDate is the resolver for the resolveGalleryCaptureDate field.
+func (r *mutationResolver) ResolveGalleryCaptureDate(ctx context.Context, setID string, expectedMetadataRevision int64, candidate string, decision string) (*ManageGalleryDetail, error) {
+	id, err := r.Database.Manage().GalleryID(ctx, setID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	if err = r.Database.CaptureDates().Resolve(ctx, id, expectedMetadataRevision, candidate, decision, time.Now()); err != nil {
+		return nil, manageError(err)
+	}
+	value, err := r.Database.Manage().GalleryDetail(ctx, setID)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	return manageGalleryDetail(value), nil
+}
+
 // SetGalleryState is the resolver for the setGalleryState field.
 func (r *mutationResolver) SetGalleryState(ctx context.Context, setID string, expectedMetadataRevision int64, state GalleryState) (*ManageGalleryDetail, error) {
 	id, err := r.Database.Manage().GalleryID(ctx, setID)

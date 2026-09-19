@@ -22,6 +22,12 @@ func (s *BrowseStore) GalleryDetailBySlug(ctx context.Context, scope browse.Scop
 	}
 	result := browse.GalleryDetail{Card: card, MetadataRevision: resolved.MetadataRevision, Description: resolved.Description, PhotographerName: resolved.PhotographerName,
 		StudioName: resolved.StudioName, Redirected: redirected}
+	dateSummary, err := (&CaptureDateStore{db: s.db}).Summary(ctx, resolved.ID)
+	if err != nil {
+		return browse.GalleryDetail{}, err
+	}
+	result.ImageCaptureStart, result.ImageCaptureEnd = dateSummary.Images.Start, dateSummary.Images.End
+	result.VideoCaptureStart, result.VideoCaptureEnd = dateSummary.Videos.Start, dateSummary.Videos.End
 	if err := s.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(byte_size),0) FROM gallery_items
 		WHERE gallery_id=? AND excluded=0 AND availability_state='AVAILABLE'`, resolved.ID).Scan(&result.AvailableBytes); err != nil {
 		return browse.GalleryDetail{}, err

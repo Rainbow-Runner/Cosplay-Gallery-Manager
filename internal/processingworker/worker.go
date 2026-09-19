@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stashapp/stash/internal/gallery"
+	"github.com/stashapp/stash/internal/imagemetadata"
 	"github.com/stashapp/stash/internal/mediaaccess"
 	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/persistence/productdb"
@@ -21,6 +22,7 @@ type Worker struct {
 	Cache                 mediaprocessing.CacheWriter
 	Generators            []mediaprocessing.Generator
 	VideoProbe            mediaprocessing.VideoProbe
+	CaptureProbe          mediaprocessing.ProbeAdapter
 	ProbeProfileHash      string
 	PosterProfileHash     string
 	ProbeUnavailableCode  string
@@ -67,7 +69,11 @@ func (worker Worker) RunOne(ctx context.Context, owner string, lease time.Durati
 	}()
 	var processErr error
 	if job.Kind == mediaprocessing.JobItemTechnicalMetadata {
-		processErr = worker.processVideoProbe(processingContext, job, now)
+		if job.Variant == productdb.CaptureDateVariant {
+			processErr = worker.processCaptureDate(processingContext, job)
+		} else {
+			processErr = worker.processVideoProbe(processingContext, job, now)
+		}
 	} else {
 		processErr = worker.processDerivative(processingContext, job)
 	}
@@ -89,6 +95,51 @@ func (worker Worker) RunOne(ctx context.Context, owner string, lease time.Durati
 		return job, err
 	}
 	return job, nil
+}
+
+func (worker Worker) processCaptureDate(ctx context.Context, job mediaprocessing.Job) error {
+	item, err := worker.Database.FindProcessingItem(ctx, job.ItemUUID)
+	if err != nil {
+		return err
+	}
+	if job.ContentRevision == nil || item.ContentRevision != *job.ContentRevision || item.Excluded || item.Availability != gallery.AvailabilityAvailable || (item.MediaKind != gallery.MediaKindStaticImage && item.MediaKind != gallery.MediaKindVideo) {
+		return ErrStaleContent
+	}
+	materialized, err := worker.Materializer.Open(ctx, mediaaccess.Source{Type: item.SourceType, Path: item.SourcePath, RelativePath: item.RelativePath})
+	if err != nil {
+		return err
+	}
+	defer materialized.Close()
+	var date, tag string
+	if item.MediaKind == gallery.MediaKindStaticImage {
+		metadata, err := imagemetadata.ExtractPath(materialized.Path)
+		if err != nil {
+			return err
+		}
+		for _, entry := range metadata.Entries {
+			if entry.Key == "exif.DateTimeOriginal" {
+				for _, layout := range []string{"2006:01:02 15:04:05", "2006-01-02 15:04:05"} {
+					parsed, parseErr := time.Parse(layout, entry.Value)
+					if parseErr == nil && parsed.Year() >= 1900 && parsed.Year() <= 2100 {
+						date = parsed.Format("2006-01-02")
+						tag = "exif.DateTimeOriginal"
+						break
+					}
+				}
+				break
+			}
+		}
+	} else {
+		timezone, err := worker.Database.CaptureDates().Timezone(ctx, item.ItemUUID)
+		if err != nil {
+			return err
+		}
+		date, tag, err = worker.CaptureProbe.CaptureDate(ctx, materialized.Path, timezone)
+		if err != nil {
+			return err
+		}
+	}
+	return worker.Database.CaptureDates().Publish(ctx, item.ItemUUID, item.ContentRevision, date, tag, time.Now())
 }
 
 func (worker Worker) processVideoProbe(ctx context.Context, job mediaprocessing.Job, now time.Time) error {

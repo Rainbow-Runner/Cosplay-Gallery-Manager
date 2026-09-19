@@ -48,6 +48,7 @@ func (s *ManifestStore) applyGalleryBusinessSnapshot(
 	result, err := tx.ExecContext(ctx, `
 		UPDATE galleries SET title = ?, description = ?, shoot_date = NULLIF(?, ''),
 			shoot_date_precision = NULLIF(?, ''), content_rating = NULLIF(?, ''),
+			shoot_date_origin = 'MANUAL',
 			photographer_name = ?, studio_name = ?, metadata_revision = metadata_revision + 1,
 			updated_at_utc = ?
 		WHERE id = ? AND metadata_revision = ?
@@ -59,6 +60,7 @@ func (s *ManifestStore) applyGalleryBusinessSnapshot(
 	if err := requireOneRevisionRow(result); err != nil {
 		return 0, err
 	}
+	if _,err:=tx.ExecContext(ctx,`DELETE FROM gallery_capture_date_reviews WHERE gallery_id=? AND manual_date<>COALESCE((SELECT shoot_date FROM galleries WHERE id=?),'')`,galleryID,galleryID);err!=nil{return 0,err}
 
 	if err := applyManifestRating(ctx, tx, galleryID, 0, snapshot["rating"], now); err != nil {
 		return 0, err
@@ -83,6 +85,9 @@ func (s *ManifestStore) applyGalleryBusinessSnapshot(
 		return 0, err
 	}
 	if err := applyManifestCover(ctx, tx, galleryID, snapshot["cover"], now); err != nil {
+		return 0, err
+	}
+	if err := reconcileGalleryCaptureDate(ctx, tx, galleryID, now); err != nil {
 		return 0, err
 	}
 	if err := demoteInvalidActiveGallery(ctx, tx, galleryID); err != nil {

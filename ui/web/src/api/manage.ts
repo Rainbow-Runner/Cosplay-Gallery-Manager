@@ -4,6 +4,7 @@ const MANAGE_GALLERY_DETAIL = gql`
   fragment ManageGalleryDetailFields on ManageGalleryDetail {
     row { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues lastScanErrorCode lastScanCompleted }
     aliases description shootDate shootDatePrecision photographerName studioName
+    imageCaptureStart imageCaptureEnd videoCaptureStart videoCaptureEnd captureDateCandidate captureDateReviewStatus
     items { uuid relativePath mediaKind contentFormat imageCategory position caption excluded availability processingState byteSize videoProbeState videoErrorCode videoContainer videoDurationSeconds videoWidth videoHeight videoCodec audioCodec }
     credits { coserUUID coserName position cast { characterUUID characterName workUUID workName position } }
     tags { uuid name position }
@@ -15,8 +16,8 @@ const MANAGE_GALLERY_DETAIL = gql`
 
 export const MANAGE_GALLERIES = gql`
   query ManageGalleries($page: Int!, $issue: String!, $search: String!) { manageGalleries(page: $page, issue: $issue, search: $search) {
-    page pageSize totalItems totalPages summary { all draft overLimit unavailable blocking processingError missingGallery manifestAttention }
-    items { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues lastScanErrorCode lastScanCompleted manifestStatus manifestCheckedAt }
+    page pageSize totalItems totalPages summary { all draft overLimit unavailable blocking processingError missingGallery manifestAttention captureDateAttention }
+    items { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues lastScanErrorCode lastScanCompleted manifestStatus manifestCheckedAt captureDateReviewStatus }
   } }
 `;
 export const PREVIEW_GALLERY_MANIFEST_BATCH_PUSH = gql`query PreviewGalleryManifestPush($setIDs: [ID!]!) { previewGalleryManifestPush(setIDs: $setIDs) { setID title status metadataRevision path fileHash databaseContentChanged localFileChanged blockReason } }`;
@@ -31,6 +32,14 @@ export const UPDATE_GALLERY_METADATA = gql`
   ${MANAGE_GALLERY_DETAIL}
   mutation UpdateGalleryMetadata($setID: ID!, $expectedMetadataRevision: Int64!, $input: UpdateGalleryMetadataInput!) {
     updateGalleryMetadata(setID: $setID, expectedMetadataRevision: $expectedMetadataRevision, input: $input) {
+      ...ManageGalleryDetailFields
+    }
+  }
+`;
+export const RESOLVE_GALLERY_CAPTURE_DATE = gql`
+  ${MANAGE_GALLERY_DETAIL}
+  mutation ResolveGalleryCaptureDate($setID: ID!, $expectedMetadataRevision: Int64!, $candidate: String!, $decision: String!) {
+    resolveGalleryCaptureDate(setID: $setID, expectedMetadataRevision: $expectedMetadataRevision, candidate: $candidate, decision: $decision) {
       ...ManageGalleryDetailFields
     }
   }

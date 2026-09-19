@@ -21,7 +21,8 @@ func TestSchemaV12MigratesToManifestInspectionV13(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := old.ExecContext(ctx, `DROP TABLE gallery_manifest_inspections; DROP TABLE gallery_manifest_inspection_progress;
+	if _, err := old.ExecContext(ctx, `DROP TABLE item_capture_dates; DROP TABLE gallery_capture_date_reviews; ALTER TABLE galleries DROP COLUMN shoot_date_origin;
+		DROP TABLE gallery_manifest_inspections; DROP TABLE gallery_manifest_inspection_progress;
 		ALTER TABLE media_libraries DROP COLUMN metadata_writeback_enabled;
 		UPDATE cgm_product_identity SET database_schema_version=12 WHERE singleton_id=1`); err != nil {
 		old.Close()
@@ -35,7 +36,7 @@ func TestSchemaV12MigratesToManifestInspectionV13(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer migrated.Close()
-	if migrated.Identity().DatabaseSchemaVersion != 14 {
+	if migrated.Identity().DatabaseSchemaVersion != 15 {
 		t.Fatalf("schema = %d", migrated.Identity().DatabaseSchemaVersion)
 	}
 	if err := validateSchemaV13(ctx, migrated.DB); err != nil {

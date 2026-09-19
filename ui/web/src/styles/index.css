@@ -756,6 +756,7 @@ a { color: inherit; text-decoration: none; }
 .manage-help-topics a { padding: .6rem .7rem; border-radius: var(--cgm-radius-sm); color: var(--cgm-muted-foreground); font-size: .75rem; }
 .manage-help-topics a[aria-current="page"] { background: var(--cgm-muted); color: var(--cgm-foreground); font-weight: 600; }
 .manage-help-article { min-width: 0; overflow: hidden; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius); background: var(--cgm-surface); box-shadow: 0 1px 2px rgb(0 0 0 / 4%); }
+.manage-help-layout > .manage-help-article { grid-column: 2; }
 .manage-help-article > header, .manage-help-article > section { padding: clamp(1.1rem, 2.5vw, 1.75rem); }
 .manage-help-article > header { border-bottom: 1px solid var(--cgm-border); background: var(--cgm-surface-subtle); }
 .manage-help-article > header > p { margin: 0 0 .4rem; color: var(--cgm-primary); font-size: .62rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
@@ -782,6 +783,7 @@ a { color: inherit; text-decoration: none; }
 .manage-help-safety ul { display: grid; gap: .65rem; margin: 0; padding-left: 1.15rem; color: var(--cgm-muted-foreground); font-size: .72rem; line-height: 1.6; }
 @media (max-width: 900px) {
   .manage-help-layout { grid-template-columns: 1fr; }
+  .manage-help-layout > .manage-help-article { grid-column: 1; }
   .manage-help-topics { position: static; }
   .manage-help-card-grid { grid-template-columns: 1fr; }
 }

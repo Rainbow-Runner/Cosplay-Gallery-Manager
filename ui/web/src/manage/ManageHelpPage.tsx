@@ -1,6 +1,10 @@
 import { useIntl } from "react-intl";
 import { Link } from "react-router-dom";
 
+const sourceAvailability = ["AVAILABLE", "MISSING", "UNREADABLE"] as const;
+const sourceReconciliation = ["NEVER_SCANNED", "SCANNING", "IN_SYNC", "NEEDS_RESCAN", "ERROR"] as const;
+const manifestStatuses = ["UNCHECKED", "STALE", "NONE", "CLEAN", "DB_DIRTY", "FILE_DIRTY", "CONFLICT", "MISSING", "ERROR", "SOURCE_UNAVAILABLE"] as const;
+
 export function ManageHelpPage() {
   const intl = useIntl();
   const f = (id: string) => intl.formatMessage({ id });
@@ -11,7 +15,8 @@ export function ManageHelpPage() {
     <div className="manage-help-layout">
       <nav className="manage-help-topics" aria-label={f("manage.help.topics")}>
         <strong>{f("manage.help.topics")}</strong>
-        <a href="#libraries" aria-current="page">{f("manage.help.libraries.title")}</a>
+        <a href="#libraries">{f("manage.help.libraries.title")}</a>
+        <a href="#gallery-status">{f("manage.help.gallery.title")}</a>
       </nav>
       <article id="libraries" className="manage-help-article">
         <header>
@@ -57,6 +62,35 @@ export function ManageHelpPage() {
         <section className="manage-help-safety" aria-labelledby="help-safety-title">
           <h4 id="help-safety-title">{f("manage.help.safety.title")}</h4>
           <ul><li>{f("manage.help.safety.explicit")}</li><li>{f("manage.help.safety.snapshot")}</li><li>{f("manage.help.safety.modes")}</li><li>{f("manage.help.safety.activation")}</li><li>{f("manage.help.safety.review")}</li></ul>
+        </section>
+      </article>
+      <article id="gallery-status" className="manage-help-article">
+        <header>
+          <p>{f("manage.help.gallery.eyebrow")}</p>
+          <h3>{f("manage.help.gallery.title")}</h3>
+          <span>{f("manage.help.gallery.summary")}</span>
+          <div className="manage-help-actions"><Link to="/manage/gallery">{f("manage.help.gallery.open")}</Link></div>
+        </header>
+        <section aria-labelledby="help-gallery-source-title">
+          <h4 id="help-gallery-source-title">{f("manage.help.gallery.source.title")}</h4>
+          <p>{f("manage.help.gallery.source.intro")}</p>
+          <div className="manage-help-table-wrap"><table><thead><tr><th>{f("manage.help.gallery.code")}</th><th>{f("manage.help.gallery.meaning")}</th></tr></thead><tbody>
+            {sourceAvailability.map((code) => <tr key={code}><th>{code}</th><td>{f(`manage.help.gallery.source.availability.${code}`)}</td></tr>)}
+          </tbody></table></div>
+          <p>{f("manage.help.gallery.source.reconcileIntro")}</p>
+          <div className="manage-help-table-wrap"><table><thead><tr><th>{f("manage.help.gallery.code")}</th><th>{f("manage.help.gallery.meaning")}</th></tr></thead><tbody>
+            {sourceReconciliation.map((code) => <tr key={code}><th>{code}</th><td>{f(`manage.help.gallery.source.reconcile.${code}`)}</td></tr>)}
+          </tbody></table></div>
+          <p>{f("manage.help.gallery.source.errorCode")}</p>
+        </section>
+        <section aria-labelledby="help-gallery-manifest-title">
+          <h4 id="help-gallery-manifest-title">{f("manage.help.gallery.manifest.title")}</h4>
+          <p>{f("manage.help.gallery.manifest.intro")}</p>
+          <div className="manage-help-table-wrap"><table><thead><tr><th>{f("manage.help.gallery.code")}</th><th>{f("manage.help.gallery.meaning")}</th></tr></thead><tbody>
+            {manifestStatuses.map((code) => <tr key={code}><th>{code}</th><td>{f(`manage.help.gallery.manifest.${code}`)}</td></tr>)}
+          </tbody></table></div>
+          <p>{f("manage.help.gallery.manifest.checkedAt")}</p>
+          <p>{f("manage.help.gallery.manifest.actions")}</p>
         </section>
       </article>
     </div>

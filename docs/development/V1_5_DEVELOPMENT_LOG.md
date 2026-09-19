@@ -2201,8 +2201,14 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 2026-09-19 12:09 CST停服并确认`MainPID=0`，在独立0700目录`/home/rainbowrunner/cos/bk/cgm-pre-writeback-v14-a1f3677-pYln6T`备份schema v13 SQLite一致副本、旧二进制、配置、用户systemd单元和完整Coser托管根；程序、配置、单元及Coser树与原件逐项比较一致。备份数据库`integrity_check=ok`，SHA-256为`d958d1b2c6bda8d15d5fc7f7c8d1c7360490c69017f1e33ef2211a4e6541ce1d`，旧二进制为`e9ea968c0a7dd64c050f63338c23fbe00dc52cdf7e7a06b847758c142d0ba4b9`；备份时两个媒体库旧`read_only`依次为1和0，Coser/Work/Character/Tag/Gallery/Source/Item为`135/108/697/23/8/8/570`。回滚目录不含原始媒体、缓存或日志。
 - 候选二进制逐字节校验后原子替换，12:11 CST启动一次并成功自动迁移至schema v14。正式库`integrity_check=ok`，上述业务计数不变；旧库1继承为`metadata_writeback_enabled=0`，`collection2`继承为1。自动迁移前快照`product.sqlite.pre-schema-v13-1789791067361095306.bak`独立检查为schema v13且完整性`ok`。服务`active/running`、`NRestarts=0`，Health/Ready为204，媒体库与Gallery后台深链200；About精确指向`a1f3677`且`exactSourceAvailable=true`，本次启动日志无WARN、ERROR、FAILED、panic或fatal。未自动执行Manifest Push、未修改媒体/Manifest/配置/缓存，未远端推送。真实浏览器的媒体库开关和正式批量Push由所有者继续验收。
 
-# 2026-09-19 作品集 Source/Manifest 状态帮助说明（本地源码）
+# 2026-09-19 作品集 Source/Manifest 状态帮助说明（已部署）
 
 - 按用户要求保持 Gallery 列表中的 Source、Manifest 短语与现有交互不变，只在 Manage → Help 新增独立的“作品集列表：Source 与 Manifest”中英双语指南和跳转列表入口。Source 分开解释来源可用状态（`AVAILABLE/MISSING/UNREADABLE`）、成员扫描对账状态（`NEVER_SCANNED/SCANNING/IN_SYNC/NEEDS_RESCAN/ERROR`）及最近扫描错误码；Manifest 逐项解释`UNCHECKED/STALE/NONE/CLEAN/DB_DIRTY/FILE_DIRTY/CONFLICT/MISSING/ERROR/SOURCE_UNAVAILABLE`。
 - 说明列表 Manifest 取最近一次已保存巡检、不是每行实时读取；`IN_SYNC`不等于`CLEAN`，`STALE`不直接证明文件损坏，`NONE`与已建立基线后的`MISSING`不同。增加检查时间、批量 Push 复核、媒体库写回策略及父目录可写条件的说明。帮助页第二篇文章固定在桌面正文列，窄屏恢复单列；不修改任何产品数据或后台 Gallery 列表。
 - 回归：新增中英文帮助页渲染及状态说明断言；TypeScript检查、Vitest 34文件124项和Vite生产构建（685模块）通过，仅见既存主chunk大小提示；`git diff --check`通过。纯前端与开发文档变更，无后端、数据库schema、业务库、Manifest或媒体写入。
+
+### 提交、备份与无 schema 增量部署
+
+- 功能和部署前记录提交为`4f14073d28c8d2ae00972eec09e43edf5e93bc5d`（`Explain Gallery Source and Manifest statuses in Help`）。正式三标签单文件构建`vcs.modified=false`且revision一致，候选SHA-256为`012c8d64a8103d87b0faef5f09b3c31bbeceb92064a3af3bb4d4bb0e64bbd726`；仅见既存主chunk大小提示。部署前服务`active/running`、Health 204。
+- 2026-09-19 12:35 CST停服确认`MainPID=0`，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-help-4f14073-RmOG3z`保存一致SQLite副本、旧二进制、配置、用户服务单元和完整Coser托管目录；原件与副本逐项核对，Coser目录递归比较无差异。备份库`integrity_check=ok`，SHA-256为`98ee99c787626851a0800e9b97472293052bd15ac7a6125824c3dcaaf0ea1c20`；旧程序SHA-256为`200b3e7bb4b11978c54b96771909c0ebab80621affea8d3f4bd734bf3b1dcfcf`。备份不含原始媒体、缓存或日志。
+- 候选复制至正式程序同目录并逐字节校验后原子替换，12:36 CST启动一次。服务`active/running`、`NRestarts=0`，Health/Ready均204，`/manage/help`及新增Help JS、CSS资源均200；About精确报告`4f14073`且`exactSourceAvailable=true`。正式库`integrity_check=ok`，备份与部署后Coser/Work/Character/Tag/Gallery/Source/Item计数均为`135/108/697/23/8/8/570`；本次启动无warning以上日志。未迁移schema，未修改正式配置、原始媒体、Manifest或缓存；未远端推送。

@@ -326,12 +326,23 @@ func (r *mutationResolver) ResetGalleryCover(ctx context.Context, setID string, 
 
 // CreateMediaLibrary is the resolver for the createMediaLibrary field.
 func (r *mutationResolver) CreateMediaLibrary(ctx context.Context, input CreateMediaLibraryInput) (*ManageLibrary, error) {
-	value, err := r.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{Name: input.Name, RootPath: input.RootPath, Enabled: input.Enabled, ReadOnly: input.ReadOnly, CaptureTimezone: input.CaptureTimezone}, time.Now())
+	value, err := r.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{Name: input.Name, RootPath: input.RootPath, Enabled: input.Enabled, MetadataWritebackEnabled: &input.MetadataWritebackEnabled, CaptureTimezone: input.CaptureTimezone}, time.Now())
 	if err != nil {
 		r.auditManage(ctx, "LIBRARY_CREATE", "LIBRARY", "", "LIBRARY_CREATE_FAILED", err, nil)
 		return nil, manageError(err)
 	}
-	r.auditManage(ctx, "LIBRARY_CREATE", "LIBRARY", strconv.FormatInt(value.ID, 10), "", nil, map[string]any{"enabled": value.Enabled, "read_only": value.ReadOnly})
+	r.auditManage(ctx, "LIBRARY_CREATE", "LIBRARY", strconv.FormatInt(value.ID, 10), "", nil, map[string]any{"enabled": value.Enabled, "metadata_writeback_enabled": value.MetadataWritebackEnabled})
+	return manageLibrary(value, nil), nil
+}
+
+// SetMediaLibraryMetadataWriteback is the resolver for the setMediaLibraryMetadataWriteback field.
+func (r *mutationResolver) SetMediaLibraryMetadataWriteback(ctx context.Context, libraryID int64, enabled bool, expectedUpdatedAt string) (*ManageLibrary, error) {
+	value, err := r.Database.Libraries().SetMetadataWriteback(ctx, libraryID, enabled, expectedUpdatedAt, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "LIBRARY_METADATA_WRITEBACK_UPDATE", "LIBRARY", strconv.FormatInt(libraryID, 10), "LIBRARY_METADATA_WRITEBACK_UPDATE_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "LIBRARY_METADATA_WRITEBACK_UPDATE", "LIBRARY", strconv.FormatInt(libraryID, 10), "", nil, map[string]any{"metadata_writeback_enabled": enabled})
 	return manageLibrary(value, nil), nil
 }
 
@@ -1212,6 +1223,7 @@ func (r *mutationResolver) PushGalleryManifests(ctx context.Context, items []*Ga
 	seen := map[string]bool{}
 	results := make([]*ManageGalleryManifestBatchResult, 0, len(items))
 	counts := map[string]int{}
+	blocked := 0
 	for _, item := range items {
 		if item == nil || seen[item.SetID] {
 			return nil, errors.New("invalid or duplicate Gallery selection")
@@ -1232,12 +1244,19 @@ func (r *mutationResolver) PushGalleryManifests(ctx context.Context, items []*Ga
 		}
 		results = append(results, &ManageGalleryManifestBatchResult{SetID: item.SetID, Outcome: result.Outcome, Reason: result.Reason})
 		counts[result.Outcome]++
+		if result.Outcome == "SKIPPED" && result.Reason != "NO_CONTENT_CHANGE" && result.Reason != "LOCAL_FILE_CHANGED" {
+			blocked++
+		}
 	}
 	var auditErr error
+	auditCode := "MANIFEST_BATCH_PARTIAL_FAILURE"
 	if counts["FAILED"] > 0 {
 		auditErr = errors.New("one or more Gallery Manifest Pushes failed")
+	} else if blocked == len(items) {
+		auditErr = errors.New("every selected Gallery Manifest was blocked")
+		auditCode = "MANIFEST_BATCH_ALL_BLOCKED"
 	}
-	r.auditManage(ctx, "GALLERY_MANIFEST_BATCH_PUSH", "GALLERY", "", "MANIFEST_BATCH_PARTIAL_FAILURE", auditErr, map[string]any{"selected": len(items), "pushed": counts["PUSHED"], "skipped": counts["SKIPPED"], "failed": counts["FAILED"], "overwrite_local": overwriteLocal})
+	r.auditManage(ctx, "GALLERY_MANIFEST_BATCH_PUSH", "GALLERY", "", auditCode, auditErr, map[string]any{"selected": len(items), "pushed": counts["PUSHED"], "skipped": counts["SKIPPED"], "blocked": blocked, "failed": counts["FAILED"], "overwrite_local": overwriteLocal})
 	return results, nil
 }
 

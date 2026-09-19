@@ -66,7 +66,7 @@ func TestAutomaticScanIsOptInPersistentAndRunsDiscovery(t *testing.T) {
 	now := time.Date(2026, 7, 26, 6, 0, 0, 0, time.UTC)
 	libraryRoot := t.TempDir()
 	mediaLibrary, err := server.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{
-		Name: "Automatic", RootPath: libraryRoot, Enabled: true, ReadOnly: true, CaptureTimezone: "UTC",
+		Name: "Automatic", RootPath: libraryRoot, Enabled: true, CaptureTimezone: "UTC",
 	}, now)
 	if err != nil {
 		t.Fatal(err)
@@ -157,7 +157,7 @@ func TestAutomaticScanQueuesSavedLibraryAutomationPolicy(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 8, 29, 7, 0, 0, 0, time.UTC)
 	mediaLibrary, err := server.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{
-		Name: "Automated", RootPath: t.TempDir(), Enabled: true, ReadOnly: true, CaptureTimezone: "UTC",
+		Name: "Automated", RootPath: t.TempDir(), Enabled: true, CaptureTimezone: "UTC",
 	}, now)
 	if err != nil {
 		t.Fatal(err)
@@ -196,7 +196,7 @@ func TestAutomaticScanUsesConfiguredIntervalAndStartupPolicy(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 9, 10, 8, 0, 0, 0, time.UTC)
 	if _, err := server.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{
-		Name: "Scheduled", RootPath: t.TempDir(), Enabled: true, ReadOnly: true, CaptureTimezone: "UTC",
+		Name: "Scheduled", RootPath: t.TempDir(), Enabled: true, CaptureTimezone: "UTC",
 	}, now); err != nil {
 		t.Fatal(err)
 	}

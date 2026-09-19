@@ -7,7 +7,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { IntlProvider } from "react-intl";
 
-import { APPLY_MEDIA_LIBRARY_CHANGE, CANCEL_LIBRARY_AUTOMATION, DELETE_RECOGNITION_RULE, MANAGE_DISCOVERY, MANAGE_IGNORED_SOURCES, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, PREVIEW_IGNORED_SOURCE_REMOVAL, PREVIEW_MEDIA_LIBRARY_CHANGE, REVOKE_IGNORED_SOURCE, RUN_LIBRARY_AUTOMATION, SAVE_LIBRARY_AUTOMATION_POLICY, TRANSFER_MEDIA_LIBRARY_SOURCE, UPDATE_RECOGNITION_RULE } from "../api/manage";
+import { APPLY_MEDIA_LIBRARY_CHANGE, CANCEL_LIBRARY_AUTOMATION, DELETE_RECOGNITION_RULE, MANAGE_DISCOVERY, MANAGE_IGNORED_SOURCES, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, PREVIEW_IGNORED_SOURCE_REMOVAL, PREVIEW_MEDIA_LIBRARY_CHANGE, REVOKE_IGNORED_SOURCE, RUN_LIBRARY_AUTOMATION, SAVE_LIBRARY_AUTOMATION_POLICY, SET_MEDIA_LIBRARY_METADATA_WRITEBACK, TRANSFER_MEDIA_LIBRARY_SOURCE, UPDATE_RECOGNITION_RULE } from "../api/manage";
 import { messages } from "../i18n/messages";
 import { ManageLibrariesPage } from "./ManageLibrariesPage";
 
@@ -19,7 +19,7 @@ const markerRule = {
 };
 const library = {
   id: 2, name: "Collection", rootPath: "/media/collection", enabled: true,
-  readOnly: true, captureTimezone: "Asia/Shanghai", rules: [markerRule],
+  metadataWritebackEnabled: false, boundGalleryCount: 8, updatedAt: "2026-09-18T14:00:00Z", captureTimezone: "Asia/Shanghai", rules: [markerRule],
 };
 const discoveryMock: MockedResponse = {
   request: { query: MANAGE_DISCOVERY, variables: { libraryID: 2 } },
@@ -43,6 +43,19 @@ function renderPage(mocks: ReadonlyArray<MockedResponse>) {
 }
 
 describe("ManageLibrariesPage recognition rules", () => {
+  it("enables metadata sidecar writeback for an existing library with confirmation", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    renderPage([
+      { request: { query: MANAGE_LIBRARIES }, result: { data: { manageLibraries: [library] } } },
+      discoveryMock,
+      { request: { query: SET_MEDIA_LIBRARY_METADATA_WRITEBACK, variables: { libraryID: 2, enabled: true, expectedUpdatedAt: library.updatedAt } }, result: { data: { setMediaLibraryMetadataWriteback: { id: 2, metadataWritebackEnabled: true, updatedAt: "2026-09-18T15:00:00Z" } } } },
+      { request: { query: MANAGE_LIBRARIES }, result: { data: { manageLibraries: [{ ...library, metadataWritebackEnabled: true, updatedAt: "2026-09-18T15:00:00Z" }] } } },
+    ]);
+    fireEvent.click(await screen.findByRole("button", { name: "Enable sidecar writeback" }));
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("8 bound galleries"));
+    expect(await screen.findByRole("button", { name: "Disable sidecar writeback" })).toBeInTheDocument();
+  });
+
   it("reviews a global ignore before password-confirmed removal", async () => {
     const record = { id: 7, libraryID: null, setID: null, path: "/media/collection/old", reason: "SOURCE_REBOUND", createdAt: "2026-09-14T00:00:00Z" };
     renderPage([

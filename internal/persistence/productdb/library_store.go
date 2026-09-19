@@ -24,11 +24,11 @@ func (db *Database) Libraries() *LibraryStore {
 }
 
 type CreateLibraryInput struct {
-	Name            string
-	RootPath        string
-	Enabled         bool
-	ReadOnly        bool
-	CaptureTimezone string
+	Name                     string
+	RootPath                 string
+	Enabled                  bool
+	MetadataWritebackEnabled *bool
+	CaptureTimezone          string
 }
 
 func (s *LibraryStore) Create(
@@ -51,12 +51,16 @@ func (s *LibraryStore) Create(
 	}
 
 	timestamp := formatTime(normalisedTime(now))
+	writebackEnabled := true
+	if input.MetadataWritebackEnabled != nil {
+		writebackEnabled = *input.MetadataWritebackEnabled
+	}
 	result, err := s.db.ExecContext(ctx, `
 		INSERT INTO media_libraries (
-			name, root_path, enabled, read_only, capture_timezone,
+			name, root_path, enabled, metadata_writeback_enabled, capture_timezone,
 			created_at_utc, updated_at_utc
 		) VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, input.Name, root, input.Enabled, input.ReadOnly, input.CaptureTimezone, timestamp, timestamp)
+	`, input.Name, root, input.Enabled, writebackEnabled, input.CaptureTimezone, timestamp, timestamp)
 	if err != nil {
 		return library.Library{}, fmt.Errorf("creating media library: %w", err)
 	}
@@ -73,6 +77,23 @@ func (s *LibraryStore) Find(ctx context.Context, id int64) (library.Library, err
 
 func (s *LibraryStore) List(ctx context.Context) ([]library.Library, error) {
 	return s.list(ctx)
+}
+
+// SetMetadataWriteback changes only the sidecar-write policy. Source media
+// remains read-only to CGM regardless of this setting.
+func (s *LibraryStore) SetMetadataWriteback(ctx context.Context, id int64, enabled bool, expectedUpdatedAt string, now time.Time) (library.Library, error) {
+	if expectedUpdatedAt == "" {
+		return library.Library{}, errors.New("media library writeback update requires an expected version")
+	}
+	result, err := s.db.ExecContext(ctx, `UPDATE media_libraries SET metadata_writeback_enabled=?,updated_at_utc=?
+		WHERE id=? AND updated_at_utc=?`, enabled, formatTime(normalisedTime(now)), id, expectedUpdatedAt)
+	if err != nil {
+		return library.Library{}, err
+	}
+	if count, err := result.RowsAffected(); err != nil || count != 1 {
+		return library.Library{}, errors.New("media library writeback setting changed; reload and retry")
+	}
+	return s.Find(ctx, id)
 }
 
 // OwnerForPath returns the most specific configured root. Disabled libraries
@@ -228,9 +249,10 @@ func ownerFromSortedLibraries(libraries []library.Library, candidate string) *li
 
 func (s *LibraryStore) list(ctx context.Context) ([]library.Library, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, name, root_path, enabled, read_only, capture_timezone,
-			created_at_utc, updated_at_utc
-		FROM media_libraries ORDER BY id
+		SELECT library.id, library.name, library.root_path, library.enabled, library.metadata_writeback_enabled, library.capture_timezone,
+			library.created_at_utc, library.updated_at_utc,
+			(SELECT COUNT(*) FROM gallery_sources source WHERE source.library_id=library.id)
+		FROM media_libraries library ORDER BY library.id
 	`)
 	if err != nil {
 		return nil, err
@@ -250,9 +272,10 @@ func (s *LibraryStore) list(ctx context.Context) ([]library.Library, error) {
 
 func findLibrary(ctx context.Context, queryer galleryQueryer, id int64) (library.Library, error) {
 	row := queryer.QueryRowContext(ctx, `
-		SELECT id, name, root_path, enabled, read_only, capture_timezone,
-			created_at_utc, updated_at_utc
-		FROM media_libraries WHERE id = ?
+		SELECT library.id, library.name, library.root_path, library.enabled, library.metadata_writeback_enabled, library.capture_timezone,
+			library.created_at_utc, library.updated_at_utc,
+			(SELECT COUNT(*) FROM gallery_sources source WHERE source.library_id=library.id)
+		FROM media_libraries library WHERE library.id = ?
 	`, id)
 	result, err := scanLibrary(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -267,16 +290,16 @@ type libraryScanner interface {
 
 func scanLibrary(scanner libraryScanner) (library.Library, error) {
 	var result library.Library
-	var enabled, readOnly int
+	var enabled, writebackEnabled int
 	var createdAt, updatedAt string
 	if err := scanner.Scan(
-		&result.ID, &result.Name, &result.RootPath, &enabled, &readOnly,
-		&result.CaptureTimezone, &createdAt, &updatedAt,
+		&result.ID, &result.Name, &result.RootPath, &enabled, &writebackEnabled,
+		&result.CaptureTimezone, &createdAt, &updatedAt, &result.BoundGalleryCount,
 	); err != nil {
 		return library.Library{}, err
 	}
 	result.Enabled = enabled == 1
-	result.ReadOnly = readOnly == 1
+	result.MetadataWritebackEnabled = writebackEnabled == 1
 	var err error
 	if result.CreatedAtUTC, err = parseTime(createdAt); err != nil {
 		return library.Library{}, err

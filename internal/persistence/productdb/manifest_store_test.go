@@ -145,12 +145,13 @@ func TestGalleryManifestPushPreviewCountsForgottenMembers(t *testing.T) {
 	}
 }
 
-func TestGalleryManifestNeverOverwritesUntrackedOrReadOnlySource(t *testing.T) {
+func TestGalleryManifestNeverOverwritesUntrackedOrDisabledWriteback(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)
 	now := time.Date(2026, 7, 23, 0, 0, 0, 0, time.UTC)
+	writebackDisabled := false
 	mediaLibrary, err := db.Libraries().Create(ctx, CreateLibraryInput{
-		Name: "Read only", RootPath: t.TempDir(), Enabled: true, ReadOnly: true,
+		Name: "Writeback disabled", RootPath: t.TempDir(), Enabled: true, MetadataWritebackEnabled: &writebackDisabled,
 	}, now)
 	if err != nil {
 		t.Fatal(err)
@@ -166,7 +167,7 @@ func TestGalleryManifestNeverOverwritesUntrackedOrReadOnlySource(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := db.Manifests().PushGallery(ctx, created.ID, created.MetadataRevision, now); err == nil {
-		t.Fatal("Manifest Push wrote to a read-only media library")
+		t.Fatal("Manifest Push wrote to a media library with metadata writeback disabled")
 	}
 
 	root := t.TempDir()

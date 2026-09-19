@@ -77,11 +77,11 @@ type CoserDetail struct {
 }
 
 type CreateMediaLibraryInput struct {
-	Name            string `json:"name"`
-	RootPath        string `json:"rootPath"`
-	Enabled         bool   `json:"enabled"`
-	ReadOnly        bool   `json:"readOnly"`
-	CaptureTimezone string `json:"captureTimezone"`
+	Name                     string `json:"name"`
+	RootPath                 string `json:"rootPath"`
+	Enabled                  bool   `json:"enabled"`
+	MetadataWritebackEnabled bool   `json:"metadataWritebackEnabled"`
+	CaptureTimezone          string `json:"captureTimezone"`
 }
 
 type CreateRecognitionRuleInput struct {
@@ -595,13 +595,15 @@ type ManageIssueSummary struct {
 }
 
 type ManageLibrary struct {
-	ID              int64                    `json:"id"`
-	Name            string                   `json:"name"`
-	RootPath        string                   `json:"rootPath"`
-	Enabled         bool                     `json:"enabled"`
-	ReadOnly        bool                     `json:"readOnly"`
-	CaptureTimezone string                   `json:"captureTimezone"`
-	Rules           []*ManageRecognitionRule `json:"rules"`
+	ID                       int64                    `json:"id"`
+	Name                     string                   `json:"name"`
+	RootPath                 string                   `json:"rootPath"`
+	Enabled                  bool                     `json:"enabled"`
+	MetadataWritebackEnabled bool                     `json:"metadataWritebackEnabled"`
+	BoundGalleryCount        int                      `json:"boundGalleryCount"`
+	CaptureTimezone          string                   `json:"captureTimezone"`
+	UpdatedAt                string                   `json:"updatedAt"`
+	Rules                    []*ManageRecognitionRule `json:"rules"`
 }
 
 type ManageLibraryAutomation struct {

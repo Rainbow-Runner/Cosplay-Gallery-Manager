@@ -292,7 +292,7 @@ input ReplaceGalleryRelationsInput { credits: [ReplaceGalleryCreditInput!]! tags
 input GalleryExternalLinkInput { type: String! label: String! url: String! position: String! }
 input ManifestConflictChoiceInput { path: String! choice: String! }
 type ManageRecognitionRule { id: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }
-type ManageLibrary { id: Int64! name: String! rootPath: String! enabled: Boolean! readOnly: Boolean! captureTimezone: String! rules: [ManageRecognitionRule!]! }
+type ManageLibrary { id: Int64! name: String! rootPath: String! enabled: Boolean! metadataWritebackEnabled: Boolean! boundGalleryCount: Int! captureTimezone: String! updatedAt: String! rules: [ManageRecognitionRule!]! }
 type ManageLibrarySourceImpact { sourceID: Int64! galleryID: Int64! galleryTitle: String! sourcePath: String! currentLibraryID: Int64! suggestedOwnerID: Int64 }
 type ManageLibraryIgnoredSourceImpact { id: Int64! path: String! reason: String! }
 type ManageIgnoredSourceRecord { id: Int64! libraryID: Int64 setID: ID path: String! reason: String! createdAt: String! }
@@ -328,7 +328,7 @@ type ManageUnassignedDiagnostic { parentPath: String! mediaCount: Int! }
 type ManageLibraryCoverageSummary { regularFileCount: Int! supportedMediaCount: Int! supportedArchiveCount: Int! unsupportedArchiveCount: Int! controlFileCount: Int! ignoredOtherCount: Int! actionableIssueCount: Int! registeredSourceCount: Int! indexedItemCount: Int! sourceNeedsScanCount: Int! }
 type ManageLibraryCoverageDiagnostic { path: String! entryKind: String! reasonCode: String! fileCount: Int! byteSize: Int64! }
 type ManageDiscoverySnapshot { id: Int64! libraryID: Int64! completedAt: String! candidates: [ManageCandidate!]! unassigned: [ManageUnassignedDiagnostic!]! coverageSummary: ManageLibraryCoverageSummary! coverageDiagnostics: [ManageLibraryCoverageDiagnostic!]! }
-input CreateMediaLibraryInput { name: String! rootPath: String! enabled: Boolean! readOnly: Boolean! captureTimezone: String! }
+input CreateMediaLibraryInput { name: String! rootPath: String! enabled: Boolean! metadataWritebackEnabled: Boolean! = true captureTimezone: String! }
 input CreateRecognitionRuleInput { libraryID: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }
 input UpdateRecognitionRuleInput { id: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }
 type ManageRuntimeSettings {
@@ -518,6 +518,7 @@ type Mutation {
   setGalleryCoverItem(setID: ID!, itemUUID: ID!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
   resetGalleryCover(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryDetail!
   createMediaLibrary(input: CreateMediaLibraryInput!): ManageLibrary!
+  setMediaLibraryMetadataWriteback(libraryID: Int64!, enabled: Boolean!, expectedUpdatedAt: String!): ManageLibrary!
   transferMediaLibrarySource(sourceID: Int64!, expectedLibraryID: Int64!, targetLibraryID: Int64): Boolean!
   applyMediaLibraryChange(libraryID: Int64!, newRoot: String!, revisionToken: String!, password: String!, confirmation: String!): Boolean!
   revokeIgnoredSource(id: Int64!, revisionToken: String!, password: String!, confirmation: String!): Boolean!

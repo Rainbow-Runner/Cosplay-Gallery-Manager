@@ -46,6 +46,38 @@ func TestHandlerRequiresOwnerAuthentication(t *testing.T) {
 	}
 }
 
+func TestMetadataWritebackMutationRequiresOwnerAndCurrentLibraryVersion(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 19, 0, 0, 0, 0, time.UTC)
+	library, err := database.Libraries().Create(ctx, productdb.CreateLibraryInput{Name: "Writeback", RootPath: t.TempDir(), Enabled: true}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	query := fmt.Sprintf(`mutation { setMediaLibraryMetadataWriteback(libraryID:%d,enabled:false,expectedUpdatedAt:%q) { id metadataWritebackEnabled updatedAt } }`, library.ID, library.UpdatedAtUTC.Format(time.RFC3339Nano))
+	requestBody, err := json.Marshal(map[string]string{"query": query})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := func(authorize AuthorizeRequest) *httptest.ResponseRecorder {
+		t.Helper()
+		input := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewReader(requestBody))
+		input.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		NewHandler(database, authorize).ServeHTTP(response, input)
+		return response
+	}
+	if response := request(nil); response.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated mutation status=%d", response.Code)
+	}
+	if response := request(func(*http.Request) bool { return true }); response.Code != http.StatusOK || !bytes.Contains(response.Body.Bytes(), []byte(`"metadataWritebackEnabled":false`)) || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) {
+		t.Fatalf("mutation response=%d %s", response.Code, response.Body.String())
+	}
+	if response := request(func(*http.Request) bool { return true }); !bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) {
+		t.Fatalf("stale mutation unexpectedly succeeded: %s", response.Body.String())
+	}
+}
+
 func TestHandlerServesPathFreeBrowseContract(t *testing.T) {
 	database := openTestDatabase(t)
 	body := `{"operationName":"HomeGalleries","variables":{"page":1},"query":"query HomeGalleries($page:Int!){homeGalleries(page:$page){scope page{page pageSize totalItems totalPages items{setID slug title}}}}"}`
@@ -121,7 +153,7 @@ func TestLibraryAutomationGraphQLQueuesAndCancelsPersistentRun(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 8, 29, 6, 0, 0, 0, time.UTC)
 	library, err := database.Libraries().Create(ctx, productdb.CreateLibraryInput{
-		Name: "Automation", RootPath: t.TempDir(), Enabled: true, ReadOnly: true, CaptureTimezone: "UTC",
+		Name: "Automation", RootPath: t.TempDir(), Enabled: true, CaptureTimezone: "UTC",
 	}, now)
 	if err != nil {
 		t.Fatal(err)
@@ -293,7 +325,7 @@ func TestRecognitionRuleUpdateAndDeleteGraphQL(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 7, 27, 15, 30, 0, 0, time.UTC)
 	mediaLibrary, err := database.Libraries().Create(ctx, productdb.CreateLibraryInput{
-		Name: "Rule API", RootPath: t.TempDir(), Enabled: true, ReadOnly: true, CaptureTimezone: "UTC",
+		Name: "Rule API", RootPath: t.TempDir(), Enabled: true, CaptureTimezone: "UTC",
 	}, now)
 	if err != nil {
 		t.Fatal(err)

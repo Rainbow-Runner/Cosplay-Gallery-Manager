@@ -357,7 +357,7 @@ func manageGalleryDetail(value manage.GalleryDetail) *ManageGalleryDetail {
 }
 
 func manageLibrary(value library.Library, rules []discovery.Rule) *ManageLibrary {
-	result := &ManageLibrary{ID: value.ID, Name: value.Name, RootPath: value.RootPath, Enabled: value.Enabled, ReadOnly: value.ReadOnly, CaptureTimezone: value.CaptureTimezone}
+	result := &ManageLibrary{ID: value.ID, Name: value.Name, RootPath: value.RootPath, Enabled: value.Enabled, MetadataWritebackEnabled: value.MetadataWritebackEnabled, BoundGalleryCount: value.BoundGalleryCount, CaptureTimezone: value.CaptureTimezone, UpdatedAt: value.UpdatedAtUTC.Format(time.RFC3339Nano)}
 	for _, rule := range rules {
 		result.Rules = append(result.Rules, manageRecognitionRule(rule))
 	}

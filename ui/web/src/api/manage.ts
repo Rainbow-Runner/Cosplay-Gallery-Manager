@@ -98,7 +98,7 @@ export const RESET_GALLERY_COVER = gql`
   }
 `;
 export const MANAGE_LIBRARIES = gql`
-  query ManageLibraries { manageLibraries { id name rootPath enabled readOnly captureTimezone rules { id name kind enabled autoCreateDraft order pattern fixedDepth } } }
+  query ManageLibraries { manageLibraries { id name rootPath enabled metadataWritebackEnabled boundGalleryCount captureTimezone updatedAt rules { id name kind enabled autoCreateDraft order pattern fixedDepth } } }
 `;
 export const PREVIEW_MEDIA_LIBRARY_CHANGE = gql`
   query PreviewMediaLibraryChange($libraryID: Int64!, $newRoot: String!) {
@@ -150,7 +150,12 @@ export const SAVE_LIBRARY_AUTOMATION_POLICY = gql`${LIBRARY_AUTOMATION_FIELDS} m
 export const RUN_LIBRARY_AUTOMATION = gql`mutation RunLibraryAutomation($libraryID: Int64!) { runLibraryAutomation(libraryID: $libraryID) { id libraryID policyRevision mode status phase processedTargets totalTargets currentGalleryTitle cancellationRequested candidatesSeen draftsCreated scanned activated needsReview issueCount errorCode startedAt completedAt } }`;
 export const CANCEL_LIBRARY_AUTOMATION = gql`mutation CancelLibraryAutomation($runID: Int64!) { cancelLibraryAutomation(runID: $runID) { id status cancellationRequested completedAt } }`;
 export const CREATE_MEDIA_LIBRARY = gql`
-  mutation CreateMediaLibrary($input: CreateMediaLibraryInput!) { createMediaLibrary(input: $input) { id name rootPath enabled readOnly captureTimezone rules { id } } }
+  mutation CreateMediaLibrary($input: CreateMediaLibraryInput!) { createMediaLibrary(input: $input) { id name rootPath enabled metadataWritebackEnabled boundGalleryCount captureTimezone updatedAt rules { id } } }
+`;
+export const SET_MEDIA_LIBRARY_METADATA_WRITEBACK = gql`
+  mutation SetMediaLibraryMetadataWriteback($libraryID: Int64!, $enabled: Boolean!, $expectedUpdatedAt: String!) {
+    setMediaLibraryMetadataWriteback(libraryID: $libraryID, enabled: $enabled, expectedUpdatedAt: $expectedUpdatedAt) { id metadataWritebackEnabled updatedAt }
+  }
 `;
 export const CREATE_RECOGNITION_RULE = gql`
   mutation CreateRecognitionRule($input: CreateRecognitionRuleInput!) { createRecognitionRule(input: $input) { id name kind enabled autoCreateDraft order pattern fixedDepth } }

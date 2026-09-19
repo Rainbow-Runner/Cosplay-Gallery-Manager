@@ -33,6 +33,7 @@ func TestSchemaV11TagAssignmentMigrationKeepsExistingTagsAssignable(t *testing.T
 		ALTER TABLE tags DROP COLUMN allow_direct_assignment;
 		DROP TABLE gallery_manifest_inspections;
 		DROP TABLE gallery_manifest_inspection_progress;
+		ALTER TABLE media_libraries DROP COLUMN metadata_writeback_enabled;
 		UPDATE cgm_product_identity SET database_schema_version=11 WHERE singleton_id=1`); err != nil {
 		legacy.Close()
 		t.Fatal(err)
@@ -45,7 +46,7 @@ func TestSchemaV11TagAssignmentMigrationKeepsExistingTagsAssignable(t *testing.T
 		t.Fatal(err)
 	}
 	defer migrated.Close()
-	if migrated.Identity().DatabaseSchemaVersion != 13 {
+	if migrated.Identity().DatabaseSchemaVersion != 14 {
 		t.Fatalf("schema version = %d", migrated.Identity().DatabaseSchemaVersion)
 	}
 	loaded, err := migrated.CoreEntities().ManageFind(ctx, "TAG", tag.UUID)

@@ -569,13 +569,15 @@ type ComplexityRoot struct {
 	}
 
 	ManageLibrary struct {
-		CaptureTimezone func(childComplexity int) int
-		Enabled         func(childComplexity int) int
-		ID              func(childComplexity int) int
-		Name            func(childComplexity int) int
-		ReadOnly        func(childComplexity int) int
-		RootPath        func(childComplexity int) int
-		Rules           func(childComplexity int) int
+		BoundGalleryCount        func(childComplexity int) int
+		CaptureTimezone          func(childComplexity int) int
+		Enabled                  func(childComplexity int) int
+		ID                       func(childComplexity int) int
+		MetadataWritebackEnabled func(childComplexity int) int
+		Name                     func(childComplexity int) int
+		RootPath                 func(childComplexity int) int
+		Rules                    func(childComplexity int) int
+		UpdatedAt                func(childComplexity int) int
 	}
 
 	ManageLibraryAutomation struct {
@@ -1148,6 +1150,7 @@ type ComplexityRoot struct {
 		SetGalleryState                        func(childComplexity int, setID string, expectedMetadataRevision int64, state GalleryState) int
 		SetItemFavorite                        func(childComplexity int, itemUUID string, favorite bool) int
 		SetItemRating                          func(childComplexity int, itemUUID string, ratingHalfSteps *int, expectedMetadataRevision int64) int
+		SetMediaLibraryMetadataWriteback       func(childComplexity int, libraryID int64, enabled bool, expectedUpdatedAt string) int
 		TestMediaClassificationRule            func(childComplexity int, input MediaClassificationRuleInput, relativePath string) int
 		TestMediaExclusionRule                 func(childComplexity int, input MediaExclusionRuleInput, relativePath string, mediaKind string) int
 		TransferMediaLibrarySource             func(childComplexity int, sourceID int64, expectedLibraryID int64, targetLibraryID *int64) int
@@ -1352,6 +1355,7 @@ type MutationResolver interface {
 	SetGalleryCoverItem(ctx context.Context, setID string, itemUUID string, expectedMetadataRevision int64) (*ManageGalleryDetail, error)
 	ResetGalleryCover(ctx context.Context, setID string, expectedMetadataRevision int64) (*ManageGalleryDetail, error)
 	CreateMediaLibrary(ctx context.Context, input CreateMediaLibraryInput) (*ManageLibrary, error)
+	SetMediaLibraryMetadataWriteback(ctx context.Context, libraryID int64, enabled bool, expectedUpdatedAt string) (*ManageLibrary, error)
 	TransferMediaLibrarySource(ctx context.Context, sourceID int64, expectedLibraryID int64, targetLibraryID *int64) (bool, error)
 	ApplyMediaLibraryChange(ctx context.Context, libraryID int64, newRoot string, revisionToken string, password string, confirmation string) (bool, error)
 	RevokeIgnoredSource(ctx context.Context, id int64, revisionToken string, password string, confirmation string) (bool, error)
@@ -4003,6 +4007,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageIssueSummary.Unavailable(childComplexity), true
 
+	case "ManageLibrary.boundGalleryCount":
+		if e.complexity.ManageLibrary.BoundGalleryCount == nil {
+			break
+		}
+
+		return e.complexity.ManageLibrary.BoundGalleryCount(childComplexity), true
+
 	case "ManageLibrary.captureTimezone":
 		if e.complexity.ManageLibrary.CaptureTimezone == nil {
 			break
@@ -4024,19 +4035,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageLibrary.ID(childComplexity), true
 
+	case "ManageLibrary.metadataWritebackEnabled":
+		if e.complexity.ManageLibrary.MetadataWritebackEnabled == nil {
+			break
+		}
+
+		return e.complexity.ManageLibrary.MetadataWritebackEnabled(childComplexity), true
+
 	case "ManageLibrary.name":
 		if e.complexity.ManageLibrary.Name == nil {
 			break
 		}
 
 		return e.complexity.ManageLibrary.Name(childComplexity), true
-
-	case "ManageLibrary.readOnly":
-		if e.complexity.ManageLibrary.ReadOnly == nil {
-			break
-		}
-
-		return e.complexity.ManageLibrary.ReadOnly(childComplexity), true
 
 	case "ManageLibrary.rootPath":
 		if e.complexity.ManageLibrary.RootPath == nil {
@@ -4051,6 +4062,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageLibrary.Rules(childComplexity), true
+
+	case "ManageLibrary.updatedAt":
+		if e.complexity.ManageLibrary.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.ManageLibrary.UpdatedAt(childComplexity), true
 
 	case "ManageLibraryAutomation.policy":
 		if e.complexity.ManageLibraryAutomation.Policy == nil {
@@ -7326,6 +7344,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.SetItemRating(childComplexity, args["itemUUID"].(string), args["ratingHalfSteps"].(*int), args["expectedMetadataRevision"].(int64)), true
+
+	case "Mutation.setMediaLibraryMetadataWriteback":
+		if e.complexity.Mutation.SetMediaLibraryMetadataWriteback == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setMediaLibraryMetadataWriteback_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetMediaLibraryMetadataWriteback(childComplexity, args["libraryID"].(int64), args["enabled"].(bool), args["expectedUpdatedAt"].(string)), true
 
 	case "Mutation.testMediaClassificationRule":
 		if e.complexity.Mutation.TestMediaClassificationRule == nil {
@@ -12086,6 +12116,80 @@ func (ec *executionContext) field_Mutation_setItemRating_argsExpectedMetadataRev
 	}
 
 	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_setMediaLibraryMetadataWriteback_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_setMediaLibraryMetadataWriteback_argsLibraryID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["libraryID"] = arg0
+	arg1, err := ec.field_Mutation_setMediaLibraryMetadataWriteback_argsEnabled(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["enabled"] = arg1
+	arg2, err := ec.field_Mutation_setMediaLibraryMetadataWriteback_argsExpectedUpdatedAt(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["expectedUpdatedAt"] = arg2
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_setMediaLibraryMetadataWriteback_argsLibraryID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int64, error) {
+	if _, ok := rawArgs["libraryID"]; !ok {
+		var zeroVal int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("libraryID"))
+	if tmp, ok := rawArgs["libraryID"]; ok {
+		return ec.unmarshalNInt642int64(ctx, tmp)
+	}
+
+	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_setMediaLibraryMetadataWriteback_argsEnabled(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (bool, error) {
+	if _, ok := rawArgs["enabled"]; !ok {
+		var zeroVal bool
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
+	if tmp, ok := rawArgs["enabled"]; ok {
+		return ec.unmarshalNBoolean2bool(ctx, tmp)
+	}
+
+	var zeroVal bool
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_setMediaLibraryMetadataWriteback_argsExpectedUpdatedAt(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["expectedUpdatedAt"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedUpdatedAt"))
+	if tmp, ok := rawArgs["expectedUpdatedAt"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
+	}
+
+	var zeroVal string
 	return zeroVal, nil
 }
 
@@ -32251,8 +32355,8 @@ func (ec *executionContext) fieldContext_ManageLibrary_enabled(_ context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _ManageLibrary_readOnly(ctx context.Context, field graphql.CollectedField, obj *ManageLibrary) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ManageLibrary_readOnly(ctx, field)
+func (ec *executionContext) _ManageLibrary_metadataWritebackEnabled(ctx context.Context, field graphql.CollectedField, obj *ManageLibrary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibrary_metadataWritebackEnabled(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -32265,7 +32369,7 @@ func (ec *executionContext) _ManageLibrary_readOnly(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ReadOnly, nil
+		return obj.MetadataWritebackEnabled, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -32282,7 +32386,7 @@ func (ec *executionContext) _ManageLibrary_readOnly(ctx context.Context, field g
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_ManageLibrary_readOnly(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_ManageLibrary_metadataWritebackEnabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ManageLibrary",
 		Field:      field,
@@ -32290,6 +32394,50 @@ func (ec *executionContext) fieldContext_ManageLibrary_readOnly(_ context.Contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibrary_boundGalleryCount(ctx context.Context, field graphql.CollectedField, obj *ManageLibrary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibrary_boundGalleryCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BoundGalleryCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibrary_boundGalleryCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibrary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -32327,6 +32475,50 @@ func (ec *executionContext) _ManageLibrary_captureTimezone(ctx context.Context, 
 }
 
 func (ec *executionContext) fieldContext_ManageLibrary_captureTimezone(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageLibrary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageLibrary_updatedAt(ctx context.Context, field graphql.CollectedField, obj *ManageLibrary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageLibrary_updatedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageLibrary_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ManageLibrary",
 		Field:      field,
@@ -50291,10 +50483,14 @@ func (ec *executionContext) fieldContext_Mutation_createMediaLibrary(ctx context
 				return ec.fieldContext_ManageLibrary_rootPath(ctx, field)
 			case "enabled":
 				return ec.fieldContext_ManageLibrary_enabled(ctx, field)
-			case "readOnly":
-				return ec.fieldContext_ManageLibrary_readOnly(ctx, field)
+			case "metadataWritebackEnabled":
+				return ec.fieldContext_ManageLibrary_metadataWritebackEnabled(ctx, field)
+			case "boundGalleryCount":
+				return ec.fieldContext_ManageLibrary_boundGalleryCount(ctx, field)
 			case "captureTimezone":
 				return ec.fieldContext_ManageLibrary_captureTimezone(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ManageLibrary_updatedAt(ctx, field)
 			case "rules":
 				return ec.fieldContext_ManageLibrary_rules(ctx, field)
 			}
@@ -50309,6 +50505,81 @@ func (ec *executionContext) fieldContext_Mutation_createMediaLibrary(ctx context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_createMediaLibrary_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_setMediaLibraryMetadataWriteback(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_setMediaLibraryMetadataWriteback(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SetMediaLibraryMetadataWriteback(rctx, fc.Args["libraryID"].(int64), fc.Args["enabled"].(bool), fc.Args["expectedUpdatedAt"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageLibrary)
+	fc.Result = res
+	return ec.marshalNManageLibrary2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageLibrary(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_setMediaLibraryMetadataWriteback(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ManageLibrary_id(ctx, field)
+			case "name":
+				return ec.fieldContext_ManageLibrary_name(ctx, field)
+			case "rootPath":
+				return ec.fieldContext_ManageLibrary_rootPath(ctx, field)
+			case "enabled":
+				return ec.fieldContext_ManageLibrary_enabled(ctx, field)
+			case "metadataWritebackEnabled":
+				return ec.fieldContext_ManageLibrary_metadataWritebackEnabled(ctx, field)
+			case "boundGalleryCount":
+				return ec.fieldContext_ManageLibrary_boundGalleryCount(ctx, field)
+			case "captureTimezone":
+				return ec.fieldContext_ManageLibrary_captureTimezone(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ManageLibrary_updatedAt(ctx, field)
+			case "rules":
+				return ec.fieldContext_ManageLibrary_rules(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageLibrary", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setMediaLibraryMetadataWriteback_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -56671,10 +56942,14 @@ func (ec *executionContext) fieldContext_Query_manageLibraries(_ context.Context
 				return ec.fieldContext_ManageLibrary_rootPath(ctx, field)
 			case "enabled":
 				return ec.fieldContext_ManageLibrary_enabled(ctx, field)
-			case "readOnly":
-				return ec.fieldContext_ManageLibrary_readOnly(ctx, field)
+			case "metadataWritebackEnabled":
+				return ec.fieldContext_ManageLibrary_metadataWritebackEnabled(ctx, field)
+			case "boundGalleryCount":
+				return ec.fieldContext_ManageLibrary_boundGalleryCount(ctx, field)
 			case "captureTimezone":
 				return ec.fieldContext_ManageLibrary_captureTimezone(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ManageLibrary_updatedAt(ctx, field)
 			case "rules":
 				return ec.fieldContext_ManageLibrary_rules(ctx, field)
 			}
@@ -63517,7 +63792,11 @@ func (ec *executionContext) unmarshalInputCreateMediaLibraryInput(ctx context.Co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "rootPath", "enabled", "readOnly", "captureTimezone"}
+	if _, present := asMap["metadataWritebackEnabled"]; !present {
+		asMap["metadataWritebackEnabled"] = true
+	}
+
+	fieldsInOrder := [...]string{"name", "rootPath", "enabled", "metadataWritebackEnabled", "captureTimezone"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -63545,13 +63824,13 @@ func (ec *executionContext) unmarshalInputCreateMediaLibraryInput(ctx context.Co
 				return it, err
 			}
 			it.Enabled = data
-		case "readOnly":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("readOnly"))
+		case "metadataWritebackEnabled":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("metadataWritebackEnabled"))
 			data, err := ec.unmarshalNBoolean2bool(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.ReadOnly = data
+			it.MetadataWritebackEnabled = data
 		case "captureTimezone":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("captureTimezone"))
 			data, err := ec.unmarshalNString2string(ctx, v)
@@ -68690,13 +68969,23 @@ func (ec *executionContext) _ManageLibrary(ctx context.Context, sel ast.Selectio
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "readOnly":
-			out.Values[i] = ec._ManageLibrary_readOnly(ctx, field, obj)
+		case "metadataWritebackEnabled":
+			out.Values[i] = ec._ManageLibrary_metadataWritebackEnabled(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "boundGalleryCount":
+			out.Values[i] = ec._ManageLibrary_boundGalleryCount(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "captureTimezone":
 			out.Values[i] = ec._ManageLibrary_captureTimezone(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._ManageLibrary_updatedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -72292,6 +72581,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "createMediaLibrary":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createMediaLibrary(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "setMediaLibraryMetadataWriteback":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setMediaLibraryMetadataWriteback(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

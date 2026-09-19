@@ -224,12 +224,12 @@ func (s *ManifestStore) pushGallery(ctx context.Context, galleryID int64, expect
 		return GalleryManifestState{}, err
 	}
 	if source.LibraryID != nil {
-		var readOnly int
-		if err := s.db.QueryRowContext(ctx, `SELECT read_only FROM media_libraries WHERE id = ?`, *source.LibraryID).Scan(&readOnly); err != nil {
+		var writebackEnabled int
+		if err := s.db.QueryRowContext(ctx, `SELECT metadata_writeback_enabled FROM media_libraries WHERE id = ?`, *source.LibraryID).Scan(&writebackEnabled); err != nil {
 			return GalleryManifestState{}, err
 		}
-		if readOnly == 1 {
-			return GalleryManifestState{}, errors.New("media library is read-only; Manifest Push is unavailable")
+		if writebackEnabled == 0 {
+			return GalleryManifestState{}, errors.New("media library metadata writeback is disabled; Manifest Push is unavailable")
 		}
 	}
 	path, err := manifest.GalleryPath(source.Type, source.Path)

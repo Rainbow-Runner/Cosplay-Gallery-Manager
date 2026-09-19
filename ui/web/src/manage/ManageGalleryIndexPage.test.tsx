@@ -70,4 +70,18 @@ describe("ManageGalleryIndexPage filter cards", () => {
     fireEvent.click(screen.getByRole("button", { name: /Skip changed files/ }));
     expect(await screen.findByRole("dialog", { name: "Batch Manifest Push result" })).toHaveTextContent("LOCAL_FILE_CHANGED");
   });
+
+  it("explains a disabled metadata writeback policy before any Push can run", async () => {
+    const row = { setID: "gallery-one", slug: "one", state: "ACTIVE", title: "One", contentRating: "NON_ADULT", metadataRevision: 4, scanRevision: 2, browsable: true, sourceType: "DIRECTORY", sourcePath: "/media/one", sourceAvailability: "AVAILABLE", reconcileState: "IN_SYNC", overLimit: false, itemCount: 2, missingCount: 0, pendingCount: 0, errorCount: 0, blockingIssues: 0, lastScanErrorCode: "", lastScanCompleted: "", manifestStatus: "NONE", manifestCheckedAt: "2026-09-18T12:00:00Z" };
+    render(<MemoryRouter initialEntries={["/manage/gallery"]}><MockedProvider mocks={[
+      { request: { query: MANAGE_GALLERIES, variables: { page: 1, issue: "ALL" } }, result: { data: { manageGalleries: { page: 1, pageSize: 24, totalItems: 1, totalPages: 1, summary: { ...summary, all: 1 }, items: [row] } } } },
+      { request: { query: PREVIEW_GALLERY_MANIFEST_BATCH_PUSH, variables: { setIDs: ["gallery-one"] } }, result: { data: { previewGalleryManifestPush: [{ setID: "gallery-one", title: "One", status: "NONE", metadataRevision: 4, path: "/media/one/.cosplay.json", fileHash: "", databaseContentChanged: true, localFileChanged: false, blockReason: "METADATA_WRITEBACK_DISABLED" }] } } },
+    ]}><ManageGalleryIndexPage /></MockedProvider></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Select One" }));
+    fireEvent.click(screen.getByRole("button", { name: /Batch Push \(1\/100\)/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Batch Manifest Push preview" });
+    expect(dialog).toHaveTextContent("元数据写回已关闭");
+    expect(screen.getByRole("button", { name: /Skip changed files/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Overwrite changed files/ })).toBeDisabled();
+  });
 });

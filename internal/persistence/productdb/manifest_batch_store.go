@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"reflect"
 	"time"
 
 	"github.com/stashapp/stash/internal/manifest"
+	"golang.org/x/sys/unix"
 )
 
 type GalleryManifestBatchPreview struct {
@@ -36,9 +38,9 @@ func (s *ManifestStore) PreviewGalleryBatchPush(ctx context.Context, galleryID i
 		result.Status, result.BlockReason = ManifestNone, "NO_SOURCE"
 		return result, nil
 	}
-	available, readOnly := 1, 0
+	available, writebackEnabled := 1, 1
 	if source.LibraryID != nil {
-		if err := s.db.QueryRowContext(ctx, `SELECT source.availability_state='AVAILABLE',library.read_only FROM gallery_sources source JOIN media_libraries library ON library.id=source.library_id WHERE source.id=?`, source.ID).Scan(&available, &readOnly); err != nil {
+		if err := s.db.QueryRowContext(ctx, `SELECT source.availability_state='AVAILABLE',library.metadata_writeback_enabled FROM gallery_sources source JOIN media_libraries library ON library.id=source.library_id WHERE source.id=?`, source.ID).Scan(&available, &writebackEnabled); err != nil {
 			return result, err
 		}
 	}
@@ -46,14 +48,17 @@ func (s *ManifestStore) PreviewGalleryBatchPush(ctx context.Context, galleryID i
 		result.Status, result.BlockReason = ManifestSourceUnavailable, "SOURCE_UNAVAILABLE"
 		return result, nil
 	}
-	if readOnly != 0 {
-		result.BlockReason = "READ_ONLY_LIBRARY"
+	if writebackEnabled == 0 {
+		result.BlockReason = "METADATA_WRITEBACK_DISABLED"
 	}
 	state, checkErr := s.CheckGallery(ctx, galleryID, now)
 	result.Status, result.Path, result.FileHash = state.Status, state.Path, state.FileHash
 	if checkErr != nil {
 		result.Status, result.BlockReason = ManifestError, "MANIFEST_CHECK_FAILED"
 		return result, nil
+	}
+	if result.BlockReason == "" {
+		result.BlockReason = manifestParentWriteBlock(result.Path)
 	}
 	baselineState, baseline, _, found, err := loadGalleryManifestState(ctx, s.db, galleryID)
 	if err != nil {
@@ -81,6 +86,20 @@ func (s *ManifestStore) PreviewGalleryBatchPush(ctx context.Context, galleryID i
 		}
 	}
 	return result, nil
+}
+
+// This is only a read-only diagnostic. Push still relies on WriteAtomic and
+// its own last-moment checks because permissions or mounts can change later.
+func manifestParentWriteBlock(path string) string {
+	parent := filepath.Dir(path)
+	info, err := os.Lstat(parent)
+	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return "MANIFEST_PARENT_INVALID"
+	}
+	if err := unix.Access(parent, unix.W_OK|unix.X_OK); err != nil {
+		return "MANIFEST_PARENT_NOT_WRITABLE"
+	}
+	return ""
 }
 
 type GalleryManifestBatchDecision struct {

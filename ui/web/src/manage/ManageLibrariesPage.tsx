@@ -2,12 +2,12 @@ import { useLazyQuery, useMutation, useQuery } from "@apollo/client/react";
 import { type FormEvent, type RefObject, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
-import { APPLY_MEDIA_LIBRARY_CHANGE, CANCEL_LIBRARY_AUTOMATION, CONFIRM_GALLERY_SOURCE_REBIND, CREATE_MEDIA_LIBRARY, CREATE_RECOGNITION_RULE, DELETE_RECOGNITION_RULE, DISCOVER_MEDIA_LIBRARY, IMPORT_GALLERY_CANDIDATE, MANAGE_DISCOVERY, MANAGE_IGNORED_SOURCES, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, PREVIEW_IGNORED_SOURCE_REMOVAL, PREVIEW_MEDIA_LIBRARY_CHANGE, REVOKE_IGNORED_SOURCE, RUN_LIBRARY_AUTOMATION, SAVE_LIBRARY_AUTOMATION_POLICY, TRANSFER_MEDIA_LIBRARY_SOURCE, UPDATE_RECOGNITION_RULE } from "../api/manage";
+import { APPLY_MEDIA_LIBRARY_CHANGE, CANCEL_LIBRARY_AUTOMATION, CONFIRM_GALLERY_SOURCE_REBIND, CREATE_MEDIA_LIBRARY, CREATE_RECOGNITION_RULE, DELETE_RECOGNITION_RULE, DISCOVER_MEDIA_LIBRARY, IMPORT_GALLERY_CANDIDATE, MANAGE_DISCOVERY, MANAGE_IGNORED_SOURCES, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, PREVIEW_IGNORED_SOURCE_REMOVAL, PREVIEW_MEDIA_LIBRARY_CHANGE, REVOKE_IGNORED_SOURCE, RUN_LIBRARY_AUTOMATION, SAVE_LIBRARY_AUTOMATION_POLICY, SET_MEDIA_LIBRARY_METADATA_WRITEBACK, TRANSFER_MEDIA_LIBRARY_SOURCE, UPDATE_RECOGNITION_RULE } from "../api/manage";
 import { MediaClassificationRules } from "./MediaClassificationRules";
 import { MediaExclusionRules } from "./MediaExclusionRules";
 import type { ManageDiscoverySnapshot, ManageGalleryDetail, ManageIgnoredSourcePage, ManageIgnoredSourceRemovalPreview, ManageLibrary, ManageLibraryAutomation, ManageLibraryAutomationPolicy, ManageLibraryAutomationRun, ManageLibraryChangePreview, ManageRecognitionRule } from "./types";
 
-const emptyLibrary = { name: "", rootPath: "", enabled: true, readOnly: true, captureTimezone: "UTC" };
+const emptyLibrary = { name: "", rootPath: "", enabled: true, metadataWritebackEnabled: true, captureTimezone: "UTC" };
 type RuleDraft = Omit<ManageRecognitionRule, "id">;
 const emptyRule = (name: string): RuleDraft => ({ name, kind: "FIXED_DEPTH", enabled: false, autoCreateDraft: false, order: 100, pattern: "", fixedDepth: 1 });
 
@@ -152,9 +152,10 @@ export function ManageLibrariesPage() {
     {message ? <p className="manage-message" role="status">{message}</p> : null}
     <section className="library-layout">
       <aside className="library-list"><h3>{f("manage.library.mediaLibraries")}</h3>{libraries.map((library) => <button type="button" className={library.id === selectedID ? "is-active" : ""} key={library.id} onClick={() => { setSelectedID(library.id); resetRuleEditor(); setDeletingRuleID(null); }}><strong>{library.name}</strong><span>{library.rootPath}</span></button>)}
-        <details><summary>{f("manage.library.add")}</summary><form onSubmit={addLibrary}><label>{f("manage.library.nameRequired")}<input required value={libraryDraft.name} onChange={(event) => setLibraryDraft({ ...libraryDraft, name: event.target.value })} /></label><label>{f("manage.library.pathRequired")}<input required value={libraryDraft.rootPath} onChange={(event) => setLibraryDraft({ ...libraryDraft, rootPath: event.target.value })} /></label><label>{f("manage.library.timezoneRequired")}<input required value={libraryDraft.captureTimezone} onChange={(event) => setLibraryDraft({ ...libraryDraft, captureTimezone: event.target.value })} /></label><label className="check"><input type="checkbox" checked={libraryDraft.readOnly} onChange={(event) => setLibraryDraft({ ...libraryDraft, readOnly: event.target.checked })} /> {f("manage.library.readOnly")}</label><button type="submit" disabled={!libraryValid || createLibraryState.loading}>{createLibraryState.loading ? f("manage.library.creating") : f("manage.library.create")}</button></form></details>
+        <details><summary>{f("manage.library.add")}</summary><form onSubmit={addLibrary}><label>{f("manage.library.nameRequired")}<input required value={libraryDraft.name} onChange={(event) => setLibraryDraft({ ...libraryDraft, name: event.target.value })} /></label><label>{f("manage.library.pathRequired")}<input required value={libraryDraft.rootPath} onChange={(event) => setLibraryDraft({ ...libraryDraft, rootPath: event.target.value })} /></label><label>{f("manage.library.timezoneRequired")}<input required value={libraryDraft.captureTimezone} onChange={(event) => setLibraryDraft({ ...libraryDraft, captureTimezone: event.target.value })} /></label><label className="check"><input type="checkbox" checked={libraryDraft.metadataWritebackEnabled} onChange={(event) => setLibraryDraft({ ...libraryDraft, metadataWritebackEnabled: event.target.checked })} /> {f("manage.library.metadataWriteback")}</label><p>{f("manage.library.mediaReadOnlyHelp")}</p><button type="submit" disabled={!libraryValid || createLibraryState.loading}>{createLibraryState.loading ? f("manage.library.creating") : f("manage.library.create")}</button></form></details>
       </aside>
       <div className="library-workspace">{selectedLibrary === null ? <p className="state-message">{f("manage.library.createFirst")}</p> : <>
+        <LibraryWritebackPanel library={selectedLibrary} onUpdated={() => librariesQuery.refetch()} />
         <LibraryChangeWorkbench key={`change-${selectedLibrary.id}`} library={selectedLibrary} libraries={libraries} onApplied={async (deleted) => { const refreshed = await librariesQuery.refetch(); if (deleted) setSelectedID(refreshed.data?.manageLibraries[0]?.id ?? null); }} />
         <LibraryAutomationPanel key={selectedLibrary.id} libraryID={selectedLibrary.id} report={setMessage} />
         <LibraryRules sectionRef={rulesSectionRef} library={selectedLibrary} draft={ruleDraft} setDraft={setRuleDraft} submit={saveRule} saving={createRuleState.loading || updateRuleState.loading} editingRuleID={editingRuleID} deletingRuleID={deletingRuleID} editRule={editRule} cancelEdit={resetRuleEditor} requestDelete={setDeletingRuleID} deleteRule={removeRule} />
@@ -179,6 +180,28 @@ export function ManageLibrariesPage() {
     <MediaExclusionRules library={selectedLibrary ? { id: selectedLibrary.id, name: selectedLibrary.name } : null} />
     <IgnoredSourcesWorkbench selectedLibrary={selectedLibrary} libraries={libraries} />
   </main>;
+}
+
+function LibraryWritebackPanel({ library, onUpdated }: { library: ManageLibrary; onUpdated: () => Promise<unknown> }) {
+  const intl = useIntl();
+  const f = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
+  const [save, state] = useMutation(SET_MEDIA_LIBRARY_METADATA_WRITEBACK);
+  const [error, setError] = useState("");
+  async function change() {
+    const enabled = !library.metadataWritebackEnabled;
+    if (!window.confirm(f(enabled ? "manage.library.writebackEnableConfirm" : "manage.library.writebackDisableConfirm", { count: library.boundGalleryCount }))) return;
+    setError("");
+    try {
+      await save({ variables: { libraryID: library.id, enabled, expectedUpdatedAt: library.updatedAt } });
+      await onUpdated();
+    } catch (value) { setError(value instanceof Error ? value.message : f("manage.library.writebackFailed")); }
+  }
+  return <section className="manage-panel"><h3>{f("manage.library.metadataWriteback")}</h3>
+    <p>{f("manage.library.writebackStatus", { status: f(library.metadataWritebackEnabled ? "manage.library.enabled" : "manage.library.disabled"), count: library.boundGalleryCount })}</p>
+    <p>{f("manage.library.mediaReadOnlyHelp")}</p>
+    <button type="button" disabled={state.loading} onClick={change}>{f(library.metadataWritebackEnabled ? "manage.library.disableWriteback" : "manage.library.enableWriteback")}</button>
+    {error ? <p role="alert" className="manage-error">{error}</p> : null}
+  </section>;
 }
 
 function IgnoredSourcesWorkbench({ selectedLibrary, libraries }: { selectedLibrary: ManageLibrary | null; libraries: ManageLibrary[] }) {

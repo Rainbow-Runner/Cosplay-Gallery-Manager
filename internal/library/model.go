@@ -4,14 +4,15 @@ package library
 import "time"
 
 type Library struct {
-	ID              int64
-	Name            string
-	RootPath        string
-	Enabled         bool
-	ReadOnly        bool
-	CaptureTimezone string
-	CreatedAtUTC    time.Time
-	UpdatedAtUTC    time.Time
+	ID                       int64
+	Name                     string
+	RootPath                 string
+	Enabled                  bool
+	MetadataWritebackEnabled bool
+	BoundGalleryCount        int
+	CaptureTimezone          string
+	CreatedAtUTC             time.Time
+	UpdatedAtUTC             time.Time
 }
 
 type SourceImpact struct {

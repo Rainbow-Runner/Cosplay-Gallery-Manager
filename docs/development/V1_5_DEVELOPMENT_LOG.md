@@ -2183,3 +2183,14 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 功能与部署前记录提交为`4bd55881522afe0bf3f863682a2891c604cb76ec`（`Add Manifest inspection and batch push workflow`）。清洁提交使用Go 1.25.12及`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，Go VCS元数据确认`modified=false`且revision匹配；正式二进制SHA-256为`e9ea968c0a7dd64c050f63338c23fbe00dc52cdf7e7a06b847758c142d0ba4b9`，About构建时间为`2026-09-18T14:46:30Z`。
 - 2026-09-18 22:47 CST停服并确认`MainPID=0`，在独立0700目录`/home/rainbowrunner/cos/bk/cgm-pre-manifest-4bd5588-rfepLp`保存schema v12 SQLite一致副本、旧二进制、配置、用户systemd单元和完整Coser托管根；旧程序、配置、单元和Coser树与原件逐项比较一致。备份库为0600，`integrity_check=ok`，Coser/Work/Character/Tag/Gallery/Source/Item计数为`135/108/697/23/8/8/570`。备份数据库SHA-256为`cfe7efd85b85912a9fb6f688b2980e5ccf0da3e940b86d1d17777baecc85b183`，旧程序为`8f31c00adafca2ade12da2a652b9bde88cdd67962cde824296f39486212933e6`。不包含原始媒体、缓存或日志。
 - 逐字节校验候选后原子替换程序并于22:48 CST启动一次。正式库成功迁移至schema v13，两个新巡检表及游标行存在，`integrity_check=ok`，上述七类业务记录计数不变。自动生成的迁移前快照`product.sqlite.pre-schema-v12-1789742911708134619.bak`独立检查为schema v12且完整性`ok`。服务`active/running`、`NRestarts=0`，Health/Ready为204，首页和Gallery后台深链200；About精确报告提交`4bd5588`且`exactSourceAvailable=true`。本次启动日志未见WARN、ERROR、FAILED、panic或fatal；原配置、媒体、Manifest和缓存未替换，未远端推送。真实浏览器的跨页勾选、预览、跳过与覆盖确认仍待所有者业务验收，不曾用正式媒体执行批量Push。
+
+### collection2 的 Manifest 写回权限调整
+
+- 2026-09-18 22:53 CST首次正式批量Push审计为6项选中、0项写入、6项跳过、0项失败；六项均绑定于`collection2`，其媒体库`read_only=1`，所以在写入前被`READ_ONLY_LIBRARY`门禁跳过。另一媒体库没有绑定Gallery。宿主机实际挂载为可写，八个已绑定来源的Manifest目标父目录均具备写权限；沙箱内只读挂载探测结果不代表正式宿主机权限。
+- 按所有者要求，仅将`collection2`媒体库改为允许Manifest sidecar写回，保留另一个`cosplay_collection`媒体库的只读设置。停服确认`MainPID=0`，在独立0700目录`/home/rainbowrunner/cos/bk/cgm-pre-collection2-write-hoxRmM`保存并核对schema v13 SQLite一致副本、旧程序、配置、用户systemd单元和完整Coser托管根；备份数据库`integrity_check=ok`，SHA-256为`3a11347d626de8a97b29b8dfbcfaaed42b6f887468687762da60f95f54f7f356`。在限定库ID、名称、根路径和原只读值的事务中，仅更新`media_libraries.read_only`及更新时间；库1仍为1，库2为0，正式库完整性`ok`，其八个来源绑定不变。随后服务`active/running`、`NRestarts=0`，Health/Ready为204。没有修改原始图片、视频、存档、媒体权限或Manifest，也没有自动重试批量Push。当前“媒体只读”是CGM不重写媒体内容的应用行为，不等于操作系统对媒体文件的写权限隔离。
+
+# 2026-09-19 媒体只读与元数据旁置文件写回策略解耦（本地源码）
+
+- schema v14在`media_libraries`新增`metadata_writeback_enabled`，迁移对每个旧库执行`NOT read_only`映射；不改变旧列或原始媒体/Manifest。正式库当前`collection2.read_only=0`，部署后将得到写回开启；`cosplay_collection.read_only=1`将得到写回关闭。新建库的数据库与GraphQL默认值为开启，Manage创建页也默认开启；旧`read_only`字段退为兼容遗留，不再决定Push。
+- Media Libraries页显示当前写回状态和已绑定Gallery数，开启/关闭均需要显式确认，API以库`updated_at_utc`作为乐观并发令牌，记录管理审计；原始媒体仍由既有只读扫描和物化路径读取。单项和批量Manifest Push均查新策略；批量预览额外只读检查目标父目录真实路径及当前进程写权限，显示稳定阻断原因，所有选中项被阻断时禁用执行。实际写入仍以原子写入器及执行时复核为准；预览不能保证之后挂载/权限不变化。全阻断的批量执行不再以成功审计掩盖零写入。
+- 定向回归覆盖v13→v14旧库策略继承、新库默认、过期设置拒绝、单项/批量门禁、写入sidecar不修改原始媒体、GraphQL鉴权及Web设置/预览交互。正式三标签Go产品库/API/Server/PortableCatalog/Product/CMD测试及同范围Go Vet、Web 34文件123项测试、TypeScript和685模块生产构建均通过；仅保留既有主chunk超过500KiB的提示，`git diff --check`通过。正式服务、业务库、媒体和Manifest尚未由本轮源码修改；部署需先提交、停服备份、迁移，再核对两个库写回策略及健康探针。

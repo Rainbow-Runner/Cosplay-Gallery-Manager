@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 const sourceAvailability = ["AVAILABLE", "MISSING", "UNREADABLE"] as const;
 const sourceReconciliation = ["NEVER_SCANNED", "SCANNING", "IN_SYNC", "NEEDS_RESCAN", "ERROR"] as const;
 const manifestStatuses = ["UNCHECKED", "STALE", "NONE", "CLEAN", "DB_DIRTY", "FILE_DIRTY", "CONFLICT", "MISSING", "ERROR", "SOURCE_UNAVAILABLE"] as const;
+const recognitionSteps = ["bound", "manifest", "archive", "marker", "template", "depth", "unassigned"] as const;
 
 export function ManageHelpPage() {
   const intl = useIntl();
@@ -16,6 +17,7 @@ export function ManageHelpPage() {
       <nav className="manage-help-topics" aria-label={f("manage.help.topics")}>
         <strong>{f("manage.help.topics")}</strong>
         <a href="#libraries">{f("manage.help.libraries.title")}</a>
+        <a href="#scan-rules">{f("manage.help.rules.title")}</a>
         <a href="#gallery-status">{f("manage.help.gallery.title")}</a>
       </nav>
       <article id="libraries" className="manage-help-article">
@@ -62,6 +64,33 @@ export function ManageHelpPage() {
         <section className="manage-help-safety" aria-labelledby="help-safety-title">
           <h4 id="help-safety-title">{f("manage.help.safety.title")}</h4>
           <ul><li>{f("manage.help.safety.explicit")}</li><li>{f("manage.help.safety.snapshot")}</li><li>{f("manage.help.safety.modes")}</li><li>{f("manage.help.safety.activation")}</li><li>{f("manage.help.safety.review")}</li></ul>
+        </section>
+      </article>
+      <article id="scan-rules" className="manage-help-article">
+        <header>
+          <p>{f("manage.help.rules.eyebrow")}</p>
+          <h3>{f("manage.help.rules.title")}</h3>
+          <span>{f("manage.help.rules.summary")}</span>
+          <div className="manage-help-actions"><Link to="/manage/libraries">{f("manage.help.openLibraries")}</Link></div>
+        </header>
+        <section aria-labelledby="help-rules-discovery-title">
+          <h4 id="help-rules-discovery-title">{f("manage.help.rules.discovery.title")}</h4>
+          <p>{f("manage.help.rules.discovery.intro")}</p>
+          <div className="manage-help-table-wrap"><table><thead><tr><th>{f("manage.help.rules.order")}</th><th>{f("manage.help.gallery.meaning")}</th></tr></thead><tbody>
+            {recognitionSteps.map((step) => <tr key={step}><th>{f(`manage.help.rules.discovery.${step}.name`)}</th><td>{f(`manage.help.rules.discovery.${step}.body`)}</td></tr>)}
+          </tbody></table></div>
+          <p>{f("manage.help.rules.discovery.draft")}</p>
+        </section>
+        <section aria-labelledby="help-rules-exclusions-title">
+          <h4 id="help-rules-exclusions-title">{f("manage.help.rules.exclusion.title")}</h4>
+          <p>{f("manage.help.rules.exclusion.intro")}</p>
+          <ul className="manage-help-list">
+            <li>{f("manage.help.rules.exclusion.root")}</li>
+            <li>{f("manage.help.rules.exclusion.custom")}</li>
+            <li>{f("manage.help.rules.exclusion.archive")}</li>
+            <li>{f("manage.help.rules.exclusion.noBlacklist")}</li>
+            <li>{f("manage.help.rules.exclusion.skipped")}</li>
+          </ul>
         </section>
       </article>
       <article id="gallery-status" className="manage-help-article">

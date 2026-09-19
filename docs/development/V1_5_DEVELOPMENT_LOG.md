@@ -2224,3 +2224,9 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 功能与部署前记录提交为`970e251b8260c8742d043dbd0ce369208ecfcdb6`（`Add server-side search to Manage Gallery list`）。正式三标签二进制已核对`vcs.modified=false`、revision一致、构建时间`2026-09-19T05:06:55Z`；候选SHA-256为`61ad515a36b1628cf4ee0a2abe9da86dca8b7948d47b837f2a5b655725d5ae09`。部署前服务`active/running`、Health 204。
 - 2026-09-19停服确认`MainPID=0`，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-gallery-search-970e251-TPV9xS`保存一致SQLite副本、旧二进制、配置、用户服务单元和完整Coser托管目录；原件与副本逐项核对，Coser目录递归比较无差异。备份库`integrity_check=ok`、SHA-256为`f9a7b9052b72d68c4692399c2f109111b415ed23fdd1245b065a951ffdab0dd2`；旧程序SHA-256为`012c8d64a8103d87b0faef5f09b3c31bbeceb92064a3af3bb4d4bb0e64bbd726`。备份不含原始媒体、缓存或日志。
 - 候选复制至正式程序同目录并逐字节校验后原子替换，13:09 CST启动一次。服务`active/running`、`NRestarts=0`，Health/Ready均204，`/manage/gallery`、新Gallery列表JS和CSS资源均200；About精确报告`970e251`且`exactSourceAvailable=true`。正式库`integrity_check=ok`，备份与部署后Coser/Work/Character/Tag/Gallery/Source/Item计数均为`135/108/697/23/8/8/570`；本次启动无warning以上日志。未迁移schema，未修改正式配置、原始媒体、Manifest或缓存；未远端推送。
+
+# 2026-09-19 媒体库扫描识别与默认排除规则帮助说明（本地源码）
+
+- 复核`internal/discovery`、`discovery_store`、`sourcescan`、`scan_store`和`media_exclusion_store`后，在Manage → Help新增独立中英双语主题和目录锚点。说明启用媒体库发现时跳过子库及符号链接、已有或忽略来源优先、有效Manifest、内置ARCHIVE_FILE、需要启用MARKER规则的`.cosplay-root`、PATH_TEMPLATE和FIXED_DEPTH的优先级，以及不匹配时进入未分配媒体复核，而非直接建Gallery或激活。说明支持存档本身是来源根，存档内成员路径也接受媒体排除匹配。
+- 明确唯一内置的默认“排除”行为是来源扫描时将新发现的Gallery根层级媒体作为`excluded` Item入库；手动扫描默认勾选，媒体库自动化策略也默认开启，但均可关闭。此项只影响新Item，重扫保留现有手动决定，自定义INCLUDE不能抵消这个独立默认。自定义规则没有预装文件夹名／文件名黑名单，Global/Library规则首匹配并可用INCLUDE作例外；既有媒体规则评估进入待审核，不静默排除。控制文件、不支持扩展名、符号链接／特殊文件及不安全存档属于跳过或报错，不能与已入库`excluded`状态混同。
+- 新增帮助页回归覆盖MARKER前提、内置存档识别、根层级默认排除、无硬编码名称黑名单及格式跳过说明。TypeScript检查、Web 34文件127项测试与685模块生产构建通过，仅见既存主chunk大小提示；无GraphQL、后端、schema、业务数据库、媒体或Manifest更改。

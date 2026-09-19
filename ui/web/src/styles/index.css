@@ -786,6 +786,7 @@ a { color: inherit; text-decoration: none; }
 .manage-help-table-wrap tr:last-child > * { border-bottom: 0; }
 .manage-help-safety { background: color-mix(in srgb, var(--cgm-primary) 4%, var(--cgm-surface)); }
 .manage-help-safety ul { display: grid; gap: .65rem; margin: 0; padding-left: 1.15rem; color: var(--cgm-muted-foreground); font-size: .72rem; line-height: 1.6; }
+.manage-help-list { display: grid; gap: .8rem; margin: 0; padding-left: 1.15rem; color: var(--cgm-muted-foreground); font-size: .75rem; line-height: 1.7; }
 @media (max-width: 900px) {
   .manage-help-layout { grid-template-columns: 1fr; }
   .manage-help-layout > .manage-help-article { grid-column: 1; }

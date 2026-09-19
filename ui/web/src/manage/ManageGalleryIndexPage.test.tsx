@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 
 import type { MockedResponse } from "@apollo/client/testing";
 import { MockedProvider } from "@apollo/client/testing/react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -13,10 +13,10 @@ afterEach(cleanup);
 
 const summary = { all: 60, draft: 55, overLimit: 2, unavailable: 3, blocking: 4, missingGallery: 1, processingError: 2, manifestAttention: 4 };
 
-function galleryPage(page: number, issue: string): MockedResponse {
+function galleryPage(page: number, issue: string, search = ""): MockedResponse {
   return {
-    request: { query: MANAGE_GALLERIES, variables: { page, issue } },
-    result: { data: { manageGalleries: { page, pageSize: 24, totalItems: issue === "ALL" ? 60 : issue === "MISSING" ? 1 : issue === "PROCESSING_ERROR" ? 2 : 55,
+    request: { query: MANAGE_GALLERIES, variables: { page, issue, search } },
+    result: { data: { manageGalleries: { page, pageSize: 24, totalItems: search ? 1 : issue === "ALL" ? 60 : issue === "MISSING" ? 1 : issue === "PROCESSING_ERROR" ? 2 : 55,
       totalPages: page === 3 ? 3 : 1, summary, items: [] } } },
   };
 }
@@ -54,10 +54,38 @@ describe("ManageGalleryIndexPage filter cards", () => {
     expect(screen.getByTestId("location").textContent).toBe("");
   });
 
+  it("searches across pages, combines issue filters and preserves the query in the URL", async () => {
+    render(<MemoryRouter initialEntries={["/manage/gallery?page=3&issue=DRAFT"]}>
+      <MockedProvider mocks={[galleryPage(3, "DRAFT"), galleryPage(1, "DRAFT", "Alice"), galleryPage(1, "MISSING", "Alice"), galleryPage(1, "MISSING")]}>
+        <><ManageGalleryIndexPage /><CurrentLocation /></>
+      </MockedProvider>
+    </MemoryRouter>);
+
+    await screen.findByRole("navigation", { name: "作品集筛选 / Gallery filters" });
+    fireEvent.change(screen.getByRole("searchbox", { name: /搜索作品集/ }), { target: { value: "Alice" } });
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("issue=DRAFT&search=Alice"));
+    expect(screen.getByTestId("location")).not.toHaveTextContent("page=3");
+    expect(await screen.findByText(/1 个匹配作品集/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /缺失媒体 \/ Missing/ }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("issue=MISSING&search=Alice"));
+    fireEvent.click(screen.getByRole("button", { name: /清除 \/ Clear/ }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("?issue=MISSING"));
+  });
+
+  it("reports when no Gallery matches the search", async () => {
+    const emptyPage = { page: 1, pageSize: 24, totalItems: 0, totalPages: 0, summary, items: [] };
+    render(<MemoryRouter initialEntries={["/manage/gallery?search=unknown"]}><MockedProvider mocks={[
+      { request: { query: MANAGE_GALLERIES, variables: { page: 1, issue: "ALL", search: "unknown" } }, result: { data: { manageGalleries: emptyPage } } },
+    ]}><ManageGalleryIndexPage /></MockedProvider></MemoryRouter>);
+    expect(await screen.findByText(/没有匹配的作品集/)).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: /搜索作品集/ })).toHaveValue("unknown");
+  });
+
   it("previews a selected Gallery and offers explicit skip or overwrite decisions", async () => {
     const row = { setID: "gallery-one", slug: "one", state: "ACTIVE", title: "One", contentRating: "NON_ADULT", metadataRevision: 4, scanRevision: 2, browsable: true, sourceType: "DIRECTORY", sourcePath: "/media/one", sourceAvailability: "AVAILABLE", reconcileState: "IN_SYNC", overLimit: false, itemCount: 2, missingCount: 0, pendingCount: 0, errorCount: 0, blockingIssues: 0, lastScanErrorCode: "", lastScanCompleted: "", manifestStatus: "FILE_DIRTY", manifestCheckedAt: "2026-09-18T12:00:00Z" };
     const page = { page: 1, pageSize: 24, totalItems: 1, totalPages: 1, summary: { ...summary, all: 1 }, items: [row] };
-    const pageMock: MockedResponse = { request: { query: MANAGE_GALLERIES, variables: { page: 1, issue: "ALL" } }, result: { data: { manageGalleries: page } } };
+    const pageMock: MockedResponse = { request: { query: MANAGE_GALLERIES, variables: { page: 1, issue: "ALL", search: "" } }, result: { data: { manageGalleries: page } } };
     render(<MemoryRouter initialEntries={["/manage/gallery"]}><MockedProvider mocks={[
       pageMock,
       { request: { query: PREVIEW_GALLERY_MANIFEST_BATCH_PUSH, variables: { setIDs: ["gallery-one"] } }, result: { data: { previewGalleryManifestPush: [{ setID: "gallery-one", title: "One", status: "FILE_DIRTY", metadataRevision: 4, path: "/media/one/.cosplay.json", fileHash: "hash", databaseContentChanged: true, localFileChanged: true, blockReason: "" }] } } },
@@ -74,7 +102,7 @@ describe("ManageGalleryIndexPage filter cards", () => {
   it("explains a disabled metadata writeback policy before any Push can run", async () => {
     const row = { setID: "gallery-one", slug: "one", state: "ACTIVE", title: "One", contentRating: "NON_ADULT", metadataRevision: 4, scanRevision: 2, browsable: true, sourceType: "DIRECTORY", sourcePath: "/media/one", sourceAvailability: "AVAILABLE", reconcileState: "IN_SYNC", overLimit: false, itemCount: 2, missingCount: 0, pendingCount: 0, errorCount: 0, blockingIssues: 0, lastScanErrorCode: "", lastScanCompleted: "", manifestStatus: "NONE", manifestCheckedAt: "2026-09-18T12:00:00Z" };
     render(<MemoryRouter initialEntries={["/manage/gallery"]}><MockedProvider mocks={[
-      { request: { query: MANAGE_GALLERIES, variables: { page: 1, issue: "ALL" } }, result: { data: { manageGalleries: { page: 1, pageSize: 24, totalItems: 1, totalPages: 1, summary: { ...summary, all: 1 }, items: [row] } } } },
+      { request: { query: MANAGE_GALLERIES, variables: { page: 1, issue: "ALL", search: "" } }, result: { data: { manageGalleries: { page: 1, pageSize: 24, totalItems: 1, totalPages: 1, summary: { ...summary, all: 1 }, items: [row] } } } },
       { request: { query: PREVIEW_GALLERY_MANIFEST_BATCH_PUSH, variables: { setIDs: ["gallery-one"] } }, result: { data: { previewGalleryManifestPush: [{ setID: "gallery-one", title: "One", status: "NONE", metadataRevision: 4, path: "/media/one/.cosplay.json", fileHash: "", databaseContentChanged: true, localFileChanged: false, blockReason: "METADATA_WRITEBACK_DISABLED" }] } } },
     ]}><ManageGalleryIndexPage /></MockedProvider></MemoryRouter>);
     fireEvent.click(await screen.findByRole("checkbox", { name: "Select One" }));

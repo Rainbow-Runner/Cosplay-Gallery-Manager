@@ -1616,8 +1616,8 @@ func (r *queryResolver) FavoriteMedia(ctx context.Context, scope BrowseScope, pa
 }
 
 // ManageGalleries is the resolver for the manageGalleries field.
-func (r *queryResolver) ManageGalleries(ctx context.Context, page int, issue string) (*ManageGalleryPage, error) {
-	value, err := r.Database.Manage().GalleryPage(ctx, page, issue)
+func (r *queryResolver) ManageGalleries(ctx context.Context, page int, issue string, search string) (*ManageGalleryPage, error) {
+	value, err := r.Database.Manage().GalleryPage(ctx, page, issue, search)
 	if err != nil {
 		return nil, manageError(err)
 	}

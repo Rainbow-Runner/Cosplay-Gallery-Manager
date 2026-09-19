@@ -549,6 +549,11 @@ a { color: inherit; text-decoration: none; }
 .state--draft { border-color: #9a7f5a; color: #c8aa7b; }
 .state--archived { color: #777073; }
 .manage-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem; color: var(--ink-muted); font-size: .68rem; }
+.manage-gallery-search { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; margin: 1rem 0; }
+.manage-gallery-search label, .manage-gallery-search span { color: var(--cgm-muted-foreground); font-size: .72rem; }
+.manage-gallery-search input { flex: 1 1 17rem; min-width: 0; max-width: 34rem; padding: .55rem .7rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface); color: var(--cgm-foreground); font: inherit; font-size: .75rem; }
+.manage-gallery-search button { padding: .5rem .65rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface); color: var(--cgm-foreground); cursor: pointer; font-size: .7rem; }
+.manage-gallery-empty { padding: 1rem; color: var(--cgm-muted-foreground); font-size: .75rem; }
 .manage-pagination button:disabled { opacity: .3; cursor: default; }
 .editor-tabs { display: flex; overflow-x: auto; margin-bottom: 1.5rem; border-bottom: 1px solid var(--line); }
 .editor-tabs button { padding: .8rem 1rem; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ink-muted); font-size: .68rem; text-transform: capitalize; cursor: pointer; }

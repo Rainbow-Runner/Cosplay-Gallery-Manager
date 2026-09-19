@@ -1217,7 +1217,7 @@ type ComplexityRoot struct {
 		ManageCoserManifest                  func(childComplexity int, coserUUID string) int
 		ManageCoserNameConflicts             func(childComplexity int, name string, limit int) int
 		ManageDiscovery                      func(childComplexity int, libraryID int64) int
-		ManageGalleries                      func(childComplexity int, page int, issue string) int
+		ManageGalleries                      func(childComplexity int, page int, issue string, search string) int
 		ManageGallery                        func(childComplexity int, setID string) int
 		ManageGalleryManifest                func(childComplexity int, setID string) int
 		ManageIgnoredSources                 func(childComplexity int, libraryID *int64, page int, query string) int
@@ -1432,7 +1432,7 @@ type QueryResolver interface {
 	FavoriteGalleries(ctx context.Context, scope BrowseScope, page int) (*GalleryPage, error)
 	GalleryHistory(ctx context.Context, scope BrowseScope, page int) (*GalleryPage, error)
 	FavoriteMedia(ctx context.Context, scope BrowseScope, page int, ratingSort bool) (*MediaPage, error)
-	ManageGalleries(ctx context.Context, page int, issue string) (*ManageGalleryPage, error)
+	ManageGalleries(ctx context.Context, page int, issue string, search string) (*ManageGalleryPage, error)
 	PreviewGalleryManifestPush(ctx context.Context, setIDs []string) ([]*ManageGalleryManifestBatchPreview, error)
 	ManageGallery(ctx context.Context, setID string) (*ManageGalleryDetail, error)
 	ManageGalleryManifest(ctx context.Context, setID string) (*ManageGalleryManifestState, error)
@@ -7889,7 +7889,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.ManageGalleries(childComplexity, args["page"].(int), args["issue"].(string)), true
+		return e.complexity.Query.ManageGalleries(childComplexity, args["page"].(int), args["issue"].(string), args["search"].(string)), true
 
 	case "Query.manageGallery":
 		if e.complexity.Query.ManageGallery == nil {
@@ -14124,6 +14124,11 @@ func (ec *executionContext) field_Query_manageGalleries_args(ctx context.Context
 		return nil, err
 	}
 	args["issue"] = arg1
+	arg2, err := ec.field_Query_manageGalleries_argsSearch(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["search"] = arg2
 	return args, nil
 }
 func (ec *executionContext) field_Query_manageGalleries_argsPage(
@@ -14155,6 +14160,24 @@ func (ec *executionContext) field_Query_manageGalleries_argsIssue(
 
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("issue"))
 	if tmp, ok := rawArgs["issue"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_manageGalleries_argsSearch(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["search"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("search"))
+	if tmp, ok := rawArgs["search"]; ok {
 		return ec.unmarshalNString2string(ctx, tmp)
 	}
 
@@ -56540,7 +56563,7 @@ func (ec *executionContext) _Query_manageGalleries(ctx context.Context, field gr
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().ManageGalleries(rctx, fc.Args["page"].(int), fc.Args["issue"].(string))
+		return ec.resolvers.Query().ManageGalleries(rctx, fc.Args["page"].(int), fc.Args["issue"].(string), fc.Args["search"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

@@ -460,7 +460,7 @@ type Query {
   favoriteGalleries(scope: BrowseScope! = LIST, page: Int! = 1): GalleryPage!
   galleryHistory(scope: BrowseScope! = LIST, page: Int! = 1): GalleryPage!
   favoriteMedia(scope: BrowseScope! = LIST, page: Int! = 1, ratingSort: Boolean! = false): MediaPage!
-  manageGalleries(page: Int! = 1, issue: String! = "ALL"): ManageGalleryPage!
+  manageGalleries(page: Int! = 1, issue: String! = "ALL", search: String! = ""): ManageGalleryPage!
   previewGalleryManifestPush(setIDs: [ID!]!): [ManageGalleryManifestBatchPreview!]!
   manageGallery(setID: ID!): ManageGalleryDetail!
   manageGalleryManifest(setID: ID!): ManageGalleryManifestState!

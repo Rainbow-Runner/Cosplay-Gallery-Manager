@@ -17,7 +17,7 @@ type ManageStore struct{ db *sql.DB }
 
 func (db *Database) Manage() *ManageStore { return &ManageStore{db: db.DB} }
 
-func (s *ManageStore) GalleryPage(ctx context.Context, page int, issue string) (manage.GalleryPage, error) {
+func (s *ManageStore) GalleryPage(ctx context.Context, page int, issue, search string) (manage.GalleryPage, error) {
 	if page < 1 || page > 1_000_000 {
 		return manage.GalleryPage{}, errors.New("Manage page is out of range")
 	}
@@ -41,6 +41,16 @@ func (s *ManageStore) GalleryPage(ctx context.Context, page int, issue string) (
 	default:
 		return manage.GalleryPage{}, errors.New("unsupported Manage Gallery issue filter")
 	}
+	search = normalizedDisplay(strings.TrimSpace(search))
+	if len([]rune(search)) > 300 {
+		return manage.GalleryPage{}, errors.New("Manage Gallery search is too long")
+	}
+	var filterArgs []any
+	if search != "" {
+		pattern := "%" + literalLike(search) + "%"
+		condition = "(" + condition + `) AND (gallery.title LIKE ? ESCAPE '\' OR gallery.set_id LIKE ? ESCAPE '\' OR gallery.slug LIKE ? ESCAPE '\' OR COALESCE(source.source_path,'') LIKE ? ESCAPE '\' OR EXISTS(SELECT 1 FROM gallery_aliases search_alias WHERE search_alias.gallery_id=gallery.id AND search_alias.alias LIKE ? ESCAPE '\') )`
+		filterArgs = []any{pattern, pattern, pattern, pattern, pattern}
+	}
 	result := manage.GalleryPage{Page: page, PageSize: 24}
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*),
 		COALESCE(SUM(CASE WHEN gallery.state='DRAFT' THEN 1 ELSE 0 END),0),COALESCE(SUM(CASE WHEN source.over_limit=1 THEN 1 ELSE 0 END),0),
@@ -56,12 +66,12 @@ func (s *ManageStore) GalleryPage(ctx context.Context, page int, issue string) (
 	}
 	result.TotalItems = result.Summary.All
 	if condition != "1=1" {
-		if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM galleries gallery LEFT JOIN gallery_sources source ON source.gallery_id=gallery.id LEFT JOIN gallery_manifest_inspections inspection ON inspection.gallery_id=gallery.id WHERE `+condition).Scan(&result.TotalItems); err != nil {
+		if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM galleries gallery LEFT JOIN gallery_sources source ON source.gallery_id=gallery.id LEFT JOIN gallery_manifest_inspections inspection ON inspection.gallery_id=gallery.id WHERE `+condition, filterArgs...).Scan(&result.TotalItems); err != nil {
 			return manage.GalleryPage{}, err
 		}
 	}
 	result.TotalPages = int(math.Ceil(float64(result.TotalItems) / 24))
-	rows, err := s.db.QueryContext(ctx, manageGalleryRowSelect+` WHERE `+condition+` ORDER BY CASE WHEN gallery.state='DRAFT' THEN 0 WHEN source.over_limit=1 OR source.availability_state<>'AVAILABLE' THEN 1 WHEN EXISTS(SELECT 1 FROM gallery_items priority_item WHERE priority_item.gallery_id=gallery.id AND priority_item.availability_state='MISSING') THEN 2 ELSE 3 END,gallery.updated_at_utc DESC,gallery.id DESC LIMIT ? OFFSET ?`, 24, (page-1)*24)
+	rows, err := s.db.QueryContext(ctx, manageGalleryRowSelect+` WHERE `+condition+` ORDER BY CASE WHEN gallery.state='DRAFT' THEN 0 WHEN source.over_limit=1 OR source.availability_state<>'AVAILABLE' THEN 1 WHEN EXISTS(SELECT 1 FROM gallery_items priority_item WHERE priority_item.gallery_id=gallery.id AND priority_item.availability_state='MISSING') THEN 2 ELSE 3 END,gallery.updated_at_utc DESC,gallery.id DESC LIMIT ? OFFSET ?`, append(filterArgs, 24, (page-1)*24)...)
 	if err != nil {
 		return manage.GalleryPage{}, err
 	}

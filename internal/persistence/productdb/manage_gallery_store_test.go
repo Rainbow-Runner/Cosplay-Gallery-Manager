@@ -3,6 +3,8 @@ package productdb
 import (
 	"context"
 	"errors"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,6 +30,51 @@ func TestManageGalleryItemResolutionNeverCrossesAggregateBoundary(t *testing.T) 
 	}
 	if _, err := db.Manage().GalleryItemID(ctx, second.SetID, item.UUID); err != nil {
 		t.Fatalf("same-Gallery member resolution failed: %v", err)
+	}
+}
+
+func TestManageGalleryPageSearchAcrossDatabaseAndIssueFilters(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 19, 0, 0, 0, 0, time.UTC)
+	first, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "Alice COS", Aliases: []string{"Moonlight"}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstSource, err := db.Galleries().AddSource(ctx, first.ID, CreateSourceInput{Type: gallery.SourceTypeDirectory, Path: filepath.Join(t.TempDir(), "Special Source"), Availability: gallery.AvailabilityAvailable}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "100% Hero"}, now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Galleries().AddSource(ctx, second.ID, CreateSourceInput{Type: gallery.SourceTypeDirectory, Path: filepath.Join(t.TempDir(), "other"), Availability: gallery.AvailabilityAvailable}, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Galleries().AddItem(ctx, first.ID, firstSource.ID, CreateItemInput{RelativePath: "missing.jpg", MediaKind: gallery.MediaKindStaticImage, ContentFormat: gallery.ContentFormatImage, ImageCategory: gallery.ImageCategoryPhoto, Position: 1024, Availability: gallery.AvailabilityMissing, ProcessingState: gallery.ProcessingReady}, now); err != nil {
+		t.Fatal(err)
+	}
+	for _, search := range []string{"Alice", "moon", "Special Source", first.SetID[:8]} {
+		page, err := db.Manage().GalleryPage(ctx, 1, "ALL", search)
+		if err != nil || page.TotalItems != 1 || len(page.Items) != 1 || page.Items[0].SetID != first.SetID || page.Summary.All != 2 {
+			t.Fatalf("search %q: page=%#v err=%v", search, page, err)
+		}
+	}
+	page, err := db.Manage().GalleryPage(ctx, 1, "MISSING", "Moon")
+	if err != nil || page.TotalItems != 1 || page.Items[0].SetID != first.SetID {
+		t.Fatalf("combined filter: %#v %v", page, err)
+	}
+	page, err = db.Manage().GalleryPage(ctx, 1, "MISSING", "Hero")
+	if err != nil || page.TotalItems != 0 || len(page.Items) != 0 || page.Summary.All != 2 {
+		t.Fatalf("empty combined filter: %#v %v", page, err)
+	}
+	page, err = db.Manage().GalleryPage(ctx, 1, "ALL", "%")
+	if err != nil || page.TotalItems != 1 || page.Items[0].SetID != second.SetID {
+		t.Fatalf("literal wildcard: %#v %v", page, err)
+	}
+	if _, err := db.Manage().GalleryPage(ctx, 1, "ALL", strings.Repeat("x", 301)); err == nil {
+		t.Fatal("long query was accepted")
 	}
 }
 
@@ -58,7 +105,7 @@ func TestManageGalleryPageFiltersMissingMembersAcrossTheWholeDatabase(t *testing
 	}, now); err != nil {
 		t.Fatal(err)
 	}
-	page, err := db.Manage().GalleryPage(ctx, 1, "MISSING")
+	page, err := db.Manage().GalleryPage(ctx, 1, "MISSING", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,11 +115,11 @@ func TestManageGalleryPageFiltersMissingMembersAcrossTheWholeDatabase(t *testing
 	if page.Summary.All != 2 || page.Summary.MissingGallery != 1 || page.Summary.MissingItem != 2 || page.Summary.ProcessingError != 1 {
 		t.Fatalf("global summary must count Galleries, except legacy missingItem: %#v", page.Summary)
 	}
-	errorPage, err := db.Manage().GalleryPage(ctx, 1, "PROCESSING_ERROR")
+	errorPage, err := db.Manage().GalleryPage(ctx, 1, "PROCESSING_ERROR", "")
 	if err != nil || errorPage.TotalItems != 1 || len(errorPage.Items) != 1 || errorPage.Items[0].SetID != errorGallery.SetID || errorPage.Summary.All != 2 {
 		t.Fatalf("processing error page = %#v, err=%v", errorPage, err)
 	}
-	if _, err := db.Manage().GalleryPage(ctx, 1, "NOT_A_FILTER"); err == nil {
+	if _, err := db.Manage().GalleryPage(ctx, 1, "NOT_A_FILTER", ""); err == nil {
 		t.Fatal("unsupported issue filter was accepted")
 	}
 	runID, err := db.Scans().Begin(ctx, missingSource.ID, now.Add(2*time.Minute))

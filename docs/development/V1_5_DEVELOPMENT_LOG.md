@@ -2247,3 +2247,9 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 功能和部署前记录提交为`8c803d50dfbe755749930ed4d6749eab7723d0b9`（`Add collapsible media folder tree in Gallery editor`）。正式三标签`cgm_web_embed cgm_galleryepic cgm_moegirl`构建的Go VCS元数据确认该revision且`vcs.modified=false`。初次候选因未注入About提交元数据，探针显示`exactSourceAvailable=false`；随后从同一清洁提交补齐`githash/buildstamp`重建并再次原子替换，最终正式程序SHA-256为`517c68b0b4eda8f060438ad4ce1fd501ed2b0606faab96eca1d1518ebeda300d`，About精确报告该提交、`buildTime=2026-09-19T09:35:23Z`及`exactSourceAvailable=true`。功能未变更，无schema迁移。
 - 停服确认`MainPID=0`后，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-media-folders-8c803d5-05HhTm`保存SQLite一致副本、旧二进制、配置、用户systemd单元及完整Coser托管目录；原件与副本逐项比较一致。备份库`integrity_check=ok`，SHA-256为`f9a7b9052b72d68c4692399c2f109111b415ed23fdd1245b065a951ffdab0dd2`；旧程序SHA-256为`7fd567dd93e5b7410cda200ea5403e8b032c02cf3b26ff41d03aecea7a0e9642`。备份不含原始媒体、缓存或日志。
 - 最终服务`active/running`、`NRestarts=0`，Health/Ready均204，`/manage/gallery`及本轮Media编辑JS资源均200；正式库`integrity_check=ok`，备份和部署后的Coser/Work/Character/Tag/Gallery/Source/Item计数均为`135/108/697/23/8/8/570`。正式配置SHA-256仍为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，近四分钟服务日志没有warning以上条目。未修改媒体或Manifest；未远端推送。用户浏览器实际交互仍待业务验收。
+
+# 2026-09-19 前台搜索结果单列封面布局（源码完成，待部署）
+
+- Browse → Search由桌面双列分组/纯文字结果改为纵向单列分组，每条结果独占一行、整行可点击；Gallery行最左侧使用现有有效封面缩略图，中间为标题和实体类型，右侧为轻量箭头。其他实体在同一列表节奏中使用类型图标；无封面Gallery显示占位图标，不显示破图或物理媒体路径。移动端收窄封面与行距，保留长标题截断和键盘焦点样式。分组标题、类型和无结果状态增加中英文文案。搜索范围、排序、每类最多5条和现有跳转路径保持不变。
+- `SearchHit`新增可选`coverResource`；服务端仅针对已经通过Browse可见性和分级范围筛选的Gallery，读取现有有效封面派生资源的UUID/修订/变体等不透明标识，仍通过认证`/resource/item`端点加载，不创建新缓存、不读取原始媒体、不增加数据库表或字段。无封面时返回`null`。GraphQL执行代码已按schema重新生成。
+- 数据库定向测试覆盖有封面和无封面结果，前端测试覆盖单行封面、占位和路由。正式三标签Browse/产品库/API/Server/CMD测试及Go Vet、TypeScript、前端35文件131项测试和685模块生产构建通过；仅见既存主chunk超过500KiB提示。本轮尚未提交或增量部署，正式业务库、服务、媒体、Manifest和缓存未修改。

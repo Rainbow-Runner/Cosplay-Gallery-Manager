@@ -126,7 +126,7 @@ export interface VideoPlaybackStatus {
 export type SearchEntityKind = "GALLERY" | "COSER" | "WORK" | "CHARACTER" | "TAG";
 export interface EntityIndexItem { kind: SearchEntityKind; uuid: string; slug: string; name: string; aliases: string[]; avatarURL?: string | null }
 export interface EntityPage { items: EntityIndexItem[]; page: number; pageSize: number; totalItems: number; totalPages: number }
-export interface SearchHit { kind: SearchEntityKind; uuid: string; slug: string; name: string; matchLevel: number }
+export interface SearchHit { kind: SearchEntityKind; uuid: string; slug: string; name: string; matchLevel: number; coverResource?: ResourceIdentity | null }
 export interface SearchPreview { scope: Scope; query: string; galleries: SearchHit[]; cosers: SearchHit[]; works: SearchHit[]; characters: SearchHit[]; tags: SearchHit[] }
 export interface RandomMediaItem {
   itemUUID: string; mediaKind: GalleryMember["mediaKind"]; imageCategory?: GalleryMember["imageCategory"];

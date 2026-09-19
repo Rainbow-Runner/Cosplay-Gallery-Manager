@@ -188,7 +188,7 @@ func searchHits(values []browse.SearchHit) []*SearchHit {
 	result := make([]*SearchHit, 0, len(values))
 	for _, value := range values {
 		result = append(result, &SearchHit{Kind: SearchEntityKind(value.Kind), UUID: value.UUID, Slug: value.Slug,
-			Name: value.Name, MatchLevel: value.MatchLevel})
+			Name: value.Name, MatchLevel: value.MatchLevel, CoverResource: resourceIdentity(value.CoverResource)})
 	}
 	return result
 }

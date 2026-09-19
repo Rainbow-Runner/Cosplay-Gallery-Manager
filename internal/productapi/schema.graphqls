@@ -175,6 +175,7 @@ type SearchHit {
   slug: String!
   name: String!
   matchLevel: Int!
+  coverResource: ResourceIdentity
 }
 
 type SearchPreview {

@@ -201,7 +201,7 @@ export const SEARCH_PREVIEW = gql`
   query SearchPreview($query: String!, $scope: BrowseScope!) {
     searchPreview(query: $query, scope: $scope) {
       scope query
-      galleries { kind uuid slug name matchLevel }
+      galleries { kind uuid slug name matchLevel coverResource { itemUUID contentRevision profileHash variant mimeType } }
       cosers { kind uuid slug name matchLevel }
       works { kind uuid slug name matchLevel }
       characters { kind uuid slug name matchLevel }

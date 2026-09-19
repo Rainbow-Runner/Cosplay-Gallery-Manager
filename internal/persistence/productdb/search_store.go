@@ -2,10 +2,12 @@ package productdb
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"strings"
 
 	"github.com/stashapp/stash/internal/browse"
+	"github.com/stashapp/stash/internal/mediaprocessing"
 )
 
 // SearchPreview searches only Gallery and core entity names/sort names/Alias.
@@ -50,6 +52,7 @@ func (s *BrowseStore) searchGalleries(ctx context.Context, scope browse.Scope, q
 		args = append(args, scopeArg)
 	}
 	args = append(args, query, prefix, contains, query, prefix, contains, contains)
+	args = append(args, mediaprocessing.VariantStaticPoster, mediaprocessing.VariantCard480)
 	rows, err := s.db.QueryContext(ctx, `WITH visible AS (
 		SELECT gallery.id,gallery.set_id,gallery.slug,gallery.title,gallery.added_at_utc FROM galleries gallery
 		JOIN gallery_sources source ON source.gallery_id=gallery.id LEFT JOIN gallery_personal_states personal ON personal.gallery_id=gallery.id
@@ -68,7 +71,14 @@ func (s *BrowseStore) searchGalleries(ctx context.Context, scope browse.Scope, q
 			UNION ALL SELECT tag.name FROM gallery_tags relation JOIN tags tag ON tag.uuid=relation.tag_uuid WHERE relation.gallery_id=visible.id
 			UNION ALL SELECT alias.alias FROM gallery_tags relation JOIN tag_aliases alias ON alias.tag_uuid=relation.tag_uuid WHERE relation.gallery_id=visible.id
 		) related WHERE related.value LIKE ? ESCAPE '\'))
-		SELECT visible.set_id,visible.slug,visible.title,MIN(matches.rank) rank FROM matches JOIN visible ON visible.id=matches.id
+		SELECT visible.set_id,visible.slug,visible.title,MIN(matches.rank) rank,
+			cover_derivative.item_uuid,cover_derivative.content_revision,cover_derivative.profile_hash,
+			cover_derivative.variant,cover_derivative.mime_type
+		FROM matches JOIN visible ON visible.id=matches.id
+		LEFT JOIN gallery_covers cover ON cover.gallery_id=visible.id
+		LEFT JOIN media_derivatives cover_derivative ON cover_derivative.item_uuid=cover.effective_item_uuid
+			AND cover_derivative.is_current=1
+			AND cover_derivative.variant=CASE WHEN cover.effective_kind='VIDEO_POSTER' THEN ? ELSE ? END
 		GROUP BY visible.id ORDER BY rank,visible.added_at_utc DESC,visible.id DESC LIMIT 5`, args...)
 	if err != nil {
 		return nil, err
@@ -77,8 +87,15 @@ func (s *BrowseStore) searchGalleries(ctx context.Context, scope browse.Scope, q
 	var result []browse.SearchHit
 	for rows.Next() {
 		value := browse.SearchHit{Kind: browse.SearchGallery}
-		if err := rows.Scan(&value.UUID, &value.Slug, &value.Name, &value.MatchLevel); err != nil {
+		var itemUUID, profileHash, variant, mimeType sql.NullString
+		var revision sql.NullInt64
+		if err := rows.Scan(&value.UUID, &value.Slug, &value.Name, &value.MatchLevel,
+			&itemUUID, &revision, &profileHash, &variant, &mimeType); err != nil {
 			return nil, err
+		}
+		if itemUUID.Valid && revision.Valid {
+			value.CoverResource = &browse.ResourceIdentity{ItemUUID: itemUUID.String, ContentRevision: revision.Int64,
+				ProfileHash: profileHash.String, Variant: variant.String, MIMEType: mimeType.String}
 		}
 		result = append(result, value)
 	}

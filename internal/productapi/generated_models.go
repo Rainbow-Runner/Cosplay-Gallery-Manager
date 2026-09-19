@@ -1283,11 +1283,12 @@ type RuntimeSettingsInput struct {
 }
 
 type SearchHit struct {
-	Kind       SearchEntityKind `json:"kind"`
-	UUID       string           `json:"uuid"`
-	Slug       string           `json:"slug"`
-	Name       string           `json:"name"`
-	MatchLevel int              `json:"matchLevel"`
+	Kind          SearchEntityKind  `json:"kind"`
+	UUID          string            `json:"uuid"`
+	Slug          string            `json:"slug"`
+	Name          string            `json:"name"`
+	MatchLevel    int               `json:"matchLevel"`
+	CoverResource *ResourceIdentity `json:"coverResource,omitempty"`
 }
 
 type SearchPreview struct {

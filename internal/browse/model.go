@@ -174,11 +174,12 @@ const (
 )
 
 type SearchHit struct {
-	Kind       SearchEntityKind
-	UUID       string
-	Slug       string
-	Name       string
-	MatchLevel int
+	Kind          SearchEntityKind
+	UUID          string
+	Slug          string
+	Name          string
+	MatchLevel    int
+	CoverResource *ResourceIdentity
 }
 
 type SearchPreview struct {

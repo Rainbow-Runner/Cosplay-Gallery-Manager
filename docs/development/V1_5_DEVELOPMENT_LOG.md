@@ -2236,3 +2236,8 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 功能与部署前记录提交为`2cba64d46161bec53de1c37dc2157a898d685806`（`Document library recognition and exclusion defaults`）。正式三标签单文件构建经核对`vcs.modified=false`、revision一致、构建时间`2026-09-19T08:27:01Z`；候选SHA-256为`7fd567dd93e5b7410cda200ea5403e8b032c02cf3b26ff41d03aecea7a0e9642`。部署前正式服务`active/running`、Health 204。
 - 停服确认`MainPID=0`，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-scan-help-2cba64d-vEeAsV`保存SQLite一致副本、旧二进制、配置、用户服务单元和完整Coser托管目录；原件与副本逐项核对，Coser目录递归比较无差异。备份库`integrity_check=ok`、SHA-256为`f9a7b9052b72d68c4692399c2f109111b415ed23fdd1245b065a951ffdab0dd2`；旧程序SHA-256为`61ad515a36b1628cf4ee0a2abe9da86dca8b7948d47b837f2a5b655725d5ae09`。备份不含原始媒体、缓存或日志。
 - 候选复制至正式程序同目录并逐字节校验后原子替换，2026-09-19 16:29 CST启动一次。服务`active/running`、`NRestarts=0`，Health/Ready均204，`/manage/help`、新Help JS及CSS资源均200；About精确报告`2cba64d`且`exactSourceAvailable=true`。正式库`integrity_check=ok`，备份与部署后Coser/Work/Character/Tag/Gallery/Source/Item计数均为`135/108/697/23/8/8/570`；本次启动无warning以上日志。未迁移schema，未修改正式配置、原始媒体、Manifest或缓存；未远端推送。
+# 2026-09-19 Gallery Media目录折叠与紧凑列表（源码完成，待部署）
+
+- 后台Gallery详情的Media页由完整父目录平铺改为逐层目录树；各媒体类型组保持独立，Gallery根目录默认展开，子目录默认折叠，节点显示含后代的媒体总量，点击箭头展开/收起。“仅显示缺失媒体”在未手动指定折叠状态时自动展开可见目录，方便排查缺失项目。折叠状态仅为本页UI状态，不写入业务库。
+- 文件夹排序改为只在同级节点间移动整棵子树，不能移动Gallery根目录；文件内项目顺序和自然文件名排序仍按原有完整父目录执行，媒体类型组之间不混排。File与Caption改为同一行；父目录已由节点展示，普通行不再重复占行，重名文件仍保留父目录提示。表格、输入框及按钮垂直间距压缩，未调整元数据编辑和保存语义。
+- 覆盖目录树构建、空中间目录、子树移动边界、折叠/展开与Caption同行、缺失媒体入口的回归。TypeScript检查、Web 34文件130项测试、685模块生产构建通过，仅见既存主chunk大小提示。纯前端与开发文档变更，无后端、数据库schema、业务库、媒体、Manifest或缓存写入；本轮未提交或增量部署。

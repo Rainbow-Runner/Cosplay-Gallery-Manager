@@ -79,6 +79,8 @@ describe("ManageGalleryEditorPage relations", () => {
 		renderPage([{ request: { query: MANAGE_GALLERY, variables: { setID } }, result: { data: { manageGallery: missing } } }], "media");
 
 		expect(await screen.findByText("2 members · 1 missing · folder paths are relative to the Gallery root")).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Forget record" })).not.toBeInTheDocument();
+		fireEvent.click(screen.getByRole("button", { name: "Expand folder old" }));
 		expect(screen.getByRole("button", { name: "Forget record" })).toBeInTheDocument();
 		fireEvent.click(screen.getByRole("button", { name: "Replace file…" }));
 		expect(screen.getByRole("heading", { name: /Confirm media replacement/ })).toBeInTheDocument();
@@ -86,6 +88,19 @@ describe("ManageGalleryEditorPage relations", () => {
 		fireEvent.click(screen.getByRole("checkbox", { name: /Missing only/ }));
 		expect(screen.getByText("old")).toBeInTheDocument();
 		expect(screen.queryByText("new")).not.toBeInTheDocument();
+	});
+
+	it("collapses nested directories while keeping the caption beside the filename", async () => {
+		const photo = { uuid: "nested-item", relativePath: "disc/chapter/01.jpg", mediaKind: "STATIC_IMAGE", contentFormat: "JPEG", imageCategory: "PHOTO", position: "1024", caption: "A caption", excluded: false, availability: "AVAILABLE", processingState: "READY", byteSize: 100, videoProbeState: "", videoErrorCode: "", videoContainer: "", videoDurationSeconds: 0, videoWidth: 0, videoHeight: 0, videoCodec: "", audioCodec: "" };
+		renderPage([{ request: { query: MANAGE_GALLERY, variables: { setID } }, result: { data: { manageGallery: { ...gallery, items: [photo] } } } }], "media");
+		expect(await screen.findByRole("button", { name: "Expand folder disc" })).toHaveAttribute("aria-expanded", "false");
+		expect(screen.queryByRole("textbox", { name: "Caption for disc/chapter/01.jpg" })).not.toBeInTheDocument();
+		fireEvent.click(screen.getByRole("button", { name: "Expand folder disc" }));
+		fireEvent.click(screen.getByRole("button", { name: "Expand folder disc/chapter" }));
+		const caption = screen.getByRole("textbox", { name: "Caption for disc/chapter/01.jpg" });
+		expect(caption.closest(".manage-media-file-line")?.querySelector("strong")?.textContent).toBe("01.jpg");
+		fireEvent.click(screen.getByRole("button", { name: "Collapse folder disc" }));
+		expect(caption).not.toBeInTheDocument();
 	});
 
 	it("shows the portable member diff before an explicit Manifest Push", async () => {

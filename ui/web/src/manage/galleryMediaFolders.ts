@@ -14,6 +14,14 @@ export interface GalleryMediaGroup {
   folders: GalleryMediaFolder[];
 }
 
+export interface GalleryMediaFolderNode {
+  path: string;
+  name: string;
+  items: ManageGalleryItem[];
+  children: GalleryMediaFolderNode[];
+  totalCount: number;
+}
+
 export function galleryMediaGroupKey(item: ManageGalleryItem): GalleryMediaGroupKey {
   if (item.mediaKind === "STATIC_IMAGE") return item.imageCategory === "SELFIE" ? "SELFIE" : "PHOTO";
   return item.mediaKind === "ANIMATED_IMAGE" ? "ANIMATED_IMAGE" : "VIDEO";
@@ -36,7 +44,9 @@ export function groupGalleryMedia(items: ManageGalleryItem[]): GalleryMediaGroup
     const byFolder = new Map<string, ManageGalleryItem[]>();
     for (const item of groupItems) {
       const folder = galleryMediaParentPath(item.relativePath);
-      byFolder.set(folder, [...(byFolder.get(folder) || []), item]);
+      const members = byFolder.get(folder);
+      if (members) members.push(item);
+      else byFolder.set(folder, [item]);
     }
     const folderPaths = [...byFolder.keys()].filter(Boolean);
     const orderedPaths = byFolder.has("") ? ["", ...folderPaths] : folderPaths;
@@ -50,6 +60,54 @@ export function groupGalleryMedia(items: ManageGalleryItem[]): GalleryMediaGroup
 
 export function flattenGalleryMediaFolders(folders: GalleryMediaFolder[]) {
   return folders.flatMap((folder) => folder.items);
+}
+
+export function buildGalleryMediaFolderTree(folders: GalleryMediaFolder[]): GalleryMediaFolderNode {
+  const root: GalleryMediaFolderNode = { path: "", name: "Gallery root", items: [], children: [], totalCount: 0 };
+  for (const folder of folders) {
+    let node = root;
+    if (folder.path) {
+      for (const name of folder.path.split("/")) {
+        const path = node.path ? `${node.path}/${name}` : name;
+        let child = node.children.find((value) => value.path === path);
+        if (!child) {
+          child = { path, name, items: [], children: [], totalCount: 0 };
+          node.children.push(child);
+        }
+        node = child;
+      }
+    }
+    node.items = folder.items;
+  }
+  function count(node: GalleryMediaFolderNode): number {
+    node.totalCount = node.items.length + node.children.reduce((total, child) => total + count(child), 0);
+    return node.totalCount;
+  }
+  count(root);
+  return root;
+}
+
+export function moveGalleryMediaFolderTreeNode(folders: GalleryMediaFolder[], path: string, direction: -1 | 1): GalleryMediaFolder[] | null {
+  if (!path) return null;
+  const root = buildGalleryMediaFolderTree(folders);
+  const parts = path.split("/");
+  let parent = root;
+  for (const part of parts.slice(0, -1)) {
+    const child = parent.children.find((value) => value.name === part);
+    if (!child) return null;
+    parent = child;
+  }
+  const index = parent.children.findIndex((value) => value.path === path);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= parent.children.length) return null;
+  [parent.children[index], parent.children[target]] = [parent.children[target], parent.children[index]];
+  const result: GalleryMediaFolder[] = [];
+  function flatten(node: GalleryMediaFolderNode) {
+    if (node.items.length) result.push({ path: node.path, items: node.items });
+    node.children.forEach(flatten);
+  }
+  flatten(root);
+  return result;
 }
 
 export function naturalFileNameCompare(left: ManageGalleryItem, right: ManageGalleryItem) {

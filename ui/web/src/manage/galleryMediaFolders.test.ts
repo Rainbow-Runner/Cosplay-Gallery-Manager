@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ManageGalleryItem } from "./types";
-import { flattenGalleryMediaFolders, galleryMediaFileName, groupGalleryMedia, naturalFileNameCompare } from "./galleryMediaFolders";
+import { buildGalleryMediaFolderTree, flattenGalleryMediaFolders, galleryMediaFileName, groupGalleryMedia, moveGalleryMediaFolderTreeNode, naturalFileNameCompare } from "./galleryMediaFolders";
 
 function item(uuid: string, relativePath: string, mediaKind = "STATIC_IMAGE", imageCategory = "PHOTO"): ManageGalleryItem {
   return {
@@ -32,5 +32,28 @@ describe("Gallery media folder grouping", () => {
     const values = [item("10", "a/10.jpg"), item("2", "a/2.jpg"), item("1", "a/1.jpg")];
     values.sort(naturalFileNameCompare);
     expect(values.map((value) => galleryMediaFileName(value.relativePath))).toEqual(["1.jpg", "2.jpg", "10.jpg"]);
+  });
+
+  it("builds nested directory nodes, including directories without direct media", () => {
+    const folders = groupGalleryMedia([
+      item("deep", "disc-a/chapter-1/01.jpg"), item("other", "disc-b/02.jpg"),
+      item("direct", "disc-a/cover.jpg"), item("root", "cover.jpg"),
+    ])[0].folders;
+    const tree = buildGalleryMediaFolderTree(folders);
+    expect(tree.totalCount).toBe(4);
+    expect(tree.items.map((value) => value.uuid)).toEqual(["root"]);
+    expect(tree.children.map((child) => [child.path, child.totalCount])).toEqual([["disc-a", 2], ["disc-b", 1]]);
+    expect(tree.children[0].children[0].path).toBe("disc-a/chapter-1");
+    expect(tree.children[0].items.map((value) => value.uuid)).toEqual(["direct"]);
+  });
+
+  it("moves only sibling subtrees and keeps root/direct media before their descendants", () => {
+    const folders = groupGalleryMedia([
+      item("deep", "disc-a/chapter-1/01.jpg"), item("other", "disc-b/02.jpg"),
+      item("direct", "disc-a/cover.jpg"), item("root", "cover.jpg"),
+    ])[0].folders;
+    expect(moveGalleryMediaFolderTreeNode(folders, "disc-b", -1)?.map((folder) => folder.path)).toEqual(["", "disc-b", "disc-a", "disc-a/chapter-1"]);
+    expect(moveGalleryMediaFolderTreeNode(folders, "disc-a/chapter-1", -1)).toBeNull();
+    expect(moveGalleryMediaFolderTreeNode(folders, "", 1)).toBeNull();
   });
 });

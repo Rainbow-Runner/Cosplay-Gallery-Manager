@@ -2213,8 +2213,14 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 2026-09-19 12:35 CST停服确认`MainPID=0`，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-help-4f14073-RmOG3z`保存一致SQLite副本、旧二进制、配置、用户服务单元和完整Coser托管目录；原件与副本逐项核对，Coser目录递归比较无差异。备份库`integrity_check=ok`，SHA-256为`98ee99c787626851a0800e9b97472293052bd15ac7a6125824c3dcaaf0ea1c20`；旧程序SHA-256为`200b3e7bb4b11978c54b96771909c0ebab80621affea8d3f4bd734bf3b1dcfcf`。备份不含原始媒体、缓存或日志。
 - 候选复制至正式程序同目录并逐字节校验后原子替换，12:36 CST启动一次。服务`active/running`、`NRestarts=0`，Health/Ready均204，`/manage/help`及新增Help JS、CSS资源均200；About精确报告`4f14073`且`exactSourceAvailable=true`。正式库`integrity_check=ok`，备份与部署后Coser/Work/Character/Tag/Gallery/Source/Item计数均为`135/108/697/23/8/8/570`；本次启动无warning以上日志。未迁移schema，未修改正式配置、原始媒体、Manifest或缓存；未远端推送。
 
-# 2026-09-19 后台作品集跨页搜索（本地源码）
+# 2026-09-19 后台作品集跨页搜索（已部署）
 
 - Manage → Gallery 现有状态卡和每页24项分页均保留，新增搜索框，对全库Gallery标题、别名、Slug、Set ID及已绑定来源路径执行服务端关键词匹配；结果数量、页数和列表行按状态卡条件与关键词的交集计算。顶部状态卡仍展示全库统计，用于随时切换问题类别；搜索词持久于URL，切换卡片或翻页不会丢失，修改搜索词与切换卡片均重置页码。输入350ms防抖、最长300字符，清除按钮恢复未搜索列表，零结果明确提示；批量Manifest选择与执行流程保持原样。
 - 产品库查询沿用既有Manage可见边界和固定排序，不读取额外媒体文件；`LIKE`模式转义`%`、`_`、反斜杠并参数化，避免把用户文本作为SQL条件。GraphQL新增默认空串的`search`参数并重新生成执行层，旧调用保持兼容。不新增表、索引、schema或数据迁移。
 - 定向产品库测试覆盖标题/别名/路径/ID、状态交集、空结果、字面百分号和超长输入；前端测试覆盖跨页重置、URL保留、状态组合、清除和空结果提示。正式三标签产品库/API/Server/CMD测试及Go Vet、Web 34文件126项测试、TypeScript和685模块生产构建通过，仅见既存主chunk大小提示。部署前正式业务服务仍运行上一轮`4f14073`二进制。
+
+### 提交、备份与无 schema 增量部署
+
+- 功能与部署前记录提交为`970e251b8260c8742d043dbd0ce369208ecfcdb6`（`Add server-side search to Manage Gallery list`）。正式三标签二进制已核对`vcs.modified=false`、revision一致、构建时间`2026-09-19T05:06:55Z`；候选SHA-256为`61ad515a36b1628cf4ee0a2abe9da86dca8b7948d47b837f2a5b655725d5ae09`。部署前服务`active/running`、Health 204。
+- 2026-09-19停服确认`MainPID=0`，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-gallery-search-970e251-TPV9xS`保存一致SQLite副本、旧二进制、配置、用户服务单元和完整Coser托管目录；原件与副本逐项核对，Coser目录递归比较无差异。备份库`integrity_check=ok`、SHA-256为`f9a7b9052b72d68c4692399c2f109111b415ed23fdd1245b065a951ffdab0dd2`；旧程序SHA-256为`012c8d64a8103d87b0faef5f09b3c31bbeceb92064a3af3bb4d4bb0e64bbd726`。备份不含原始媒体、缓存或日志。
+- 候选复制至正式程序同目录并逐字节校验后原子替换，13:09 CST启动一次。服务`active/running`、`NRestarts=0`，Health/Ready均204，`/manage/gallery`、新Gallery列表JS和CSS资源均200；About精确报告`970e251`且`exactSourceAvailable=true`。正式库`integrity_check=ok`，备份与部署后Coser/Work/Character/Tag/Gallery/Source/Item计数均为`135/108/697/23/8/8/570`；本次启动无warning以上日志。未迁移schema，未修改正式配置、原始媒体、Manifest或缓存；未远端推送。

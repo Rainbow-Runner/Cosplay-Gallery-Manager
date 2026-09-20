@@ -35,6 +35,12 @@ type fakeVideoProbe struct {
 	result mediaprocessing.VideoTechnicalMetadata
 }
 
+type fakeCombinedVideoProbe struct{ fakeVideoProbe }
+
+func (probe fakeCombinedVideoProbe) ProbeWithCaptureDate(context.Context, string, string) (mediaprocessing.VideoTechnicalMetadata, string, string, error, error) {
+	return probe.result, "2024-05-13", "ffprobe.creation_time", nil, nil
+}
+
 func (probe fakeVideoProbe) Probe(context.Context, string) (mediaprocessing.VideoTechnicalMetadata, error) {
 	return probe.result, nil
 }
@@ -94,6 +100,14 @@ func TestWorkerClaimsMaterializesPublishesAndCompletesDerivative(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(cacheRoot, filepath.FromSlash(derivative.CacheRelativePath))); err != nil {
 		t.Fatal(err)
+	}
+	checked, err := db.CaptureDates().HasCurrent(ctx, item.UUID, revision)
+	if err != nil || !checked {
+		t.Fatalf("first derivative did not check capture date: checked=%v err=%v", checked, err)
+	}
+	queued, err := db.CaptureDates().EnqueueBackfill(ctx, 25, true, time.Now())
+	if err != nil || queued != 0 {
+		t.Fatalf("checked media requeued: count=%d err=%v", queued, err)
 	}
 	cover, err := db.Covers().Find(ctx, galleryRecord.ID)
 	if err != nil || cover.PreferredKind != gallery.CoverAutoRandom || cover.EffectiveItemUUID != item.UUID {
@@ -212,7 +226,7 @@ func TestWorkerPublishesVideoTechnicalMetadataBeforeQueuingPoster(t *testing.T) 
 		t.Fatal(err)
 	}
 	worker := Worker{Database: db, Materializer: mediaaccess.Materializer{TemporaryRoot: t.TempDir()}, Cache: mediaprocessing.CacheWriter{Root: t.TempDir()},
-		VideoProbe:       fakeVideoProbe{result: mediaprocessing.VideoTechnicalMetadata{Container: "mp4", DurationSeconds: 20, VideoStreamIndex: 2, VideoCodec: "h264", DisplayWidth: 1280, DisplayHeight: 720}},
+		VideoProbe:       fakeCombinedVideoProbe{fakeVideoProbe{result: mediaprocessing.VideoTechnicalMetadata{Container: "mp4", DurationSeconds: 20, VideoStreamIndex: 2, VideoCodec: "h264", DisplayWidth: 1280, DisplayHeight: 720}}},
 		ProbeProfileHash: probeProfile, PosterProfileHash: posterProfile}
 	if _, err := worker.RunOne(ctx, "probe-worker", time.Minute, now); err != nil {
 		t.Fatal(err)
@@ -223,6 +237,10 @@ func TestWorkerPublishesVideoTechnicalMetadataBeforeQueuingPoster(t *testing.T) 
 	metadata, err := db.VideoMetadata().Find(ctx, item.UUID)
 	if err != nil || metadata.ProbeState != mediaprocessing.VideoProbeReady || metadata.DurationSeconds != 20 || metadata.VideoStreamIndex != 2 {
 		t.Fatalf("technical metadata = %#v, %v", metadata, err)
+	}
+	dateSummary, err := db.CaptureDates().Summary(ctx, galleryRecord.ID)
+	if err != nil || dateSummary.Videos.Start != "2024-05-13" {
+		t.Fatalf("video capture date = %#v, %v", dateSummary, err)
 	}
 	poster, err := db.ProcessingJobs().FindByKey(ctx, productdb.ItemDerivativeJobKey(item.UUID, mediaprocessing.VariantStaticPoster, revision, posterProfile))
 	if err != nil || poster.Status != mediaprocessing.JobPending {

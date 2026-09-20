@@ -120,6 +120,13 @@ type VideoProbe interface {
 	Probe(context.Context, string) (VideoTechnicalMetadata, error)
 }
 
+// VideoProbeWithCaptureDate is optional so alternate video probes can keep
+// implementing VideoProbe. The two errors separate date-only and probe failure.
+type VideoProbeWithCaptureDate interface {
+	VideoProbe
+	ProbeWithCaptureDate(context.Context, string, string) (VideoTechnicalMetadata, string, string, error, error)
+}
+
 type ProbeAdapter struct {
 	Executable string
 	Version    string
@@ -144,10 +151,11 @@ func VideoErrorCode(err error) string {
 
 type probeJSON struct {
 	Format struct {
-		FormatName string `json:"format_name"`
-		Duration   string `json:"duration"`
-		StartTime  string `json:"start_time"`
-		BitRate    string `json:"bit_rate"`
+		FormatName string            `json:"format_name"`
+		Duration   string            `json:"duration"`
+		StartTime  string            `json:"start_time"`
+		BitRate    string            `json:"bit_rate"`
+		Tags       map[string]string `json:"tags"`
 	} `json:"format"`
 	Streams []probeStream `json:"streams"`
 }
@@ -182,8 +190,35 @@ type probeStream struct {
 }
 
 func (adapter ProbeAdapter) Probe(parent context.Context, sourcePath string) (VideoTechnicalMetadata, error) {
+	document, err := adapter.probeDocument(parent, sourcePath)
+	if err != nil {
+		return VideoTechnicalMetadata{}, err
+	}
+	return technicalMetadataFromProbe(document, adapter.Version)
+}
+
+// ProbeWithCaptureDate uses the same FFprobe response for technical metadata
+// and date tags; a malformed timezone only prevents date publication.
+func (adapter ProbeAdapter) ProbeWithCaptureDate(parent context.Context, sourcePath, timezone string) (VideoTechnicalMetadata, string, string, error, error) {
+	document, err := adapter.probeDocument(parent, sourcePath)
+	if err != nil {
+		return VideoTechnicalMetadata{}, "", "", nil, err
+	}
+	metadata, err := technicalMetadataFromProbe(document, adapter.Version)
+	if err != nil {
+		return VideoTechnicalMetadata{}, "", "", nil, err
+	}
+	groups := []map[string]string{document.Format.Tags}
+	for _, stream := range document.Streams {
+		groups = append(groups, stream.Tags)
+	}
+	date, tag, dateErr := captureDateFromTags(groups, timezone)
+	return metadata, date, tag, dateErr, nil
+}
+
+func (adapter ProbeAdapter) probeDocument(parent context.Context, sourcePath string) (probeJSON, error) {
 	if adapter.Executable == "" {
-		return VideoTechnicalMetadata{}, &VideoProcessingError{Code: ErrorFFprobeUnavailable, Err: errors.New("ffprobe is unavailable")}
+		return probeJSON{}, &VideoProcessingError{Code: ErrorFFprobeUnavailable, Err: errors.New("ffprobe is unavailable")}
 	}
 	timeout := adapter.Timeout
 	if timeout <= 0 {
@@ -196,13 +231,17 @@ func (adapter ProbeAdapter) Probe(parent context.Context, sourcePath string) (Vi
 	stdout.Maximum, stderr.Maximum = 4<<20, 64<<10
 	command.Stdout, command.Stderr = &stdout, &stderr
 	if err := command.Run(); err != nil {
-		return VideoTechnicalMetadata{}, &VideoProcessingError{Code: ErrorVideoProbeFailed, Err: fmt.Errorf("ffprobe execution failed: %w", err)}
+		return probeJSON{}, &VideoProcessingError{Code: ErrorVideoProbeFailed, Err: fmt.Errorf("ffprobe execution failed: %w", err)}
 	}
 	var document probeJSON
 	decoder := json.NewDecoder(bytes.NewReader(stdout.Bytes()))
 	if err := decoder.Decode(&document); err != nil {
-		return VideoTechnicalMetadata{}, &VideoProcessingError{Code: ErrorVideoProbeFailed, Err: errors.New("ffprobe output is invalid")}
+		return probeJSON{}, &VideoProcessingError{Code: ErrorVideoProbeFailed, Err: errors.New("ffprobe output is invalid")}
 	}
+	return document, nil
+}
+
+func technicalMetadataFromProbe(document probeJSON, version string) (VideoTechnicalMetadata, error) {
 	video := selectProbeStream(document.Streams, "video")
 	if video == nil {
 		return VideoTechnicalMetadata{}, &VideoProcessingError{Code: ErrorVideoTrackMissing, Err: errors.New("no usable video stream")}
@@ -220,7 +259,7 @@ func (adapter ProbeAdapter) Probe(parent context.Context, sourcePath string) (Vi
 		CodedWidth: positiveOr(video.CodedWidth, video.Width), CodedHeight: positiveOr(video.CodedHeight, video.Height), DisplayWidth: displayWidth, DisplayHeight: displayHeight,
 		FrameRate: parseFrameRate(video.AverageFrameRate, video.RealFrameRate), Rotation: rotation, ColorRange: normalizedTechnicalValue(video.ColorRange),
 		ColorSpace: normalizedTechnicalValue(video.ColorSpace), ColorPrimaries: normalizedTechnicalValue(video.ColorPrimaries), ColorTransfer: normalizedTechnicalValue(video.ColorTransfer),
-		HDR: isHDR(video.ColorPrimaries, video.ColorTransfer), FFprobeVersion: adapter.Version,
+		HDR: isHDR(video.ColorPrimaries, video.ColorTransfer), FFprobeVersion: version,
 	}
 	if audio != nil {
 		index := audio.Index

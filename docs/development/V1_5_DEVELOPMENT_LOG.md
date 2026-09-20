@@ -2278,3 +2278,16 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 部署前正式服务`active/running`、Health/Ready均204，数据库schema v14、`integrity_check=ok`，Coser/Work/Character/Tag/Gallery/Source/Item实时计数为`135/108/697/23/9/9/600`。2026-09-19 23:24 CST停服确认`MainPID=0`，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-capture-v15-242ad15-Ec8t52`保存数据库一致副本、旧程序、配置、用户systemd单元及完整Coser托管资源；文件逐项`cmp`/递归`diff`一致。备份库schema v14、完整性`ok`、业务计数同上；备份库SHA-256为`bbdc43f803b3712e466f4215f488cd1a34d57ce308e0339ca072d3a87d15fad3`，旧程序为`f60484e8c861c581ae1fcf208dab859e56317084ef0204e42ea52dde80921e7c`。备份不包含原始媒体、缓存或日志。
 - 候选程序逐字节核对后原子替换，23:25 CST启动一次。正式库自动升级为schema v15，`integrity_check=ok`且上述7类业务计数不变；两个日期新表可访问。自动迁移前快照`product.sqlite.pre-schema-v14-1789831546422515817.bak`另行检查为schema v14、完整性`ok`。服务`active/running`、`NRestarts=0`，Health/Ready均204，首页、Browse和Manage Gallery深链均200；About精确报告提交`242ad15`且`exactSourceAvailable=true`。两个worker、LibRaw、FFmpeg和FFprobe正常启用，启动至23:27 CST无WARN、ERROR、panic或日期任务失败日志。配置SHA-256仍为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`；未修改原始媒体、Manifest或正式配置，缓存未随程序替换，也未远端推送。
 - 日期回填在服务启动后按每分钟25项安全批次排队；正式库当时有582个符合条件的未排除/可用静态图片和视频，23:27 CST已完成50项且均为无可信日期标签的`NONE`，无复核冲突。后台将继续自动补齐，Gallery日期与前端复核交互需在回填结束后由所有者结合真实文件验收；此项不是部署失败，也不要求人工再执行来源扫描。
+
+# 2026-09-20 新增媒体日期首次处理合并（已开发，未部署）
+
+- 用户确认新媒体应尽量在首次媒体处理时提取日期，不必等待全局每分钟25项的历史补录批次。静态图片首次`CARD_480`任务在已物化的同一原始来源上调用既有安全EXIF提取器；视频技术元数据任务增加FFprobe单次响应同时解析技术字段及QuickTime/容器/流日期标签，保持媒体库时区转换与原有字段优先级。未找到可信日期写入`NONE`，不依赖文件mtime、文件名或目录。
+- 日期证据与派生图/视频技术元数据独立发布：日期提取失败不会令缩略图或探测失败；缩略图后续生成失败也不会回滚已取得的日期证据。只对当前Item内容修订读写，日期证据已经存在时跳过重复提取；后台诊断仅记录Item UUID、阶段及错误类型，不记录物理路径或EXIF全文。
+- 全局日期补录查询跳过仍有待执行/运行/有限重试的基础图片派生或视频首次技术探测的Item；首次处理终态失败后重新成为补录候选。后台原有启动及每分钟最多25项的调度继续服务于旧媒体、首次提取失败或没有首次处理任务的媒体；已经完成的当前修订证据（包括`NONE`）不会重排。已终态失败的独立日期任务仍沿用现有不自动无限重试规则。历史功能上线造成的大批量回填是一次性存量工作；新Gallery仍会有正常的派生/探测后台任务，补录队列作为兜底长期保留。
+- 本轮不修改数据库schema、前端、媒体根、原始媒体、正式业务库或正式服务；未提交或部署。单元/集成回归覆盖图片首次派生、视频单次FFprobe日期解析、已有证据不重复排队、静态图片和视频首次处理失败后的补录兜底，以及可移植重建优先等待首次处理。正式三标签`mediaprocessing`、`processingworker`、`productdb`、`productapi`、`productserver`、`cmd/cgm`全套Go测试及同范围Go Vet通过；`git diff --check`通过。无前端或schema变更，故未执行前端构建及数据库迁移。
+
+# 2026-09-20 手动Gallery扫描后续任务置前（已开发，未部署）
+
+- 核实Manage → Gallery的`scanGallerySource`在GraphQL请求中直接执行来源扫描，现有系统没有独立的Gallery来源扫描队列；自动定期扫描也按来源顺序直接调用相同扫描存储过程。此次不伪造可抢占的来源扫描队列，优先级只作用于来源扫描完成后已有worker处理队列中的目标Gallery任务。
+- 手动扫描成功后，优先为该Gallery当前可处理且缺少日期证据的Item补排独立日期任务（已有待执行的基础图片派生或视频首次探测则继续由首次处理提取，避免重复排队）；随后在单事务中提升该Gallery当前修订的`CARD_480`、`STATIC_POSTER`、视频首次技术探测及`CAPTURE_DATE`待执行任务优先级。新手动请求得到高于旧手动请求和所有普通处理任务的优先级，因此下一个空闲worker优先领取最新手动Gallery；现有运行中租约不抢占，`RETRY_WAIT`原延迟不缩短，失败、取消、完成状态不复活。其他Gallery与Browse按需任务不变。
+- 管理操作审计记录新增日期任务数及提升数；若来源扫描已提交而优先化失败，向用户返回“扫描已完成、优先化失败”的明确分段错误，不谎报来源扫描失败。跨Gallery顺序及独立日期任务、终态失败不复活由产品库测试验证；GraphQL手动扫描与已有背景任务竞争由接口测试验证。不修改schema、前端、来源扫描同步语义、正式业务库或运行中服务；未提交、备份或部署。正式三标签`mediaprocessing`、`processingworker`、`productdb`、`productapi`、`productserver`、`cmd/cgm`回归测试及同范围Go Vet通过，`git diff --check`无误。由于未动前端或数据库schema，本次没有执行前端构建或数据库迁移。

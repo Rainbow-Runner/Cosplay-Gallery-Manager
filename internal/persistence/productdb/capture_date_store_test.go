@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/stashapp/stash/internal/gallery"
 )
 
 func TestCaptureDateManualConflictRequiresReview(t *testing.T) {
@@ -122,5 +124,49 @@ func TestCaptureDateAutomaticallySetsEmptyShootDate(t *testing.T) {
 	}
 	if current.ShootDate != "" {
 		t.Fatalf("incomplete new capture evidence retained stale date: %q", current.ShootDate)
+	}
+}
+
+func TestCaptureDateBackfillWaitsForPrimaryProcessingThenRecoversFailure(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	run, err := db.Scans().Begin(ctx, source.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	photo := scanPhoto("a.jpg", "a")
+	photo.ProcessingState = gallery.ProcessingPending
+	video := scanVideo("b.mp4", "b")
+	video.ProcessingState = gallery.ProcessingPending
+	for _, observation := range []ScanObservation{photo, video} {
+		if err := db.Scans().Stage(ctx, run, observation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Scans().Commit(ctx, run, now); err != nil {
+		t.Fatal(err)
+	}
+	if items := loadGalleryItemsForTest(t, db, created.ID); len(items) != 2 {
+		t.Fatalf("scanned items=%d", len(items))
+	}
+	queued, err := db.CaptureDates().EnqueueBackfill(ctx, 25, true, now)
+	if err != nil || queued != 0 {
+		t.Fatalf("primary processing should take precedence: queued=%d err=%v", queued, err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE processing_jobs SET status='FAILED' WHERE job_kind='ITEM_DERIVATIVE' AND variant='CARD_480' AND gallery_id=?`, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	queued, err = db.CaptureDates().EnqueueBackfill(ctx, 25, true, now.Add(time.Minute))
+	if err != nil || queued != 1 {
+		t.Fatalf("failed primary processing lost date fallback: queued=%d err=%v", queued, err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE processing_jobs SET status='FAILED' WHERE job_kind='ITEM_TECHNICAL_METADATA' AND variant='' AND gallery_id=?`, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	queued, err = db.CaptureDates().EnqueueBackfill(ctx, 25, true, now.Add(2*time.Minute))
+	if err != nil || queued != 1 {
+		t.Fatalf("failed video probe lost date fallback: queued=%d err=%v", queued, err)
 	}
 }

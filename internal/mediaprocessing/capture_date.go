@@ -16,10 +16,6 @@ func (adapter ProbeAdapter) CaptureDate(parent context.Context, sourcePath, time
 	if adapter.Executable == "" {
 		return "", "", errors.New("ffprobe is unavailable")
 	}
-	location, err := time.LoadLocation(timezone)
-	if err != nil {
-		return "", "", err
-	}
 	timeout := adapter.Timeout
 	if timeout <= 0 {
 		timeout = 30 * time.Second
@@ -47,6 +43,14 @@ func (adapter ProbeAdapter) CaptureDate(parent context.Context, sourcePath, time
 	groups := []map[string]string{document.Format.Tags}
 	for _, stream := range document.Streams {
 		groups = append(groups, stream.Tags)
+	}
+	return captureDateFromTags(groups, timezone)
+}
+
+func captureDateFromTags(groups []map[string]string, timezone string) (string, string, error) {
+	location, err := time.LoadLocation(timezone)
+	if err != nil {
+		return "", "", err
 	}
 	for _, key := range []string{"com.apple.quicktime.creationdate", "creation_time"} {
 		for _, tags := range groups {

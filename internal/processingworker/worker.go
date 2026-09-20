@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/stashapp/stash/internal/gallery"
@@ -105,6 +106,11 @@ func (worker Worker) processCaptureDate(ctx context.Context, job mediaprocessing
 	if job.ContentRevision == nil || item.ContentRevision != *job.ContentRevision || item.Excluded || item.Availability != gallery.AvailabilityAvailable || (item.MediaKind != gallery.MediaKindStaticImage && item.MediaKind != gallery.MediaKindVideo) {
 		return ErrStaleContent
 	}
+	if done, err := worker.Database.CaptureDates().HasCurrent(ctx, item.ItemUUID, item.ContentRevision); err != nil {
+		return err
+	} else if done {
+		return nil
+	}
 	materialized, err := worker.Materializer.Open(ctx, mediaaccess.Source{Type: item.SourceType, Path: item.SourcePath, RelativePath: item.RelativePath})
 	if err != nil {
 		return err
@@ -112,22 +118,9 @@ func (worker Worker) processCaptureDate(ctx context.Context, job mediaprocessing
 	defer materialized.Close()
 	var date, tag string
 	if item.MediaKind == gallery.MediaKindStaticImage {
-		metadata, err := imagemetadata.ExtractPath(materialized.Path)
+		date, tag, err = imageCaptureDate(materialized.Path)
 		if err != nil {
 			return err
-		}
-		for _, entry := range metadata.Entries {
-			if entry.Key == "exif.DateTimeOriginal" {
-				for _, layout := range []string{"2006:01:02 15:04:05", "2006-01-02 15:04:05"} {
-					parsed, parseErr := time.Parse(layout, entry.Value)
-					if parseErr == nil && parsed.Year() >= 1900 && parsed.Year() <= 2100 {
-						date = parsed.Format("2006-01-02")
-						tag = "exif.DateTimeOriginal"
-						break
-					}
-				}
-				break
-			}
 		}
 	} else {
 		timezone, err := worker.Database.CaptureDates().Timezone(ctx, item.ItemUUID)
@@ -140,6 +133,48 @@ func (worker Worker) processCaptureDate(ctx context.Context, job mediaprocessing
 		}
 	}
 	return worker.Database.CaptureDates().Publish(ctx, item.ItemUUID, item.ContentRevision, date, tag, time.Now())
+}
+
+func imageCaptureDate(path string) (string, string, error) {
+	metadata, err := imagemetadata.ExtractPath(path)
+	if err != nil {
+		return "", "", err
+	}
+	for _, entry := range metadata.Entries {
+		if entry.Key != "exif.DateTimeOriginal" {
+			continue
+		}
+		for _, layout := range []string{"2006:01:02 15:04:05", "2006-01-02 15:04:05"} {
+			parsed, parseErr := time.Parse(layout, entry.Value)
+			if parseErr == nil && parsed.Year() >= 1900 && parsed.Year() <= 2100 {
+				return parsed.Format("2006-01-02"), "exif.DateTimeOriginal", nil
+			}
+		}
+		break
+	}
+	return "", "", nil
+}
+
+// A source is already materialized for its first CARD_480 generation. Capture
+// evidence is independent of the derivative: failure in either must not turn
+// the other into a failed operation. The scheduler retries missing evidence.
+func (worker Worker) captureImageDuringDerivative(ctx context.Context, item productdb.ProcessingItem, path string) {
+	done, err := worker.Database.CaptureDates().HasCurrent(ctx, item.ItemUUID, item.ContentRevision)
+	if err != nil {
+		slog.Warn("CGM_CAPTURE_DATE_INLINE_FAILED", "item_uuid", item.ItemUUID, "stage", "check", "error_type", fmt.Sprintf("%T", err))
+		return
+	}
+	if done {
+		return
+	}
+	date, tag, err := imageCaptureDate(path)
+	if err != nil {
+		slog.Warn("CGM_CAPTURE_DATE_INLINE_FAILED", "item_uuid", item.ItemUUID, "stage", "extract", "error_type", fmt.Sprintf("%T", err))
+		return
+	}
+	if err := worker.Database.CaptureDates().Publish(ctx, item.ItemUUID, item.ContentRevision, date, tag, time.Now()); err != nil {
+		slog.Warn("CGM_CAPTURE_DATE_INLINE_FAILED", "item_uuid", item.ItemUUID, "stage", "publish", "error_type", fmt.Sprintf("%T", err))
+	}
 }
 
 func (worker Worker) processVideoProbe(ctx context.Context, job mediaprocessing.Job, now time.Time) error {
@@ -174,7 +209,22 @@ func (worker Worker) processVideoProbe(ctx context.Context, job mediaprocessing.
 		return err
 	}
 	defer materialized.Close()
-	metadata, err := worker.VideoProbe.Probe(ctx, materialized.Path)
+	var metadata mediaprocessing.VideoTechnicalMetadata
+	var date, tag string
+	var dateErr error
+	dateChecked := false
+	if combined, ok := worker.VideoProbe.(mediaprocessing.VideoProbeWithCaptureDate); ok {
+		timezone, tzErr := worker.Database.CaptureDates().Timezone(ctx, item.ItemUUID)
+		if tzErr == nil {
+			metadata, date, tag, dateErr, err = combined.ProbeWithCaptureDate(ctx, materialized.Path, timezone)
+			dateChecked = dateErr == nil
+		} else {
+			slog.Warn("CGM_CAPTURE_DATE_INLINE_FAILED", "item_uuid", item.ItemUUID, "stage", "timezone", "error_type", fmt.Sprintf("%T", tzErr))
+			metadata, err = worker.VideoProbe.Probe(ctx, materialized.Path)
+		}
+	} else {
+		metadata, err = worker.VideoProbe.Probe(ctx, materialized.Path)
+	}
 	if err != nil {
 		_ = worker.Database.VideoMetadata().PublishError(ctx, item.ItemUUID, item.ContentRevision, job.ProfileHash, mediaprocessing.VideoErrorCode(err), time.Now())
 		return err
@@ -182,6 +232,17 @@ func (worker Worker) processVideoProbe(ctx context.Context, job mediaprocessing.
 	metadata.ItemUUID, metadata.ContentRevision, metadata.ProbeProfileHash = item.ItemUUID, item.ContentRevision, job.ProfileHash
 	if err := worker.Database.VideoMetadata().PublishReady(ctx, metadata, time.Now()); err != nil {
 		return err
+	}
+	if dateChecked {
+		if done, checkErr := worker.Database.CaptureDates().HasCurrent(ctx, item.ItemUUID, item.ContentRevision); checkErr == nil && !done {
+			if publishErr := worker.Database.CaptureDates().Publish(ctx, item.ItemUUID, item.ContentRevision, date, tag, time.Now()); publishErr != nil {
+				slog.Warn("CGM_CAPTURE_DATE_INLINE_FAILED", "item_uuid", item.ItemUUID, "stage", "publish", "error_type", fmt.Sprintf("%T", publishErr))
+			}
+		} else if checkErr != nil {
+			slog.Warn("CGM_CAPTURE_DATE_INLINE_FAILED", "item_uuid", item.ItemUUID, "stage", "check", "error_type", fmt.Sprintf("%T", checkErr))
+		}
+	} else if dateErr != nil {
+		slog.Warn("CGM_CAPTURE_DATE_INLINE_FAILED", "item_uuid", item.ItemUUID, "stage", "extract", "error_type", fmt.Sprintf("%T", dateErr))
 	}
 	profile := worker.PosterProfileHash
 	if profile == "" {
@@ -223,6 +284,9 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 		return err
 	}
 	defer materialized.Close()
+	if item.MediaKind == gallery.MediaKindStaticImage && job.Variant == mediaprocessing.VariantCard480 {
+		worker.captureImageDuringDerivative(ctx, item, materialized.Path)
+	}
 	extension := outputExtension(job.Variant)
 	relative, err := worker.Cache.RelativePath(item.ItemUUID, item.ContentRevision, job.Variant, job.ProfileHash, extension)
 	if err != nil {

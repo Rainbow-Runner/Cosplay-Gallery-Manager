@@ -19,6 +19,11 @@ var (
 
 type ProcessingJobStore struct{ db *sql.DB }
 
+// ManualGalleryPriorityFloor sits above all ordinary media processing
+// priorities (including interactive playback). Later manual scans receive a
+// strictly higher priority so the most recently requested Gallery runs first.
+const ManualGalleryPriorityFloor = 1000
+
 type ProcessingJobPage struct {
 	Items      []mediaprocessing.Job
 	Page       int
@@ -28,6 +33,49 @@ type ProcessingJobPage struct {
 }
 
 func (db *Database) ProcessingJobs() *ProcessingJobStore { return &ProcessingJobStore{db: db.DB} }
+
+// PrioritizeManualGalleryScan promotes only runnable, current-revision base
+// processing and capture-date jobs. Running leases and retry delays remain
+// untouched; terminal failures are never implicitly retried.
+func (s *ProcessingJobStore) PrioritizeManualGalleryScan(ctx context.Context, galleryID int64, now time.Time) (int, error) {
+	if galleryID <= 0 {
+		return 0, errors.New("invalid Gallery")
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	var maximum int64
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(priority),0) FROM processing_jobs`).Scan(&maximum); err != nil {
+		return 0, err
+	}
+	priority := int64(ManualGalleryPriorityFloor)
+	if maximum >= priority {
+		priority = maximum + 1
+	}
+	if priority > math.MaxInt32 {
+		return 0, errors.New("manual Gallery priority limit reached")
+	}
+	result, err := tx.ExecContext(ctx, `UPDATE processing_jobs SET priority=?,updated_at_utc=?
+		WHERE gallery_id=? AND status IN ('PENDING','RETRY_WAIT')
+		AND ((job_kind='ITEM_DERIVATIVE' AND variant IN ('CARD_480','STATIC_POSTER'))
+			OR (job_kind='ITEM_TECHNICAL_METADATA' AND variant IN ('','CAPTURE_DATE')))
+		AND EXISTS(SELECT 1 FROM gallery_items item WHERE item.item_uuid=processing_jobs.item_uuid
+			AND item.gallery_id=processing_jobs.gallery_id AND item.content_revision=processing_jobs.content_revision
+			AND item.excluded=0 AND item.availability_state='AVAILABLE')`, priority, formatTime(normalisedTime(now)), galleryID)
+	if err != nil {
+		return 0, err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
 
 type EnqueueJobInput struct {
 	Key             string

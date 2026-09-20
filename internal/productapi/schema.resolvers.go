@@ -731,7 +731,35 @@ func (r *mutationResolver) ScanGallerySource(ctx context.Context, setID string, 
 		r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "GALLERY_SCAN_FAILED", err, map[string]any{"source_id": sourceID, "exclude_new_root_media": excludeNewRootMedia})
 		return nil, manageError(err)
 	}
-	r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "", nil, map[string]any{"source_id": sourceID, "exclude_new_root_media": excludeNewRootMedia})
+	galleryID, err := r.Database.Manage().GalleryID(ctx, setID)
+	if err != nil {
+		r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "GALLERY_SCAN_PRIORITY_FAILED", err, map[string]any{"source_id": sourceID})
+		return nil, errors.New("source scan completed; Gallery queue identity unavailable")
+	}
+	videoAvailable := false
+	if r.Operations != nil {
+		if dependency, statusErr := r.Operations.VideoDependencyStatus(ctx); statusErr == nil {
+			videoAvailable = dependency.FFprobeAvailable
+		}
+	}
+	queued := 0
+	for {
+		batch, queueErr := r.Database.CaptureDates().EnqueueGallery(ctx, galleryID, videoAvailable, time.Now())
+		if queueErr != nil {
+			r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "GALLERY_SCAN_PRIORITY_FAILED", queueErr, map[string]any{"source_id": sourceID})
+			return nil, errors.New("source scan completed; date queue scheduling failed")
+		}
+		queued += batch
+		if batch == 0 {
+			break
+		}
+	}
+	promoted, err := r.Database.ProcessingJobs().PrioritizeManualGalleryScan(ctx, galleryID, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "GALLERY_SCAN_PRIORITY_FAILED", err, map[string]any{"source_id": sourceID})
+		return nil, errors.New("source scan completed; queue priority update failed")
+	}
+	r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "", nil, map[string]any{"source_id": sourceID, "exclude_new_root_media": excludeNewRootMedia, "date_jobs_queued": queued, "jobs_promoted": promoted})
 	return r.loadManageGalleryDetail(ctx, setID)
 }
 

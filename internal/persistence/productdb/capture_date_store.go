@@ -30,6 +30,14 @@ func (s *CaptureDateStore) Timezone(ctx context.Context, itemUUID string) (strin
 	return value, err
 }
 
+// HasCurrent reports whether this content revision has already been checked,
+// including the case where no embedded capture date was found.
+func (s *CaptureDateStore) HasCurrent(ctx context.Context, itemUUID string, revision int64) (bool, error) {
+	var exists bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM item_capture_dates WHERE item_uuid=? AND content_revision=?)`, itemUUID, revision).Scan(&exists)
+	return exists, err
+}
+
 func (s *CaptureDateStore) EnqueueBackfill(ctx context.Context, limit int, videoAvailable bool, now time.Time) (int, error) {
 	return s.enqueueBackfill(ctx, limit, videoAvailable, 0, now)
 }
@@ -48,12 +56,19 @@ func (s *CaptureDateStore) enqueueBackfill(ctx context.Context, limit int, video
 	if limit < 1 || limit > 500 {
 		return 0, errors.New("invalid capture-date backfill limit")
 	}
+	// The item:<uuid>: to item:<uuid>; range uses the existing unique job-key
+	// index; scanning every job for each historical Item would be quadratic.
 	rows, err := s.db.QueryContext(ctx, `SELECT item.item_uuid,item.gallery_id,item.content_revision FROM gallery_items item
 		JOIN gallery_sources source ON source.id=item.source_id
 		LEFT JOIN item_capture_dates capture ON capture.item_uuid=item.item_uuid AND capture.content_revision=item.content_revision
 		WHERE item.media_kind IN ('STATIC_IMAGE','VIDEO') AND (?=1 OR item.media_kind='STATIC_IMAGE') AND item.excluded=0 AND item.availability_state='AVAILABLE'
 		AND source.availability_state='AVAILABLE' AND capture.item_uuid IS NULL AND (?=0 OR item.gallery_id=?)
 		AND NOT EXISTS(SELECT 1 FROM processing_jobs job WHERE job.job_key='capture-date:'||item.item_uuid||':'||item.content_revision||':capture-date-v1')
+		AND NOT EXISTS(SELECT 1 FROM processing_jobs primary_job WHERE primary_job.job_key >= 'item:'||item.item_uuid||':' AND primary_job.job_key < 'item:'||item.item_uuid||';'
+			AND primary_job.item_uuid=item.item_uuid
+			AND primary_job.content_revision=item.content_revision AND primary_job.status IN ('PENDING','RUNNING','RETRY_WAIT')
+			AND ((item.media_kind='STATIC_IMAGE' AND primary_job.job_kind='ITEM_DERIVATIVE' AND primary_job.variant='CARD_480')
+				OR (item.media_kind='VIDEO' AND primary_job.job_kind='ITEM_TECHNICAL_METADATA' AND primary_job.variant='')))
 		ORDER BY item.id LIMIT ?`, boolInt(videoAvailable), galleryID, galleryID, limit)
 	if err != nil {
 		return 0, err

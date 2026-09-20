@@ -400,9 +400,12 @@ func TestPortableGalleryRebuildPreservesDirectoryIdentitiesAtNewRoot(t *testing.
 	if err := target.Database.QueryRowContext(ctx, `SELECT shoot_date,shoot_date_origin FROM galleries WHERE id=?`, targetGalleryID).Scan(&migratedDate, &origin); err != nil || migratedDate != "2024-05-20" || origin != "MANUAL" {
 		t.Fatalf("migrated shoot date=%q origin=%q err=%v", migratedDate, origin, err)
 	}
-	var dateJobs int
-	if err := target.Database.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_jobs WHERE gallery_id=? AND variant='CAPTURE_DATE'`, targetGalleryID).Scan(&dateJobs); err != nil || dateJobs != 1 {
-		t.Fatalf("target capture date jobs=%d err=%v", dateJobs, err)
+	var dateJobs, primaryJobs int
+	if err := target.Database.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_jobs WHERE gallery_id=? AND variant='CAPTURE_DATE'`, targetGalleryID).Scan(&dateJobs); err != nil || dateJobs != 0 {
+		t.Fatalf("date backfill should defer to primary processing: jobs=%d err=%v", dateJobs, err)
+	}
+	if err := target.Database.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_jobs WHERE gallery_id=? AND variant='CARD_480' AND status IN ('PENDING','RUNNING','RETRY_WAIT')`, targetGalleryID).Scan(&primaryJobs); err != nil || primaryJobs != 1 {
+		t.Fatalf("target first-derivative jobs=%d err=%v", primaryJobs, err)
 	}
 	var targetItemUUID, targetLinkUUID, targetSourcePath string
 	if err := target.Database.QueryRowContext(ctx, `SELECT item_uuid FROM gallery_items WHERE gallery_id=?`, targetGalleryID).Scan(&targetItemUUID); err != nil {

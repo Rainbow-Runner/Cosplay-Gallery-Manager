@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -43,6 +45,53 @@ func TestHandlerRequiresOwnerAuthentication(t *testing.T) {
 	NewHandler(database, nil).ServeHTTP(response, request)
 	if response.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestManualGallerySourceScanPrioritizesItsBaseJobs(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 20, 2, 0, 0, 0, time.UTC)
+	created, err := database.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Manual scan priority"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "chapter"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.Create(filepath.Join(root, "chapter", "photo.png"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := png.Encode(file, image.NewRGBA(image.Rect(0, 0, 1, 1))); err != nil {
+		file.Close()
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Galleries().AddSource(ctx, created.ID, productdb.CreateSourceInput{Type: gallery.SourceTypeDirectory, Path: root, Availability: gallery.AvailabilityAvailable}, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.ProcessingJobs().Enqueue(ctx, productdb.EnqueueJobInput{Key: "cache:background", Kind: mediaprocessing.JobCache, Priority: 600}, now); err != nil {
+		t.Fatal(err)
+	}
+	query := fmt.Sprintf(`mutation { scanGallerySource(setID:%q,excludeNewRootMedia:true) { row { setID } } }`, created.SetID)
+	requestBody, err := json.Marshal(map[string]string{"query": query})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewReader(requestBody))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	NewHandler(database, func(*http.Request) bool { return true }).ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) {
+		t.Fatalf("manual scan response=%d %s", response.Code, response.Body.String())
+	}
+	job, err := database.ProcessingJobs().ClaimNext(ctx, "worker", time.Minute, time.Now())
+	if err != nil || job.GalleryID == nil || *job.GalleryID != created.ID || job.Variant != mediaprocessing.VariantCard480 || job.Priority < productdb.ManualGalleryPriorityFloor {
+		t.Fatalf("manual Gallery did not reach queue front: job=%#v err=%v", job, err)
 	}
 }
 

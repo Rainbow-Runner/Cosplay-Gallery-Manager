@@ -2298,3 +2298,9 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 部署前正式服务`active/running`、Health/Ready均204，About指向旧提交`242ad15`；正式业务库schema v15、`integrity_check=ok`，Coser/Work/Character/Tag/Gallery/Source/Item计数依次为`135/108/697/23/9/9/600`，拍摄日期证据FOUND/NONE为`114/468`，处理任务COMPLETED/FAILED为`1307/12`且无待执行项。正式配置SHA-256为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`。
 - 停服确认`MainPID=0`、服务`inactive/dead`且SQLite WAL/SHM已移除后，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-inline-priority-9d0cd79-CtLnkd`保存一致数据库、旧二进制、启动配置、用户systemd单元和完整Coser托管目录。原件与副本逐项`cmp`及目录递归比较一致；备份库schema v15、完整性`ok`、上述7类业务计数不变。备份库SHA-256为`32bb6a8067a2bedce5eea0603c77bee5ff352a0427f85d6048a8a801c6b2f780`，旧程序为`02ddaedea254991c86f4d01f47d8ac58e7b41d85af341af004b0b29bc32c961c`。该回滚目录不包含原始媒体、缓存或日志。
 - 验证候选与同目录暂存文件逐字节一致后，原子替换正式程序，只启动服务一次。最终服务`active/running`、`NRestarts=0`，Health/Ready均204、Manage Gallery页面200；About精确报告`9d0cd79aa7303ce2dcd0fa31b045f261cf180f8b`、构建时间`2026-09-20T12:56:13Z`和`exactSourceAvailable=true`，正式程序SHA-256与候选一致。正式库schema v15、完整性`ok`、上述业务计数和任务状态均未变；配置SHA-256未变，启动后的warning及以上journal无条目。未修改原始媒体、Manifest、缓存或配置；未远端推送。真实新增媒体与手动扫描优先级交互待所有者按业务文件验收。
+
+# 2026-09-21 迁移测试Docker镜像发布
+
+- 当前分支原有48个本地提交已Fast-forward推送到GitHub；从清洁提交`ad2597b`按`docker/cgm/Dockerfile`在本机构建`linux/amd64`镜像，独立无业务数据容器的Docker健康检查为`healthy`。本机构建不含数据库、配置、媒体根、Manifest或缓存。
+- 个人GitHub令牌能登录GHCR但缺少镜像Push所需的Package写权限，直接Push明确返回`permission_denied`。没有扩大个人令牌权限；新增仅在当前迁移测试分支源码/工作流变化时触发的`.github/workflows/cgm-migration-image.yml`，使用GitHub Actions仓库令牌`packages: write`。工作流先构建并运行临时容器健康检查，通过后才推送不可变提交标签和可移动`migration-test`标签。
+- 工作流提交`eea756a67ad1c5d2b1c79e102d98bf3299a3f661`已推送；[远端运行35521591466](https://github.com/Rainbow-Runner/Cosplay-Gallery-Manager/actions/runs/35521591466)的构建、健康检查及GHCR发布全部成功。发布镜像`ghcr.io/rainbow-runner/cosplay-gallery-manager:sha-eea756a67ad1c5d2b1c79e102d98bf3299a3f661`，远端摘要`sha256:97ec56b4a1860bec667138c63930caa32539c7e0a11bb705b8c63be087dab572`；本机退出GHCR后匿名完整拉取再次成功。仅支持`linux/amd64`，不宣称arm64已发布或完成跨机迁移验收。

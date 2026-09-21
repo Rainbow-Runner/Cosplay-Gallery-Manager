@@ -2304,3 +2304,7 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 当前分支原有48个本地提交已Fast-forward推送到GitHub；从清洁提交`ad2597b`按`docker/cgm/Dockerfile`在本机构建`linux/amd64`镜像，独立无业务数据容器的Docker健康检查为`healthy`。本机构建不含数据库、配置、媒体根、Manifest或缓存。
 - 个人GitHub令牌能登录GHCR但缺少镜像Push所需的Package写权限，直接Push明确返回`permission_denied`。没有扩大个人令牌权限；新增仅在当前迁移测试分支源码/工作流变化时触发的`.github/workflows/cgm-migration-image.yml`，使用GitHub Actions仓库令牌`packages: write`。工作流先构建并运行临时容器健康检查，通过后才推送不可变提交标签和可移动`migration-test`标签。
 - 工作流提交`eea756a67ad1c5d2b1c79e102d98bf3299a3f661`已推送；[远端运行35521591466](https://github.com/Rainbow-Runner/Cosplay-Gallery-Manager/actions/runs/35521591466)的构建、健康检查及GHCR发布全部成功。发布镜像`ghcr.io/rainbow-runner/cosplay-gallery-manager:sha-eea756a67ad1c5d2b1c79e102d98bf3299a3f661`，远端摘要`sha256:97ec56b4a1860bec667138c63930caa32539c7e0a11bb705b8c63be087dab572`；本机退出GHCR后匿名完整拉取再次成功。仅支持`linux/amd64`，不宣称arm64已发布或完成跨机迁移验收。
+
+### 同一迁移镜像发布至Docker Hub
+
+- Docker Hub公开仓库`rainbowrunner2015/cosplay-gallery-manager`已发布不可变提交标签`sha-eea756a67ad1c5d2b1c79e102d98bf3299a3f661`。本地普通`docker push`因镜像索引引用的内容缺失而失败，未生成远端标签；随后从已验证的GHCR镜像按摘要直接复制单平台清单至Docker Hub，远端清单摘要经`docker buildx imagetools inspect`确认为`sha256:97ec56b4a1860bec667138c63930caa32539c7e0a11bb705b8c63be087dab572`，与GHCR完全一致。仅为`linux/amd64`；未修改Docker Hub的`latest`标签，也未在目标机完成迁移模拟。

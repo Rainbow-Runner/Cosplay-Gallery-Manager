@@ -2,7 +2,7 @@
 
 > 当前里程碑：1.5 本机业务迭代与可诊断性增强
 > 状态：进行中
-> 更新日期：2026-09-20
+> 更新日期：2026-09-21
 
 ## 已规划、尚未实现
 
@@ -11,6 +11,8 @@
 - 后续（视频处理第三阶段）：已持久化[第三阶段条件式功能规划](VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)。第三阶段A规划按需Storyboard Sprite/WebVTT和可访问辅助时间轴；第三阶段B仅在第二阶段真实大视频冷启动指标证明必要并完成ADR后，才规划单清晰度渐进HLS、会话治理和完整bundle缓存。该阶段不属于当前第一版/1.5门禁，尚未实现或部署。
 
 ## 已完成
+
+- 1.5（Docker Hub迁移测试镜像，已发布）：公开仓库`rainbowrunner2015/cosplay-gallery-manager`新增提交标签`sha-eea756a67ad1c5d2b1c79e102d98bf3299a3f661`；远端摘要`sha256:97ec56b4a1860bec667138c63930caa32539c7e0a11bb705b8c63be087dab572`与GHCR相同，仅支持`linux/amd64`。未改动`latest`；跨机迁移测试仍待执行。详见[1.5开发日志](V1_5_DEVELOPMENT_LOG.md)。
 
 - 1.5（迁移测试Docker镜像，已发布）：当前迁移测试分支新增专用GitHub Actions发布流程，仅构建`linux/amd64`镜像，先启动临时无业务数据容器并通过Docker健康检查，再以不可变提交标签和`migration-test`标签推送GHCR。2026-09-21远端流程[35521591466](https://github.com/Rainbow-Runner/Cosplay-Gallery-Manager/actions/runs/35521591466)完成；源码提交`eea756a67ad1c5d2b1c79e102d98bf3299a3f661`，镜像`ghcr.io/rainbow-runner/cosplay-gallery-manager:sha-eea756a67ad1c5d2b1c79e102d98bf3299a3f661`，远端摘要`sha256:97ec56b4a1860bec667138c63930caa32539c7e0a11bb705b8c63be087dab572`。本机退出GHCR登录后再次匿名拉取成功。未打包数据库、配置、媒体、Manifest或缓存；另一台机器的Linux→Docker真实迁移模拟仍待执行。
 

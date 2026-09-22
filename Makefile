@@ -37,6 +37,12 @@ endif
 ifdef PHASHER_OUTPUT
   PHASHER_OUTPUT := -o $(PHASHER_OUTPUT)
 endif
+ifdef CGM_OUTPUT
+  CGM_BINARY := $(CGM_OUTPUT)
+  override CGM_OUTPUT := -o $(CGM_OUTPUT)
+else
+  CGM_BINARY := cgm
+endif
 
 # set GO_BUILD_FLAGS environment variable to any extra build flags required
 GO_BUILD_FLAGS := $(GO_BUILD_FLAGS)
@@ -49,6 +55,11 @@ GO_BUILD_TAGS += sqlite_stat4 sqlite_math_functions
 # STASH_SOURCEMAPS := true
 
 export CGO_ENABLED := 1
+
+# Allows the product build to select the repository's pinned Go toolchain
+# without changing the toolchain used by the legacy build targets.
+CGM_GO ?= go
+WEB_PNPM ?= corepack pnpm
 
 # define COMPILER_IMAGE for cross-compilation docker container
 ifndef COMPILER_IMAGE
@@ -137,6 +148,18 @@ stash: build-flags
 .PHONY: phasher
 phasher: build-flags
 	go build $(PHASHER_OUTPUT) $(BUILD_FLAGS) ./cmd/phasher
+
+.PHONY: cgm
+cgm: GO_BUILD_TAGS += cgm_web_embed cgm_galleryepic cgm_moegirl
+cgm: web-ui build-flags
+	$(CGM_GO) build $(CGM_OUTPUT) $(BUILD_FLAGS) ./cmd/cgm
+
+.PHONY: build-cgm
+build-cgm: verify-cgm-ui-boundary verify-cgm-metadata-provider-boundary cgm
+
+.PHONY: verify-cgm-release
+verify-cgm-release:
+	CGM_GO="$(CGM_GO)" scripts/verify-cgm-release.sh
 
 # builds dynamically-linked debug binaries
 .PHONY: build
@@ -404,6 +427,43 @@ fmt-ui:
 .PHONY: validate-ui
 validate-ui:
 	cd ui/v2.5 && pnpm run validate
+
+# React 19 product UI. These targets remain separate from the legacy UI until
+# the new BrowseShell and ManageShell satisfy the replacement gates.
+.PHONY: pre-web-ui
+pre-web-ui:
+	cd ui/web && $(WEB_PNPM) install
+
+.PHONY: web-ui
+web-ui:
+	cd ui/web && $(WEB_PNPM) run build
+
+.PHONY: web-ui-start
+web-ui-start:
+	cd ui/web && $(WEB_PNPM) run dev
+
+.PHONY: test-web-ui
+test-web-ui:
+	cd ui/web && $(WEB_PNPM) run test
+
+.PHONY: validate-web-ui
+validate-web-ui:
+	cd ui/web && $(WEB_PNPM) run validate
+
+# CGM may embed only ui/web. Importing package ui would pull ui/v2.5/build into
+# the product binary through the legacy Stash UI embed.
+.PHONY: verify-cgm-ui-boundary
+verify-cgm-ui-boundary:
+	@! $(CGM_GO) list -deps ./cmd/cgm | grep -Fxq "github.com/stashapp/stash/ui"
+
+# The offline product composition must not import a site adapter. GalleryEpic
+# is added only by the explicit cgm_galleryepic composition tag.
+.PHONY: verify-cgm-metadata-provider-boundary
+verify-cgm-metadata-provider-boundary:
+	@! $(CGM_GO) list -deps ./cmd/cgm | grep -Fxq "github.com/stashapp/stash/internal/cosermetadata/galleryepic"
+	@$(CGM_GO) list -deps -tags cgm_galleryepic ./cmd/cgm | grep -Fxq "github.com/stashapp/stash/internal/cosermetadata/galleryepic"
+	@! $(CGM_GO) list -deps ./cmd/cgm | grep -Fxq "github.com/stashapp/stash/internal/entitymetadata/moegirl"
+	@$(CGM_GO) list -deps -tags cgm_moegirl ./cmd/cgm | grep -Fxq "github.com/stashapp/stash/internal/entitymetadata/moegirl"
 
 # these targets run the same steps as fmt-ui and validate-ui, but only on files that have changed
 fmt-ui-quick:

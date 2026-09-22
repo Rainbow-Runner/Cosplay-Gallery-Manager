@@ -1,0 +1,40 @@
+{
+  "name": "@cosplay-gallery-manager/web",
+  "version": "1.5.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "check": "tsc --noEmit",
+    "e2e": "corepack pnpm run build && playwright test",
+    "e2e:update": "corepack pnpm run build && playwright test --update-snapshots",
+    "test": "vitest run",
+    "validate": "corepack pnpm run check && corepack pnpm run test && corepack pnpm run build && corepack pnpm run e2e"
+  },
+  "dependencies": {
+    "@apollo/client": "^4.0.0",
+    "graphql": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-intl": "^7.0.0",
+    "react-router-dom": "^7.0.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.11.1",
+    "@playwright/test": "1.58.2",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "^16.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "jsdom": "^27.0.0",
+    "typescript": "~5.9.0",
+    "vite": "^7.0.0",
+    "vitest": "^4.0.0"
+  }
+}

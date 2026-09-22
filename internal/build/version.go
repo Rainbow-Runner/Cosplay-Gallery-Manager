@@ -3,9 +3,11 @@ package build
 
 import (
 	"regexp"
+
+	"github.com/stashapp/stash/internal/product"
 )
 
-var version string
+var version = product.DevelopmentVersion
 var buildstamp string
 var githash string
 var officialBuild string

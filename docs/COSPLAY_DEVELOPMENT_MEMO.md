@@ -1,7 +1,7 @@
 # Cosplay Gallery Manager 开发备忘录
 
-> 状态：第一版产品与架构基线，尚未进入业务实现  
-> 最后更新：2026-07-21  
+> 状态：第一版产品与架构基线；0.1～0.7 主干功能已进入实现与联调
+> 最后更新：2026-08-15
 > 原始代码基线：Stash `develop` / `c7d2fe4f97b99c6a2aac968ac8a2aad3adf5b800`  
 > 分支策略：独立产品，不考虑与 Stash 上游合并  
 > 工作名：Cosplay Gallery Manager；最终品牌名延期决定  
@@ -21,7 +21,7 @@
 - 一个 Gallery 对应一个物理来源，包含图片、动态图和视频，并统一管理 Coser、Character、Work、Tag、日期、分级和成员顺序。
 - 保留并重构 Stash 的底层文件扫描、图片处理、FFmpeg、GraphQL、SQLite和任务能力。
 - 新建 GalleryEpic 风格的浏览前台，同时重建适用于作品集聚合编辑的管理后台。
-- 元数据以人工数据库编辑和本地 Manifest 为核心，不依赖网络刮削。
+- 元数据仍以人工数据库编辑和本地 Manifest 为核心；1.5允许默认关闭、所有者显式触发、人工逐项确认且可完全拆除的网络资料Provider。Coser Provider只导入托管头像、Banner和SocialAccount；Work/Character名称Provider只向现有Alias提出候选，不改主名称或Character所属Work。两者均不参与核心业务正确性。
 
 ### 2.2 明确非目标
 
@@ -29,8 +29,8 @@
 - 不支持原 Stash 数据库、旧 Tag、NFO、插件或 GraphQL 兼容迁移。
 - 不保留独立 Image/Scene 业务页面、单媒体网络刮削或单文件物理删除。
 - 不支持跨 Gallery 共享媒体身份。
-- 不实现网络刮削、社交账号检测Provider、AI视觉推荐或向量数据库。
-- 不实现服务端主动外联、遥测、更新检查、CDN资源或运行时插件市场。
+- 第一版不实现自动网络刮削、社交账号联网检测、定时Provider任务、AI视觉推荐或向量数据库；1.5的Coser资料导入和Work/Character人工名称导入是用户确认后的可选外联例外。
+- 除1.5已确认的所有者显式资料导入外，不实现服务端主动外联、遥测、更新检查、CDN资源或运行时插件市场。
 - 不实现应用内静态加密、内置HTTPS、外部数据库或实时文件监听。
 
 ## 3. 原 Stash Code View 结论
@@ -82,7 +82,7 @@
 ### 5.2 名称规则
 
 - UUID决定身份，`name_hint`只用于提示和缺失实体首次命名。
-- Coser、Work允许重名；创建时警告，Slug使用稳定短后缀。
+- Coser、Work允许重名，Slug使用稳定短后缀。新建Coser在提交前以主名和Alias执行规范化精确匹配；若命中，显示头像、别名、UUID末段和Gallery数，可打开已有实体，仅在所有者明确确认为不同人物后才继续创建；该检查是防重复复核，不是唯一性约束。
 - Character在同一Work内规范化主名称唯一；不同Work可同名。
 - Tag主名称和Alias在Tag命名空间全局无歧义。
 - 名称查重使用NFC、Unicode大小写折叠、首尾清理和连续空白折叠；不做简繁、标点或罗马音转换。
@@ -141,7 +141,11 @@ SocialAccount：
 - account_uuid、可扩展字符串platform_key、label、handle、HTTP(S) URL、ACTIVE/INACTIVE、visible、position。
 - platform_key格式 `[a-z0-9][a-z0-9_-]{0,63}`；未知平台使用通用本地图标。
 - INACTIVE不改变顺序，只原位弱化；visible=false时Browse不返回。
-- 第一版仅定义未来检测Provider接口，不实现Provider、定时任务或结果表。
+- 第一版仅定义未来检测Provider接口，不实现账号状态检测、定时任务或结果表。1.5新增的可拔除资料导入Provider只提供候选、头像、Banner和账号建议，与检测Provider分离。
+- Coser资料Provider的JSON集合字段必须稳定输出数组，零候选或零账号使用`[]`而不是`null`；前端仍需在使用外部候选数据前执行运行时标准化。网络资料面板必须有局部错误边界，单个Provider候选异常不得清空Coser编辑页或其他Manage功能。
+- 每次所有者触发的Provider搜索都必须得到明确的完成反馈：有候选时显示数量，成功但零候选时显示空结果及改用完整名称、Alias或较短特征名称的建议，传输失败继续显示错误；不得以空白区域表示零候选。服务日志可记录请求ID、Provider key与候选数量用于区分“正常零结果”和“外联失败”，但不得记录人物姓名或搜索词。
+- Manage核心实体的Coser、Work、Character和Tag列表统一提供名称/Sort name/Alias全库搜索、30/60/100项页量、完整分页与URL状态恢复；排序在数据库分页前统一按英文名称和中文拼音升序，Sort name优先，名称与UUID稳定破同序。Coser独有的头像/Banner完善度筛选不得出现在其他实体。
+- Work与Character的Aliases使用输入框内嵌气泡控件：回车提交当前文本为单个Alias，气泡正文用于退回输入框编辑，独立叉号用于删除；输入框已有编辑文本时点击另一气泡，必须先原子生成当前文本气泡，再将目标气泡退回输入框。未回车文本不得静默丢失或随表单保存，中文输入法合成回车不得误提交。Coser与Tag继续使用既有斜杠分隔输入，除非后续另行确认统一改造。
 
 ### 6.4 Work与Character
 
@@ -206,19 +210,33 @@ SocialAccount：
 ### 8.2 SELFIE建议
 
 - 新静态图默认PHOTO；人工或Manifest可正式设为SELFIE。
-- 扫描完整相对目录段，内置selfie/selfies/self-portrait/自拍/自拍照/自拍写真/セルフィー等关键词，并允许后台RE2规则。
+- 自拍识别使用独立的“媒体分类规则”，不复用Gallery根发现规则。后台可按全局或单一媒体库管理规则，匹配对象支持父目录段、文件名、去扩展名文件名和完整相对路径，操作符支持Exact、Glob和Go RE2。
+- Exact/Glob每行一个模式并按OR处理；RE2只允许一个表达式。路径统一NFC和`/`，默认不区分大小写；RE2保存前必须由后端Go RE2引擎编译，前端当前表达式未通过后端校验时禁止保存，Glob同样由后端校验语法。
+- 优先级按较小order在前；相同order时媒体库专属规则先于全局规则，再按规则ID。首个命中即停止，PHOTO结果可作为显式排除规则阻断后续SELFIE规则。
+- 内置目录关键词以可编辑、可禁用、可删除并可显式恢复的数据库默认规则一次性播种，不在运行时硬编码；默认文件名规则保持关闭，避免误判。
 - 命中只生成非阻断建议；接受后正式分类，拒绝后普通重扫不重复提示。
-- 规则可关闭；不根据文件名、人脸、相机或AI自动定类。
+- 规则修改递增revision；同一Item对同一revision的接受/拒绝结果保持稳定，旧待处理建议会被更新规则或更高优先级命中标记为SUPERSEDED。只有STATIC_IMAGE参与，动画和视频永不生成PHOTO/SELFIE建议。
+- 保存规则不批量改写现有Item；人工“评估现有媒体”只产生预览/建议，必须逐项或批量明确接受。人工与Manifest现值不会被扫描自动覆盖；不使用人脸、相机信息或AI自动定类。
 
-### 8.3 Position
+### 8.3 自动排除规则
+
+- GalleryItem自动排除使用独立于根发现及PHOTO/SELFIE分类的数据库规则；后台支持全局/媒体库作用域、父目录段、父目录路径、文件名、文件stem与完整相对路径，以及Exact、Glob和Go RE2。
+- 规则结果为EXCLUDE或INCLUDE例外，按order、媒体库优先和ID确定首个命中；可限制STATIC_IMAGE、ANIMATED_IMAGE、VIDEO或全部媒体。路径只在NFC规范化Gallery相对字符串上匹配，不访问文件系统或执行Shell。
+- 第一阶段仅应用于DIRECTORY新Item；Archive保持现有行为。根目录新媒体本次扫描开关继续优先，既有路径/唯一指纹Item的人工Exclude/Restore及Manifest结果不被重扫覆盖。
+- 保存、编辑或删除规则不批量改写存量Item；显式存量评估只生成EXCLUDE待审核建议，接受后才改变状态。规则命中来源和revision持久化，但`gallery_items.excluded`仍是当前状态事实来源。
+- 详细schema v5、扫描、API、UI和部署门禁见[可管理媒体自动排除规则实施计划](development/MEDIA_EXCLUSION_RULES_PLAN_2026-08-28.md)。
+
+### 8.4 Position
 
 - GalleryItem共用一套Gallery内全局唯一int64 position，但只在分类组内比较。
 - 初始成员按固定组顺序及规范化完整相对路径自然排序；数字按数值比较，DIRECTORY和归档一致。
 - 初始间隔1024；后续新增或重新分类追加到目标组末尾。
 - 同组拖拽优先写中点；间隔耗尽时只把当前组按原顺序迁移到Gallery全局高水位后的新区间。
-- 重新按文件名排序必须人工预览触发。
+- Manage媒体页按完整父目录分组；Gallery根目录作为独立分组并固定排在该媒体类型的所有文件夹之前。
+- 文件夹排序只在所属PHOTO、SELFIE、ANIMATED_IMAGE或VIDEO组内生效；移动文件夹时保持文件夹内部既有顺序。
+- 按文件名自然排序必须由用户对具体文件夹显式触发，比较文件名而非完整父目录；整个媒体组顺序在单事务和单次metadata_revision递增中提交。
 
-### 8.4 Credit/Cast Position
+### 8.5 Credit/Cast Position
 
 - 两者同样使用int64间隔值。
 - Credit为Gallery全局顺序；Cast为所属Credit内部顺序。
@@ -230,7 +248,7 @@ SocialAccount：
 
 - 类型仅 `DIRECTORY | ARCHIVE`；一个Gallery恰好最多一个物理来源。
 - DIRECTORY允许纯视频Gallery；所有成员必须在根内，递归发现但永不跟随符号链接。
-- ARCHIVE仅ZIP/CBZ；不能附加外部视频；内部未排除Video、RAW或AVIF均为阻断错误。
+- ARCHIVE支持ZIP/CBZ、TAR、TAR.GZ/TGZ和7Z；不能附加外部媒体；内部未排除Video、RAW或AVIF均为阻断错误。
 - Gallery不嵌套；确认根后内部Marker/Manifest不得拆出新Gallery。
 - DRAFT无来源时不能包含媒体。
 
@@ -247,15 +265,19 @@ SocialAccount：
 1. IgnoredGallerySource；
 2. 已绑定GallerySource；
 3. 有效Gallery Manifest；
-4. 可选空文件 `.cosplay-root`；
-5. PATH_TEMPLATE；
-6. FIXED_DEPTH（DIRECT_CHILD是深度1预设）；
-7. 人工绑定。
+4. 安全且包含受支持媒体的Archive文件本身；
+5. 可选空文件 `.cosplay-root`；
+6. PATH_TEMPLATE；
+7. FIXED_DEPTH（DIRECT_CHILD是深度1预设）；
+8. 人工绑定。
 
 - 所有自动规则默认关闭；显式来源直接建DRAFT。
 - 每条自动规则默认只生成Candidate，可逐规则开启AUTO_CREATE_DRAFT；仍只建DRAFT。
+- Archive文件是内置确定性来源根，不依赖PATH_TEMPLATE或FIXED_DEPTH；手工发现默认只生成`ARCHIVE_FILE` Candidate，ASSISTED/TRUSTED可通过默认关闭的媒体库级开关授权自动创建DRAFT。有效相邻Manifest继续优先；加密、损坏、不安全或无受支持媒体的Archive进入覆盖诊断，超限Archive保留为受阻Candidate，二者均不得自动导入。
+- 已确认的DIRECTORY来源或候选拥有完整子树，其内部Archive不得再形成嵌套Gallery；普通组织目录不阻止其中每个安全Archive分别成为候选。
+- `.cosplay-root`所在父目录始终是DIRECTORY来源根；新候选若根内恰好一个直属真实子目录，标题保底取该子目录名，否则取来源根目录名。该规则不回写已有Gallery，不改变根级媒体默认Exclude，也不适用于ARCHIVE来源。
 - 完全移除启发式候选、评分和证据Provider。
-- 未归属媒体只按实际父目录聚合诊断；用户手工选根或修改确定性规则。
+- 未归属媒体只指未命中DIRECTORY根的散装媒体，并按实际父目录聚合诊断；安全受支持Archive不得误列为未分配媒体文件夹。用户可从诊断项预填精确目录规则或使用其他人工根确认流程。
 
 ### 9.4 PATH_TEMPLATE
 
@@ -276,13 +298,13 @@ SocialAccount：
 - 批量仅允许无冲突、未超限、根明确的Candidate建DRAFT；不批量接受人物/角色/日期。
 - Candidate和未归属报告只使用最近一次完整扫描快照。
 
-### 9.7 ZIP/CBZ结构与资源安全
+### 9.7 Archive结构与资源安全
 
 - 默认限制：总Entry 20,000、非排除Gallery成员1,000、单成员解压后2GiB、总解压估算100GiB、单图200MP、压缩比1000。
 - 上述资源阈值可在后台调整；Gallery 1,000成员仍是产品硬上限。
 - 路径穿越、绝对路径、Unicode/大小写重复、符号链接、硬链接、设备/特殊文件、加密Entry和嵌套归档等结构性校验不得关闭。
 - CRC或成员读取失败产生明确Issue；不把归档完整解压到用户媒体库，也不递归处理内嵌压缩包。
-- ZIP/CBZ中的Video、RAW和AVIF沿用阻断规则；必须明确排除，或解压为DIRECTORY后再激活。
+- Archive中的Video、RAW和AVIF沿用阻断规则；必须明确排除，或解压为DIRECTORY后再激活。
 
 ## 10. 扫描、指纹与对账
 
@@ -292,6 +314,7 @@ SocialAccount：
 - 扫描只做发现与对账；缩略图、RAW、动画、Video进入独立持久化处理队列。
 - 每次扫描有scan_run_id，观察结果先暂存；以单GallerySource完整成功为最小原子提交。
 - 取消、网络中断或失败时丢弃未完成暂存，保留上一版成员状态，不产生半扫描MISSING。
+- 用户发起扫描时默认把本次新发现的Gallery根目录媒体记录为excluded，并可在扫描前关闭该选项；子目录媒体仍默认纳入。该策略只作用新Item，按路径或唯一指纹识别出的既有Item继续保留人工Exclude/Restore决定。
 - 移除原Stash Clean：`Reconcile Sources`只标记来源/成员状态，`Cache Maintenance`只清理应用生成的缓存、临时文件、轮换备份和明确托管的元数据资源。
 - 应用任何路径都不能删除用户媒体来源文件；文件物理删除和移动完全由外部文件系统完成。
 
@@ -316,17 +339,17 @@ SocialAccount：
 ### 11.1 发现与实际内容
 
 - 默认图片候选扩展名：`png, jpg, jpeg, gif, webp, avif, jxl`，另加第11.2节RAW扩展名；默认视频：`m4v, mp4, mov, wmv, avi, mpg, mpeg, rmvb, rm, flv, asf, mkv, webm, f4v`。
-- 扩展名集合可在后台增减；HEIC、SVG、音频、RAR和7z不在第一版默认/支持范围。
+- 扩展名集合可在后台增减；HEIC、SVG、音频和RAR不在第一版默认/支持范围；7Z只作为受安全校验的ARCHIVE容器支持。
 - 最终使用签名、容器探测和实际解码分类；错配格式保留并警告，不自动重命名。
 - 图片后缀实际为Video需用户确认后Gallery才可激活。
-- 不支持SVG、音频、RAR、7z；无后缀/未知扩展即使内容可解码也不发现。
+- 不支持SVG、音频和RAR；无后缀/未知扩展即使内容可解码也不发现。
 
 ### 11.2 RAW
 
 - 使用固定版本LibRaw；DIRECTORY支持常见CR2/CR3/CRW、NEF/NRW、ARW/SR2/SRF、RAF、ORF/ORI、RW2/RWL、PEF、DNG、SRW、3FR/FFF、X3F等。
 - 不默认启用含义模糊的 `.raw`；扩展名只发现，LibRaw确认内容。
 - RAW为STATIC_IMAGE，默认PHOTO；原始文件永不修改，优先嵌入预览，必要时解码为sRGB代理。
-- ZIP/CBZ内RAW阻断；LibRaw不可用产生RAW_DECODER_UNAVAILABLE。
+- Archive内RAW阻断；LibRaw不可用产生RAW_DECODER_UNAVAILABLE。
 - 同目录同主名RAW+JPEG保持独立Item，只生成伴生提示，由用户决定排除。
 
 ### 11.3 EXIF/XMP
@@ -339,17 +362,20 @@ SocialAccount：
 ### 11.4 静态图片
 
 - 卡片/网格派生480/960/1600响应尺寸；Lightbox和媒体详情默认4096长边代理。
-- 浏览器兼容格式可经认证资源接口按需查看原图；RAW只显示代理。
+- 浏览器兼容的JPEG、PNG和静态WebP在来源文件不超过20MiB、宽高均不超过4096时，经认证不透明资源接口直接查看原图；超过任一阈值、RAW或其他格式回落到按需4096代理。
+- 原图直读支持DIRECTORY和受支持Archive Entry；必须继续校验ACTIVE/Browse可见性、content revision、实际文件签名和非符号链接边界，不向GraphQL或URL暴露物理路径。
 - 正确应用方向、转换sRGB、保留Alpha、不放大。
 - 默认最大解码像素200MP；第一版无裁剪写回、滤镜或图片编辑。
 
 ### 11.5 动画
 
 - GIF/APNG/动态WebP/动态AVIF/动态JXL归ANIMATED_IMAGE，前端统一放GIF组但保留真实格式。
-- 每项生成长期静态Poster；允许动画的单媒体卡片使用增强缓存预览：最长6秒、最大960px、15FPS、循环。
+- 每项生成长期静态Poster；Gallery详情网格的可见动画项按需生成ENHANCED动画WebP：保持原动画完整时长、最长边480px、最高15FPS并循环，不得以固定秒数截断。
+- Gallery详情动画播放安全上限默认12、允许在Manage Settings设为1～16。动画总数不超过上限时，所有进入视口的动画均可播放且不安装悬浮切换监听；超过上限时初始窗口取排序前N项，精确鼠标在动画项停留150ms后把窗口锁定到以该项为中心的连续N项，偶数N向右多取一项并在首尾夹紧。鼠标移开保持窗口；再次锁定须遵守默认800ms、可配置700～1000ms的切换间隔。
+- 播放窗口只授予资格，实际播放仍须项目进入视口；Lightbox打开或`prefers-reduced-motion: reduce`时全部恢复Poster。无悬浮能力的设备按当前可见动画中位项移动窗口，避免后段动画永久无法播放。
 - Gallery卡片混合媒体Scrubber始终只显示静态Poster，不使用上述动画预览。
 - 仅视口内播放，离开即停；同页默认最多4个，可配置1～8；reduced-motion只显示Poster。
-- 详情尽量显示原动画；不提供进度、逐帧、速度或编辑。
+- Lightbox和单媒体详情对当前已识别的GIF/动态WebP经认证接口播放未经重编码的完整原动画；列表、Related、Scrubber等其他入口保持静态Poster。不提供进度、逐帧、速度或编辑。
 
 ### 11.6 Video
 
@@ -358,6 +384,9 @@ SocialAccount：
 - 第一版只做基础播放：确定性选择default/首个可解码主视频轨和音轨，不提供音轨选择、字幕、画质档、预览精灵、360°或外部播放器。
 - 正确应用旋转；代理将HDR Tone Map为SDR。
 - 不持久化播放进度、观看状态、次数或时长。
+- 1.5按两个实现阶段补齐该闭环：第一阶段完成FFmpeg/FFprobe诊断、产品自有技术元数据与约20%位置可靠Poster；第二阶段完成认证DIRECT Range路由、按需Remux/H.264-AAC代理及Lightbox/媒体详情播放。完整任务、数据、缓存、安全和测试规格见[视频处理第一、第二阶段功能规划](development/VIDEO_PROCESSING_PHASE_1_2_PLAN_2026-08-15.md)。
+- Gallery列表、卡片曝光和Gallery卡片Scrubber不得触发原视频读取、Remux或转码；只有当前Lightbox视频或媒体详情实际打开才请求播放资源。
+- Storyboard辅助时间轴和条件式单清晰度渐进HLS已形成[第三阶段后续规划](development/VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)，但不加入当前第一版/1.5完成门禁；HLS必须先由第二阶段真实大视频指标证明必要并另行ADR确认。
 
 ### 11.7 复用Stash底层
 
@@ -403,6 +432,22 @@ SocialAccount：
 - BrowseGalleryCard不得携带全部成员URL；通过新的GalleryItem级认证预览资源契约按ordinal获取，并可缓存Gallery的可预览item_uuid序列，避免沿用逐次SQL `OFFSET` 查询。
 - 预览请求必须支持过期请求取消、客户端节流和已访问ordinal缓存；Gallery无可预览成员时Scrubber保持无效，卡片继续显示effective cover。
 
+### 12.5 后续并发调度与宿主机资源自适应（已规划、暂不实施）
+
+- 当前实现边界保持不变：媒体库发现、Gallery来源扫描和自动化Gallery推进主要串行；持久化Item处理队列按启动配置`worker_count`并行，正式部署当前为2。Go运行时和FFmpeg仍可能在单个任务内部使用多核，因此worker数量不等于CPU线程硬上限。
+- 借鉴Stash“顶层作业串行、单个作业内有界并行”的分层思想，但不复制其内存队列或仅按`runtime.NumCPU()/4+1`计算并发的简单实现。CGM继续以数据库持久化任务、唯一任务键、租约、心跳、恢复和重试为调度基础。
+- 顶层高影响操作继续互斥：媒体库发现/来源扫描、显式自动化、备份、恢复和迁移不得因性能优化而无界重叠。目录遍历采用单生产者；同一媒体库、同一物理来源或同一低速设备默认只允许一个扫描读取流，避免随机I/O放大。
+- 后续将持久化媒体处理队列按资源重量拆分限流，而不是所有variant共用一个worker计数：普通静态图片派生池、FFmpeg/RAW/超大图片重任务池，以及Browse按需预览高优先级池。当前查看请求可以提高已有唯一任务的优先级，但不得绕过认证、可见性、磁盘余量和任务唯一性门禁。
+- 默认自动模式必须同时参考有效CPU配额、`MemAvailable`、cgroup/systemd内存上限、Swap活动、系统负载和I/O压力；不能只按逻辑CPU数量决定。网络盘、机械盘和存档解压应采用更保守的设备级并发；无法可靠识别时按保守值运行。
+- 自动调节只影响尚未领取的新任务，不强制终止正在写临时文件或运行中的FFmpeg/LibRaw进程。降并发应立即停止领取超额任务；升并发必须在持续存在资源余量后进行，并使用采样周期、迟滞和冷却时间避免频繁抖动。
+- 后台最终提供“保守/均衡/性能/自动”模式和用户硬上限；自动计算不得超过硬上限。建议参考起点：扫描并发1；普通图片在4核8GiB基准机上1～2；FFmpeg/RAW重任务1。更高配置只能在真实压力指标证明安全后逐步放宽。
+- FFmpeg需要单独控制每进程线程或统一核预算，避免“媒体worker数 × FFmpeg内部线程数”造成CPU过量订阅。未来若启用硬件加速，也必须分别限制解码、编码会话和显存压力，不能把硬件转码视为零成本。
+- 浏览时即时缩略图、Lightbox代理、动画预览和Video播放代理不得与后台批处理使用同一个无优先级信号量；前台队列必须有受控保留容量，后台资源压力也不能造成无限请求排队或重复生成。
+- 同一Item、Source及物理文件的扫描、派生、替换、忘记、删除引用和Manifest操作需纳入生命周期协调；继续以revision/Profile复核和原子发布保证旧任务结果不能覆盖新内容。
+- 管理页后续显示配置并发、实际运行数、各资源池排队数、当前重任务、CPU/内存/I/O压力摘要及自动降级原因；日志只记录稳定事件码和聚合资源状态，不记录媒体正文或不必要的绝对路径。
+- 验收至少覆盖：大量候选根、百万Item发现、同盘/网络盘扫描、超大静态图、RAW、GIF和多路FFmpeg；前台浏览延迟、取消/重启恢复、公平性、低内存/低磁盘/cgroup限制和无任务饿死。必须比较固定并发与自动模式的吞吐、峰值RSS、Swap、I/O wait和p95响应。
+- 本项是1.5之后的性能与运行治理优化，不改变当前Gallery识别、自动化安全门禁、Manifest、媒体分类、缓存语义或产品设计；在专项实现计划和测试基线另行确认前不进入近期开发、迁移或部署范围。
+
 ## 13. 封面
 
 - 来源：静态GalleryItem、Video帧、独立自定义封面资源。
@@ -417,6 +462,7 @@ SocialAccount：
 ## 14. 排除、MISSING与硬上限
 
 - 来源内支持媒体默认自动纳入；人工排除写数据库和Manifest，重扫不得恢复。
+- DIRECTORY中新发现媒体可由已启用的数据库自动排除规则设置初始状态；排除决策必须在1000上限和处理任务排队前统一计算。规则不覆盖既有Item，Archive第一阶段不应用。
 - 排除已有Item保留GalleryItem、UUID、分类、Position、Caption、评分和收藏，状态EXCLUDED，不进入Browse、计数、封面、随机或1000上限。
 - Manifest Push中被排除已有Item同时存在于 `items[]` 和 `excluded_items[]`；后者可含item_uuid。
 - 恢复沿用同一Item；Position冲突时追加目标组。
@@ -429,7 +475,7 @@ SocialAccount：
 ### 15.1 路径与可选性
 
 - DIRECTORY：根内 `.cosplay.json`。
-- ZIP/CBZ：相邻 `<完整归档文件名>.cosplay.json`；永不因写Manifest重打包归档。
+- Archive：相邻 `<完整归档文件名>.cosplay.json`；永不因写Manifest重打包归档。
 - Gallery和Coser Manifest均可选；`NONE`与曾同步后丢失的`MISSING`明确区分。
 - 首次发现自动读入DRAFT；后续扫描只检测状态。后续Pull/Push必须用户显式触发。
 
@@ -516,7 +562,7 @@ SocialAccount：
 
 - NON_ADULT进入LIST，ADULT进入MAGIC；成人卡片使用小型三角R-18徽标。
 - 内容范围贯穿搜索、推荐、时间线、随机、收藏和历史。
-- Coser/Work/Character/Tag统一详情默认ALL，可显式切All/List/Magic，不继承入口。
+- Work/Character/Tag统一详情默认ALL，可显式切All/List/Magic，不继承入口。Coser详情改用作品类型筛选，不再使用内容分级筛选。
 - LIST/MAGIC是浏览组织，不是权限边界；所有页面仍需唯一所有者认证。
 
 ## 18. BrowseShell 信息架构
@@ -569,6 +615,10 @@ SocialAccount：
 - Lightbox停止上一动画/视频，只预取相邻图片代理，视频只预取Poster。
 - 详情“拍摄时间”为主、“收录于”为次，不显示文字标签，以图标、字体、字号、颜色区分，并保留Tooltip/aria-label。
 - 总大小只统计当前AVAILABLE Item实际存储大小；归档用压缩后成员大小。
+- 已认证单所有者可在详情“更多详情”中查看该Gallery实际存在媒体的去重绝对父目录，并直达其Manage媒体页；这是Browse物理路径约束的有限例外。DIRECTORY包含被排除但非MISSING的Item，根目录优先、其余自然排序；ARCHIVE只显示归档文件所在目录。不得返回文件名、Item相对路径、指纹、缓存路径，也不得提供`file://`、文件管理器或外部命令入口。
+- “更多详情”点击弹层外或按`Escape`关闭，弹层内部操作不得误关闭。
+- 已认证单所有者可在详情“更多详情”的现有Tag区域原地编辑Gallery直接Tag：控件借鉴Stash多选标签输入，聚焦空白输入区展开现有Tag列表，按主名/Alias实时筛选，选择后形成可移除气泡；使用页面内草稿及显式保存/取消，不在每次点击时写库，也不在Browse创建或编辑Tag实体。
+- Browse快捷Tag保存必须使用Gallery范围的专用乐观锁事务，只替换`gallery_tags`并递增`metadata_revision`、标记Manifest `DB_DIRTY`和写审计；不得整体回传或覆盖Credit/Cast，不运行激活降级，不改变ACTIVE/DRAFT/ARCHIVED状态，不触发扫描、自动化或媒体处理。revision冲突保留页面草稿并明确提示刷新复核。
 
 ### 18.6 媒体详情与媒体卡片
 
@@ -587,7 +637,7 @@ SocialAccount：
 
 ### 18.8 Coser、Work、Character、Tag
 
-- Coser详情跨分区默认ALL，显示全部作品、个人介绍、Biography、社交账号、筛选和专属时间线按钮。
+- Coser详情默认显示该人物全部COSPLAY与ALBUM，保留个人介绍、Biography、社交账号和专属时间线按钮；作品筛选固定为“全部作品 / COSPLAY / ALBUM”。COSPLAY使用内容范围ALL，因此等于LIST与MAGIC合集；ALBUM继续展示全部内容分级。Model详情保持既有ALBUM专用列表，不增加该筛选。
 - Coser卡片使用1:1头像、6/5/4/3/2列，30项/页；Work/Character/Tag为无图片高密度文字索引，5/4/3/1列，60项/页。
 - Work详情只显示当前选择范围内至少关联可见Gallery的Character；不显示Gallery。
 - Character详情显示相关Gallery网格；Tag详情包含自身及全部后代Gallery。
@@ -675,6 +725,8 @@ SocialAccount：
 
 - 使用最小字段表单、高密度索引、关系预览和合并/删除检查。
 - Work编辑关联Character；Character编辑主要Work及只读Gallery；Tag编辑父子DAG及影响预览。
+- 1.5 Tag管理采用层级导航与现有平铺列表双视图：默认按根Tag展开树，名称/Alias搜索展示命中项及上级路径；同一Tag允许出现在多个父节点下，所有节点均指向同一UUID，右侧继续统一编辑全部直接父关系。树节点可原子创建直属子Tag，创建时按父revision乐观复核；不把多父DAG误当作可直接拖拽移动的单父文件夹树。
+- 层级视图读取轻量Tag投影（UUID、名称、Alias、直接父UUID、revision、直接子数和直接Gallery数），不加载全库完整实体；平铺列表继续服务端分页。层级投影设置20,000 Tag保护上限，超过时明确报错而非截断成不完整树，未来若规模逼近上限须改为按父节点分页加载。
 
 ### 20.5 路径与外部命令
 
@@ -733,19 +785,19 @@ SocialAccount：
 - Session默认30天，可配置1～90；改密码/恢复/注销全部设备撤销全部Session。
 - 登录限速、CSRF、Origin和Host校验。
 - 本地可信模式显式开启后绕过认证但保留密码/Session；关闭即恢复，界面持续警告。
-- 忘记密码使用本机一次性Recovery Token，默认10分钟、单次使用。
+- 忘记密码使用本机一次性Recovery Token，默认10分钟、单次使用；schema v16只保存令牌哈希，重置后撤销全部Session并关闭可信模式。
 
 ### 24.2 首次Setup
 
 - 五步：环境、所有者认证、界面/时间、存储位置、确认创建；完成后手工启动首次扫描。
-- 原生loopback可直接Setup；Docker/非loopback必须从服务器CLI生成15分钟单次Setup Token。
+- 原生loopback可直接Setup；提供的Docker Compose仅绑定宿主机`127.0.0.1`且显式启用本机首次Setup时可免门票；其他Docker/非loopback部署必须从服务器CLI生成15分钟单次Setup Token。Docker不得仅凭容器内请求源地址推断宿主机loopback。
 - Token换短期HttpOnly Setup Cookie后从URL移除；Setup完成后入口永久失效。
 
 ### 24.3 媒体资源
 
 - item_uuid仅定位，不是凭证；全部Browse/Manage媒体资源统一认证。
 - 路由只接受UUID和variant白名单，校验Source归属、路径边界、状态和可见性，不接受任意路径。
-- Browse和Manage使用不同可见性规则；Browse DTO永不返回路径、指纹或技术详情。
+- Browse和Manage使用不同可见性规则；除第18.5节已确认的认证单所有者Gallery详情父目录摘要外，Browse DTO永不返回路径、指纹或技术详情。该摘要只聚合文件夹路径，不扩散到卡片、索引、成员轻量DTO或资源URL。
 - MIME正确、nosniff、inline、private cache；带不可变revision派生资源可长期缓存；原图/视频支持Range。
 - 不生成永久公开、无认证签名或CDN URL。
 
@@ -773,14 +825,14 @@ SocialAccount：
 
 ### 25.3 平台
 
-- 正式支持Linux amd64/arm64、Docker双架构、Windows amd64；CPU处理为验收基线。
+- 第一版正式支持Linux amd64/arm64与Docker双架构；CPU处理为验收基线。
 - Docker包含固定FFmpeg/FFprobe和LibRaw；libvips可选加速。
-- 不承诺macOS原生、Windows ARM、32位、GPU硬件转码或移动原生App。
+- Windows原生支持整体延期；第一版不承诺macOS原生、32位、GPU硬件转码或移动原生App。
 - Manifest和备份在正式支持平台间可迁移。
 
 ### 25.4 离线与插件
 
-- 服务端零主动外联；前端资产全部本地；核心功能断网可用。
+- 服务端核心流程零主动外联；前端资产全部本地；核心功能断网可用。1.5 Coser资料导入与Work/Character名称导入分别默认关闭，只在所有者显式操作时外联；移除全部Provider后产品仍可完整编译和使用。
 - 第一版彻底移除原Stash插件市场、执行入口、旧Hook、Scraper和主题兼容。
 - 只保留内部代码级Recommendation、Account Check和Derivative Generator接口。
 - Manifest `extensions`只保存JSON，不执行代码。
@@ -800,6 +852,8 @@ SocialAccount：
 - Web与CLI共用维护模式恢复：重新认证、包Hash/产品/Schema校验、临时安全解包、替换前安全快照、失败自动回滚。
 - 恢复后撤销Session，取消旧可执行任务，自动计划SUSPENDED_AFTER_RESTORE；完成路径/依赖检查后用户显式恢复。
 - 搜索索引、Tag闭包、推荐缓存和计数可重建；不自动扫描或Manifest Pull/Push。
+- 异机可移植迁移与完整备份解耦：核心身份/实体和Gallery重建声明进入可移植包，旧机器绝对媒体路径不进入；Gallery由目标媒体根及Manifest重建。
+- 可选owner continuity只允许Gallery生命周期/首次收录时间和Gallery收藏隐藏/Item收藏，默认不导出且只在Gallery身份重建后应用。Gallery地址/Slug历史、最后浏览时间、最后浏览项目和其他浏览历史不迁移；Gallery/Item评分继续由Manifest负责。
 
 ## 28. 日志与审计
 
@@ -816,6 +870,7 @@ SocialAccount：
 - BrowseGalleryCard只返回Scrubber可用数量/版本等轻量状态，不内嵌全部预览URL；专用认证资源接口以Gallery UUID、ordinal和不可变revision定位对应GalleryItem派生图/Poster。
 - Scrubber资源沿用Browse可见性校验，不接受物理路径，不复用旧Gallery Preview API；设置关闭时前端不得请求，后端仍不得因此绕过正常资源授权。
 - 所有索引服务端分页；默认Gallery/个人列表24、Coser30、Work/Character/Tag60；随机单页；Gallery详情成员不分页。
+- Manage Coser主从编辑列表默认30项并可切换60/100项；名称、Sort name、Alias搜索和头像/Banner完善度筛选必须在服务端分页前作用于全库，搜索、筛选、页量、页码和当前实体保留在URL。Coser排序采用固定zh-CN Unicode Collation，将英文名称与中文拼音放入同一不区分大小写的字母序；人工Sort name优先，用于多音字或特殊读音覆盖。排序必须先于分页且以名称、原始文本和UUID依次稳定破同序。Manage不使用仅过滤当前页的前端假搜索或无限滚动。
 - Gallery业务Mutation均以Gallery为范围并带expected_metadata_revision；扫描技术Mutation独立。
 - Coser/Work/Character/Tag和Settings Mutation同样带各自revision。
 - 前后端同包发布，第一版不支持跨版本前端/后端混用。
@@ -854,7 +909,7 @@ SocialAccount：
 - Manifest冲突静默覆盖；半扫描批量MISSING；Tag成环；OVER_LIMIT进入Browse。
 - LIST/MAGIC范围错误；原Stash/未知DB被转换；核心p95不达标。
 - Scrubber播放动画/Video、回退读取大原图、泄漏不可见Gallery资源、设置关闭后仍请求资源，或其Hover行为错误记录浏览历史。
-- Linux amd64跑全套；Linux arm64/Windows跑核心数据库/路径/媒体契约；Docker双架构启动健康检查；CI禁外网。
+- Linux amd64跑全套；Linux arm64跑核心数据库/路径/媒体契约；Docker双架构启动健康检查；CI禁外网。
 
 ## 33. 产品、许可证与版本
 
@@ -870,14 +925,16 @@ SocialAccount：
 - 最终产品名称、Logo和完整品牌系统。
 - AI/视觉向量相似推荐、Embedding模型和向量存储。
 - Coser社交账号联网检测Provider和结果建议表。
-- 任何网络Scraper、在线更新、遥测或远程素材获取。
+- 自动网络Scraper、在线更新、遥测或后台远程素材获取；1.5已确认的人工Coser资料导入与Work/Character名称导入例外不得扩展到扫描、Browse或定时任务。
 - Coser真实姓名、出生日期、身高、体重、三围等结构化字段；第一版写Biography。
 - 字幕/多音轨UI、视频进度、硬件转码、360°/VR、Dolby Vision专用处理。
 - 应用内加密备份、SQLCipher、内置TLS、外部数据库和多用户。
 - Gallery级运行时插件API；未来设计也不兼容原Stash插件。
-- macOS原生发行、Windows ARM和移动原生应用。
+- Windows原生发行（含amd64/ARM）、macOS原生发行和移动原生应用。
 
 ## 35. 当前结论
+
+- 2026-09-10：异机可移植迁移的CLI/Web业务闭环已完成源码收口；Web包含导出预检、owner-continuity范围摘要、最近200条会话窗口和中断恢复入口。Gallery地址、评分重复副本及浏览历史仍按已确认边界排除；真实迁移模拟由所有者在本轮提交部署后执行。
 
 - 第一版关键产品和架构决策已闭合，没有阻塞Schema设计的待确认项。
 - 旧数据迁移、上游兼容和插件兼容均不再是实现约束。

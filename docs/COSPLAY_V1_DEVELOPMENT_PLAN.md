@@ -4,7 +4,7 @@
 > 上游需求：[COSPLAY_DEVELOPMENT_MEMO.md](./COSPLAY_DEVELOPMENT_MEMO.md)  
 > 适用范围：从当前 Stash 代码基线启动独立产品开发，直至 `1.0.0` 发行  
 > 工作名：Cosplay Gallery Manager  
-> 最后更新：2026-07-21
+> 最后更新：2026-08-15
 
 ## 1. 计划目标
 
@@ -12,11 +12,11 @@
 
 第一版交付目标是一个可离线运行、单所有者使用、以 Gallery 为最小管理单元的独立产品。它能够：
 
-1. 从 DIRECTORY、ZIP 或 CBZ 单一来源发现并导入 Gallery。
+1. 从 DIRECTORY、ZIP/CBZ、TAR/TAR.GZ/TGZ或7Z单一来源发现并导入 Gallery。
 2. 在不删除用户媒体文件的前提下完成扫描、对账、分类、排序、排除和媒体派生处理。
 3. 管理 Coser、Work、Character、Tag、Credit、Cast、Manifest 和个人状态。
 4. 提供全新的 React 19 BrowseShell 与 ManageShell。
-5. 在 Linux amd64/arm64、Docker 双架构和 Windows amd64 上完成正式验收。
+5. 在 Linux amd64/arm64 和 Docker 双架构上完成正式验收。
 6. 以 AGPLv3 发布，并提供对应源码和第三方许可证清单。
 
 ## 2. 执行原则
@@ -32,8 +32,8 @@
 - 所有可移植 UUID 跨实体类型全局唯一，Alias 与 Tombstone 永久占用旧 UUID。
 - 应用不能删除任何用户媒体来源文件，只能清理应用生成的数据。
 - 只支持全新数据库；检测到原 Stash 或未知非空数据库时拒绝启动。
-- 第一版服务端零主动外联，前端资源全部本地化，完整功能可离线运行。
-- Browse API 只返回 Gallery 级 DTO，不向浏览页面泄漏单媒体旧业务模型或物理路径。
+- 第一版核心流程服务端零主动外联，前端资源全部本地化，完整功能可离线运行。1.5允许默认关闭、所有者显式触发且可拔除的Coser资料Provider及Work/Character名称Provider；它们不得被启动、Browse、扫描或计划任务调用。名称Provider仅追加人工勾选且仍通过revision复核的Alias，不引入新Schema。
+- Browse API 只返回 Gallery 级 DTO，不向浏览页面泄漏单媒体旧业务模型；物理路径仅允许在已认证单所有者的Gallery详情“更多详情”中以去重绝对父目录摘要形式出现，不返回文件名、Item相对路径、指纹或缓存路径，也不扩散到列表/卡片/成员DTO。
 - 所有资源统一认证；Browse 与 Manage 使用不同可见性校验。
 
 ### 2.2 开发方式
@@ -43,7 +43,7 @@
 - 先实现 DIRECTORY 与静态图片的最小闭环，再依次接入归档、RAW、动画和视频。
 - 新旧前端只在迁移期并存；新业务不得继续叠加到 `ui/v2.5`。
 - 复用 Stash 的底层文件、图片、任务和流式能力时，必须通过新领域适配层隔离旧 Image/Scene/Gallery 业务语义。
-- 不为尚未确定的联网、插件、AI 推荐或多用户需求提前建设运行时框架。
+- 不为尚未确定的联网、插件、AI 推荐或多用户需求提前建设通用运行时框架；1.5 Coser资料导入及Work/Character名称导入只使用窄代码级Provider契约和编译期组合，不建立插件执行系统。
 
 ### 2.3 每个工作项的完成定义
 
@@ -230,11 +230,14 @@ flowchart LR
 
 #### P02-02 确定性根识别
 
-- 严格按 IgnoredGallerySource → 已绑定 GallerySource → 有效 Manifest → `.cosplay-root` → PATH_TEMPLATE → FIXED_DEPTH/DIRECT_CHILD → 人工绑定处理。
+- 严格按 IgnoredGallerySource → 已绑定 GallerySource → 有效 Manifest → 内置ARCHIVE_FILE → `.cosplay-root` → PATH_TEMPLATE → FIXED_DEPTH/DIRECT_CHILD → 人工绑定处理。
 - 已绑定来源是人工显式身份；PATH_TEMPLATE 是尚未绑定来源的自动规则最高优先级。
 - 多种自动规则可以同时启用，默认全部关闭。
 - DIRECT_CHILD 是 FIXED_DEPTH=1 的界面预设；深度规则不生成元数据建议。
-- 移除启发式候选模块；未归属媒体只生成按实际父目录聚合的诊断报告。
+- MARKER的来源根保持为`.cosplay-root`所在父目录；新发现时若仅有一个直属真实子目录，确定性标题保底使用该子目录名，否则使用来源根目录名。已有Gallery、根级媒体Exclude策略和ARCHIVE发现均不受影响。
+- 安全且包含受支持媒体的Archive文件以内置`ARCHIVE_FILE`方式直接成为独立候选，不依赖PATH_TEMPLATE或FIXED_DEPTH；已确认DIRECTORY根优先拥有其子树，防止内部Archive形成嵌套Gallery。
+- Archive手工发现默认只生成Candidate；ASSISTED/TRUSTED策略通过默认关闭的媒体库级开关显式授权自动创建DRAFT。加密、损坏、不安全、无受支持媒体和超限Archive不得自动导入。
+- 移除启发式候选模块；未归属媒体只生成按实际父目录聚合的DIRECTORY诊断报告，安全受支持Archive不得误报为未分配媒体文件夹。
 
 #### P02-03 正则建议系统
 
@@ -274,15 +277,16 @@ flowchart LR
 - LibraryPathIgnoreRule 只影响未绑定路径发现。
 - GalleryItemExclusion 只影响已绑定来源内成员。
 - 来源内媒体默认纳入；排除保留 Item 和元数据，重扫不得恢复，显式忘记才删除记录。
+- 增加独立数据库媒体自动排除规则：第一阶段仅对DIRECTORY新Item按全局/媒体库范围、路径/文件匹配及媒体类型决定EXCLUDE或INCLUDE；根级媒体本次扫描开关优先，既有路径/指纹重绑定Item保持持久决定，Archive不变。
 - Gallery 删除后写入永久 Tombstone 与 Ignore，文件保留时也不得重建。
 
 #### P02-08 归档与资源安全
 
-- ZIP/CBZ 禁止路径穿越、绝对路径、危险链接和超限解压资源。
+- ZIP/CBZ、TAR、TAR.GZ/TGZ和7Z禁止路径穿越、绝对路径、危险链接和超限解压资源。
 - 默认限制为总 Entry 20,000、单成员解压后 2GiB、总解压估算 100GiB、单图 200MP、压缩比 1,000。
 - 阈值可配置，但 Unicode/大小写重复、加密 Entry、嵌套归档、路径穿越和特殊文件等结构性安全校验不可关闭。
 - 归档中的未排除视频、RAW 和 AVIF 是激活阻断错误。
-- ZIP/CBZ 不可附加外部视频或其他外部媒体来源。
+- Archive不可附加外部视频或其他外部媒体来源。
 
 #### P02-09 成员排序与上限
 
@@ -290,11 +294,14 @@ flowchart LR
 - Position 初始间隔为 1,024，在 Gallery 内全局唯一，但只在所属媒体组内比较。
 - 新增成员只追加；重新按文件名排序必须人工触发。
 - 使用 Gallery 全局高水位；组内间隔耗尽时只迁移该组到新区间。
+- Manage按完整父目录分组，根目录固定排在所属媒体组最前；文件夹只能在PHOTO、SELFIE、ANIMATED_IMAGE或VIDEO各自组内排序，移动文件夹保留内部顺序，具体文件夹可显式按文件名自然排序。
+- 文件夹或文件夹内顺序通过完整组成员UUID列表原子提交；后端校验列表恰好覆盖同一媒体组，拒绝重复、遗漏、跨组和过期revision。
+- 用户扫描默认只自动排除本次新发现的根目录媒体，并提供本次扫描开关；既有Item的Exclude/Restore选择不被重扫覆盖。
 - 单 Gallery 非排除成员超过 1,000 时进入 OVER_LIMIT，禁止激活或退出浏览。
 
 ### 7.3 退出门禁 G2
 
-- DIRECTORY、ZIP、CBZ 候选和两阶段导入集成测试通过。
+- DIRECTORY及全部受支持Archive候选和两阶段导入集成测试通过。
 - 父子媒体库、路径规范化、符号链接、路径穿越、扫描中断和来源失联测试通过。
 - 两次扫描在输入未变时产生幂等结果。
 - 应用代码不存在删除用户来源媒体文件的调用路径。
@@ -369,7 +376,8 @@ flowchart LR
 #### P03-08 Item 元数据
 
 - 静态图片默认 PHOTO；SELFIE 只能由人工或 Manifest 确认。
-- 自拍语义目录只产生非阻断建议，并保留接受或拒绝结果。
+- 可管理的媒体分类规则支持父目录、文件名、文件stem与完整相对路径的Exact/Glob/RE2匹配；只对静态图片产生非阻断PHOTO/SELFIE建议，并按规则revision保留接受或拒绝结果。无效RE2/Glob必须在后端保存前拒绝。
+- 可管理的自动排除规则与媒体分类保持业务分表但复用纯路径匹配器；存量评估只产生待审核EXCLUDE建议，规则修改/删除和普通重扫不得静默恢复或覆盖Item状态。schema v5与完整门禁见[专项计划](development/MEDIA_EXCLUSION_RULES_PLAN_2026-08-28.md)。
 - Item 只具有 Gallery 上下文中的 media kind、分类、Caption、Position、排除、评分和收藏。
 - Caption 为受长度限制的短纯文本，不扩展成单媒体完整业务元数据。
 
@@ -425,6 +433,23 @@ flowchart LR
 - 视频优先直接播放，其次 Remux，必要时生成 H.264/AAC MP4 代理。
 - 第一版确定性选择单视频轨和单音轨，不处理字幕选择。
 - 代理统一正确旋转，HDR 转 SDR；不持久化播放进度与观看状态。
+
+##### P04-04A 视频完善第一阶段：依赖、探测与Poster
+
+- 增加FFmpeg/FFprobe成对解析、版本校验和Manage只读诊断；依赖缺失不阻断图片/RAW业务，但视频任务必须返回明确错误码。
+- 通过受控前向数据库迁移建立GalleryItem 1:1视频技术元数据，持久化当前content revision的容器、主轨、时长、编码、尺寸、帧率、旋转和HDR信息；不保存路径或原始ffprobe JSON。
+- 视频扫描后先幂等探测，探测成功再生成BASE Poster；Poster默认从有效时长约20%处截取，快速seek失败后精确seek，长边上限960px且不放大。
+- 内容替换使旧技术元数据与派生资源失效；既有视频采用有界低优先级回填，不在schema迁移事务中批量读取来源。
+
+##### P04-04B 视频完善第二阶段：直放与按需代理
+
+- 以持久化技术元数据和经目标浏览器验证的保守兼容矩阵决定DIRECT、REMUX或TRANSCODE，不按文件后缀或Stash旧Scene字段判断。
+- DIRECT通过`item_uuid + content_revision`认证路由在保持来源路径私有的前提下提供GET/HEAD/Range；只支持DIRECTORY视频并保持原始文件只读。
+- REMUX/TRANSCODE只在Lightbox当前视频或媒体详情实际打开时幂等排队；统一生成Fast Start MP4，必要时转H.264/AAC、应用旋转与HDR到SDR，最高1080p且不放大。
+- `VIDEO_PLAYBACK`保持ENHANCED并受现有LRU约束；前端在准备期间显示Poster，发布后无整页刷新切换播放器，离开当前媒体立即停止上一视频。
+- Gallery列表、卡片、Scrubber、推荐和随机查询不得触发播放任务。详细数据模型、错误码、实施顺序和验收矩阵见[1.5视频处理阶段规划](development/VIDEO_PROCESSING_PHASE_1_2_PLAN_2026-08-15.md)。
+
+> Storyboard辅助时间轴及按证据决定的单清晰度渐进HLS已记录于[视频处理第三阶段功能规划](development/VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)，但仍属于第一版明确延期能力，不进入P04/G4或1.5完成判定。
 
 #### P04-05 双层缓存
 
@@ -525,7 +550,7 @@ flowchart LR
 
 ### 10.3 退出门禁 G5-API
 
-- Browse schema 中不存在物理路径、旧 Scene/Image 业务字段或浏览计数。
+- Browse schema 中除`GalleryDetail.mediaParentDirectories`这一已确认有限例外外，不存在物理路径；该字段只返回非MISSING实际媒体的去重绝对父目录，不得包含文件名、Item相对路径、指纹、缓存路径、旧 Scene/Image 业务字段或浏览计数。
 - scope、分页、排序、搜索等级、时间线日期精度和推荐算法契约测试通过。
 - 所有 Mutation 的 revision 冲突和权限拒绝均返回稳定错误码。
 - Scrubber资源只能读取当前可见Gallery的合格成员；MISSING、UNREADABLE、排除及无可用Poster/代理成员不会被ordinal命中。
@@ -655,11 +680,19 @@ flowchart LR
 - 个人资料、社交账号、关联作品集、Manifest。
 - 头像裁切、Banner 焦点、长文本、账号顺序和独立 Manifest 资源管理。
 - 第一版只定义账号检测 Provider 接口，不实现 Provider、任务或结果表。
+- 1.5资料导入Provider的候选/账号集合使用非null数组契约；前端对旧版或异常响应做空数组标准化，并以网络资料面板局部错误边界隔离渲染失败，禁止单个候选导致整个Manage页面黑屏。
+- 1.5资料导入搜索在成功完成后必须显示候选数量或明确的零结果提示；修改查询词或Provider立即清除旧候选，避免旧结果被误认为新结果。服务端只记录请求ID、Provider key和候选数，不把姓名或查询词写入日志。
+- 1.5 Manage核心实体索引统一为Coser、Work、Character和Tag提供按名称/Sort name/Alias搜索、30/60/100页量、完整分页及URL状态；四类实体均在分页前按英文名称与中文拼音排序，人工Sort name优先。图片完善度仍是Coser专属条件。
+- 1.5 Work/Character的Aliases编辑器采用输入框内嵌chip：Enter生成、正文点击退回编辑、叉号删除；已有待提交文本时点击其他chip，先校验并生成当前文本，再把目标chip原子切换为编辑文本。待提交文本存在时禁用实体保存并给出提示，处理IME composing且阻止重复和超过100项。Coser/Tag保留现有`/`分隔控件。
 
 #### P08-05 核心实体管理
 
 - Work/Character/Tag 的最小字段编辑、关系维护、Slug 历史、DAG 环检测。
+- 新建Coser前对主名与Alias进行Unicode规范化精确查重，展示可识别的已有人物摘要并提供直达入口；允许真实同名人物，但必须显式确认后继续创建。
+- Coser管理列表支持全库名称/Sort name/Alias搜索、头像与Banner完善度筛选、30/60/100页量和首页/末页/页码直达；列表状态及当前实体写入URL，保持可刷新、可返回和可深链。
+- Coser管理列表在筛选后、分页前按固定zh-CN Unicode Collation混排英文名称与中文拼音；非空Sort name保持最高优先级，供所有者覆盖多音字或人名特殊读音，不依赖宿主机locale。
 - Coser/Work/Character/Tag 合并预览、冲突处理、Alias 和 Tombstone。
+- 1.5 Work/Character名称资料入口只允许所有者逐次搜索、选择候选页并逐项勾选Alias；应用前复核实体revision和候选绑定，不改变主名称、Sort name或Character所属Work。站点适配器以独立编译标签组合，移除后实体管理完整可用。
 - 只有无引用实体提供删除数据库记录操作。
 
 #### P08-06 设置、任务与诊断
@@ -669,15 +702,18 @@ flowchart LR
 - 默认自动扫描关闭；支持手工、启动时和定时扫描。
 - 任务队列、重试、取消、缓存容量和处理 profile 状态。
 - LibraryPathIgnoreRule、IgnoredGallerySource、GalleryItemExclusion 分层管理。
+- 在Libraries & import提供独立双语自动排除规则区，按全局/当前媒体库分组，并提供后端校验、单路径测试、存量预览、显式评估和逐项/批量审核。
 
 ### 13.2 退出门禁 G7
 
 - 从空库到媒体库配置、候选、DRAFT、审核、激活、浏览、归档的完整 E2E 通过。
 - 所有复杂表单支持 revision 冲突恢复且不会静默覆盖。
 - 批量操作不能绕过 Gallery ACTIVE 校验、来源约束或 Tombstone。
-- Manage 中不存在媒体文件删除、外部命令执行或网络刮削入口。
+- Manage 中不存在媒体文件删除或外部命令执行入口；1.5 Coser资料页及Work/Character编辑页可显示各自默认关闭、人工候选审核与逐项应用的可拔除网络资料导入入口。
 
 ## 14. 阶段 9：Setup、认证、审计与恢复（0.6）
+
+> 实施进度（2026-07-26）：P09-01～P09-06的第一版Web/CLI闭环已完成，包括持久化每日快照与自动扫描计划、带SHA-256及平台中立ZIP约束的完整备份、Operations API/UI、维护恢复、Session/任务撤销、逐媒体库异机路径映射或禁用、显式恢复、交换失败自动回滚，以及核心实体/Gallery删除门禁。
 
 ### 14.1 工作包
 
@@ -727,7 +763,7 @@ flowchart LR
 ### 14.2 退出门禁 G8
 
 - Setup、Docker 门票、登录、Session 撤销、可信模式和恢复 Token 测试通过。
-- 未认证资源访问、Browse/Manage 越权和路径泄漏测试通过。
+- 未认证资源访问、Browse/Manage 越权和非授权路径泄漏测试通过；Gallery详情父目录摘要只能经所有者认证取得，且其字段边界符合P05-01有限例外。
 - 备份—破坏测试库—恢复—自动回滚演练通过。
 - 恢复后 Session、任务和自动计划状态符合约束。
 
@@ -746,7 +782,6 @@ flowchart LR
 
 - Linux amd64/arm64 原生包验收。
 - Docker amd64/arm64 镜像与健康检查验收。
-- Windows amd64 安装、路径、SQLite、LibRaw、ffmpeg 和备份恢复验收。
 - 媒体库只读、操作系统级网络挂载和 Manifest Push 无写权限场景验收。
 - CPU 处理是第一版基线，不把 GPU 可用性作为正确性前提。
 
@@ -759,8 +794,8 @@ flowchart LR
 ### 15.4 退出门禁 G9
 
 - 性能 p95 目标全部达标或有经批准的阻断豁免记录。
-- 三个正式平台均完成安装、导入、浏览、备份恢复和升级测试。
-- 离线环境下核心功能完整可用，服务端无主动外联。
+- Linux amd64/arm64 与 Docker 双架构均完成安装、导入、浏览、备份恢复和升级测试。
+- 离线环境下核心功能完整可用；除所有者主动运行已启用的1.5 Coser资料导入或Work/Character名称导入外，服务端无主动外联。
 
 ## 16. 阶段 11：RC 与 1.0 发行
 
@@ -798,12 +833,12 @@ flowchart LR
 
 ### 16.4 1.0 发行物
 
-- Linux amd64/arm64、Windows amd64 和 Docker 双架构产物。
+- Linux amd64/arm64 和 Docker 双架构产物。
 - 对应发行提交的完整 AGPLv3 源码归档。
 - Stash 归属说明、第三方许可证和依赖清单。
 - 数据库、Manifest、媒体 profile 和产品版本说明。
 - 安装、Setup、媒体库、备份恢复、反向代理和升级文档。
-- 已知限制：无网络刮削、无插件、多用户、AI 推荐、文件系统监听、字幕选择和应用内媒体删除。
+- 已知限制：无自动网络刮削、无插件、多用户、AI 推荐、文件系统监听、字幕选择和应用内媒体删除；可选网络资料仅限所有者逐次搜索、预览和确认导入。
 
 ## 17. CI/CD 流程
 
@@ -881,7 +916,7 @@ flowchart LR
 | SQLite 写竞争 | 扫描或任务导致 Browse 超时 | 短事务、staging、原子提交、租约队列、查询计划测试 | G9 |
 | 扫描产生半状态 | 中断后大量误报 MISSING | source staging + 完整成功后提交 | G2 |
 | Manifest 冲突造成覆盖 | 外部编辑后 Push 丢字段 | 基线快照、成员级三方比较、显式冲突 | G3 |
-| 媒体依赖跨平台困难 | arm64/Windows 缺 LibRaw/ffmpeg | 阶段 4 即建立平台构建冒烟，不等 RC | G4/G9 |
+| 媒体依赖跨平台困难 | arm64 缺 LibRaw/ffmpeg | 阶段 4 即建立平台构建冒烟，不等 RC | G4/G9 |
 | React 重写范围失控 | 页面各自实现 scope/卡片/权限 | 先建共用 DTO、设计 token 和组件契约 | G5-UI |
 | Gallery卡片Scrubber产生请求风暴 | 快速横移触发大量并发查询/派生任务 | 专用静态资源、ordinal序列缓存、节流、取消过期请求、客户端私有缓存 | G6/G9 |
 | 归档攻击或资源耗尽 | 特制 ZIP 逃逸或解压炸弹 | 不可关闭结构校验、资源阈值、恶意样本回归 | G2 |
@@ -911,6 +946,6 @@ flowchart LR
 - 0.0～0.9 的所有退出门禁均已通过。
 - 全部已确认的核心约束均有自动化发布阻断回归。
 - 新 React 19 BrowseShell 与 ManageShell 完全承担产品功能，旧单媒体业务 UI 不再进入发行包。
-- 从空数据库开始，用户可在完全离线环境完成 Setup、导入、审核、激活、浏览、编辑、Manifest 同步、收藏评分、备份和恢复。
-- 应用在任何正常业务路径中都不能删除用户媒体来源文件，也不泄漏物理路径。
+- 从空数据库开始，用户可在完全离线环境完成 Setup、Gallery导入、审核、激活、浏览、编辑、Manifest 同步、收藏评分、备份和恢复；Coser网络资料导入不属于离线核心完成条件。
+- 应用在任何正常业务路径中都不能删除用户媒体来源文件；除已认证Gallery详情的父目录摘要有限例外外，不泄漏物理路径。
 - 正式平台、性能、无障碍、安全、许可证与源码交付要求全部达标。

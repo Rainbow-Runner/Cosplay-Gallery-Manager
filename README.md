@@ -1,119 +1,255 @@
-# Stash
+# Cosplay Gallery Manager
 
-[![Build](https://github.com/stashapp/stash/actions/workflows/build.yml/badge.svg?branch=develop&event=push)](https://github.com/stashapp/stash/actions/workflows/build.yml)
-[![Docker pulls](https://img.shields.io/docker/pulls/stashapp/stash?logo=docker)](https://hub.docker.com/r/stashapp/stash 'DockerHub')
-[![GitHub Sponsors](https://img.shields.io/github/sponsors/stashapp?logo=github)](https://github.com/sponsors/stashapp)
-[![Open Collective backers](https://img.shields.io/opencollective/backers/stashapp?logo=opencollective)](https://opencollective.com/stashapp)
-[![Go Report Card](https://goreportcard.com/badge/github.com/stashapp/stash)](https://goreportcard.com/report/github.com/stashapp/stash)
-[![Discord](https://img.shields.io/discord/559159668438728723.svg?logo=discord)](https://discord.gg/2TsNFKt)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/stashapp/stash?logo=github)](https://github.com/stashapp/stash/releases/latest)
-[![Codeberg Translate](https://img.shields.io/weblate/progress/stash?server=https%3A%2F%2Ftranslate.codeberg.org&logo=weblate)](https://translate.codeberg.org/engage/stash/)
-[![GitHub issues by-label](https://img.shields.io/github/issues-raw/stashapp/stash/bounty?logo=github)](https://github.com/stashapp/stash/labels/bounty)
+Cosplay Gallery Manager（CGM）是一个本地优先、单所有者、自托管的 Cosplay 与写真作品集管理系统。它以 **Gallery** 为业务聚合根，把一个媒体目录或 ZIP/CBZ、TAR、TAR.GZ/TGZ、7Z 归档作为一个完整作品集进行发现、整理、浏览、备份和元数据同步。
 
-<h3>Stash is a self-hosted webapp written in Go which organizes and serves your diverse content collection, catering to both your SFW and NSFW needs.</h3>
+> [!WARNING]
+> 当前代码处于 `1.5.0-dev` 本机业务迭代阶段，尚未发布正式稳定版。第一版以 Linux 原生部署和 Linux 容器为目标；Windows 与 macOS 原生构建已经延期，不属于当前支持范围。
 
-![Screenshot of Stash web application interface](docs/readme_assets/demo_image.png)
+![Cosplay Gallery Manager Browse 页面](ui/web/e2e/offline-lifecycle.spec.ts-snapshots/browse-desktop-linux.png)
 
-- Stash gathers information about videos in your collection from the internet, and is extensible through the use of community-built plugins for a large number of content producers and sites.
-- Stash supports a wide variety of both video and image formats.
-- You can tag videos and find them later.
-- Stash provides statistics about performers, tags, studios and more.
+## 项目定位
 
-You can [watch a SFW demo video](https://vimeo.com/545323354) to see it in action.
+CGM 面向以文件夹或归档保存 Cosplay、写真和 Album 的个人媒体库。它不把图片、视频视为互不关联的散文件，而是围绕 Gallery 保存来源身份、成员顺序、Coser、作品来源、角色、Tag、个人状态和可移植 Manifest。
 
-For further information see [Support & Resources](#support--resources) section.
+典型业务流程如下：
 
-## Installing Stash
+```text
+配置媒体库与识别规则
+  → 发现 Gallery 候选
+  → 人工审阅并导入 DRAFT
+  → 原子扫描媒体成员
+  → 补充关系、分级和展示项
+  → 激活并在 Browse 中使用
+  → 按需同步 Manifest、备份或恢复
+```
 
-> [!tip]
-Step-by-step instructions are available at [docs.stashapp.cc/installation](https://docs.stashapp.cc/installation/).
+## 主要功能
 
-> [!important]
-> **Windows Users**
->
-> As of version 0.27.0, Stash no longer supports _Windows 7, 8, Server 2008 and Server 2012._  
-> At least Windows 10 or Server 2016 is required.
->
-> **macOS Users**
->
-> As of version 0.29.0, Stash requires _macOS 11 Big Sur_ or later.  
-> As of version 0.32.0, Stash requires _macOS 12 Monterey_ or later.  
-> Older versions can still be run through Docker.
+### Gallery 发现与扫描
 
-<img src="docs/readme_assets/windows_logo.svg" width="100%" height="75"> Windows | <img src="docs/readme_assets/mac_logo.svg" width="100%" height="75"> macOS | <img src="docs/readme_assets/linux_logo.svg" width="100%" height="75"> Linux | <img src="docs/readme_assets/docker_logo.svg" width="100%" height="75"> Docker
-:---:|:---:|:---:|:---:
-[Latest Release](https://github.com/stashapp/stash/releases/latest/download/stash-win.exe) <br /> <sup><sub>[Development Preview](https://github.com/stashapp/stash/releases/download/latest_develop/stash-win.exe)</sub></sup> | [Latest Release](https://github.com/stashapp/stash/releases/latest/download/Stash.app.zip) <br /> <sup><sub>[Development Preview](https://github.com/stashapp/stash/releases/download/latest_develop/Stash.app.zip)</sub></sup> | [Latest Release (amd64)](https://github.com/stashapp/stash/releases/latest/download/stash-linux) <br /> <sup><sub>[Development Preview (amd64)](https://github.com/stashapp/stash/releases/download/latest_develop/stash-linux)</sub></sup> <br /> [More Architectures...](https://github.com/stashapp/stash/releases/latest) | [Instructions](docker/production/README.md) <br /> <sup><sub>[Sample docker-compose.yml](docker/production/docker-compose.yml)</sub></sup>
+- 支持 `DIRECTORY`、ZIP 和 CBZ 单一来源；一个 Gallery 最多绑定一个物理来源。
+- 按确定顺序识别既有来源、有效 `.cosplay.json`、空 `.cosplay-root` 标记和人工配置的路径规则。
+- 采用“发现候选 → 导入 DRAFT → 显式扫描”的两阶段流程，不会因配置媒体根而自动导入全部内容。
+- DIRECTORY 扫描拒绝根符号链接且永不跟随内部符号链接；归档经过路径穿越、加密、条目数、容量和压缩比限制。
+- 重扫使用 staging 和原子提交；来源暂时失联不会被误判为用户删除成员。
 
-Download links for other platforms and architectures are available on the [Releases](https://github.com/stashapp/stash/releases) page.
+### 元数据与关系
 
-### First Run
+- 核心实体包括 Gallery、Coser、Work、Character 和 Tag；全部使用可移植 UUID、永久 Alias 与 Tombstone 保护身份。
+- Gallery 可设置 Credit、Cast、Character、Work、Tag、内容分级、封面、拍摄时间、外部链接和个人状态。
+- Gallery 类型不单独存储：存在 Cast 时派生为 `COSPLAY`，无 Cast 时派生为 `ALBUM`。
+- Coser 支持资料、头像、Banner、社交账号和独立 Coser Manifest；头像与 Banner 由 CGM 托管，不写入媒体来源。
+- Gallery Manifest 使用 `.cosplay.json`：目录来源写入根目录，归档来源写入相邻的 `<完整归档名>.cosplay.json`，不会重打包归档。
+- Manifest Push、Pull 和逐字段冲突处理均为显式操作，不会后台静默覆盖数据库或文件。
 
-#### Windows/macOS Users: Security Prompt
+### 浏览与媒体
 
-On Windows or macOS, running the app might present a security prompt since the application binary isn't yet signed. 
+- Browse 采用 Cosplay 与 Album 双分区：Cosplay 提供 Lists、Cosers、Parodies、Magic，Album 提供 Lists、Models。
+- 同一人物继续使用同一个 Coser 身份，可根据实际 Gallery 类型出现在 Coser、Model 或两个视图中。
+- 提供 Gallery/Coser/Model/Work/Character 详情、搜索、时间线、随机浏览、收藏、评分、历史和 Tag 导航。
+- 支持静态图片、动画图片、常见 RAW 和视频处理；内容类型由实际文件内容判定，不只信任扩展名。
+- 每个静态图片预生成不可回收的 `CARD_480` 基础缩略图；Lightbox 4096 大图按首次查看生成，并可依据容量上限执行 LRU 回收。
+- 浏览器只读取经过认证的不透明资源 URL，不直接暴露媒体绝对路径或缓存路径。
 
-- On Windows, bypass this by clicking "more info" and then the "run anyway" button.
-- On macOS, Control+Click the app, click "Open", and then "Open" again.
+### 管理、备份与恢复
 
-#### ffmpeg
+- 单密码所有者模型，Session、同源校验、敏感操作重新认证和精确确认词共同保护管理操作。
+- 媒体处理任务使用 SQLite 持久化队列、租约与恢复机制；进程异常退出后不会把内存状态当成业务事实。
+- 默认每日执行 SQLite 一致性快照；完整备份包含产品数据库、托管 Coser 元数据、必要启动配置和版本清单。
+- 恢复前验证 SHA-256、产品身份、版本清单和安全 ZIP 约束，并自动创建安全备份；异机恢复要求逐个映射或禁用媒体库路径。
+- 管理日志使用稳定事件码、请求 ID 和技术状态，不记录 GraphQL 变量、搜索词、媒体路径或业务元数据。
 
-Stash requires FFmpeg. If you don't have it installed, Stash will prompt you to download a copy during setup. It is recommended that Linux users install `ffmpeg` from their distro's package manager.
+## 明确不包含的能力
 
-## Usage
+第一版不会提供：
 
-### Quickstart Guide
+- 网络 Scraper、在线元数据识别、StashBox 接入或主动联网抓取；
+- 插件市场、运行时脚本、旧 Stash 主题或在线更新器；
+- 删除、移动或改写原始媒体的产品 API；
+- 多用户权限系统、多个 CGM 实例并发访问同一数据库；
+- 公网直接暴露、内置 TLS、原生移动客户端或 GPU 媒体处理；
+- Windows/macOS 原生发行包。
 
-Stash is a web-based application. Once the application is running, the interface is available (by default) from `http://localhost:9999`.
+CGM 可以在所有者明确执行 Manifest Push 时写入 sidecar 文件。除此之外，来源媒体应优先以只读权限挂载。
 
-On first run, Stash will prompt you for some configuration options and media directories to index, called "Scanning" in Stash. After scanning, your media will be available for browsing, curating, editing, and tagging.
+## 平台状态
 
-Stash can pull metadata (performers, tags, descriptions, studios, and more) directly from many sites through the use of [scrapers](https://github.com/stashapp/stash/blob/develop/ui/v2.5/src/docs/en/Manual/Scraping.md), which integrate directly into Stash. Identifying an entire collection will typically require a mix of multiple sources:
-- The stashapp team maintains [StashDB](https://stashdb.org/), a crowd-sourced repository of scene, studio, and performer information. Connecting it to Stash will allow you to automatically identify much of a typical media collection. It runs on our stash-box software and is primarily focused on mainstream digital scenes and studios. Instructions, invite codes, and more can be found in this guide to [Accessing StashDB](https://guidelines.stashdb.org/docs/faq_getting-started/stashdb/accessing-stashdb/).
-- Several community-managed stash-box databases can also be connected to Stash in a similar manner. Each one serves a slightly different niche and follows their own methodology. A rundown of each stash-box, their differences, and the information you need to sign up can be found in the [Metadata Sources](https://docs.stashapp.cc/metadata-sources/stash-box-instances/) section of the documentation.
-- Many community-maintained scrapers can also be downloaded, installed, and updated from within Stash, allowing you to pull data from a wide range of other websites and databases. They can be found by navigating to `Settings → Metadata Providers → Available Scrapers → Community (stable)`. These can be trickier to use than a stash-box because every scraper works a little differently. For more information, please visit the [CommunityScrapers repository](https://github.com/stashapp/CommunityScrapers).
-- All of the above methods of scraping data into Stash are also covered in more detail in our [Guide to Scraping](https://docs.stashapp.cc/beginner-guides/guide-to-scraping/).
+| 目标 | 当前状态 |
+| --- | --- |
+| Linux amd64 原生 | 已构建并完成本机业务部署验证 |
+| Linux arm64 原生 | 构建通过，仍需真实 arm64 设备验收 |
+| Docker linux/amd64 | 已构建、以非 root 用户启动并通过健康检查 |
+| Docker linux/arm64 | 构建目标已定义，仍需 arm64 runner 完成运行验收 |
+| Windows/macOS 原生 | 第一版延期，不支持 |
 
-<sub>[StashDB](http://stashdb.org) is the canonical instance of our open source metadata API, [stash-box](https://github.com/stashapp/stash-box).</sub>
+当前 Chromium 离线业务流程和 1440/390px 视口已纳入自动化门禁；Firefox、WebKit、Edge、真实移动设备和读屏仍属于待完成的目标环境验收。最新状态以[实施状态](docs/development/IMPLEMENTATION_STATUS.md)为准。
 
-## Support & Resources
+## 从源码构建
 
-Need help or want to get involved? Start with the documentation, then reach out to the community if you need further assistance.
+### 环境要求
 
-### Documentation
+- Linux amd64 或 arm64；
+- Go `1.25.x`（当前验证工具链为 `1.25.12`）；
+- Node.js `20.19+` 与 Corepack；
+- 支持 CGO 的 C 编译器和 `make`；
+- 视频处理需要 FFmpeg/FFprobe；RAW 处理需要兼容 LibRaw 的 `dcraw`。
 
-- [Official documentation](https://docs.stashapp.cc) - official guides guides and troubleshooting.
-- [In-app manual](https://docs.stashapp.cc/in-app-manual) press <kbd>Shift</kbd> + <kbd>?</kbd> in the app or view the manual online.
-- [FAQ](https://discourse.stashapp.cc/c/support/faq/28) - common questions and answers.
-- [Community wiki](https://discourse.stashapp.cc/tags/c/community-wiki/22/stash) - guides, how-to’s and tips.
-  
-### Community & Discussion
+```bash
+git clone https://github.com/Rainbow-Runner/Cosplay-Gallery-Manager.git
+cd Cosplay-Gallery-Manager/ui/web
+corepack pnpm install --frozen-lockfile
+cd ../..
+make build-cgm CGM_GO="$(command -v go)" CGM_OUTPUT=./cgm
+./cgm -version
+```
 
-- [Community forum](https://discourse.stashapp.cc) - community support, feature requests and discussions.
-- [Discord](https://discord.gg/2TsNFKt) - real-time chat and community support.
-- [GitHub discussions](https://github.com/stashapp/stash/discussions) - community support and feature discussions.
-- [Lemmy community](https://discuss.online/c/stashapp) - board-style community space.
+`build-cgm` 会先检查新旧 UI 依赖边界、构建 React 19 前端，再生成嵌入全部前端资源的 CGM 单文件二进制。不要使用原 Stash 的 `stash` 构建目标作为 CGM 产品包。
 
-### Community Scrapers & Plugins
+## 原生快速启动
 
-- [Metadata sources](https://docs.stashapp.cc/metadata-sources/)
-- [Plugins](https://docs.stashapp.cc/plugins/)
-- [Themes](https://docs.stashapp.cc/themes/)
-- [Other projects](https://docs.stashapp.cc/other-projects/)
+创建只允许当前服务用户访问的数据库、缓存、Coser 元数据和备份目录。媒体目录可以且建议只读。示例 `cgm.json`：
 
-## Architecture
+```json
+{
+  "listen": "127.0.0.1:9999",
+  "database_path": "/var/lib/cgm/product.sqlite",
+  "cache_path": "/var/cache/cgm",
+  "ffmpeg_path": "/usr/bin/ffmpeg",
+  "ffprobe_path": "/usr/bin/ffprobe",
+  "libraw_path": "/usr/bin/dcraw",
+  "worker_count": 2,
+  "log_level": "INFO",
+  "metadata_scraping_enabled": false,
+  "entity_metadata_scraping_enabled": false
+}
+```
 
-You can find an overview of Stash's architecture in the [ARCHITECTURE.md](docs/ARCHITECTURE.md) document.
+`ffprobe_path`可省略；CGM会优先使用`ffmpeg_path`同目录中的FFprobe，避免静默混用不同版本。Manage → Settings会显示两项依赖的解析来源、版本和稳定错误码。视频扫描先探测技术元数据并生成960px BASE Poster；只有用户在Lightbox或媒体详情实际打开视频时，才会直接Range读取兼容原视频，或按需生成可回收的H.264/AAC MP4代理。
 
-## Contributing
+两个网络资料开关都默认关闭。`metadata_scraping_enabled`只控制Coser资料导入，`entity_metadata_scraping_enabled`只控制Work/Character名称导入。开启后也只有已登录所有者在对应管理页主动操作时才会访问已编译进产品的资料源；浏览、扫描、启动和后台计划仍不会联网。GalleryEpic与萌娘百科适配器都是可拔除的编译期模块，不承载CGM核心业务数据。
 
-We welcome contributions and help from all humans who want to improve the project.
+启动应用：
 
-Before contributing, please read the [Contributing](docs/CONTRIBUTING.md) document to understand our guidelines and processes for contributing to the project.
+```bash
+./cgm -config /absolute/path/cgm.json
+```
 
-You can learn about setting up a local development environment in the [Development](docs/DEVELOPMENT.md) document. 
+然后访问 `http://127.0.0.1:9999/setup`：
 
-## Translation
+1. 设置所有者密码、语言和拍摄时区；
+2. 配置托管 Coser 元数据根和备份根；
+3. 登录后进入 Manage → Libraries 添加真实媒体绝对路径；
+4. 新建识别规则并显式执行发现；
+5. 审阅候选、导入 DRAFT、扫描、补充关系与内容分级，再激活 Gallery。
 
-The widget below shows the current translation status of Stash across all supported languages. If you want to help us translate Stash, you can make an account at [Codeberg Translate](https://translate.codeberg.org/projects/stash/stash/) to contribute to new or existing languages. Thanks!
+Setup 不会自动创建媒体库，也不会自动扫描。不要把 CGM 指向原 Stash 数据库或其他非空未知数据库；产品身份守卫会拒绝接管。
 
-[![Translation status](https://translate.codeberg.org/widget/stash/stash/multi-auto.svg)](https://translate.codeberg.org/engage/stash/)
+完整原生安装、权限、反向代理和升级说明见[安装手册](docs/INSTALLATION.md)。
+
+## Docker Compose
+
+以下模板直接从 Docker Hub 拉取已发布的 `linux/amd64` 镜像，使用宿主机目录保存数据库、托管资源、备份与缓存。请在源码仓库之外创建独立部署目录，把模板保存为该目录中的 `compose.yml`，避免把业务数据或迁移包误提交到 Git：
+
+```yaml
+services:
+  cgm:
+    image: rainbowrunner2015/cosplay-gallery-manager:sha-f424966a77495a768e2ad054daf70e116e85aebc
+    user: "${CGM_UID:-65532}:${CGM_GID:-65532}"
+    ports:
+      - "127.0.0.1:9999:9999"
+    environment:
+      CGM_LOCAL_DOCKER_SETUP: "1"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    volumes:
+      - ./state:/var/lib/cgm
+      - ./cache:/var/cache/cgm
+      - ${CGM_MEDIA_ROOT:?set CGM_MEDIA_ROOT to an absolute host directory}:/media:rw
+      - ./transfer:/transfer:ro
+    restart: unless-stopped
+```
+
+在同目录创建 `.env`。媒体目录填写真实存在的宿主机绝对路径；`CGM_UID`、`CGM_GID` 填部署用户运行 `id -u`、`id -g` 得到的数字（下面的 `1000` 仅为示例）：
+
+```dotenv
+CGM_MEDIA_ROOT=/absolute/path/to/cosplay-media
+CGM_UID=1000
+CGM_GID=1000
+```
+
+`user:` 使用上述 UID/GID 运行容器进程；未设置时沿用镜像默认的 `65532:65532`，不会自动修改宿主机目录或已有文件的属主。首次空目录、并使用与当前部署用户相同的 UID/GID 时，准备目录后启动：
+
+```bash
+mkdir -p state cache transfer
+chmod 700 state cache
+docker compose pull
+docker compose up -d
+```
+
+若选择不设置 `CGM_UID`、`CGM_GID`，则必须让空的 `state`、`cache` 归默认身份 `65532:65532` 所有，例如首次创建时使用 `sudo install -d -o 65532 -g 65532 -m 0700 state cache`。不要对已有数据库或其他业务数据盲目递归 `chown`；切换运行 UID/GID 前先备份并核对全部现有文件权限。若使用rootless Docker或用户命名空间映射，还需按其实际ID映射检查挂载权限，不能只依赖宿主机与容器显示的数字相同。
+
+在部署机器打开 `http://127.0.0.1:9999/setup`。媒体库在管理页面填写容器内路径 `/media` 或其子目录，不填写 `.env` 中的宿主机路径。`./state` 保存数据库、Coser 资源和备份；`./cache` 保存可再生成的缓存；`./transfer` 供迁移工作台只读选择 ZIP 包。`read_only: true` 只限制容器自身根文件系统；媒体挂载仍为 `rw`，以便所有者显式执行 Manifest Push 写入 sidecar，宿主机目录也必须允许所选运行身份相应读写。不需要写回时可将媒体挂载改为 `:ro`，但 Manifest Push 将无法使用。
+
+模板仅绑定宿主机 loopback，故本机首次设置无需门票；不要保持 `CGM_LOCAL_DOCKER_SETUP=1` 却把端口直接开放到局域网或公网。远程自定义部署应关闭该模式并使用一次性 `-setup-ticket`。`/tmp` 是最多 512 MiB 的非持久临时挂载，不在 `./state` 或 `./cache` 内。已有 CGM 命名卷部署不能直接改为上述空目录：须先停容器并迁移 `cgm-state` 和 `cgm-cache` 数据，尤其不能丢失 `cgm-state` 中的数据库。
+
+仓库另有从本地源码构建、使用 Docker 命名卷的[示例 Compose](docker/cgm/compose.yml)：
+
+```bash
+export CGM_MEDIA_ROOT=/absolute/path/to/cosplay-media
+docker compose -f docker/cgm/compose.yml build
+docker compose -f docker/cgm/compose.yml up -d
+```
+
+忘记密码可在容器终端执行 `cgm -config /etc/cgm/cgm.json -recovery-token`，再在登录页输入单次令牌。权限、挂载及安全边界见[安装手册](docs/INSTALLATION.md)。
+
+## 数据安全要点
+
+- CGM 不删除、移动或重写用户媒体，但显式 Manifest Push 可能写入 sidecar；媒体仍需独立文件系统备份。
+- CGM 完整备份不包含用户媒体、Gallery sidecar、生成缓存或日志；这些内容必须分别保护。
+- 缓存是可再生成数据，不能作为媒体备份。`CARD_480` 为永久基础层，按需 Lightbox 属于可回收增强层。
+- 不要让两个进程、两个容器或两个版本同时访问同一个 SQLite 文件。
+- CGM 没有内置 TLS。保持 loopback/私有网络绑定，并在需要远程访问时由受维护的反向代理终止 HTTPS。
+- 恢复或升级前，应同时创建 CGM 完整备份和独立媒体备份。
+
+详细恢复流程见[备份与恢复手册](docs/BACKUP_AND_RECOVERY.md)。
+
+## 开发与测试
+
+前端常用门禁：
+
+```bash
+cd ui/web
+corepack pnpm run check
+corepack pnpm run test
+corepack pnpm run build
+corepack pnpm run e2e
+```
+
+完整 CI 还覆盖 CGM 产品 Go 包、真实 JPEG/GIF/RAW/MP4 媒体矩阵、危险归档、许可证清单、源码对应、Linux 双架构构建和 Docker。权威命令及固定版本见 [CGM CI 工作流](.github/workflows/cgm-ci.yml)与[夜间工作流](.github/workflows/cgm-nightly.yml)。
+
+`go test ./...` 仍会包含迁移期保留的原 Stash 工程目标；开发 CGM 时应以 CI 中列出的产品包和 `build-cgm` 边界为准。
+
+## 文档导航
+
+- [产品与架构约束](docs/COSPLAY_DEVELOPMENT_MEMO.md)
+- [第一版开发计划](docs/COSPLAY_V1_DEVELOPMENT_PLAN.md)
+- [当前实施状态](docs/development/IMPLEMENTATION_STATUS.md)
+- [1.5 开发日志](docs/development/V1_5_DEVELOPMENT_LOG.md)
+- [安装手册](docs/INSTALLATION.md)
+- [备份与恢复](docs/BACKUP_AND_RECOVERY.md)
+- [Stash 复用与隔离边界](docs/architecture/STASH_REUSE_BOUNDARY.md)
+- [来源发现与扫描](docs/architecture/SOURCE_DISCOVERY_AND_SCAN.md)
+- [核心元数据与 Manifest](docs/architecture/CORE_METADATA_AND_MANIFEST.md)
+- [媒体处理与 Browse API](docs/architecture/MEDIA_PROCESSING_AND_BROWSE_API.md)
+- [许可证、归属与 SBOM](docs/legal/README.md)
+
+## 项目来源与许可证
+
+CGM 以 [Stash](https://github.com/stashapp/stash) 的代码为工程起点，复用了经过验证的 SQLite、文件访问、媒体处理、HTTP 和构建机制，但重新建立了独立的产品身份、数据库、Gallery 领域模型、API 和 React 19 前端。CGM 正式产品入口不提供原 Stash 的 Scene/Image/Performer/Studio 业务、网络 Scraper 或插件系统。
+
+Browse 的视觉语言参考 GalleryEpic 的公开页面，但 CGM 不复制其品牌、Logo、媒体、代码或远程资产，也与 GalleryEpic 无隶属关系。
+
+本项目按照 [GNU Affero General Public License v3.0 or later](LICENSE) 发布。Stash 归属、第三方依赖和许可证信息见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，机器可读依赖清单见 [SPDX 2.3 SBOM](docs/legal/cgm.spdx.json)。发行构建必须公开与运行二进制精确对应的源代码。

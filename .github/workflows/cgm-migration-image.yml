@@ -1,0 +1,64 @@
+name: CGM migration test image
+
+on:
+  push:
+    branches: [agent/cgm-migration-handoff-20260726]
+    paths:
+      - ".github/workflows/cgm-migration-image.yml"
+      - "cmd/cgm/**"
+      - "docker/cgm/**"
+      - "internal/**"
+      - "ui/web/**"
+      - "go.mod"
+      - "go.sum"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Linux amd64 image
+        run: |
+          docker buildx build --platform linux/amd64 --load \
+            --build-arg CGM_VERSION=1.5.0-dev \
+            --build-arg CGM_GIT_HASH="${GITHUB_SHA}" \
+            --label org.opencontainers.image.source="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
+            -f docker/cgm/Dockerfile \
+            -t "ghcr.io/${GITHUB_REPOSITORY,,}:sha-${GITHUB_SHA}" \
+            -t "ghcr.io/${GITHUB_REPOSITORY,,}:migration-test" .
+      - name: Health-check image before publishing
+        run: |
+          docker run --rm -d --name cgm-migration-smoke \
+            "ghcr.io/${GITHUB_REPOSITORY,,}:sha-${GITHUB_SHA}"
+          for attempt in $(seq 1 30); do
+            status="$(docker inspect --format '{{.State.Health.Status}}' cgm-migration-smoke)"
+            if [[ "$status" == healthy ]]; then
+              exit 0
+            fi
+            if [[ "$status" == unhealthy ]]; then
+              docker logs cgm-migration-smoke
+              exit 1
+            fi
+            sleep 2
+          done
+          docker logs cgm-migration-smoke
+          exit 1
+      - name: Stop smoke container
+        if: always()
+        run: docker stop cgm-migration-smoke || true
+      - name: Publish verified image
+        run: |
+          docker push "ghcr.io/${GITHUB_REPOSITORY,,}:sha-${GITHUB_SHA}"
+          docker push "ghcr.io/${GITHUB_REPOSITORY,,}:migration-test"

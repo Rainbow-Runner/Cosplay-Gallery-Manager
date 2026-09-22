@@ -148,7 +148,49 @@ Setup 不会自动创建媒体库，也不会自动扫描。不要把 CGM 指向
 
 ## Docker Compose
 
-仓库提供只读根文件系统、非 root 用户、内置 FFmpeg/dcraw 和媒体旁置 Manifest 写回所需挂载的开发/部署定义：
+以下模板直接从 Docker Hub 拉取已发布的 `linux/amd64` 镜像，使用宿主机目录保存数据库、托管资源、备份与缓存。请在源码仓库之外创建独立部署目录，把模板保存为该目录中的 `compose.yml`，避免把业务数据或迁移包误提交到 Git：
+
+```yaml
+services:
+  cgm:
+    image: rainbowrunner2015/cosplay-gallery-manager:sha-f424966a77495a768e2ad054daf70e116e85aebc
+    ports:
+      - "127.0.0.1:9999:9999"
+    environment:
+      CGM_LOCAL_DOCKER_SETUP: "1"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    volumes:
+      - ./state:/var/lib/cgm
+      - ./cache:/var/cache/cgm
+      - ${CGM_MEDIA_ROOT:?set CGM_MEDIA_ROOT to an absolute host directory}:/media:rw
+      - ./transfer:/transfer:ro
+    restart: unless-stopped
+```
+
+在同目录创建 `.env`，把宿主机媒体目录改成真实存在的绝对路径：
+
+```dotenv
+CGM_MEDIA_ROOT=/absolute/path/to/cosplay-media
+```
+
+首次空目录部署时，准备目录和容器 UID/GID `65532` 的写权限，然后启动：
+
+```bash
+sudo install -d -o 65532 -g 65532 -m 0700 state cache
+mkdir -p transfer
+docker compose pull
+docker compose up -d
+```
+
+在部署机器打开 `http://127.0.0.1:9999/setup`。媒体库在管理页面填写容器内路径 `/media` 或其子目录，不填写 `.env` 中的宿主机路径。`./state` 保存数据库、Coser 资源和备份；`./cache` 保存可再生成的缓存；`./transfer` 供迁移工作台只读选择 ZIP 包。`read_only: true` 只限制容器自身根文件系统；媒体挂载仍为 `rw`，以便所有者显式执行 Manifest Push 写入 sidecar，宿主机目录也必须允许 UID/GID `65532` 相应读写。不需要写回时可将媒体挂载改为 `:ro`，但 Manifest Push 将无法使用。
+
+模板仅绑定宿主机 loopback，故本机首次设置无需门票；不要保持 `CGM_LOCAL_DOCKER_SETUP=1` 却把端口直接开放到局域网或公网。远程自定义部署应关闭该模式并使用一次性 `-setup-ticket`。`/tmp` 是最多 512 MiB 的非持久临时挂载，不在 `./state` 或 `./cache` 内。已有 CGM 命名卷部署不能直接改为上述空目录：须先停容器并迁移 `cgm-state` 和 `cgm-cache` 数据，尤其不能丢失 `cgm-state` 中的数据库。
+
+仓库另有从本地源码构建、使用 Docker 命名卷的[示例 Compose](docker/cgm/compose.yml)：
 
 ```bash
 export CGM_MEDIA_ROOT=/absolute/path/to/cosplay-media
@@ -156,7 +198,7 @@ docker compose -f docker/cgm/compose.yml build
 docker compose -f docker/cgm/compose.yml up -d
 ```
 
-在宿主机打开 `http://127.0.0.1:9999/setup`，默认本机 Compose 首次设置不需要门票；远程自定义部署仍需 `-setup-ticket`。容器内媒体库路径为 `/media`，Coser 元数据和备份固定在 `/var/lib/cgm` 状态卷内，迁移包从只读 `/transfer` 选择。忘记密码可在容器终端执行 `cgm -config /etc/cgm/cgm.json -recovery-token`，再在登录页输入单次令牌。权限、挂载及安全边界见[安装手册](docs/INSTALLATION.md)。
+忘记密码可在容器终端执行 `cgm -config /etc/cgm/cgm.json -recovery-token`，再在登录页输入单次令牌。权限、挂载及安全边界见[安装手册](docs/INSTALLATION.md)。
 
 ## 数据安全要点
 

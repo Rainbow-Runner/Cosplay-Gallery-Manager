@@ -2327,3 +2327,8 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 2026-09-22 18:27 CST停服确认`MainPID=0`且SQLite WAL已关闭，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-v16-f424966-hCcW4x`保存一致数据库、旧二进制、配置、用户systemd单元和完整Coser托管目录；原件与备份逐项`cmp`/递归`diff`一致。备份库schema v15、`integrity_check=ok`、Coser/Work/Character/Tag/Gallery/Source/Item计数为`135/108/697/23/9/9/600`；备份库SHA-256为`0b88a145fdc856e648c9e51d03444a28db9dfb5135d0d12b241ee744097d4a70`，旧程序为`b4513c851f84dbca4d059fd4f00a71830bc95afdf4dd457b69dbb93acab825bb`。备份不含原始媒体、缓存或日志。
 - 候选二进制与同目录暂存文件逐字节一致后原子替换，正式服务只启动一次。业务库自动升级至schema v16，`integrity_check=ok`，上述七类计数不变；服务`active/running`、`NRestarts=0`，Health/Ready均204，登录与管理深链均200，About准确报告`f424966`且`exactSourceAvailable=true`。启动日志未发现warning以上信息；正式配置SHA-256保持`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，未修改原始媒体、Manifest或缓存。
 - 已把同一提交镜像推送至Docker Hub公开仓库`rainbowrunner2015/cosplay-gallery-manager:sha-f424966a77495a768e2ad054daf70e116e85aebc`。`docker buildx imagetools inspect`从远端确认OCI索引摘要`sha256:35b8d71757de4313e90bb7fa560e123c1172f2d9e09f4e525e9961fba6c1b796`，包含`linux/amd64`和构建证明清单；旧提交标签与`latest`未改动。未执行另一台机器的真实Docker首次设置及迁移模拟，不将本机隔离容器冒烟测试等同于跨机验收；本轮没有Git远端推送。
+
+## 2026-09-22 Docker Hub宿主机目录挂载模板
+
+- README新增可直接拉取上述已发布`linux/amd64`镜像的Compose模板，与仓库内供源码构建的命名卷示例明确区分。新模板将数据库/Coser资源/备份与缓存分别绑定到独立部署目录下的`./state`、`./cache`，保留只读根文件系统、非root运行、loopback本机Setup、`/transfer`只读导入和显式Manifest Push所需媒体`rw`挂载；说明UID/GID 65532权限、容器与宿主机路径、`/tmp`临时卷、已有命名卷迁移以及不要在源码仓库保存业务数据。
+- 仅文档改动，未改变镜像、Compose源码、数据库schema、正式服务、媒体或缓存。README内联YAML经`docker compose -f - config --quiet`解析通过，`git diff --check`通过；没有把模板冒充真实目标机部署验收。

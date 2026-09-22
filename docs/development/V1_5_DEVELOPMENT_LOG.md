@@ -2332,3 +2332,8 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 
 - README新增可直接拉取上述已发布`linux/amd64`镜像的Compose模板，与仓库内供源码构建的命名卷示例明确区分。新模板将数据库/Coser资源/备份与缓存分别绑定到独立部署目录下的`./state`、`./cache`，保留只读根文件系统、非root运行、loopback本机Setup、`/transfer`只读导入和显式Manifest Push所需媒体`rw`挂载；说明UID/GID 65532权限、容器与宿主机路径、`/tmp`临时卷、已有命名卷迁移以及不要在源码仓库保存业务数据。
 - 仅文档改动，未改变镜像、Compose源码、数据库schema、正式服务、媒体或缓存。README内联YAML经`docker compose -f - config --quiet`解析通过，`git diff --check`通过；没有把模板冒充真实目标机部署验收。
+
+### 宿主机UID/GID匹配说明
+
+- 目标机以默认固定`65532:65532`运行时，用户创建的`1000:1000`绑定目录不可写，导致启动阶段统一报`CGM_DATABASE_OPEN_FAILED`；该事件码也覆盖缓存初始化，单靠日志无法确定具体失败路径。隔离临时目录实测当前已发布镜像通过Docker运行用户覆盖为`1000:1000`时，能够创建数据库和缓存并返回Health 204；这只验证启动，不等同于完整备份、迁移和媒体写回验收。
+- README的Docker Hub绑定目录模板加入可选`user: "${CGM_UID:-65532}:${CGM_GID:-65532}"`，明确宿主机同UID/GID首次空目录部署、默认65532目录准备、已有数据换用户前备份和核权，以及rootless/用户命名空间映射的边界。仅更新文档；不更改镜像默认非root身份、仓库源码构建Compose、业务代码、正式服务或目标机数据。

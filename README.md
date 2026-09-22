@@ -154,6 +154,7 @@ Setup 不会自动创建媒体库，也不会自动扫描。不要把 CGM 指向
 services:
   cgm:
     image: rainbowrunner2015/cosplay-gallery-manager:sha-f424966a77495a768e2ad054daf70e116e85aebc
+    user: "${CGM_UID:-65532}:${CGM_GID:-65532}"
     ports:
       - "127.0.0.1:9999:9999"
     environment:
@@ -171,22 +172,26 @@ services:
     restart: unless-stopped
 ```
 
-在同目录创建 `.env`，把宿主机媒体目录改成真实存在的绝对路径：
+在同目录创建 `.env`。媒体目录填写真实存在的宿主机绝对路径；`CGM_UID`、`CGM_GID` 填部署用户运行 `id -u`、`id -g` 得到的数字（下面的 `1000` 仅为示例）：
 
 ```dotenv
 CGM_MEDIA_ROOT=/absolute/path/to/cosplay-media
+CGM_UID=1000
+CGM_GID=1000
 ```
 
-首次空目录部署时，准备目录和容器 UID/GID `65532` 的写权限，然后启动：
+`user:` 使用上述 UID/GID 运行容器进程；未设置时沿用镜像默认的 `65532:65532`，不会自动修改宿主机目录或已有文件的属主。首次空目录、并使用与当前部署用户相同的 UID/GID 时，准备目录后启动：
 
 ```bash
-sudo install -d -o 65532 -g 65532 -m 0700 state cache
-mkdir -p transfer
+mkdir -p state cache transfer
+chmod 700 state cache
 docker compose pull
 docker compose up -d
 ```
 
-在部署机器打开 `http://127.0.0.1:9999/setup`。媒体库在管理页面填写容器内路径 `/media` 或其子目录，不填写 `.env` 中的宿主机路径。`./state` 保存数据库、Coser 资源和备份；`./cache` 保存可再生成的缓存；`./transfer` 供迁移工作台只读选择 ZIP 包。`read_only: true` 只限制容器自身根文件系统；媒体挂载仍为 `rw`，以便所有者显式执行 Manifest Push 写入 sidecar，宿主机目录也必须允许 UID/GID `65532` 相应读写。不需要写回时可将媒体挂载改为 `:ro`，但 Manifest Push 将无法使用。
+若选择不设置 `CGM_UID`、`CGM_GID`，则必须让空的 `state`、`cache` 归默认身份 `65532:65532` 所有，例如首次创建时使用 `sudo install -d -o 65532 -g 65532 -m 0700 state cache`。不要对已有数据库或其他业务数据盲目递归 `chown`；切换运行 UID/GID 前先备份并核对全部现有文件权限。若使用rootless Docker或用户命名空间映射，还需按其实际ID映射检查挂载权限，不能只依赖宿主机与容器显示的数字相同。
+
+在部署机器打开 `http://127.0.0.1:9999/setup`。媒体库在管理页面填写容器内路径 `/media` 或其子目录，不填写 `.env` 中的宿主机路径。`./state` 保存数据库、Coser 资源和备份；`./cache` 保存可再生成的缓存；`./transfer` 供迁移工作台只读选择 ZIP 包。`read_only: true` 只限制容器自身根文件系统；媒体挂载仍为 `rw`，以便所有者显式执行 Manifest Push 写入 sidecar，宿主机目录也必须允许所选运行身份相应读写。不需要写回时可将媒体挂载改为 `:ro`，但 Manifest Push 将无法使用。
 
 模板仅绑定宿主机 loopback，故本机首次设置无需门票；不要保持 `CGM_LOCAL_DOCKER_SETUP=1` 却把端口直接开放到局域网或公网。远程自定义部署应关闭该模式并使用一次性 `-setup-ticket`。`/tmp` 是最多 512 MiB 的非持久临时挂载，不在 `./state` 或 `./cache` 内。已有 CGM 命名卷部署不能直接改为上述空目录：须先停容器并迁移 `cgm-state` 和 `cgm-cache` 数据，尤其不能丢失 `cgm-state` 中的数据库。
 

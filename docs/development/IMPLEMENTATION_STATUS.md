@@ -12,6 +12,8 @@
 
 ## 已完成
 
+- 2026-09-22 最新部署状态：下方两项“Docker首次设置/密码恢复/路径契约”及“迁移工作台导入包选择”的“已开发、未部署”是功能提交前的阶段记录；现已从提交`f424966a77495a768e2ad054daf70e116e85aebc`正式部署。本机库从schema v15升级至v16，完整性和七类业务计数复核通过，Health/Ready均204。Docker Hub已更新不可变标签`rainbowrunner2015/cosplay-gallery-manager:sha-f424966a77495a768e2ad054daf70e116e85aebc`，远端摘要`sha256:35b8d71757de4313e90bb7fa560e123c1172f2d9e09f4e525e9961fba6c1b796`，仅支持`linux/amd64`；未修改`latest`。跨机迁移及新Docker首次设置仍待所有者实测。
+
 - 1.5（Docker首次设置、所有者密码恢复与路径契约，已开发、未部署）：提供的Compose仅绑定宿主机loopback并显式启用无门票本机首次设置；其他Docker/非loopback部署仍需原有单次门票。Setup由服务端声明运行环境，Docker的Coser/备份路径固定在持久`/var/lib/cgm`卷，完成前校验`/var/lib/cgm`、`/var/cache/cgm`、`/media`、`/transfer`挂载及存储目录可写性；新Docker媒体库路径须在已挂载的`/media`之下。忘记密码通过本机CLI生成10分钟单次Recovery Token，schema v16只保存哈希，成功后撤销Session并关闭可信模式；便携包格式、Gallery Manifest均不变。默认Compose媒体挂载改为允许显式旁置Manifest写回，原始媒体业务处理仍不改写。见[1.5开发日志](V1_5_DEVELOPMENT_LOG.md)和[安装手册](../INSTALLATION.md)。
 
 - 1.5（迁移工作台导入包选择，已开发、未部署）：导出目标路径与导入来源分开；导入/准备合并只能从默认`/transfer`的顶层ZIP文件下拉选择，显示文件名、大小、包内创建时间、格式版本和校验状态，并支持刷新目录及显式完整校验。未校验或校验失败时禁用导入/准备合并，执行阶段仍走原有完整检查。Docker Compose新增只读`./transfer:/transfer`挂载；无数据库schema或迁移包格式变化。测试与边界见[1.5开发日志](V1_5_DEVELOPMENT_LOG.md)。

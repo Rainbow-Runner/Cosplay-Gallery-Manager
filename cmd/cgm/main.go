@@ -27,6 +27,7 @@ func main() {
 	configPath := flag.String("config", "cgm.json", "startup configuration JSON")
 	showVersion := flag.Bool("version", false, "print the product version")
 	setupTicket := flag.Bool("setup-ticket", false, "generate a one-time 15-minute Docker Setup ticket")
+	recoveryToken := flag.Bool("recovery-token", false, "generate a one-time 10-minute owner password recovery token")
 	createBackup := flag.Bool("create-backup", false, "create a consistent full backup package and exit")
 	restoreBackup := flag.String("restore-backup", "", "restore a backup UUID through maintenance mode and exit")
 	mapRestoredPaths := flag.Bool("map-restored-paths", false, "map or disable every restored media library and exit")
@@ -60,7 +61,7 @@ func main() {
 		return
 	}
 	if *inspectPortable != "" {
-		if *setupTicket || *createBackup || *restoreBackup != "" || *mapRestoredPaths || *resumeMaintenance || *exportPortable != "" || *importPortable != "" || *mapPortableLibrariesFlag != "" || *preflightPortableRebuild != "" || *rebuildPortableGalleries != "" || *preflightPortableMerge != "" || *preparePortableMerge != "" || *decidePortableMerge != "" || *applyPortableMerge != "" || *abortPortableMerge != "" || *recoverPortableMerge != "" || *recoverPortable || *preflightPortable || *allowIncompletePortable || *includeOwnerLifecycle || *includeOwnerFlags || *applyOwnerContinuity != "" {
+		if *setupTicket || *recoveryToken || *createBackup || *restoreBackup != "" || *mapRestoredPaths || *resumeMaintenance || *exportPortable != "" || *importPortable != "" || *mapPortableLibrariesFlag != "" || *preflightPortableRebuild != "" || *rebuildPortableGalleries != "" || *preflightPortableMerge != "" || *preparePortableMerge != "" || *decidePortableMerge != "" || *applyPortableMerge != "" || *abortPortableMerge != "" || *recoverPortableMerge != "" || *recoverPortable || *preflightPortable || *allowIncompletePortable || *includeOwnerLifecycle || *includeOwnerFlags || *applyOwnerContinuity != "" {
 			fatal("CGM_CLI_ACTION_CONFLICT")
 		}
 		inspection, err := portablecatalog.InspectFile(context.Background(), *inspectPortable)
@@ -91,7 +92,7 @@ func main() {
 	}
 	defer server.Close()
 	actionCount := 0
-	for _, selected := range []bool{*setupTicket, *createBackup, *restoreBackup != "", *mapRestoredPaths, *resumeMaintenance, *exportPortable != "", *importPortable != "", *mapPortableLibrariesFlag != "", *preflightPortableRebuild != "", *rebuildPortableGalleries != "", *preflightPortableMerge != "", *preparePortableMerge != "", *decidePortableMerge != "", *applyPortableMerge != "", *abortPortableMerge != "", *recoverPortableMerge != "", *recoverPortable, *preflightPortable, *applyOwnerContinuity != ""} {
+	for _, selected := range []bool{*setupTicket, *recoveryToken, *createBackup, *restoreBackup != "", *mapRestoredPaths, *resumeMaintenance, *exportPortable != "", *importPortable != "", *mapPortableLibrariesFlag != "", *preflightPortableRebuild != "", *rebuildPortableGalleries != "", *preflightPortableMerge != "", *preparePortableMerge != "", *decidePortableMerge != "", *applyPortableMerge != "", *abortPortableMerge != "", *recoverPortableMerge != "", *recoverPortable, *preflightPortable, *applyOwnerContinuity != ""} {
 		if selected {
 			actionCount++
 		}
@@ -105,6 +106,14 @@ func main() {
 			fatal("CGM_SETUP_TICKET_FAILED")
 		}
 		fmt.Printf("%s\nexpires %s\n", ticket, expires.Local().Format(time.RFC3339))
+		return
+	}
+	if *recoveryToken {
+		token, expires, err := server.Auth.CreateRecoveryToken(context.Background())
+		if err != nil {
+			fatal("CGM_RECOVERY_TOKEN_FAILED")
+		}
+		fmt.Printf("%s\nexpires %s\n", token, expires.Local().Format(time.RFC3339))
 		return
 	}
 	if *createBackup || *restoreBackup != "" || *mapRestoredPaths || *resumeMaintenance || *exportPortable != "" || *importPortable != "" || *mapPortableLibrariesFlag != "" || *preflightPortableRebuild != "" || *rebuildPortableGalleries != "" || *preflightPortableMerge != "" || *preparePortableMerge != "" || *decidePortableMerge != "" || *applyPortableMerge != "" || *abortPortableMerge != "" || *recoverPortableMerge != "" || *recoverPortable || *preflightPortable || *applyOwnerContinuity != "" {

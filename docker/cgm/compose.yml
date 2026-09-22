@@ -6,6 +6,8 @@ services:
     image: cosplay-gallery-manager:local
     ports:
       - "127.0.0.1:9999:9999"
+    environment:
+      CGM_LOCAL_DOCKER_SETUP: "1"
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -14,7 +16,8 @@ services:
     volumes:
       - cgm-state:/var/lib/cgm
       - cgm-cache:/var/cache/cgm
-      - ${CGM_MEDIA_ROOT:?set CGM_MEDIA_ROOT to an absolute host directory}:/media:ro
+      - ${CGM_MEDIA_ROOT:?set CGM_MEDIA_ROOT to an absolute host directory}:/media:rw
+      - ./transfer:/transfer:ro
     restart: unless-stopped
 
 volumes:

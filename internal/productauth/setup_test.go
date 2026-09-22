@@ -51,15 +51,46 @@ func TestRemoteSetupRequiresExchangedCookieWhileLoopbackIsDirect(t *testing.T) {
 	remote := httptest.NewRequest(http.MethodPost, "/setup/complete", strings.NewReader(body))
 	remote.RemoteAddr = "192.0.2.10:12000"
 	response := httptest.NewRecorder()
-	service.CompleteSetupHandler(true).ServeHTTP(response, remote)
+	service.CompleteSetupHandler(SetupOptions{RuntimeEnvironment: "NATIVE", AllowDirectLoopback: true}).ServeHTTP(response, remote)
 	if response.Code != http.StatusUnauthorized {
 		t.Fatalf("remote Setup without ticket = %d", response.Code)
 	}
 	loopback := httptest.NewRequest(http.MethodPost, "/setup/complete", strings.NewReader(body))
 	loopback.RemoteAddr = "127.0.0.1:12000"
 	response = httptest.NewRecorder()
-	service.CompleteSetupHandler(true).ServeHTTP(response, loopback)
+	service.CompleteSetupHandler(SetupOptions{RuntimeEnvironment: "NATIVE", AllowDirectLoopback: true}).ServeHTTP(response, loopback)
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("loopback Setup = %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestDockerLocalSetupRequiresExplicitModeAndLoopbackHost(t *testing.T) {
+	body := `{"runtimeEnvironment":"DOCKER","locale":"en-GB","timezone":"UTC","coserMetadataRoot":"/var/lib/cgm/cosers","backupRoot":"/var/lib/cgm/backups","password":"correct horse battery staple"}`
+	request := func(host string) *http.Request {
+		value := httptest.NewRequest(http.MethodPost, "http://"+host+"/setup/complete", strings.NewReader(body))
+		value.RemoteAddr = "172.18.0.1:12345"
+		return value
+	}
+	service := testService(t)
+	options := SetupOptions{RuntimeEnvironment: "DOCKER", AllowDockerLocal: true, ValidateStorage: func(SetupInput) error { return nil }}
+	remote := httptest.NewRecorder()
+	service.CompleteSetupHandler(options).ServeHTTP(remote, request("example.test"))
+	if remote.Code != http.StatusUnauthorized {
+		t.Fatalf("remote host = %d", remote.Code)
+	}
+	strict := httptest.NewRecorder()
+	service.CompleteSetupHandler(SetupOptions{RuntimeEnvironment: "DOCKER"}).ServeHTTP(strict, request("127.0.0.1:9999"))
+	if strict.Code != http.StatusUnauthorized {
+		t.Fatalf("ticket mode = %d", strict.Code)
+	}
+	local := httptest.NewRecorder()
+	service.CompleteSetupHandler(options).ServeHTTP(local, request("127.0.0.1:9999"))
+	if local.Code != http.StatusNoContent {
+		t.Fatalf("local Docker Setup = %d %s", local.Code, local.Body.String())
+	}
+	reused := httptest.NewRecorder()
+	service.CompleteSetupHandler(options).ServeHTTP(reused, request("127.0.0.1:9999"))
+	if reused.Code != http.StatusBadRequest {
+		t.Fatalf("second Setup = %d", reused.Code)
 	}
 }

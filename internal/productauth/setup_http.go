@@ -4,10 +4,27 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
-func (s *Service) SetupStatusHandler() http.Handler {
+type SetupOptions struct {
+	RuntimeEnvironment  string
+	AllowDirectLoopback bool
+	AllowDockerLocal    bool
+	CoserMetadataRoot   string
+	BackupRoot          string
+	ValidateStorage     func(SetupInput) error
+}
+
+func (o SetupOptions) directAllowed(request *http.Request) bool {
+	// Docker cannot observe the host-side port binding. AllowDockerLocal is an
+	// explicit deployment opt-in and must only be set with a loopback-published
+	// host port; Host alone is not an authentication boundary.
+	return o.AllowDirectLoopback && isLoopbackRequest(request) || o.AllowDockerLocal && isLoopbackHost(request.Host)
+}
+
+func (s *Service) SetupStatusHandler(options SetupOptions) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if request.Method != http.MethodGet {
 			response.WriteHeader(http.StatusMethodNotAllowed)
@@ -19,7 +36,14 @@ func (s *Service) SetupStatusHandler() http.Handler {
 			return
 		}
 		response.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(response).Encode(status)
+		response.Header().Set("Cache-Control", "no-store")
+		_ = json.NewEncoder(response).Encode(struct {
+			Complete           bool   `json:"complete"`
+			RuntimeEnvironment string `json:"runtimeEnvironment"`
+			TicketRequired     bool   `json:"ticketRequired"`
+			CoserMetadataRoot  string `json:"coserMetadataRoot"`
+			BackupRoot         string `json:"backupRoot"`
+		}{status.Complete, options.RuntimeEnvironment, !options.directAllowed(request), options.CoserMetadataRoot, options.BackupRoot})
 	})
 }
 
@@ -49,13 +73,13 @@ func (s *Service) SetupTicketExchangeHandler() http.Handler {
 	})
 }
 
-func (s *Service) CompleteSetupHandler(allowDirectLoopback bool) http.Handler {
+func (s *Service) CompleteSetupHandler(options SetupOptions) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if request.Method != http.MethodPost {
 			response.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		if !allowDirectLoopback || !isLoopbackRequest(request) {
+		if !options.directAllowed(request) {
 			cookie, _ := request.Cookie(SetupCookieName)
 			if cookie == nil {
 				http.Error(response, "Setup authorization required", http.StatusUnauthorized)
@@ -74,6 +98,14 @@ func (s *Service) CompleteSetupHandler(allowDirectLoopback bool) http.Handler {
 			http.Error(response, "invalid Setup input", http.StatusBadRequest)
 			return
 		}
+		if input.RuntimeEnvironment != options.RuntimeEnvironment {
+			http.Error(response, "Setup environment mismatch", http.StatusBadRequest)
+			return
+		}
+		if options.ValidateStorage != nil && options.ValidateStorage(input) != nil {
+			http.Error(response, "Setup storage is unavailable or not writable", http.StatusBadRequest)
+			return
+		}
 		if err := s.CompleteSetup(request.Context(), input); err != nil {
 			http.Error(response, "Setup could not be completed", http.StatusBadRequest)
 			return
@@ -82,6 +114,18 @@ func (s *Service) CompleteSetupHandler(allowDirectLoopback bool) http.Handler {
 			Secure: request.TLS != nil, SameSite: http.SameSiteStrictMode})
 		response.WriteHeader(http.StatusNoContent)
 	})
+}
+
+func isLoopbackHost(value string) bool {
+	host, _, err := net.SplitHostPort(value)
+	if err != nil {
+		host = value
+	}
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	address := net.ParseIP(host)
+	return address != nil && address.IsLoopback()
 }
 
 func isLoopbackRequest(request *http.Request) bool {

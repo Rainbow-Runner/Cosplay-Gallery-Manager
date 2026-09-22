@@ -16,10 +16,12 @@ export function ManageHelpPage() {
     <div className="manage-help-layout">
       <nav className="manage-help-topics" aria-label={f("manage.help.topics")}>
         <strong>{f("manage.help.topics")}</strong>
+        <a href="#docker-paths">{f("manage.help.docker.title")}</a>
         <a href="#libraries">{f("manage.help.libraries.title")}</a>
         <a href="#scan-rules">{f("manage.help.rules.title")}</a>
         <a href="#gallery-status">{f("manage.help.gallery.title")}</a>
       </nav>
+      <article id="docker-paths" className="manage-help-article"><header><h3>{f("manage.help.docker.title")}</h3><span>{f("manage.help.docker.summary")}</span></header><section><ul className="manage-help-list"><li>{f("manage.help.docker.state")}</li><li>{f("manage.help.docker.cache")}</li><li>{f("manage.help.docker.media")}</li><li>{f("manage.help.docker.transfer")}</li><li>{f("manage.help.docker.recovery")}</li></ul></section></article>
       <article id="libraries" className="manage-help-article">
         <header>
           <p>{f("manage.help.libraries.eyebrow")}</p>

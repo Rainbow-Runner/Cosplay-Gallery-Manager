@@ -302,7 +302,7 @@ func (s *Server) restartWorkers() {
 func (s *Server) maintenanceGate(database *productdb.Database, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		switch request.URL.Path {
-		case "/healthz", "/readyz", "/about.json", "/session/login", "/session/logout", "/session/status", "/maintenance/status", "/maintenance/path-mappings", "/maintenance/resume":
+		case "/healthz", "/readyz", "/about.json", "/session/login", "/session/logout", "/session/recover", "/session/status", "/maintenance/status", "/maintenance/path-mappings", "/maintenance/resume":
 			next.ServeHTTP(response, request)
 			return
 		}

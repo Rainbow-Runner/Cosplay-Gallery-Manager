@@ -785,12 +785,12 @@ SocialAccount：
 - Session默认30天，可配置1～90；改密码/恢复/注销全部设备撤销全部Session。
 - 登录限速、CSRF、Origin和Host校验。
 - 本地可信模式显式开启后绕过认证但保留密码/Session；关闭即恢复，界面持续警告。
-- 忘记密码使用本机一次性Recovery Token，默认10分钟、单次使用。
+- 忘记密码使用本机一次性Recovery Token，默认10分钟、单次使用；schema v16只保存令牌哈希，重置后撤销全部Session并关闭可信模式。
 
 ### 24.2 首次Setup
 
 - 五步：环境、所有者认证、界面/时间、存储位置、确认创建；完成后手工启动首次扫描。
-- 原生loopback可直接Setup；Docker/非loopback必须从服务器CLI生成15分钟单次Setup Token。
+- 原生loopback可直接Setup；提供的Docker Compose仅绑定宿主机`127.0.0.1`且显式启用本机首次Setup时可免门票；其他Docker/非loopback部署必须从服务器CLI生成15分钟单次Setup Token。Docker不得仅凭容器内请求源地址推断宿主机loopback。
 - Token换短期HttpOnly Setup Cookie后从URL移除；Setup完成后入口永久失效。
 
 ### 24.3 媒体资源

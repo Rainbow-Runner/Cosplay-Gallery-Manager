@@ -27,7 +27,7 @@ func TestSchemaV11TagAssignmentMigrationKeepsExistingTagsAssignable(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := legacy.ExecContext(ctx, `DROP TABLE item_capture_dates; DROP TABLE gallery_capture_date_reviews; ALTER TABLE galleries DROP COLUMN shoot_date_origin;
+	if _, err := legacy.ExecContext(ctx, `DROP TABLE owner_recovery_tokens; DROP TABLE item_capture_dates; DROP TABLE gallery_capture_date_reviews; ALTER TABLE galleries DROP COLUMN shoot_date_origin;
 		DROP TRIGGER gallery_tags_assignable_insert;
 		DROP TRIGGER gallery_tags_assignable_update;
 		DROP TRIGGER tags_disable_direct_assignment;
@@ -47,7 +47,7 @@ func TestSchemaV11TagAssignmentMigrationKeepsExistingTagsAssignable(t *testing.T
 		t.Fatal(err)
 	}
 	defer migrated.Close()
-	if migrated.Identity().DatabaseSchemaVersion != 15 {
+	if migrated.Identity().DatabaseSchemaVersion != 16 {
 		t.Fatalf("schema version = %d", migrated.Identity().DatabaseSchemaVersion)
 	}
 	loaded, err := migrated.CoreEntities().ManageFind(ctx, "TAG", tag.UUID)

@@ -342,6 +342,11 @@ func (r *mutationResolver) ResetGalleryCover(ctx context.Context, setID string, 
 
 // CreateMediaLibrary is the resolver for the createMediaLibrary field.
 func (r *mutationResolver) CreateMediaLibrary(ctx context.Context, input CreateMediaLibraryInput) (*ManageLibrary, error) {
+	if validator, ok := r.Operations.(interface{ ValidateMediaLibraryPath(string) error }); ok {
+		if err := validator.ValidateMediaLibraryPath(input.RootPath); err != nil {
+			return nil, manageError(err)
+		}
+	}
 	value, err := r.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{Name: input.Name, RootPath: input.RootPath, Enabled: input.Enabled, MetadataWritebackEnabled: &input.MetadataWritebackEnabled, CaptureTimezone: input.CaptureTimezone}, time.Now())
 	if err != nil {
 		r.auditManage(ctx, "LIBRARY_CREATE", "LIBRARY", "", "LIBRARY_CREATE_FAILED", err, nil)

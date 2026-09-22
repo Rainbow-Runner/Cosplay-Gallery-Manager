@@ -181,7 +181,7 @@ func TestMaintenanceGateKeepsRecoveryUIReachable(t *testing.T) {
 		response.WriteHeader(http.StatusNoContent)
 	})
 	handler := server.maintenanceGate(server.Database, next)
-	for _, path := range []string{"/", "/login", "/legal", "/maintenance", "/assets/application.js", "/about.json", "/session/status", "/maintenance/status"} {
+	for _, path := range []string{"/", "/login", "/legal", "/maintenance", "/assets/application.js", "/about.json", "/session/status", "/session/recover", "/maintenance/status"} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
 		if response.Code != http.StatusNoContent {

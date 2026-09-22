@@ -32,7 +32,7 @@ func TestSchemaV14UpgradePreservesManualShootDate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := legacy.ExecContext(ctx, `DROP TABLE item_capture_dates; DROP TABLE gallery_capture_date_reviews;
+	if _, err := legacy.ExecContext(ctx, `DROP TABLE owner_recovery_tokens; DROP TABLE item_capture_dates; DROP TABLE gallery_capture_date_reviews;
 		ALTER TABLE galleries DROP COLUMN shoot_date_origin;
 		UPDATE cgm_product_identity SET database_schema_version=14 WHERE singleton_id=1`); err != nil {
 		t.Fatal(err)
@@ -45,7 +45,7 @@ func TestSchemaV14UpgradePreservesManualShootDate(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer upgraded.Close()
-	if upgraded.Identity().DatabaseSchemaVersion != 15 {
+	if upgraded.Identity().DatabaseSchemaVersion != 16 {
 		t.Fatalf("schema=%d", upgraded.Identity().DatabaseSchemaVersion)
 	}
 	var date, origin string

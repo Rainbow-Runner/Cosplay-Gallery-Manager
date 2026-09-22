@@ -2,7 +2,7 @@
 
 > 当前里程碑：1.5 本机业务迭代与可诊断性增强
 > 状态：进行中
-> 更新日期：2026-09-21
+> 更新日期：2026-09-22
 
 ## 已规划、尚未实现
 
@@ -11,6 +11,10 @@
 - 后续（视频处理第三阶段）：已持久化[第三阶段条件式功能规划](VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)。第三阶段A规划按需Storyboard Sprite/WebVTT和可访问辅助时间轴；第三阶段B仅在第二阶段真实大视频冷启动指标证明必要并完成ADR后，才规划单清晰度渐进HLS、会话治理和完整bundle缓存。该阶段不属于当前第一版/1.5门禁，尚未实现或部署。
 
 ## 已完成
+
+- 1.5（Docker首次设置、所有者密码恢复与路径契约，已开发、未部署）：提供的Compose仅绑定宿主机loopback并显式启用无门票本机首次设置；其他Docker/非loopback部署仍需原有单次门票。Setup由服务端声明运行环境，Docker的Coser/备份路径固定在持久`/var/lib/cgm`卷，完成前校验`/var/lib/cgm`、`/var/cache/cgm`、`/media`、`/transfer`挂载及存储目录可写性；新Docker媒体库路径须在已挂载的`/media`之下。忘记密码通过本机CLI生成10分钟单次Recovery Token，schema v16只保存哈希，成功后撤销Session并关闭可信模式；便携包格式、Gallery Manifest均不变。默认Compose媒体挂载改为允许显式旁置Manifest写回，原始媒体业务处理仍不改写。见[1.5开发日志](V1_5_DEVELOPMENT_LOG.md)和[安装手册](../INSTALLATION.md)。
+
+- 1.5（迁移工作台导入包选择，已开发、未部署）：导出目标路径与导入来源分开；导入/准备合并只能从默认`/transfer`的顶层ZIP文件下拉选择，显示文件名、大小、包内创建时间、格式版本和校验状态，并支持刷新目录及显式完整校验。未校验或校验失败时禁用导入/准备合并，执行阶段仍走原有完整检查。Docker Compose新增只读`./transfer:/transfer`挂载；无数据库schema或迁移包格式变化。测试与边界见[1.5开发日志](V1_5_DEVELOPMENT_LOG.md)。
 
 - 1.5（Docker Hub迁移测试镜像，已发布）：公开仓库`rainbowrunner2015/cosplay-gallery-manager`新增提交标签`sha-eea756a67ad1c5d2b1c79e102d98bf3299a3f661`；远端摘要`sha256:97ec56b4a1860bec667138c63930caa32539c7e0a11bb705b8c63be087dab572`与GHCR相同，仅支持`linux/amd64`。未改动`latest`；跨机迁移测试仍待执行。详见[1.5开发日志](V1_5_DEVELOPMENT_LOG.md)。
 

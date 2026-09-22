@@ -5,5 +5,6 @@
   "ffmpeg_path": "/usr/bin/ffmpeg",
   "ffprobe_path": "/usr/bin/ffprobe",
   "libraw_path": "/usr/bin/dcraw",
-  "worker_count": 2
+  "worker_count": 2,
+  "runtime_environment": "DOCKER"
 }

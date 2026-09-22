@@ -148,16 +148,15 @@ Setup 不会自动创建媒体库，也不会自动扫描。不要把 CGM 指向
 
 ## Docker Compose
 
-仓库提供只读根文件系统、非 root 用户、内置 FFmpeg/dcraw 和只读媒体挂载的开发/部署定义：
+仓库提供只读根文件系统、非 root 用户、内置 FFmpeg/dcraw 和媒体旁置 Manifest 写回所需挂载的开发/部署定义：
 
 ```bash
 export CGM_MEDIA_ROOT=/absolute/path/to/cosplay-media
 docker compose -f docker/cgm/compose.yml build
-docker compose -f docker/cgm/compose.yml run --rm --no-deps cgm -setup-ticket
 docker compose -f docker/cgm/compose.yml up -d
 ```
 
-将一次性 Setup Ticket 输入 `http://127.0.0.1:9999/setup`。Ticket 有效期为 15 分钟，不应写入 Compose 文件、URL、日志或 shell 历史。容器内的媒体库路径位于 `/media`。
+在宿主机打开 `http://127.0.0.1:9999/setup`，默认本机 Compose 首次设置不需要门票；远程自定义部署仍需 `-setup-ticket`。容器内媒体库路径为 `/media`，Coser 元数据和备份固定在 `/var/lib/cgm` 状态卷内，迁移包从只读 `/transfer` 选择。忘记密码可在容器终端执行 `cgm -config /etc/cgm/cgm.json -recovery-token`，再在登录页输入单次令牌。权限、挂载及安全边界见[安装手册](docs/INSTALLATION.md)。
 
 ## 数据安全要点
 

@@ -2308,3 +2308,15 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 ### 同一迁移镜像发布至Docker Hub
 
 - Docker Hub公开仓库`rainbowrunner2015/cosplay-gallery-manager`已发布不可变提交标签`sha-eea756a67ad1c5d2b1c79e102d98bf3299a3f661`。本地普通`docker push`因镜像索引引用的内容缺失而失败，未生成远端标签；随后从已验证的GHCR镜像按摘要直接复制单平台清单至Docker Hub，远端清单摘要经`docker buildx imagetools inspect`确认为`sha256:97ec56b4a1860bec667138c63930caa32539c7e0a11bb705b8c63be087dab572`，与GHCR完全一致。仅为`linux/amd64`；未修改Docker Hub的`latest`标签，也未在目标机完成迁移模拟。
+
+# 2026-09-22 迁移工作台Docker导入包选择优化
+
+- 将原先导出、导入和准备合并共用的任意服务器绝对路径输入拆分：导出仍显式填写目标路径；导入与准备合并从默认`/transfer`目录的顶层普通ZIP文件下拉选择，避免Docker用户混淆宿主机与容器路径。新增认证后的目录刷新及选中包完整检查接口。列表只读取受限包头，展示文件名、字节大小、包内创建时间、格式版本和“未完整校验/格式未识别”状态；选中后显式执行既有完整校验器，只有校验通过才开放导入与准备合并。刷新或换包清除旧校验结果；原导入/合并阶段仍重新校验包，防止仅依赖前端状态。
+- 默认Compose增加宿主机`docker/cgm/transfer`到容器`/transfer`的只读挂载，并将本地迁移包目录加入Git忽略规则以免意外提交私有数据；安装手册说明存放包和导出路径的区别。接口拒绝未认证访问、路径穿越、符号链接和非普通ZIP文件，不浏览子目录；无schema、包格式或已有迁移流程变化。Go定向测试`internal/productserver`、`internal/productapi`、`internal/portablecatalog`通过；Web TypeScript检查、工作台3项测试及685模块正式构建通过；Compose配置检查通过。未提交、未部署，远端镜像未更新。
+
+## Docker首次设置、所有者密码恢复和挂载路径契约
+
+- 首次Setup不再由浏览器让用户猜测运行环境：服务端从启动配置声明`NATIVE`或`DOCKER`，页面只展示结果。Docker镜像声明`DOCKER`，但免门票模式默认关闭；仅提供的loopback端口Compose设置`CGM_LOCAL_DOCKER_SETUP=1`，在Host为loopback且产品尚未完成Setup时允许直接提交。Docker容器内的RemoteAddr不能证明宿主机loopback，故此模式是明确的部署方信任选择；远程/对外部署必须关闭并继续使用15分钟单次Ticket。Setup完成的数据库原有原子门禁不变。
+- Docker Setup将Coser元数据与备份固定为`/var/lib/cgm/cosers`、`/var/lib/cgm/backups`；提交前要求`/var/lib/cgm`、`/var/cache/cgm`、`/media`和`/transfer`为实际挂载点，检查存储目录可创建和可写，并拒绝符号链接目录。Dockerfile取消匿名`VOLUME`声明，防止漏挂持久卷时静默使用匿名卷。新建Docker媒体库验证容器路径位于已挂载`/media`内且目录存在可读；默认Compose媒体挂载改为`rw`使显式旁置Manifest Push可行，CGM仍不删除或重写原始媒体。
+- 新增所有者密码恢复闭环：本机CLI`-recovery-token`仅在完成Setup且已有密码时签发10分钟单次高熵令牌，新令牌替代旧令牌；schema v16仅保存SHA-256哈希和状态。登录页提供恢复入口，HTTP请求按原登录限速与同源检查；成功重置密码、撤销所有Session并关闭可信模式同处事务。v15→v16采用产品既有先快照再迁移机制；不改变可移植包格式或Manifest。内置全量备份的恢复仍按现有策略要求当前schema，旧v15全量备份须用v15程序恢复后再次升级。
+- 阶段测试：Go`internal/productauth`、`internal/productserver`、`internal/productapi`、`internal/persistence/productdb`、`cmd/cgm`和`internal/portablecatalog`非缓存定向测试及同范围Go Vet通过，含v15→v16升级、令牌过期/重放/撤销和Docker本机Setup安全边界；Web全量37文件136项测试、TypeScript检查及685模块正式构建通过；Compose配置检查与`git diff --check`通过。隔离容器内按正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签编译CGM成功；该隔离编译使用`-buildvcs=false`，不替代正式镜像的版本注入。未提交、未部署，也未迁移正式业务库。

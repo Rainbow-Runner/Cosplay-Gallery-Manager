@@ -32,7 +32,6 @@ COPY --from=backend --chmod=0555 /out/cgm /usr/local/bin/cgm
 COPY --chmod=0444 docker/cgm/cgm.json /etc/cgm/cgm.json
 USER 65532:65532
 EXPOSE 9999
-VOLUME ["/var/lib/cgm", "/var/cache/cgm"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD ["curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:9999/healthz"]
 ENTRYPOINT ["/usr/local/bin/cgm"]

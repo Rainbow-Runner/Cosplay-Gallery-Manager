@@ -8,6 +8,8 @@ import type { ManageLibrary, ManageMaintenanceState, ManagePortableMigrationSnap
 
 type PortableAction = "PREFLIGHT_EXPORT" | "EXPORT" | "IMPORT" | "PREPARE_MERGE" | "DECIDE_MERGE" | "APPLY_MERGE" | "ABORT_MERGE" | "RECOVER_IMPORT" | "RECOVER_MERGE" | "MAP_LIBRARIES" | "PREFLIGHT_REBUILD" | "REBUILD" | "APPLY_CONTINUITY";
 type ActionResult = { runPortableMigration: { code: string; importID?: string | null; mergeID?: string | null; exportID?: string | null; fileName: string; count: number; snapshot: ManagePortableMigrationSnapshot; preflight?: ManagePortablePreflight | null } };
+type TransferPackage = { name: string; path: string; size: number; createdAt: string; formatVersion: number; checkStatus: "UNCHECKED" | "UNRECOGNIZED" | "VALID" | "INVALID" };
+type TransferList = { root: string; packages: TransferPackage[] };
 
 const confirmations: Record<PortableAction, string> = {
   PREFLIGHT_EXPORT: "PREFLIGHT", EXPORT: "EXPORT", IMPORT: "IMPORT", PREPARE_MERGE: "PREPARE", DECIDE_MERGE: "DECIDE", APPLY_MERGE: "MERGE",
@@ -18,7 +20,12 @@ export function ManagePortableMigrationPanel() {
   const intl = useIntl();
   const zh = intl.locale.toLowerCase().startsWith("zh");
   const t = (cn: string, en: string) => zh ? cn : en;
-  const [path, setPath] = useState("");
+  const [exportPath, setExportPath] = useState("");
+  const [transfer, setTransfer] = useState<TransferList | null>(null);
+  const [transferError, setTransferError] = useState("");
+  const [selectedPackageName, setSelectedPackageName] = useState("");
+  const [checkedPackage, setCheckedPackage] = useState<TransferPackage | null>(null);
+  const [checkingPackage, setCheckingPackage] = useState(false);
   const [selectedImportID, setSelectedImportID] = useState("");
   const [selectedMergeID, setSelectedMergeID] = useState("");
   const [includeLifecycle, setIncludeLifecycle] = useState(false);
@@ -39,6 +46,33 @@ export function ManagePortableMigrationPanel() {
   const [runAction, actionState] = useMutation<ActionResult>(RUN_PORTABLE_MIGRATION);
   const snapshot = snapshotQuery.data?.managePortableMigration;
   const maintenance = snapshotQuery.data?.manageMaintenance;
+  const selectedPackage = transfer?.packages.find((item) => item.name === selectedPackageName) ?? null;
+
+  async function refreshPackages() {
+    setTransferError(""); setCheckedPackage(null);
+    try {
+      const response = await fetch("/manage/portable/packages", { credentials: "same-origin" });
+      if (!response.ok) throw new Error(t("无法读取 /transfer，请确认已挂载并可读。", "Cannot read /transfer; check its mount and permissions."));
+      const listing = await response.json() as TransferList;
+      setTransfer(listing);
+      setSelectedPackageName((current) => listing.packages.some((item) => item.name === current) ? current : "");
+    } catch (error) { setTransferError(error instanceof Error ? error.message : String(error)); }
+  }
+
+  useEffect(() => { void refreshPackages(); }, []);
+
+  async function checkPackage() {
+    if (!selectedPackage) return;
+    setCheckingPackage(true); setTransferError(""); setCheckedPackage(null);
+    try {
+      const response = await fetch("/manage/portable/packages", { method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: selectedPackage.name }) });
+      if (!response.ok) throw new Error(t("迁移包检查失败。", "Package check failed."));
+      const result = await response.json() as TransferPackage;
+      setCheckedPackage(result);
+    } catch (error) { setTransferError(error instanceof Error ? error.message : String(error)); }
+    finally { setCheckingPackage(false); }
+  }
 
   useEffect(() => {
     const next: Record<string, string> = {};
@@ -66,7 +100,7 @@ export function ManagePortableMigrationPanel() {
   async function executeAction() {
     if (!pendingAction || confirmation !== confirmations[pendingAction] || !password) return;
     const input = {
-      action: pendingAction, path: path.trim(), importID: selectedImportID,
+      action: pendingAction, path: pendingAction === "EXPORT" ? exportPath.trim() : pendingAction === "IMPORT" || pendingAction === "PREPARE_MERGE" ? checkedPackage?.path ?? "" : "", importID: selectedImportID,
       mergeID: pendingAction === "RECOVER_MERGE" ? maintenance?.restoreBackupID ?? selectedMergeID : selectedMergeID,
       password, confirmation, allowIncompleteGallery: allowIncomplete,
       includeGalleryLifecycle: includeLifecycle, includePersonalFlags: includeFlags,
@@ -95,14 +129,15 @@ export function ManagePortableMigrationPanel() {
   const decisionsReady = reviewConflicts.length > 0 && reviewConflicts.every((item) => Boolean(mergeDecisions[item.issueKey]));
   const mappingsReady = Boolean(snapshot) && (snapshot?.mappings ?? []).every((item) => Boolean(libraryDecisions[item.libraryKey]));
   const needsPath = pendingAction === "EXPORT" || pendingAction === "IMPORT" || pendingAction === "PREPARE_MERGE";
+  const actionPath = pendingAction === "EXPORT" ? exportPath.trim() : checkedPackage?.path ?? "";
 
   return <section className="operation-panel portable-workbench">
-    <header><div><h3>{t("可移植迁移工作台", "Portable migration workbench")}</h3><p>{t("在新机器路径不同的情况下迁移核心实体并从 Manifest 重建 Gallery。所有路径都是服务器本机绝对路径，操作不会复制原始媒体。", "Move core entities between installations and rebuild Galleries from Manifests when media roots differ. Paths are absolute paths on this server; original media is never copied.")}</p></div></header>
+    <header><div><h3>{t("可移植迁移工作台", "Portable migration workbench")}</h3><p>{t("在新机器路径不同的情况下迁移核心实体并从 Manifest 重建 Gallery。导入包从容器内 /transfer 选择；不会复制原始媒体。", "Move core entities and rebuild Galleries from Manifests. Select import packages from /transfer inside the container; original media is never copied.")}</p></div></header>
     {message ? <p className="manage-message" role="status">{message}</p> : null}
     {snapshotQuery.error ? <p className="manage-message" role="alert">{t("无法载入迁移会话。", "Unable to load migration sessions.")}</p> : null}
 
     <div className="portable-workbench__source">
-      <label>{t("服务器绝对路径", "Absolute server path")}<input value={path} onChange={(event) => setPath(event.target.value)} placeholder="/srv/cgm-transfer/catalog.cgm-portable.zip" /></label>
+      <label>{t("导出目标路径（服务器/容器内）", "Export destination (server/container path)")}<input value={exportPath} onChange={(event) => setExportPath(event.target.value)} placeholder="/var/lib/cgm/backups/catalog.cgm-portable.zip" /></label>
       <div className="portable-workbench__options">
         <label><input type="checkbox" checked={allowIncomplete} onChange={(event) => setAllowIncomplete(event.target.checked)} />{t("允许不完整 Gallery 声明", "Allow incomplete Gallery claims")}</label>
         <label><input type="checkbox" checked={includeLifecycle} onChange={(event) => setIncludeLifecycle(event.target.checked)} />{t("导出生命周期状态与首次收录时间", "Export lifecycle state and added-at time")}</label>
@@ -111,10 +146,16 @@ export function ManagePortableMigrationPanel() {
       <p className="portable-workbench__boundary">{t("不会迁移：Gallery 地址、评分、最后浏览时间、最后浏览项目及其他浏览历史。评分继续由 .cosplay.json Manifest 负责。", "Never migrated: Gallery addresses, ratings, last-viewed time/item, or other browsing history. Ratings remain owned by the .cosplay.json Manifest.")}</p>
       <div className="portable-workbench__actions">
         <button type="button" onClick={() => openAction("PREFLIGHT_EXPORT")}>{t("导出就绪检查…", "Check export readiness…")}</button>
-        <button type="button" disabled={!path.trim()} onClick={() => openAction("EXPORT")}>{t("导出包…", "Export package…")}</button>
-        <button type="button" disabled={!path.trim()} onClick={() => openAction("IMPORT")}>{t("导入空业务库…", "Import into empty catalog…")}</button>
-        <button type="button" disabled={!path.trim()} onClick={() => openAction("PREPARE_MERGE")}>{t("准备合并…", "Prepare merge…")}</button>
+        <button type="button" disabled={!exportPath.trim()} onClick={() => openAction("EXPORT")}>{t("导出包…", "Export package…")}</button>
       </div>
+    </div>
+
+    <div className="portable-workbench__source">
+      <label>{t("导入迁移包（/transfer）", "Import package (/transfer)")}<select value={selectedPackageName} onChange={(event) => { setSelectedPackageName(event.target.value); setCheckedPackage(null); }}><option value="">{t("选择迁移包", "Select a package")}</option>{(transfer?.packages ?? []).map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}</select></label>
+      <div className="portable-workbench__actions"><button type="button" onClick={() => void refreshPackages()}>{t("刷新目录", "Refresh directory")}</button><button type="button" disabled={!selectedPackage || checkingPackage} onClick={() => void checkPackage()}>{checkingPackage ? t("正在检查…", "Checking…") : t("导入前检查", "Check before import")}</button></div>
+      {selectedPackage ? <dl className="setup-review"><dt>{t("文件名", "File name")}</dt><dd>{selectedPackage.name}</dd><dt>{t("大小", "Size")}</dt><dd>{formatPackageSize(selectedPackage.size)}</dd><dt>{t("创建时间（包内）", "Created (package)")}</dt><dd>{selectedPackage.createdAt || "—"}</dd><dt>{t("格式版本", "Format version")}</dt><dd>{selectedPackage.formatVersion || "—"}</dd><dt>{t("校验状态", "Check status")}</dt><dd>{packageStatusLabel(checkedPackage?.name === selectedPackage.name ? checkedPackage.checkStatus : selectedPackage.checkStatus, zh)}</dd></dl> : null}
+      {transferError ? <p className="manage-message" role="alert">{transferError}</p> : null}
+      <div className="portable-workbench__actions"><button type="button" disabled={checkedPackage?.checkStatus !== "VALID" || checkedPackage.name !== selectedPackageName} onClick={() => openAction("IMPORT")}>{t("导入空业务库…", "Import into empty catalog…")}</button><button type="button" disabled={checkedPackage?.checkStatus !== "VALID" || checkedPackage.name !== selectedPackageName} onClick={() => openAction("PREPARE_MERGE")}>{t("准备合并…", "Prepare merge…")}</button></div>
     </div>
 
     {preflight ? <div className="portable-workbench__preflight" role="status"><strong>{t("最近一次导出检查", "Latest export readiness check")}</strong><span>{preflight.identityCount} IDs · {preflight.coreEntityCount} Core · {preflight.galleryCount} Gallery · {preflight.assetCount} Assets</span><span>{t("阻断", "Blocking")} {preflight.blockingCount} · {t("警告", "Warnings")} {preflight.warningCount} · {t("Manifest不完整", "Incomplete Manifests")} {preflight.incompleteGalleryCount}</span>{preflight.issues.map((issue) => <small key={`${issue.severity}-${issue.code}`}>{issue.severity} · {issue.code} × {issue.count}</small>)}</div> : null}
@@ -138,13 +179,19 @@ export function ManagePortableMigrationPanel() {
       {snapshot?.rebuilds.length ? <div className="manage-table-wrap"><table className="manage-table"><thead><tr><th>Gallery</th><th>{t("来源", "Source")}</th><th>{t("定位 / Manifest", "Locator / Manifest")}</th><th>{t("状态", "State")}</th></tr></thead><tbody>{snapshot.rebuilds.map((item) => <tr key={item.setID}><td><small>{item.setID}</small></td><td>{item.sourceType}<small>{item.relativeSource}</small></td><td>{item.locatorStatus} · {item.manifestStatus}</td><td>{item.state}<small>{item.issueCode || "—"}</small></td></tr>)}</tbody></table></div> : null}
     </div> : null}
 
-    {pendingAction ? <Dialog titleID="portable-action-title" dismissible={!actionState.loading} onClose={() => setPendingAction(null)}><p>{t("高影响迁移操作", "HIGH-IMPACT MIGRATION OPERATION")}</p><h3 id="portable-action-title">{pendingAction}</h3><ul><li>{t("将重新校验保留包、当前目标状态和阶段前置条件。", "The retained package, current target state, and phase prerequisites will be revalidated.")}</li><li>{t("导入和合并会在变更前创建安全备份。", "Import and merge create a safety backup before business data changes.")}</li><li>{t("原始媒体文件不会被复制或删除。", "Original media files are never copied or deleted.")}</li></ul>{needsPath ? <p><strong>{path}</strong></p> : null}<label>{t("所有者密码", "Owner password")}<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /></label><label>{t(`输入 ${confirmations[pendingAction]} 继续`, `Type ${confirmations[pendingAction]} to continue`)}<input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><footer><button type="button" onClick={() => setPendingAction(null)}>{t("取消", "Cancel")}</button><button type="button" disabled={!password || confirmation !== confirmations[pendingAction] || actionState.loading} onClick={executeAction}>{actionState.loading ? t("正在执行…", "Running…") : t("确认执行", "Confirm")}</button></footer></Dialog> : null}
+    {pendingAction ? <Dialog titleID="portable-action-title" dismissible={!actionState.loading} onClose={() => setPendingAction(null)}><p>{t("高影响迁移操作", "HIGH-IMPACT MIGRATION OPERATION")}</p><h3 id="portable-action-title">{pendingAction}</h3><ul><li>{t("将重新校验保留包、当前目标状态和阶段前置条件。", "The retained package, current target state, and phase prerequisites will be revalidated.")}</li><li>{t("导入和合并会在变更前创建安全备份。", "Import and merge create a safety backup before business data changes.")}</li><li>{t("原始媒体文件不会被复制或删除。", "Original media files are never copied or deleted.")}</li></ul>{needsPath ? <p><strong>{actionPath}</strong></p> : null}<label>{t("所有者密码", "Owner password")}<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /></label><label>{t(`输入 ${confirmations[pendingAction]} 继续`, `Type ${confirmations[pendingAction]} to continue`)}<input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><footer><button type="button" onClick={() => setPendingAction(null)}>{t("取消", "Cancel")}</button><button type="button" disabled={!password || confirmation !== confirmations[pendingAction] || actionState.loading} onClick={executeAction}>{actionState.loading ? t("正在执行…", "Running…") : t("确认执行", "Confirm")}</button></footer></Dialog> : null}
   </section>;
 }
 
 function decisionOptions(issueCode: string) {
   return issueCode === "PORTABLE_CORE_NAME_MATCH_REVIEW" || issueCode === "PORTABLE_SOCIAL_ACCOUNT_URL_REVIEW"
     ? ["KEEP_SEPARATE", "MAP_TO_LOCAL"] : ["KEEP_LOCAL", "USE_INCOMING"];
+}
+
+function formatPackageSize(bytes: number) { return bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KiB` : `${(bytes / (1024 * 1024)).toFixed(1)} MiB`; }
+function packageStatusLabel(status: TransferPackage["checkStatus"], zh: boolean) {
+  const labels = { UNCHECKED: ["未完整校验", "Not fully checked"], UNRECOGNIZED: ["格式未识别", "Unrecognized format"], VALID: ["校验通过", "Valid"], INVALID: ["校验失败", "Invalid"] };
+  return labels[status][zh ? 0 : 1];
 }
 
 function SessionList({ title, empty, items, selected, onSelect }: { title: string; empty: string; items: { id: string; state: string; detail: string; error: string }[]; selected: string; onSelect: (id: string) => void }) {

@@ -947,7 +947,7 @@ SocialAccount：
 
 ## 35. 当前结论
 
-- 2026-09-26：迁移实测MT-00～MT-03已按依赖顺序完成源码闭环：format v3双档位、schema v17证据字段、共享Manifest身份检查、目标来源重新定位、显式／自动接管、READY部分重建、可信目录Manifest自动化和独立副本局部身份分叉均已实现；旧format v1/v2保持可读。自动激活只通过目标媒体库既有`TRUSTED + autoActivate`持久化队列继续，所有门禁保持不变。源码尚未提交、迁移正式业务库或部署，真实跨机迁移模拟仍由所有者在部署后执行。详细实现与限制见[迁移测试问题与改进备忘录](development/MIGRATION_TEST_ISSUES_AND_IMPROVEMENTS_2026-09-23.md)。
+- 2026-09-26：迁移实测MT-00～MT-03已按依赖顺序完成源码闭环：format v3双档位、schema v17证据字段、共享Manifest身份检查、目标来源重新定位、显式／自动接管、READY部分重建、可信目录Manifest自动化和独立副本局部身份分叉均已实现；旧format v1/v2保持可读。自动激活只通过目标媒体库既有`TRUSTED + autoActivate`持久化队列继续，所有门禁保持不变。2026-09-27随提交`c07fc8f`完成正式v16→v18迁移部署；真实跨机迁移模拟仍由所有者执行。详细实现与限制见[迁移测试问题与改进备忘录](development/MIGRATION_TEST_ISSUES_AND_IMPROVEMENTS_2026-09-23.md)。
 
 - 2026-09-10：异机可移植迁移的CLI/Web业务闭环已完成源码收口；Web包含导出预检、owner-continuity范围摘要、最近200条会话窗口和中断恢复入口。Gallery地址、评分重复副本及浏览历史仍按已确认边界排除；真实迁移模拟由所有者在本轮提交部署后执行。
 

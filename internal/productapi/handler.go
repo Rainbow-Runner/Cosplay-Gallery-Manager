@@ -57,11 +57,15 @@ type PortableMigrationRequest struct {
 	ImportID                string
 	MergeID                 string
 	Confirmation            string
+	Profile                 string
 	AllowIncompleteGallery  bool
 	IncludeGalleryLifecycle bool
 	IncludePersonalFlags    bool
 	MergeDecisions          []productdb.PortableMergeDecision
 	LibraryDecisions        []productdb.PortableLibraryDecision
+	GallerySetIDs           []string
+	AutoAdopt               bool
+	AutoActivate            bool
 }
 
 type PortableMigrationRunResult struct {

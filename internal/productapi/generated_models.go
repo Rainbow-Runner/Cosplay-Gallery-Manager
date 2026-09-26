@@ -10,26 +10,31 @@ import (
 )
 
 type BrowseGalleryCard struct {
-	SetID              string             `json:"setID"`
-	Slug               string             `json:"slug"`
-	Title              string             `json:"title"`
-	CollectionType     CollectionType     `json:"collectionType"`
-	ContentRating      ContentRating      `json:"contentRating"`
-	Cover              *GalleryCover      `json:"cover"`
-	Credits            []*PersonSummary   `json:"credits"`
-	CreditCount        int                `json:"creditCount"`
-	Characters         []*EntitySummary   `json:"characters"`
-	CharacterCount     int                `json:"characterCount"`
-	Works              []*EntitySummary   `json:"works"`
-	WorkCount          int                `json:"workCount"`
-	ShootDate          string             `json:"shootDate"`
-	ShootDatePrecision ShootDatePrecision `json:"shootDatePrecision"`
-	AddedAtUtc         string             `json:"addedAtUTC"`
-	Media              *MediaCounts       `json:"media"`
-	Favorite           bool               `json:"favorite"`
-	RatingHalfSteps    *int               `json:"ratingHalfSteps,omitempty"`
-	ScrubberCount      int                `json:"scrubberCount"`
-	ScrubberRevision   int64              `json:"scrubberRevision"`
+	SetID                string             `json:"setID"`
+	Slug                 string             `json:"slug"`
+	Title                string             `json:"title"`
+	CollectionType       CollectionType     `json:"collectionType"`
+	ContentRating        ContentRating      `json:"contentRating"`
+	Cover                *GalleryCover      `json:"cover"`
+	Credits              []*PersonSummary   `json:"credits"`
+	CreditCount          int                `json:"creditCount"`
+	Characters           []*EntitySummary   `json:"characters"`
+	CharacterCount       int                `json:"characterCount"`
+	Works                []*EntitySummary   `json:"works"`
+	WorkCount            int                `json:"workCount"`
+	ShootDate            string             `json:"shootDate"`
+	ShootDatePrecision   ShootDatePrecision `json:"shootDatePrecision"`
+	PublishDate          string             `json:"publishDate"`
+	PublishDatePrecision ShootDatePrecision `json:"publishDatePrecision"`
+	AddedAtUtc           string             `json:"addedAtUTC"`
+	MediaAddedStartUtc   string             `json:"mediaAddedStartUTC"`
+	MediaAddedEndUtc     string             `json:"mediaAddedEndUTC"`
+	MediaAddedStatus     string             `json:"mediaAddedStatus"`
+	Media                *MediaCounts       `json:"media"`
+	Favorite             bool               `json:"favorite"`
+	RatingHalfSteps      *int               `json:"ratingHalfSteps,omitempty"`
+	ScrubberCount        int                `json:"scrubberCount"`
+	ScrubberRevision     int64              `json:"scrubberRevision"`
 }
 
 type BrowseUISettings struct {
@@ -280,17 +285,23 @@ type ManageCacheStorage struct {
 }
 
 type ManageCandidate struct {
-	ID              int64               `json:"id"`
-	RootPath        string              `json:"rootPath"`
-	SourceType      string              `json:"sourceType"`
-	Method          string              `json:"method"`
-	ManifestSetID   *string             `json:"manifestSetID,omitempty"`
-	Status          string              `json:"status"`
-	AutoCreateDraft bool                `json:"autoCreateDraft"`
-	HasConflict     bool                `json:"hasConflict"`
-	OverLimit       bool                `json:"overLimit"`
-	MediaCount      int                 `json:"mediaCount"`
-	Suggestions     []*ManageSuggestion `json:"suggestions"`
+	ID                     int64               `json:"id"`
+	RootPath               string              `json:"rootPath"`
+	SourceType             string              `json:"sourceType"`
+	Method                 string              `json:"method"`
+	ManifestSetID          *string             `json:"manifestSetID,omitempty"`
+	ManifestSchema         int                 `json:"manifestSchema"`
+	ManifestRevision       int64               `json:"manifestRevision"`
+	ManifestHash           string              `json:"manifestHash"`
+	IdentityClassification string              `json:"identityClassification"`
+	IdentityIssueCode      string              `json:"identityIssueCode"`
+	InspectionToken        string              `json:"inspectionToken"`
+	Status                 string              `json:"status"`
+	AutoCreateDraft        bool                `json:"autoCreateDraft"`
+	HasConflict            bool                `json:"hasConflict"`
+	OverLimit              bool                `json:"overLimit"`
+	MediaCount             int                 `json:"mediaCount"`
+	Suggestions            []*ManageSuggestion `json:"suggestions"`
 }
 
 type ManageCoreEntity struct {
@@ -435,12 +446,17 @@ type ManageGalleryDetail struct {
 	Description             string                       `json:"description"`
 	ShootDate               string                       `json:"shootDate"`
 	ShootDatePrecision      ShootDatePrecision           `json:"shootDatePrecision"`
+	PublishDate             string                       `json:"publishDate"`
+	PublishDatePrecision    ShootDatePrecision           `json:"publishDatePrecision"`
 	ImageCaptureStart       string                       `json:"imageCaptureStart"`
 	ImageCaptureEnd         string                       `json:"imageCaptureEnd"`
 	VideoCaptureStart       string                       `json:"videoCaptureStart"`
 	VideoCaptureEnd         string                       `json:"videoCaptureEnd"`
 	CaptureDateCandidate    string                       `json:"captureDateCandidate"`
 	CaptureDateReviewStatus string                       `json:"captureDateReviewStatus"`
+	MediaAddedStartUtc      string                       `json:"mediaAddedStartUTC"`
+	MediaAddedEndUtc        string                       `json:"mediaAddedEndUTC"`
+	MediaAddedStatus        string                       `json:"mediaAddedStatus"`
 	PhotographerName        string                       `json:"photographerName"`
 	StudioName              string                       `json:"studioName"`
 	Items                   []*ManageGalleryItem         `json:"items"`
@@ -873,30 +889,38 @@ type ManageMediaExclusionRule struct {
 }
 
 type ManagePortableGalleryRebuild struct {
-	SetID          string `json:"setID"`
-	LibraryKey     string `json:"libraryKey"`
-	SourceType     string `json:"sourceType"`
-	RelativeSource string `json:"relativeSource"`
-	LocatorStatus  string `json:"locatorStatus"`
-	ManifestStatus string `json:"manifestStatus"`
-	State          string `json:"state"`
-	IssueCode      string `json:"issueCode"`
+	SetID                  string `json:"setID"`
+	LibraryKey             string `json:"libraryKey"`
+	SourceType             string `json:"sourceType"`
+	RelativeSource         string `json:"relativeSource"`
+	ExportedRelativeSource string `json:"exportedRelativeSource"`
+	ResolvedRelativeSource string `json:"resolvedRelativeSource"`
+	SourceResolution       string `json:"sourceResolution"`
+	ResolutionToken        string `json:"resolutionToken"`
+	LocatorStatus          string `json:"locatorStatus"`
+	ManifestStatus         string `json:"manifestStatus"`
+	State                  string `json:"state"`
+	IssueCode              string `json:"issueCode"`
+	AdoptedManifestHash    string `json:"adoptedManifestHash"`
 }
 
 type ManagePortableImportSession struct {
-	ImportID          string `json:"importID"`
-	ExportID          string `json:"exportID"`
-	State             string `json:"state"`
-	FormatVersion     int    `json:"formatVersion"`
-	IdentityCount     int    `json:"identityCount"`
-	CoreEntityCount   int    `json:"coreEntityCount"`
-	GalleryClaimCount int    `json:"galleryClaimCount"`
-	ItemClaimCount    int    `json:"itemClaimCount"`
-	LinkClaimCount    int    `json:"linkClaimCount"`
-	AssetCount        int    `json:"assetCount"`
-	ErrorCode         string `json:"errorCode"`
-	CreatedAt         string `json:"createdAt"`
-	UpdatedAt         string `json:"updatedAt"`
+	ImportID            string `json:"importID"`
+	ExportID            string `json:"exportID"`
+	State               string `json:"state"`
+	FormatVersion       int    `json:"formatVersion"`
+	Profile             string `json:"profile"`
+	IdentityCount       int    `json:"identityCount"`
+	CoreEntityCount     int    `json:"coreEntityCount"`
+	GalleryClaimCount   int    `json:"galleryClaimCount"`
+	ItemClaimCount      int    `json:"itemClaimCount"`
+	LinkClaimCount      int    `json:"linkClaimCount"`
+	AssetCount          int    `json:"assetCount"`
+	ErrorCode           string `json:"errorCode"`
+	CreatedAt           string `json:"createdAt"`
+	UpdatedAt           string `json:"updatedAt"`
+	AutoAdoptEnabled    bool   `json:"autoAdoptEnabled"`
+	AutoActivateEnabled bool   `json:"autoActivateEnabled"`
 }
 
 type ManagePortableLibraryMapping struct {
@@ -1192,11 +1216,15 @@ type PortableMigrationActionInput struct {
 	MergeID                 string                          `json:"mergeID"`
 	Password                string                          `json:"password"`
 	Confirmation            string                          `json:"confirmation"`
+	Profile                 PortablePackageProfile          `json:"profile"`
 	AllowIncompleteGallery  bool                            `json:"allowIncompleteGallery"`
 	IncludeGalleryLifecycle bool                            `json:"includeGalleryLifecycle"`
 	IncludePersonalFlags    bool                            `json:"includePersonalFlags"`
+	AutoAdopt               bool                            `json:"autoAdopt"`
+	AutoActivate            bool                            `json:"autoActivate"`
 	MergeDecisions          []*PortableMergeDecisionInput   `json:"mergeDecisions"`
 	LibraryDecisions        []*PortableLibraryDecisionInput `json:"libraryDecisions"`
+	GallerySetIDs           []string                        `json:"gallerySetIDs"`
 }
 
 type PortableMigrationActionResult struct {
@@ -1295,12 +1323,18 @@ type RuntimeSettingsInput struct {
 }
 
 type SearchHit struct {
-	Kind          SearchEntityKind  `json:"kind"`
-	UUID          string            `json:"uuid"`
-	Slug          string            `json:"slug"`
-	Name          string            `json:"name"`
-	MatchLevel    int               `json:"matchLevel"`
-	CoverResource *ResourceIdentity `json:"coverResource,omitempty"`
+	Kind                 SearchEntityKind   `json:"kind"`
+	UUID                 string             `json:"uuid"`
+	Slug                 string             `json:"slug"`
+	Name                 string             `json:"name"`
+	MatchLevel           int                `json:"matchLevel"`
+	CoverResource        *ResourceIdentity  `json:"coverResource,omitempty"`
+	MediaAddedStartUtc   string             `json:"mediaAddedStartUTC"`
+	MediaAddedEndUtc     string             `json:"mediaAddedEndUTC"`
+	ShootDate            string             `json:"shootDate"`
+	ShootDatePrecision   ShootDatePrecision `json:"shootDatePrecision"`
+	PublishDate          string             `json:"publishDate"`
+	PublishDatePrecision ShootDatePrecision `json:"publishDatePrecision"`
 }
 
 type SearchPreview struct {
@@ -1345,14 +1379,16 @@ type UpdateGalleryItemInput struct {
 }
 
 type UpdateGalleryMetadataInput struct {
-	Title              string             `json:"title"`
-	Aliases            []string           `json:"aliases"`
-	Description        string             `json:"description"`
-	ShootDate          string             `json:"shootDate"`
-	ShootDatePrecision ShootDatePrecision `json:"shootDatePrecision"`
-	ContentRating      ContentRating      `json:"contentRating"`
-	PhotographerName   string             `json:"photographerName"`
-	StudioName         string             `json:"studioName"`
+	Title                string             `json:"title"`
+	Aliases              []string           `json:"aliases"`
+	Description          string             `json:"description"`
+	ShootDate            string             `json:"shootDate"`
+	ShootDatePrecision   ShootDatePrecision `json:"shootDatePrecision"`
+	PublishDate          string             `json:"publishDate"`
+	PublishDatePrecision ShootDatePrecision `json:"publishDatePrecision"`
+	ContentRating        ContentRating      `json:"contentRating"`
+	PhotographerName     string             `json:"photographerName"`
+	StudioName           string             `json:"studioName"`
 }
 
 type UpdateMediaClassificationRuleInput struct {
@@ -1991,19 +2027,21 @@ func (e MediaKind) MarshalJSON() ([]byte, error) {
 type PortableMigrationAction string
 
 const (
-	PortableMigrationActionPreflightExport  PortableMigrationAction = "PREFLIGHT_EXPORT"
-	PortableMigrationActionExport           PortableMigrationAction = "EXPORT"
-	PortableMigrationActionImport           PortableMigrationAction = "IMPORT"
-	PortableMigrationActionPrepareMerge     PortableMigrationAction = "PREPARE_MERGE"
-	PortableMigrationActionDecideMerge      PortableMigrationAction = "DECIDE_MERGE"
-	PortableMigrationActionApplyMerge       PortableMigrationAction = "APPLY_MERGE"
-	PortableMigrationActionAbortMerge       PortableMigrationAction = "ABORT_MERGE"
-	PortableMigrationActionRecoverImport    PortableMigrationAction = "RECOVER_IMPORT"
-	PortableMigrationActionRecoverMerge     PortableMigrationAction = "RECOVER_MERGE"
-	PortableMigrationActionMapLibraries     PortableMigrationAction = "MAP_LIBRARIES"
-	PortableMigrationActionPreflightRebuild PortableMigrationAction = "PREFLIGHT_REBUILD"
-	PortableMigrationActionRebuild          PortableMigrationAction = "REBUILD"
-	PortableMigrationActionApplyContinuity  PortableMigrationAction = "APPLY_CONTINUITY"
+	PortableMigrationActionPreflightExport            PortableMigrationAction = "PREFLIGHT_EXPORT"
+	PortableMigrationActionExport                     PortableMigrationAction = "EXPORT"
+	PortableMigrationActionImport                     PortableMigrationAction = "IMPORT"
+	PortableMigrationActionPrepareMerge               PortableMigrationAction = "PREPARE_MERGE"
+	PortableMigrationActionDecideMerge                PortableMigrationAction = "DECIDE_MERGE"
+	PortableMigrationActionApplyMerge                 PortableMigrationAction = "APPLY_MERGE"
+	PortableMigrationActionAbortMerge                 PortableMigrationAction = "ABORT_MERGE"
+	PortableMigrationActionRecoverImport              PortableMigrationAction = "RECOVER_IMPORT"
+	PortableMigrationActionRecoverMerge               PortableMigrationAction = "RECOVER_MERGE"
+	PortableMigrationActionMapLibraries               PortableMigrationAction = "MAP_LIBRARIES"
+	PortableMigrationActionPreflightRebuild           PortableMigrationAction = "PREFLIGHT_REBUILD"
+	PortableMigrationActionConfigureRebuildAutomation PortableMigrationAction = "CONFIGURE_REBUILD_AUTOMATION"
+	PortableMigrationActionAdoptRebuildSources        PortableMigrationAction = "ADOPT_REBUILD_SOURCES"
+	PortableMigrationActionRebuild                    PortableMigrationAction = "REBUILD"
+	PortableMigrationActionApplyContinuity            PortableMigrationAction = "APPLY_CONTINUITY"
 )
 
 var AllPortableMigrationAction = []PortableMigrationAction{
@@ -2018,13 +2056,15 @@ var AllPortableMigrationAction = []PortableMigrationAction{
 	PortableMigrationActionRecoverMerge,
 	PortableMigrationActionMapLibraries,
 	PortableMigrationActionPreflightRebuild,
+	PortableMigrationActionConfigureRebuildAutomation,
+	PortableMigrationActionAdoptRebuildSources,
 	PortableMigrationActionRebuild,
 	PortableMigrationActionApplyContinuity,
 }
 
 func (e PortableMigrationAction) IsValid() bool {
 	switch e {
-	case PortableMigrationActionPreflightExport, PortableMigrationActionExport, PortableMigrationActionImport, PortableMigrationActionPrepareMerge, PortableMigrationActionDecideMerge, PortableMigrationActionApplyMerge, PortableMigrationActionAbortMerge, PortableMigrationActionRecoverImport, PortableMigrationActionRecoverMerge, PortableMigrationActionMapLibraries, PortableMigrationActionPreflightRebuild, PortableMigrationActionRebuild, PortableMigrationActionApplyContinuity:
+	case PortableMigrationActionPreflightExport, PortableMigrationActionExport, PortableMigrationActionImport, PortableMigrationActionPrepareMerge, PortableMigrationActionDecideMerge, PortableMigrationActionApplyMerge, PortableMigrationActionAbortMerge, PortableMigrationActionRecoverImport, PortableMigrationActionRecoverMerge, PortableMigrationActionMapLibraries, PortableMigrationActionPreflightRebuild, PortableMigrationActionConfigureRebuildAutomation, PortableMigrationActionAdoptRebuildSources, PortableMigrationActionRebuild, PortableMigrationActionApplyContinuity:
 		return true
 	}
 	return false
@@ -2060,6 +2100,61 @@ func (e *PortableMigrationAction) UnmarshalJSON(b []byte) error {
 }
 
 func (e PortableMigrationAction) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type PortablePackageProfile string
+
+const (
+	PortablePackageProfileCoreCatalog             PortablePackageProfile = "CORE_CATALOG"
+	PortablePackageProfileGalleryIdentityAssisted PortablePackageProfile = "GALLERY_IDENTITY_ASSISTED"
+)
+
+var AllPortablePackageProfile = []PortablePackageProfile{
+	PortablePackageProfileCoreCatalog,
+	PortablePackageProfileGalleryIdentityAssisted,
+}
+
+func (e PortablePackageProfile) IsValid() bool {
+	switch e {
+	case PortablePackageProfileCoreCatalog, PortablePackageProfileGalleryIdentityAssisted:
+		return true
+	}
+	return false
+}
+
+func (e PortablePackageProfile) String() string {
+	return string(e)
+}
+
+func (e *PortablePackageProfile) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = PortablePackageProfile(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid PortablePackageProfile", str)
+	}
+	return nil
+}
+
+func (e PortablePackageProfile) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *PortablePackageProfile) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e PortablePackageProfile) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
@@ -2298,6 +2393,63 @@ func (e *ShootDatePrecision) UnmarshalJSON(b []byte) error {
 }
 
 func (e ShootDatePrecision) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type TimelineDate string
+
+const (
+	TimelineDateShoot      TimelineDate = "SHOOT"
+	TimelineDateMediaAdded TimelineDate = "MEDIA_ADDED"
+	TimelineDatePublish    TimelineDate = "PUBLISH"
+)
+
+var AllTimelineDate = []TimelineDate{
+	TimelineDateShoot,
+	TimelineDateMediaAdded,
+	TimelineDatePublish,
+}
+
+func (e TimelineDate) IsValid() bool {
+	switch e {
+	case TimelineDateShoot, TimelineDateMediaAdded, TimelineDatePublish:
+		return true
+	}
+	return false
+}
+
+func (e TimelineDate) String() string {
+	return string(e)
+}
+
+func (e *TimelineDate) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = TimelineDate(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid TimelineDate", str)
+	}
+	return nil
+}
+
+func (e TimelineDate) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *TimelineDate) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e TimelineDate) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

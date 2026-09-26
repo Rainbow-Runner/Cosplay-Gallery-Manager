@@ -3,6 +3,7 @@ package manifest
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,6 +33,26 @@ func TestGalleryManifestStrictPartialAndExplicitNull(t *testing.T) {
 	unknown := strings.Replace(raw, `"title":null,`, `"unknown":true,`, 1)
 	if _, err := ParseGallery(strings.NewReader(unknown)); err == nil {
 		t.Fatal("ordinary unknown Gallery Manifest field was accepted")
+	}
+}
+
+func TestGalleryPublicationExtensionValidatesPrecisionAndCalendar(t *testing.T) {
+	base := `{"schema_version":1,"revision":0,"set_id":"` + manifestSetID + `","updated_at":"2026-09-27T00:00:00Z","extensions":{"cgm.publish_date":%s}}`
+	for _, value := range []struct {
+		raw   string
+		valid bool
+	}{
+		{`{"value":"2025-06","precision":"MONTH"}`, true},
+		{`{"value":"2025-06-17","precision":"DAY"}`, true},
+		{`null`, true},
+		{`{"value":"2025-02-30","precision":"DAY"}`, false},
+		{`{"value":"2025-06","precision":"YEAR"}`, false},
+		{`{"value":"2025-06","precision":"MONTH","unknown":true}`, false},
+	} {
+		_, err := ParseGallery(strings.NewReader(fmt.Sprintf(base, value.raw)))
+		if (err == nil) != value.valid {
+			t.Fatalf("publication extension %s: %v", value.raw, err)
+		}
 	}
 }
 

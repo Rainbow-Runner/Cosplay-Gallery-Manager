@@ -80,10 +80,15 @@ type GalleryDetail struct {
 	VideoCaptureEnd         string
 	CaptureDateCandidate    string
 	CaptureDateReviewStatus string
+	MediaAddedStartUTC      string
+	MediaAddedEndUTC        string
+	MediaAddedStatus        string
 	Aliases                 []string
 	Description             string
 	ShootDate               string
 	ShootDatePrecision      gallery.ShootDatePrecision
+	PublishDate             string
+	PublishDatePrecision    gallery.ShootDatePrecision
 	PhotographerName        string
 	StudioName              string
 	Items                   []GalleryItem

@@ -93,6 +93,9 @@ func (s *GalleryStore) SetItemExcluded(
 	if err := reconcileGalleryCaptureDate(ctx, tx, item.GalleryID, now); err != nil {
 		return gallery.Item{}, err
 	}
+	if err := reconcileGalleryMediaAdded(ctx, tx, item.GalleryID); err != nil {
+		return gallery.Item{}, err
+	}
 	if err := demoteInvalidActiveGallery(ctx, tx, item.GalleryID); err != nil {
 		return gallery.Item{}, err
 	}
@@ -262,6 +265,9 @@ func (s *GalleryStore) ForgetItem(
 	if err := reconcileGalleryCaptureDate(ctx, tx, item.GalleryID, now); err != nil {
 		return err
 	}
+	if err := reconcileGalleryMediaAdded(ctx, tx, item.GalleryID); err != nil {
+		return err
+	}
 	if err := demoteInvalidActiveGallery(ctx, tx, item.GalleryID); err != nil {
 		return err
 	}
@@ -334,6 +340,9 @@ func (s *GalleryStore) ForgetMissingItems(ctx context.Context, galleryID int64, 
 		return 0, err
 	}
 	if err := reconcileGalleryCaptureDate(ctx, tx, galleryID, now); err != nil {
+		return 0, err
+	}
+	if err := reconcileGalleryMediaAdded(ctx, tx, galleryID); err != nil {
 		return 0, err
 	}
 	if err := demoteInvalidActiveGallery(ctx, tx, galleryID); err != nil {
@@ -465,6 +474,9 @@ func (s *GalleryStore) ReplaceMissingItem(
 		return err
 	}
 	if err := reconcileGalleryCaptureDate(ctx, tx, missing.GalleryID, now); err != nil {
+		return err
+	}
+	if err := reconcileGalleryMediaAdded(ctx, tx, missing.GalleryID); err != nil {
 		return err
 	}
 	if err := demoteInvalidActiveGallery(ctx, tx, missing.GalleryID); err != nil {

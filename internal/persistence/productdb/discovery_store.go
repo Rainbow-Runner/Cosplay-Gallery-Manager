@@ -1,8 +1,12 @@
 package productdb
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -193,6 +197,10 @@ type ObservedDirectory struct {
 	SourceType       gallery.SourceType
 	HasValidManifest bool
 	ManifestSetID    string
+	ManifestSchema   int
+	ManifestRevision int64
+	ManifestHash     string
+	ManifestDocument *manifest.GalleryDocument
 	HasRootMarker    bool
 	MarkerTitle      string
 	MediaCount       int
@@ -201,20 +209,26 @@ type ObservedDirectory struct {
 }
 
 type Candidate struct {
-	ID              int64
-	RootPath        string
-	SourceType      gallery.SourceType
-	Method          string
-	GalleryID       *int64
-	ManifestSetID   string
-	RebindGalleryID *int64
-	Status          string
-	RuleID          *int64
-	AutoCreateDraft bool
-	HasConflict     bool
-	OverLimit       bool
-	MediaCount      int
-	Suggestions     []discovery.Suggestion
+	ID                     int64
+	RootPath               string
+	SourceType             gallery.SourceType
+	Method                 string
+	GalleryID              *int64
+	ManifestSetID          string
+	ManifestSchema         int
+	ManifestRevision       int64
+	ManifestHash           string
+	IdentityClassification string
+	IdentityIssueCode      string
+	InspectionTokenHash    string
+	RebindGalleryID        *int64
+	Status                 string
+	RuleID                 *int64
+	AutoCreateDraft        bool
+	HasConflict            bool
+	OverLimit              bool
+	MediaCount             int
+	Suggestions            []discovery.Suggestion
 }
 
 type UnassignedDiagnostic struct {
@@ -254,6 +268,10 @@ type DiscoveryOptions struct {
 	// TRUSTED automation run. Manual discovery always leaves archive candidates
 	// for the owner to import explicitly.
 	AutoCreateArchives bool
+	// AutoCreateTrustedManifests is supplied only by a TRUSTED automation
+	// run. Identity inspection can still downgrade any conflicting Manifest to
+	// review; manual and ASSISTED discovery never set this flag.
+	AutoCreateTrustedManifests bool
 }
 
 type CandidateDiscoveryStore struct {
@@ -414,7 +432,9 @@ func (s *CandidateDiscoveryStore) DiscoverFilesystemWithOptions(ctx context.Cont
 			}
 		}
 		if manifestDirectories[directory] {
-			_, observation.HasValidManifest, observation.ManifestSetID = readManifestIdentity(filepath.Join(directory, ".cosplay.json"))
+			evidence := readManifestIdentity(filepath.Join(directory, ".cosplay.json"))
+			observation.HasValidManifest, observation.ManifestSetID = evidence.Valid, evidence.SetID
+			observation.ManifestSchema, observation.ManifestRevision, observation.ManifestHash, observation.ManifestDocument = evidence.Schema, evidence.Revision, evidence.Hash, evidence.Document
 			observation.HasConflict = !observation.HasValidManifest
 		}
 		observations = append(observations, observation)
@@ -639,9 +659,10 @@ func observeArchiveCandidate(libraryRoot, filename string, limits archivecheck.L
 		}
 	}
 	observation := ObservedDirectory{RelativePath: filepath.ToSlash(relative), SourceType: gallery.SourceTypeArchive, MediaCount: count, HasConflict: conflict, OverLimit: count > 1000}
-	if exists, valid, setID := readManifestIdentity(filename + ".cosplay.json"); exists {
-		observation.HasValidManifest, observation.ManifestSetID = valid, setID
-		observation.HasConflict = observation.HasConflict || !valid
+	if evidence := readManifestIdentity(filename + ".cosplay.json"); evidence.Exists {
+		observation.HasValidManifest, observation.ManifestSetID = evidence.Valid, evidence.SetID
+		observation.ManifestSchema, observation.ManifestRevision, observation.ManifestHash, observation.ManifestDocument = evidence.Schema, evidence.Revision, evidence.Hash, evidence.Document
+		observation.HasConflict = observation.HasConflict || !evidence.Valid
 	}
 	reason := ""
 	for _, issue := range validation.Issues {
@@ -659,20 +680,28 @@ func observeArchiveCandidate(libraryRoot, filename string, limits archivecheck.L
 	return observation, reason
 }
 
-func readManifestIdentity(filename string) (exists, valid bool, setID string) {
-	file, err := os.Open(filename)
+type manifestIdentityEvidence struct {
+	Exists, Valid bool
+	SetID         string
+	Schema        int
+	Revision      int64
+	Hash          string
+	Document      *manifest.GalleryDocument
+}
+
+func readManifestIdentity(filename string) manifestIdentityEvidence {
+	data, hash, err := manifest.ReadFile(filename, manifest.MaxGalleryBytes)
 	if errors.Is(err, os.ErrNotExist) {
-		return false, false, ""
+		return manifestIdentityEvidence{}
 	}
 	if err != nil {
-		return true, false, ""
+		return manifestIdentityEvidence{Exists: true}
 	}
-	defer file.Close()
-	document, err := manifest.ParseGallery(file)
+	document, err := manifest.ParseGallery(bytes.NewReader(data))
 	if err != nil {
-		return true, false, ""
+		return manifestIdentityEvidence{Exists: true}
 	}
-	return true, true, document.SetID
+	return manifestIdentityEvidence{Exists: true, Valid: true, SetID: document.SetID, Schema: document.SchemaVersion, Revision: document.Revision, Hash: hash, Document: &document}
 }
 
 func (s *CandidateDiscoveryStore) IgnoreSource(
@@ -700,18 +729,23 @@ func (s *CandidateDiscoveryStore) IgnoreSource(
 }
 
 type pendingCandidate struct {
-	root            string
-	sourceType      gallery.SourceType
-	method          string
-	ruleID          *int64
-	autoCreate      bool
-	conflict        bool
-	overLimit       bool
-	mediaCount      int
-	manifestSetID   string
-	rebindGalleryID *int64
-	status          string
-	suggestions     []discovery.Suggestion
+	root                   string
+	sourceType             gallery.SourceType
+	method                 string
+	ruleID                 *int64
+	autoCreate             bool
+	conflict               bool
+	overLimit              bool
+	mediaCount             int
+	manifestSetID          string
+	manifestSchema         int
+	manifestRevision       int64
+	manifestHash           string
+	identityClassification string
+	identityIssueCode      string
+	rebindGalleryID        *int64
+	status                 string
+	suggestions            []discovery.Suggestion
 }
 
 func (s *CandidateDiscoveryStore) CommitSnapshot(
@@ -805,10 +839,20 @@ func (s *CandidateDiscoveryStore) commitSnapshot(
 		if withinAny(boundaries, absolute) || withinAny(ignored, absolute) {
 			continue
 		}
+		if observed.HasValidManifest && observed.ManifestDocument == nil {
+			manifestPath, pathErr := manifest.GalleryPath(observed.SourceType, absolute)
+			if pathErr != nil {
+				return DiscoverySnapshot{}, pathErr
+			}
+			evidence := readManifestIdentity(manifestPath)
+			if evidence.Valid && evidence.SetID == observed.ManifestSetID {
+				observed.ManifestSchema, observed.ManifestRevision, observed.ManifestHash, observed.ManifestDocument = evidence.Schema, evidence.Revision, evidence.Hash, evidence.Document
+			}
+		}
 
 		var match *discovery.Match
 		if observed.HasValidManifest {
-			match = &discovery.Match{Root: relative, Kind: "MANIFEST", AutoCreate: observed.SourceType == gallery.SourceTypeArchive && options.AutoCreateArchives}
+			match = &discovery.Match{Root: relative, Kind: "MANIFEST", AutoCreate: (observed.SourceType == gallery.SourceTypeArchive && options.AutoCreateArchives) || (observed.SourceType == gallery.SourceTypeDirectory && options.AutoCreateTrustedManifests)}
 		} else if observed.SourceType == gallery.SourceTypeArchive {
 			match = &discovery.Match{Root: relative, Kind: discovery.RuleKindArchiveFile, AutoCreate: options.AutoCreateArchives}
 			// PATH_TEMPLATE remains an optional metadata suggestion provider for
@@ -855,14 +899,34 @@ func (s *CandidateDiscoveryStore) commitSnapshot(
 				root: rootPath, sourceType: observed.SourceType,
 				method: string(match.Kind), autoCreate: match.AutoCreate,
 				suggestions:   append([]discovery.Suggestion(nil), match.Suggestions...),
-				manifestSetID: observed.ManifestSetID, status: "PENDING",
+				manifestSetID: observed.ManifestSetID, manifestSchema: observed.ManifestSchema,
+				manifestRevision: observed.ManifestRevision, manifestHash: observed.ManifestHash, status: "PENDING",
+			}
+			if observed.ManifestDocument != nil {
+				inspection, inspectionErr := inspectManifestIdentity(ctx, tx, *observed.ManifestDocument)
+				if inspectionErr != nil {
+					return DiscoverySnapshot{}, inspectionErr
+				}
+				candidate.identityClassification = string(inspection.Class)
+				if inspection.Class != "UNCLAIMED" {
+					candidate.identityIssueCode = "MANIFEST_IDENTITY_" + string(inspection.Class)
+					candidate.conflict = true
+					candidate.autoCreate = false
+				}
 			}
 			if identity, found := setIdentities[observed.ManifestSetID]; observed.ManifestSetID != "" && found && identity.SourcePath != rootPath {
 				value := identity.GalleryID
 				candidate.rebindGalleryID = &value
 				candidate.status = "SOURCE_REBIND_CANDIDATE"
-				candidate.conflict = identity.SourceAvailable
+				candidate.conflict = candidate.conflict || identity.SourceAvailable
 				candidate.autoCreate = false
+				if identity.SourceAvailable {
+					candidate.identityClassification = "DUPLICATE_ACCESSIBLE_SOURCE"
+					candidate.identityIssueCode = "MANIFEST_IDENTITY_DUPLICATE_ACCESSIBLE_SOURCE"
+				} else {
+					candidate.identityClassification = "SAME_GALLERY_SOURCE_MOVE"
+					candidate.identityIssueCode = "MANIFEST_IDENTITY_SAME_GALLERY_SOURCE_MOVE"
+				}
 			}
 			if match.RuleID != 0 {
 				value := match.RuleID
@@ -924,15 +988,21 @@ func (s *CandidateDiscoveryStore) commitSnapshot(
 	sort.Strings(roots)
 	for _, root := range roots {
 		candidate := candidates[root]
+		inspectionToken := ""
+		if candidate.manifestHash != "" {
+			inspectionToken = discoveryInspectionToken(snapshotID, libraryID, root, candidate.manifestHash, candidate.identityClassification)
+		}
 		result, err := tx.ExecContext(ctx, `
 			INSERT INTO gallery_candidates (
 				snapshot_id, library_id, root_path, source_type, recognition_method, rule_id,
 				manifest_set_id, rebind_gallery_id, auto_create_draft, has_conflict,
-				over_limit, media_count, status, created_at_utc
-			) VALUES (?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?)
+				over_limit, media_count, status, created_at_utc,manifest_schema,manifest_revision,
+				manifest_hash,identity_classification,identity_issue_code,inspection_token_hash
+			) VALUES (?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?,?)
 		`, snapshotID, libraryID, candidate.root, candidate.sourceType, candidate.method, candidate.ruleID,
 			candidate.manifestSetID, candidate.rebindGalleryID, candidate.autoCreate, candidate.conflict,
-			candidate.overLimit, candidate.mediaCount, candidate.status, timestamp)
+			candidate.overLimit, candidate.mediaCount, candidate.status, timestamp, candidate.manifestSchema,
+			candidate.manifestRevision, candidate.manifestHash, candidate.identityClassification, candidate.identityIssueCode, inspectionToken)
 		if err != nil {
 			return DiscoverySnapshot{}, err
 		}
@@ -1057,7 +1127,8 @@ func (s *CandidateDiscoveryStore) FindSnapshot(ctx context.Context, snapshotID i
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, root_path, source_type, recognition_method, gallery_id, status,
 			rule_id, manifest_set_id, rebind_gallery_id, auto_create_draft,
-			has_conflict, over_limit, media_count
+			has_conflict, over_limit, media_count,manifest_schema,manifest_revision,manifest_hash,
+			identity_classification,identity_issue_code,inspection_token_hash
 		FROM gallery_candidates WHERE snapshot_id = ? ORDER BY root_path
 	`, snapshotID)
 	if err != nil {
@@ -1074,7 +1145,8 @@ func (s *CandidateDiscoveryStore) FindSnapshot(ctx context.Context, snapshotID i
 			&candidate.ID, &candidate.RootPath, &candidate.SourceType,
 			&candidate.Method, &galleryID, &candidate.Status, &ruleID,
 			&manifestSetID, &rebindGalleryID, &autoCreate, &conflict,
-			&overLimit, &candidate.MediaCount,
+			&overLimit, &candidate.MediaCount, &candidate.ManifestSchema, &candidate.ManifestRevision,
+			&candidate.ManifestHash, &candidate.IdentityClassification, &candidate.IdentityIssueCode, &candidate.InspectionTokenHash,
 		); err != nil {
 			rows.Close()
 			return DiscoverySnapshot{}, err
@@ -1195,24 +1267,86 @@ func (s *CandidateDiscoveryStore) ImportCandidate(
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	var libraryID int64
+	var libraryID, candidateSnapshotID int64
 	var rootPath string
 	var sourceType gallery.SourceType
 	var recognitionMethod string
 	var status string
+	var existingGalleryID sql.NullInt64
 	var manifestSetID sql.NullString
+	var storedManifestSchema int
+	var storedManifestRevision int64
+	var storedManifestHash, storedIdentityClassification, storedInspectionToken string
 	var conflict, overLimit int
 	if err := tx.QueryRowContext(ctx, `
-		SELECT library_id, root_path, source_type, recognition_method, status, has_conflict, over_limit, manifest_set_id
+		SELECT library_id, snapshot_id, root_path, source_type, recognition_method, status, has_conflict, over_limit, manifest_set_id,
+			gallery_id,
+			manifest_schema,manifest_revision,manifest_hash,identity_classification,inspection_token_hash
 		FROM gallery_candidates WHERE id = ?
-	`, candidateID).Scan(&libraryID, &rootPath, &sourceType, &recognitionMethod, &status, &conflict, &overLimit, &manifestSetID); err != nil {
+	`, candidateID).Scan(&libraryID, &candidateSnapshotID, &rootPath, &sourceType, &recognitionMethod, &status, &conflict, &overLimit, &manifestSetID,
+		&existingGalleryID,
+		&storedManifestSchema, &storedManifestRevision, &storedManifestHash, &storedIdentityClassification, &storedInspectionToken); err != nil {
 		return gallery.Gallery{}, err
 	}
-	if status != "PENDING" {
+	if status != "PENDING" && !(status == "IMPORTED" && existingGalleryID.Valid) {
 		return gallery.Gallery{}, fmt.Errorf("candidate %d is already %s", candidateID, status)
+	}
+	if status == "PENDING" {
+		var latestSnapshotID int64
+		if err := tx.QueryRowContext(ctx, `SELECT MAX(id) FROM discovery_snapshots WHERE library_id=?`, libraryID).Scan(&latestSnapshotID); err != nil || latestSnapshotID != candidateSnapshotID {
+			return gallery.Gallery{}, errors.New("candidate is not from the latest discovery snapshot")
+		}
 	}
 	if conflict == 1 || overLimit == 1 {
 		return gallery.Gallery{}, errors.New("conflicting or over-limit candidate cannot create a DRAFT")
+	}
+	var manifestDocument *manifest.GalleryDocument
+	manifestItemUUIDs := map[string]string{}
+	manifestPath := ""
+	if manifestSetID.Valid {
+		manifestPath, err = manifest.GalleryPath(sourceType, rootPath)
+		if err != nil {
+			return gallery.Gallery{}, err
+		}
+		data, hash, readErr := manifest.ReadFile(manifestPath, manifest.MaxGalleryBytes)
+		if readErr != nil {
+			return gallery.Gallery{}, errors.New("Manifest changed after discovery; run discovery again")
+		}
+		document, parseErr := manifest.ParseGallery(bytes.NewReader(data))
+		if parseErr != nil || document.SetID != manifestSetID.String || document.SchemaVersion != storedManifestSchema || document.Revision != storedManifestRevision || hash != storedManifestHash {
+			return gallery.Gallery{}, errors.New("Manifest changed after discovery; run discovery again")
+		}
+		inspection, inspectionErr := inspectManifestIdentity(ctx, tx, document)
+		if inspectionErr != nil {
+			return gallery.Gallery{}, inspectionErr
+		}
+		expectedToken := discoveryInspectionToken(candidateSnapshotID, libraryID, rootPath, storedManifestHash, storedIdentityClassification)
+		if string(inspection.Class) != storedIdentityClassification || storedInspectionToken == "" || storedInspectionToken != expectedToken {
+			return gallery.Gallery{}, errors.New("Manifest identity state changed after discovery; run discovery again")
+		}
+		if inspection.Class != "UNCLAIMED" {
+			return gallery.Gallery{}, errors.New("Manifest identity requires explicit review")
+		}
+		for _, item := range document.Items.Value {
+			if item.ItemUUID != "" {
+				manifestItemUUIDs[item.Path] = item.ItemUUID
+			}
+		}
+		manifestDocument = &document
+	}
+	if status == "IMPORTED" {
+		if manifestDocument == nil {
+			return gallery.Gallery{}, errors.New("candidate import already created a DRAFT; continue from Gallery management")
+		}
+		var sourceID int64
+		if err := tx.QueryRowContext(ctx, `SELECT id FROM gallery_sources WHERE gallery_id=? AND library_id=? AND source_type=? AND source_path=?`,
+			existingGalleryID.Int64, libraryID, sourceType, rootPath).Scan(&sourceID); err != nil {
+			return gallery.Gallery{}, err
+		}
+		if err := tx.Rollback(); err != nil {
+			return gallery.Gallery{}, err
+		}
+		return s.finishManifestCandidateImport(ctx, existingGalleryID.Int64, sourceID, manifestPath, storedManifestHash, manifestItemUUIDs, now)
 	}
 
 	setID := manifestSetID.String
@@ -1259,12 +1393,17 @@ func (s *CandidateDiscoveryStore) ImportCandidate(
 	if err != nil {
 		return gallery.Gallery{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `
+	sourceResult, err := tx.ExecContext(ctx, `
 		INSERT INTO gallery_sources (
 			gallery_id, library_id, source_type, source_path, availability_state,
 			reconcile_state, created_at_utc, updated_at_utc
 		) VALUES (?, ?, ?, ?, 'AVAILABLE', 'NEVER_SCANNED', ?, ?)
-	`, galleryID, libraryID, sourceType, rootPath, formatTime(timestamp), formatTime(timestamp)); err != nil {
+	`, galleryID, libraryID, sourceType, rootPath, formatTime(timestamp), formatTime(timestamp))
+	if err != nil {
+		return gallery.Gallery{}, err
+	}
+	sourceID, err := sourceResult.LastInsertId()
+	if err != nil {
 		return gallery.Gallery{}, err
 	}
 
@@ -1327,25 +1466,143 @@ func (s *CandidateDiscoveryStore) ImportCandidate(
 	if err := tx.Commit(); err != nil {
 		return gallery.Gallery{}, err
 	}
-	if manifestSetID.Valid {
-		manifestPath, pathErr := manifest.GalleryPath(sourceType, rootPath)
-		if pathErr != nil {
-			return gallery.Gallery{}, pathErr
-		}
-		if _, statErr := os.Lstat(manifestPath); statErr == nil {
-			pulled, pullErr := (&ManifestStore{db: s.db}).PullGallery(ctx, galleryID, created.MetadataRevision, now)
-			if pullErr != nil {
-				return gallery.Gallery{}, pullErr
-			}
-			if pulled.Status == ManifestConflict {
-				return findGallery(ctx, s.db, galleryID)
-			}
-			return findGallery(ctx, s.db, galleryID)
-		} else if !errors.Is(statErr, os.ErrNotExist) {
-			return gallery.Gallery{}, statErr
-		}
+	if manifestDocument != nil {
+		return s.finishManifestCandidateImport(ctx, galleryID, sourceID, manifestPath, storedManifestHash, manifestItemUUIDs, now)
 	}
 	return created, nil
+}
+
+func discoveryInspectionToken(snapshotID, libraryID int64, rootPath, manifestHash, classification string) string {
+	digest := sha256.Sum256([]byte(fmt.Sprintf("%d\x00%d\x00%s\x00%s\x00%s", snapshotID, libraryID, rootPath, manifestHash, classification)))
+	return hex.EncodeToString(digest[:])
+}
+
+func (s *CandidateDiscoveryStore) finishManifestCandidateImport(
+	ctx context.Context,
+	galleryID, sourceID int64,
+	manifestPath, manifestHash string,
+	manifestItemUUIDs map[string]string,
+	now time.Time,
+) (gallery.Gallery, error) {
+	if _, hash, readErr := manifest.ReadFile(manifestPath, manifest.MaxGalleryBytes); readErr != nil || hash != manifestHash {
+		return gallery.Gallery{}, errors.New("Manifest changed before source scan; DRAFT retained for review")
+	}
+	runtime, err := (&SettingsStore{db: s.db}).Find(ctx)
+	if err != nil {
+		return gallery.Gallery{}, err
+	}
+	limits := archivecheck.Limits{MaxEntries: runtime.ArchiveMaxEntries, MaxEntryUncompressed: uint64(runtime.ArchiveMaxEntryBytes), MaxTotalUncompressed: uint64(runtime.ArchiveMaxTotalBytes), MaxCompressionRatio: runtime.ArchiveMaxCompressionRatio, MaxImagePixels: uint64(runtime.ArchiveMaxImagePixels)}
+	if err := (&ScanStore{db: s.db}).RunWithOptions(ctx, sourceID, limits, ScanOptions{ExcludeNewRootMedia: false, PortableItemUUIDByPath: manifestItemUUIDs, RegisterManifestItemUUIDs: true}, now); err != nil {
+		return gallery.Gallery{}, err
+	}
+	current, err := findGallery(ctx, s.db, galleryID)
+	if err != nil {
+		return gallery.Gallery{}, err
+	}
+	if _, err := (&ManifestStore{db: s.db}).PullGallery(ctx, galleryID, current.MetadataRevision, now); err != nil {
+		return gallery.Gallery{}, err
+	}
+	return findGallery(ctx, s.db, galleryID)
+}
+
+// ForkCandidateManifest turns an explicitly confirmed duplicate source into a
+// new Gallery identity lineage. Only Gallery-local identities are replaced;
+// shared Coser/Work/Character/Tag UUIDs and all media bytes remain untouched.
+func (s *CandidateDiscoveryStore) ForkCandidateManifest(ctx context.Context, candidateID int64, now time.Time) (DiscoverySnapshot, error) {
+	var libraryID, snapshotID int64
+	var rootPath string
+	var sourceType gallery.SourceType
+	var status, classification, expectedHash, token string
+	var writebackEnabled int
+	if err := s.db.QueryRowContext(ctx, `SELECT candidate.library_id,candidate.snapshot_id,candidate.root_path,candidate.source_type,
+		candidate.status,candidate.identity_classification,candidate.manifest_hash,candidate.inspection_token_hash,library.metadata_writeback_enabled
+		FROM gallery_candidates candidate JOIN media_libraries library ON library.id=candidate.library_id WHERE candidate.id=?`, candidateID).
+		Scan(&libraryID, &snapshotID, &rootPath, &sourceType, &status, &classification, &expectedHash, &token, &writebackEnabled); err != nil {
+		return DiscoverySnapshot{}, err
+	}
+	if status != "PENDING" && status != "SOURCE_REBIND_CANDIDATE" {
+		return DiscoverySnapshot{}, errors.New("Gallery candidate is no longer forkable")
+	}
+	if classification != "DUPLICATE_ACCESSIBLE_SOURCE" && classification != "LOCAL_ITEM_OR_LINK_CONFLICT" {
+		return DiscoverySnapshot{}, errors.New("Gallery candidate identity class cannot be forked")
+	}
+	if writebackEnabled != 1 {
+		return DiscoverySnapshot{}, errors.New("media library metadata writeback is disabled")
+	}
+	var latestSnapshotID int64
+	if err := s.db.QueryRowContext(ctx, `SELECT MAX(id) FROM discovery_snapshots WHERE library_id=?`, libraryID).Scan(&latestSnapshotID); err != nil || latestSnapshotID != snapshotID {
+		return DiscoverySnapshot{}, errors.New("candidate is not from the latest discovery snapshot")
+	}
+	manifestPath, err := manifest.GalleryPath(sourceType, rootPath)
+	if err != nil {
+		return DiscoverySnapshot{}, err
+	}
+	data, hash, err := manifest.ReadFile(manifestPath, manifest.MaxGalleryBytes)
+	if err != nil || hash != expectedHash || token == "" {
+		return DiscoverySnapshot{}, errors.New("Manifest changed after discovery; run discovery again")
+	}
+	document, err := manifest.ParseGallery(bytes.NewReader(data))
+	if err != nil {
+		return DiscoverySnapshot{}, err
+	}
+	replacements := map[string]string{document.SetID: portableid.New()}
+	if document.Items.Present && !document.Items.Null {
+		for _, item := range document.Items.Value {
+			old := item.ItemUUID
+			if old == "" {
+				continue
+			}
+			fresh := portableid.New()
+			replacements[old] = fresh
+		}
+	}
+	if document.ExternalLinks.Present && !document.ExternalLinks.Null {
+		for _, link := range document.ExternalLinks.Value {
+			if old := link.LinkUUID; old != "" {
+				replacements[old] = portableid.New()
+			}
+		}
+	}
+	var rawDocument map[string]any
+	if err := json.Unmarshal(data, &rawDocument); err != nil {
+		return DiscoverySnapshot{}, err
+	}
+	replaceGalleryLocalJSONIdentities(rawDocument, replacements)
+	rawDocument["revision"] = 0
+	rawDocument["updated_at"] = normalisedTime(now).Format(time.RFC3339)
+	encoded, err := json.MarshalIndent(rawDocument, "", "  ")
+	if err != nil {
+		return DiscoverySnapshot{}, err
+	}
+	encoded = append(encoded, '\n')
+	if _, currentHash, err := manifest.ReadFile(manifestPath, manifest.MaxGalleryBytes); err != nil || currentHash != expectedHash {
+		return DiscoverySnapshot{}, errors.New("Manifest changed before fork; run discovery again")
+	}
+	if _, err := manifest.WriteAtomic(manifestPath, encoded, manifest.MaxGalleryBytes); err != nil {
+		return DiscoverySnapshot{}, err
+	}
+	return s.DiscoverFilesystem(ctx, libraryID, now)
+}
+
+func replaceGalleryLocalJSONIdentities(value any, replacements map[string]string) {
+	switch typed := value.(type) {
+	case map[string]any:
+		for key, child := range typed {
+			if key == "set_id" || key == "item_uuid" || key == "link_uuid" {
+				if current, ok := child.(string); ok {
+					if replacement, found := replacements[current]; found {
+						typed[key] = replacement
+						continue
+					}
+				}
+			}
+			replaceGalleryLocalJSONIdentities(child, replacements)
+		}
+	case []any:
+		for _, child := range typed {
+			replaceGalleryLocalJSONIdentities(child, replacements)
+		}
+	}
 }
 
 // ConfirmSourceRebind performs the explicit identity-preserving source move

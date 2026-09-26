@@ -2337,3 +2337,18 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 
 - 目标机以默认固定`65532:65532`运行时，用户创建的`1000:1000`绑定目录不可写，导致启动阶段统一报`CGM_DATABASE_OPEN_FAILED`；该事件码也覆盖缓存初始化，单靠日志无法确定具体失败路径。隔离临时目录实测当前已发布镜像通过Docker运行用户覆盖为`1000:1000`时，能够创建数据库和缓存并返回Health 204；这只验证启动，不等同于完整备份、迁移和媒体写回验收。
 - README的Docker Hub绑定目录模板加入可选`user: "${CGM_UID:-65532}:${CGM_GID:-65532}"`，明确宿主机同UID/GID首次空目录部署、默认65532目录准备、已有数据换用户前备份和核权，以及rootless/用户命名空间映射的边界。仅更新文档；不更改镜像默认非root身份、仓库源码构建Compose、业务代码、正式服务或目标机数据。
+
+# 2026-09-26 Gallery媒体加入时间证据（开发完成，待提交部署）
+
+- 产品数据库升至schema v18。旧`added_at_utc`只作为兼容生命周期字段保留，并在升级时复制为`first_activated_at_utc`；新增Item来源修改时间、状态、来源与检查时间，以及Gallery媒体加入时间最早／最晚值、`PENDING/COMPLETE/PARTIAL/NONE`状态和独立revision。首次激活同时填充兼容字段和独立生命周期字段，可选owner continuity只恢复生命周期值，不携带来源机的媒体时间证据。
+- DIRECTORY来源扫描复用安全枚举已经取得的`FileInfo.ModTime()`，不为`mtime`重新打开或解码媒体；ZIP/CBZ、TAR/TAR.GZ与7z只使用成员目录项明确提供的修改时间，不回退至存档容器或物化临时文件时间。扫描观察值随原有暂存提交，只有完整扫描成功后才原子汇总当前可用、未排除的`STATIC_IMAGE`（含RAW，不含动画和Video）；中断和失败不覆盖上次结果，也不标记Manifest `DB_DIRTY`。
+- 修改时间与拍摄时间共享同一媒体导入生命周期但保持独立失效条件：静态图片EXIF继续在首次`CARD_480`已物化来源上同步提取，`mtime`在扫描枚举阶段取得；只改变文件时间不会重读EXIF，升级EXIF解析器也不会重扫加入时间。已有Item的历史缺口由每分钟最多一个Gallery的轻量回填处理，目录仅执行安全枚举和`stat`，存档按Gallery枚举一次目录且不打开成员。回填任一证据不影响另一类已经发布的证据。
+- Browse近期排序、拍摄日期次级排序、评分次级排序、推荐衰减、搜索同级排序及Coser近期排序统一优先使用`media_added_start_at_utc`，缺失时依次回退首次激活、兼容生命周期与技术创建时间；回退值只用于稳定排序。Gallery详情仅在有可靠媒体时间时显示本地化单日／区间，并以Tooltip/ARIA明确为静态图片文件修改时间；Manage Gallery Basic显示区间和状态，便于识别`PARTIAL/NONE/PENDING`。
+- 新增回归覆盖DIRECTORY文件时间、ZIP成员时间、完整扫描原子汇总、取消扫描保留旧区间、v17→v18生命周期迁移，以及使用故意损坏JPEG证明历史回填只读取文件元数据、不执行图片解码；前端同时验证完整区间显示且`PARTIAL`不伪装展示。定向Go测试覆盖来源扫描、存档、产品库、GraphQL API、Server和Worker；Web TypeScript检查、37文件137项Vitest及685模块生产构建通过，只有既有主chunk超过500 KiB提示。当前仅修改开发工作区，未提交、备份、迁移正式库或部署。
+
+# 2026-09-27 Gallery发布时间与日期时间线（开发中，未部署）
+
+- 利用尚未部署的schema v18增加人工发布时间与`MONTH/DAY`精度，不改变现有媒体加入/拍摄时间证据流程，也不新建schema v19。管理页以`month/date`输入，服务端要求值与精度成对并严格校验真实日历；自动化补齐Content Rating时保留已有发布时间。
+- Manifest v1继续使用严格顶层结构，发布时间放在`extensions.cgm.publish_date`，覆盖Push、文件差异检查、三方合并与Pull；仅核心目录包不携带Gallery发布时间，Gallery仍随Manifest迁移。静态图片`mtime`属于目标机派生证据，继续不写入Manifest或迁移包。
+- 前台Gallery详情同一行显示发布时间；搜索结果Gallery行展示加入、拍摄、发布时间，未知值明确显示`--:--:--`，不把首次激活或技术创建时间冒充加入时间。Coser专属时间线新增拍摄、媒体加入、发布时间三种选择，默认为全部作品的拍摄时间；所选日期未知的Gallery不纳入该时间线，月精度仅在排序时视为当月第一天，稳定次级排序保持原有规则。
+- 新增日期校验、Manifest扩展字段合法性与差异、搜索日期和三种时间线回归；Go产品库、API、Server、Manifest测试和Web 38文件139项测试通过，TypeScript检查与685模块正式构建通过（只有既有主chunk体积警告）。`git diff --check`无误；未提交、备份、迁移正式业务库或部署。

@@ -572,6 +572,11 @@ func buildGalleryBusinessSnapshot(ctx context.Context, queryer rowsQueryer, gall
 	} else {
 		snapshot["shoot_date"] = map[string]any{"value": galleryRecord.ShootDate, "precision": galleryRecord.ShootDatePrecision}
 	}
+	if galleryRecord.PublishDate != "" {
+		snapshot["extensions"] = map[string]any{manifest.PublishDateExtension: map[string]any{
+			"value": galleryRecord.PublishDate, "precision": galleryRecord.PublishDatePrecision,
+		}}
+	}
 	var galleryRating sql.NullInt64
 	if err := rowQueryer.QueryRowContext(ctx, `SELECT rating_half_steps FROM gallery_personal_states WHERE gallery_id = ?`, galleryID).Scan(&galleryRating); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
@@ -733,6 +738,15 @@ func overlayGalleryDocument(baseline map[string]any, document manifest.GalleryDo
 	setOptional("title", document.Title.Present, document.Title.Null, document.Title.Value)
 	setOptional("description", document.Description.Present, document.Description.Null, document.Description.Value)
 	setOptional("shoot_date", document.ShootDate.Present, document.ShootDate.Null, map[string]any{"value": document.ShootDate.Value.Value, "precision": document.ShootDate.Value.Precision})
+	if raw, present := document.Extensions[manifest.PublishDateExtension]; present {
+		var date any
+		if err := json.Unmarshal(raw, &date); err != nil {
+			return nil, err
+		}
+		extensions := objectValue(result["extensions"])
+		extensions[manifest.PublishDateExtension] = date
+		result["extensions"] = extensions
+	}
 	setOptional("content_rating", document.ContentRating.Present, document.ContentRating.Null, document.ContentRating.Value)
 	setOptional("rating", document.Rating.Present, document.Rating.Null, document.Rating.Value)
 	setOptional("photographer_name", document.PhotographerName.Present, document.PhotographerName.Null, document.PhotographerName.Value)

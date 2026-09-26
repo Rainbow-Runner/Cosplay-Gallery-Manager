@@ -38,14 +38,16 @@ type CreateGalleryInput struct {
 }
 
 type UpdateGalleryMetadataInput struct {
-	Title              string
-	Aliases            []string
-	Description        string
-	ShootDate          string
-	ShootDatePrecision gallery.ShootDatePrecision
-	ContentRating      gallery.ContentRating
-	PhotographerName   string
-	StudioName         string
+	Title                string
+	Aliases              []string
+	Description          string
+	ShootDate            string
+	ShootDatePrecision   gallery.ShootDatePrecision
+	PublishDate          string
+	PublishDatePrecision gallery.ShootDatePrecision
+	ContentRating        gallery.ContentRating
+	PhotographerName     string
+	StudioName           string
 }
 
 type CreateSourceInput struct {
@@ -174,6 +176,9 @@ func (s *GalleryStore) UpdateMetadata(
 	); err != nil {
 		return gallery.Gallery{}, err
 	}
+	if err := validateCalendarDate(input.PublishDate, input.PublishDatePrecision, "publish"); err != nil {
+		return gallery.Gallery{}, err
+	}
 	if err := validateAliases(input.Aliases); err != nil {
 		return gallery.Gallery{}, err
 	}
@@ -188,6 +193,7 @@ func (s *GalleryStore) UpdateMetadata(
 		UPDATE galleries SET
 			title = ?, description = ?, shoot_date = NULLIF(?, ''),
 			shoot_date_precision = NULLIF(?, ''), content_rating = NULLIF(?, ''),
+			publish_date = NULLIF(?, ''), publish_date_precision = NULLIF(?, ''),
 			shoot_date_origin = CASE WHEN COALESCE(shoot_date,'')=? AND COALESCE(shoot_date_precision,'')=? THEN shoot_date_origin ELSE 'MANUAL' END,
 			photographer_name = ?, studio_name = ?, updated_at_utc = ?,
 			metadata_revision = metadata_revision + 1
@@ -198,6 +204,8 @@ func (s *GalleryStore) UpdateMetadata(
 		input.ShootDate,
 		input.ShootDatePrecision,
 		input.ContentRating,
+		input.PublishDate,
+		input.PublishDatePrecision,
 		input.ShootDate,
 		input.ShootDatePrecision,
 		input.PhotographerName,
@@ -212,7 +220,9 @@ func (s *GalleryStore) UpdateMetadata(
 	if err := requireOneRevisionRow(result); err != nil {
 		return gallery.Gallery{}, err
 	}
-	if _,err:=tx.ExecContext(ctx,`DELETE FROM gallery_capture_date_reviews WHERE gallery_id=? AND manual_date<>COALESCE((SELECT shoot_date FROM galleries WHERE id=?),'')`,id,id);err!=nil{return gallery.Gallery{},err}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM gallery_capture_date_reviews WHERE gallery_id=? AND manual_date<>COALESCE((SELECT shoot_date FROM galleries WHERE id=?),'')`, id, id); err != nil {
+		return gallery.Gallery{}, err
+	}
 	if err := markGalleryManifestDBDirty(ctx, tx, id); err != nil {
 		return gallery.Gallery{}, err
 	}
@@ -492,9 +502,13 @@ func (s *GalleryStore) SetState(
 				WHEN ? = 'ACTIVE' THEN COALESCE(added_at_utc, ?)
 				ELSE added_at_utc
 			END,
+			first_activated_at_utc = CASE
+				WHEN ? = 'ACTIVE' THEN COALESCE(first_activated_at_utc, ?)
+				ELSE first_activated_at_utc
+			END,
 			updated_at_utc = ?, metadata_revision = metadata_revision + 1
 		WHERE id = ? AND metadata_revision = ?
-	`, target, target, timestamp, timestamp, id, expectedRevision)
+	`, target, target, timestamp, target, timestamp, timestamp, id, expectedRevision)
 	if err != nil {
 		return gallery.Gallery{}, fmt.Errorf("transitioning Gallery state: %w", err)
 	}
@@ -680,23 +694,25 @@ type galleryQueryer interface {
 
 func findGallery(ctx context.Context, queryer galleryQueryer, id int64) (gallery.Gallery, error) {
 	var (
-		result         gallery.Gallery
-		shootDate      sql.NullString
-		shootPrecision sql.NullString
-		contentRating  sql.NullString
-		createdAt      string
-		updatedAt      string
-		addedAt        sql.NullString
+		result           gallery.Gallery
+		shootDate        sql.NullString
+		shootPrecision   sql.NullString
+		publishDate      sql.NullString
+		publishPrecision sql.NullString
+		contentRating    sql.NullString
+		createdAt        string
+		updatedAt        string
+		addedAt          sql.NullString
 	)
 	err := queryer.QueryRowContext(ctx, `
 		SELECT id, set_id, slug, state, title, description, shoot_date,
-			shoot_date_precision, content_rating, photographer_name,
+			shoot_date_precision, content_rating, publish_date, publish_date_precision, photographer_name,
 			studio_name, created_at_utc, updated_at_utc, added_at_utc,
 			metadata_revision, scan_revision, scrubber_revision
 		FROM galleries WHERE id = ?
 	`, id).Scan(
 		&result.ID, &result.SetID, &result.Slug, &result.State, &result.Title,
-		&result.Description, &shootDate, &shootPrecision, &contentRating,
+		&result.Description, &shootDate, &shootPrecision, &contentRating, &publishDate, &publishPrecision,
 		&result.PhotographerName, &result.StudioName, &createdAt, &updatedAt,
 		&addedAt, &result.MetadataRevision, &result.ScanRevision, &result.ScrubberRevision,
 	)
@@ -708,6 +724,8 @@ func findGallery(ctx context.Context, queryer galleryQueryer, id int64) (gallery
 	}
 	result.ShootDate = shootDate.String
 	result.ShootDatePrecision = gallery.ShootDatePrecision(shootPrecision.String)
+	result.PublishDate = publishDate.String
+	result.PublishDatePrecision = gallery.ShootDatePrecision(publishPrecision.String)
 	result.ContentRating = gallery.ContentRating(contentRating.String)
 	if result.CreatedAtUTC, err = parseTime(createdAt); err != nil {
 		return gallery.Gallery{}, err
@@ -801,19 +819,23 @@ func validateGalleryMetadata(
 	if rating != "" && rating != gallery.ContentRatingNonAdult && rating != gallery.ContentRatingAdult {
 		return fmt.Errorf("unsupported content rating %q", rating)
 	}
-	if shootDate == "" && precision != "" || shootDate != "" && precision == "" {
-		return errors.New("shoot date and precision must be provided together")
+	return validateCalendarDate(shootDate, precision, "shoot")
+}
+
+func validateCalendarDate(value string, precision gallery.ShootDatePrecision, field string) error {
+	if value == "" && precision != "" || value != "" && precision == "" {
+		return fmt.Errorf("%s date and precision must be provided together", field)
 	}
-	if shootDate != "" {
+	if value != "" {
 		if precision != gallery.ShootDatePrecisionMonth && precision != gallery.ShootDatePrecisionDay {
-			return fmt.Errorf("unsupported shoot date precision %q", precision)
+			return fmt.Errorf("unsupported %s date precision %q", field, precision)
 		}
 		layout := "2006-01"
 		if precision == gallery.ShootDatePrecisionDay {
 			layout = "2006-01-02"
 		}
-		if parsed, err := time.Parse(layout, shootDate); err != nil || parsed.Format(layout) != shootDate {
-			return fmt.Errorf("invalid shoot date %q for precision %s", shootDate, precision)
+		if parsed, err := time.Parse(layout, value); err != nil || parsed.Format(layout) != value {
+			return fmt.Errorf("invalid %s date %q for precision %s", field, value, precision)
 		}
 	}
 	return nil

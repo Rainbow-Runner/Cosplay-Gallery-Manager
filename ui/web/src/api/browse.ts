@@ -15,7 +15,12 @@ export const GALLERY_CARD_FIELDS = gql`
     workCount
     shootDate
     shootDatePrecision
+    publishDate
+    publishDatePrecision
     addedAtUTC
+    mediaAddedStartUTC
+    mediaAddedEndUTC
+    mediaAddedStatus
     media { photo selfie gif video }
     favorite
     ratingHalfSteps
@@ -171,8 +176,8 @@ export const RELATED_GALLERIES = gql`
 
 export const TIMELINE_GALLERIES = gql`
   ${GALLERY_CARD_FIELDS}
-  query TimelineGalleries($scope: BrowseScope!, $page: Int!, $coserUUID: ID) {
-    timelineGalleries(scope: $scope, page: $page, coserUUID: $coserUUID) {
+  query TimelineGalleries($scope: BrowseScope!, $page: Int!, $coserUUID: ID, $date: TimelineDate! = SHOOT) {
+    timelineGalleries(scope: $scope, page: $page, coserUUID: $coserUUID, date: $date) {
       page pageSize totalItems totalPages items { ...GalleryCardFields }
     }
   }
@@ -202,7 +207,7 @@ export const SEARCH_PREVIEW = gql`
   query SearchPreview($query: String!, $scope: BrowseScope!) {
     searchPreview(query: $query, scope: $scope) {
       scope query
-      galleries { kind uuid slug name matchLevel coverResource { itemUUID contentRevision profileHash variant mimeType } }
+      galleries { kind uuid slug name matchLevel mediaAddedStartUTC mediaAddedEndUTC shootDate shootDatePrecision publishDate publishDatePrecision coverResource { itemUUID contentRevision profileHash variant mimeType } }
       cosers { kind uuid slug name matchLevel }
       works { kind uuid slug name matchLevel }
       characters { kind uuid slug name matchLevel }

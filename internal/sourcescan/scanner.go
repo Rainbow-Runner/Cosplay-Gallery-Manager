@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/stashapp/stash/internal/archivecheck"
 	"github.com/stashapp/stash/internal/archivefile"
@@ -27,14 +28,17 @@ import (
 const sampleSize = 64 * 1024
 
 type Observation struct {
-	RelativePath     string
-	MediaKind        gallery.MediaKind
-	ContentFormat    gallery.ContentFormat
-	ImageCategory    gallery.ImageCategory
-	ByteSize         int64
-	QuickFingerprint string
-	FullFingerprint  string
-	ProcessingState  gallery.ProcessingState
+	RelativePath         string
+	MediaKind            gallery.MediaKind
+	ContentFormat        gallery.ContentFormat
+	ImageCategory        gallery.ImageCategory
+	ByteSize             int64
+	QuickFingerprint     string
+	FullFingerprint      string
+	ProcessingState      gallery.ProcessingState
+	SourceModifiedAtUTC  string
+	SourceModifiedStatus string
+	SourceModifiedOrigin string
 }
 
 type Issue struct {
@@ -124,7 +128,15 @@ func ScanDirectory(ctx context.Context, root string) (Result, error) {
 		if err != nil {
 			return err
 		}
-		observation, issues, scanErr := observeReader(ctx, relative, info.Size(), file)
+		openedInfo, statErr := file.Stat()
+		if statErr != nil || !openedInfo.Mode().IsRegular() || !os.SameFile(info, openedInfo) {
+			_ = file.Close()
+			if statErr != nil {
+				return statErr
+			}
+			return errors.New("media source changed while scanning")
+		}
+		observation, issues, scanErr := observeReader(ctx, relative, openedInfo.Size(), file)
 		closeErr := file.Close()
 		if scanErr != nil {
 			return scanErr
@@ -134,6 +146,13 @@ func ScanDirectory(ctx context.Context, root string) (Result, error) {
 		}
 		result.Issues = append(result.Issues, issues...)
 		if observation != nil {
+			if modified := openedInfo.ModTime(); !modified.IsZero() {
+				observation.SourceModifiedAtUTC = modified.UTC().Format(time.RFC3339Nano)
+				observation.SourceModifiedStatus = "FOUND"
+				observation.SourceModifiedOrigin = "FILESYSTEM"
+			} else {
+				observation.SourceModifiedStatus = "NONE"
+			}
 			result.Observations = append(result.Observations, *observation)
 		}
 		return nil
@@ -193,6 +212,13 @@ func ScanArchive(ctx context.Context, filename string, limits archivecheck.Limit
 		}
 		result.Issues = append(result.Issues, issues...)
 		if observation != nil {
+			if entry.ModifiedKnown {
+				observation.SourceModifiedAtUTC = entry.Modified.UTC().Format(time.RFC3339Nano)
+				observation.SourceModifiedStatus = "FOUND"
+				observation.SourceModifiedOrigin = "ARCHIVE_ENTRY"
+			} else {
+				observation.SourceModifiedStatus = "NONE"
+			}
 			result.Observations = append(result.Observations, *observation)
 		}
 		return nil
@@ -232,6 +258,7 @@ func observeReader(ctx context.Context, relative string, storedSize int64, reade
 		RelativePath: relative, MediaKind: kind, ContentFormat: contentFormat, ImageCategory: category,
 		ByteSize: storedSize, QuickFingerprint: "blake3-sample-v1:" + quick,
 		FullFingerprint: "blake3-v1:" + full, ProcessingState: gallery.ProcessingPending,
+		SourceModifiedStatus: "NONE",
 	}, issues, nil
 }
 

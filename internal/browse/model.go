@@ -19,6 +19,14 @@ const (
 
 type GallerySort string
 
+type TimelineDate string
+
+const (
+	TimelineShoot      TimelineDate = "SHOOT"
+	TimelineMediaAdded TimelineDate = "MEDIA_ADDED"
+	TimelinePublish    TimelineDate = "PUBLISH"
+)
+
 const (
 	GallerySortRecentlyAdded GallerySort = "RECENTLY_ADDED"
 	GallerySortName          GallerySort = "NAME"
@@ -73,26 +81,31 @@ type MediaCounts struct {
 }
 
 type GalleryCard struct {
-	SetID              string
-	Slug               string
-	Title              string
-	CollectionType     CollectionType
-	ContentRating      gallery.ContentRating
-	Cover              Cover
-	Credits            []PersonSummary
-	CreditCount        int
-	Characters         []EntitySummary
-	CharacterCount     int
-	Works              []EntitySummary
-	WorkCount          int
-	ShootDate          string
-	ShootDatePrecision gallery.ShootDatePrecision
-	AddedAtUTC         time.Time
-	Media              MediaCounts
-	Favorite           bool
-	RatingHalfSteps    *int
-	ScrubberCount      int
-	ScrubberRevision   int64
+	SetID                string
+	Slug                 string
+	Title                string
+	CollectionType       CollectionType
+	ContentRating        gallery.ContentRating
+	Cover                Cover
+	Credits              []PersonSummary
+	CreditCount          int
+	Characters           []EntitySummary
+	CharacterCount       int
+	Works                []EntitySummary
+	WorkCount            int
+	ShootDate            string
+	ShootDatePrecision   gallery.ShootDatePrecision
+	PublishDate          string
+	PublishDatePrecision gallery.ShootDatePrecision
+	AddedAtUTC           time.Time
+	MediaAddedStartUTC   string
+	MediaAddedEndUTC     string
+	MediaAddedStatus     string
+	Media                MediaCounts
+	Favorite             bool
+	RatingHalfSteps      *int
+	ScrubberCount        int
+	ScrubberRevision     int64
 }
 
 type GalleryPage struct {
@@ -174,12 +187,18 @@ const (
 )
 
 type SearchHit struct {
-	Kind          SearchEntityKind
-	UUID          string
-	Slug          string
-	Name          string
-	MatchLevel    int
-	CoverResource *ResourceIdentity
+	Kind                 SearchEntityKind
+	UUID                 string
+	Slug                 string
+	Name                 string
+	MatchLevel           int
+	CoverResource        *ResourceIdentity
+	MediaAddedStartUTC   string
+	MediaAddedEndUTC     string
+	ShootDate            string
+	ShootDatePrecision   gallery.ShootDatePrecision
+	PublishDate          string
+	PublishDatePrecision gallery.ShootDatePrecision
 }
 
 type SearchPreview struct {

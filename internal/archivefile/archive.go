@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/bodgit/sevenzip"
 )
@@ -34,6 +35,8 @@ type Entry struct {
 	// per-member compressed size (solid 7z and tar streams).
 	CompressedSize uint64
 	Encrypted      bool
+	Modified       time.Time
+	ModifiedKnown  bool
 	OpenReader     func() (io.ReadCloser, error)
 }
 
@@ -126,9 +129,10 @@ func walkZIP(filename string, visit func(Entry) error) error {
 	defer reader.Close()
 	for _, file := range reader.File {
 		current := file
+		modified := current.Modified
 		if err := visit(Entry{Name: current.Name, Mode: current.Mode(),
 			UncompressedSize: current.UncompressedSize64, CompressedSize: current.CompressedSize64,
-			Encrypted: current.Flags&0x1 != 0, OpenReader: current.Open}); err != nil {
+			Encrypted: current.Flags&0x1 != 0, Modified: modified, ModifiedKnown: !modified.IsZero(), OpenReader: current.Open}); err != nil {
 			return err
 		}
 	}
@@ -165,7 +169,8 @@ func walkTAR(filename string, compressed bool, visit func(Entry) error) error {
 		if header.Size > 0 {
 			size = uint64(header.Size)
 		}
-		entry := Entry{Name: header.Name, Mode: mode, UncompressedSize: size}
+		entry := Entry{Name: header.Name, Mode: mode, UncompressedSize: size,
+			Modified: header.ModTime, ModifiedKnown: !header.ModTime.IsZero()}
 		if mode.IsRegular() {
 			entry.OpenReader = func() (io.ReadCloser, error) {
 				return io.NopCloser(io.LimitReader(reader, header.Size)), nil
@@ -186,7 +191,8 @@ func walkSevenZIP(filename string, visit func(Entry) error) error {
 	for _, file := range reader.File {
 		current := file
 		if err := visit(Entry{Name: current.Name, Mode: current.Mode(),
-			UncompressedSize: current.UncompressedSize, OpenReader: current.Open}); err != nil {
+			UncompressedSize: current.UncompressedSize, Modified: current.Modified,
+			ModifiedKnown: !current.Modified.IsZero(), OpenReader: current.Open}); err != nil {
 			return err
 		}
 	}

@@ -6,14 +6,14 @@ import { MANAGE_LIBRARIES, MANAGE_PORTABLE_MIGRATION, RUN_PORTABLE_MIGRATION } f
 import { Dialog } from "../ui/Patterns";
 import type { ManageLibrary, ManageMaintenanceState, ManagePortableMigrationSnapshot, ManagePortablePreflight } from "./types";
 
-type PortableAction = "PREFLIGHT_EXPORT" | "EXPORT" | "IMPORT" | "PREPARE_MERGE" | "DECIDE_MERGE" | "APPLY_MERGE" | "ABORT_MERGE" | "RECOVER_IMPORT" | "RECOVER_MERGE" | "MAP_LIBRARIES" | "PREFLIGHT_REBUILD" | "REBUILD" | "APPLY_CONTINUITY";
+type PortableAction = "PREFLIGHT_EXPORT" | "EXPORT" | "IMPORT" | "PREPARE_MERGE" | "DECIDE_MERGE" | "APPLY_MERGE" | "ABORT_MERGE" | "RECOVER_IMPORT" | "RECOVER_MERGE" | "MAP_LIBRARIES" | "PREFLIGHT_REBUILD" | "CONFIGURE_REBUILD_AUTOMATION" | "ADOPT_REBUILD_SOURCES" | "REBUILD" | "APPLY_CONTINUITY";
 type ActionResult = { runPortableMigration: { code: string; importID?: string | null; mergeID?: string | null; exportID?: string | null; fileName: string; count: number; snapshot: ManagePortableMigrationSnapshot; preflight?: ManagePortablePreflight | null } };
-type TransferPackage = { name: string; path: string; size: number; createdAt: string; formatVersion: number; checkStatus: "UNCHECKED" | "UNRECOGNIZED" | "VALID" | "INVALID" };
+type TransferPackage = { name: string; path: string; size: number; createdAt: string; formatVersion: number; profile: string; checkStatus: "UNCHECKED" | "UNRECOGNIZED" | "VALID" | "INVALID" };
 type TransferList = { root: string; packages: TransferPackage[] };
 
 const confirmations: Record<PortableAction, string> = {
   PREFLIGHT_EXPORT: "PREFLIGHT", EXPORT: "EXPORT", IMPORT: "IMPORT", PREPARE_MERGE: "PREPARE", DECIDE_MERGE: "DECIDE", APPLY_MERGE: "MERGE",
-  ABORT_MERGE: "ABORT", RECOVER_IMPORT: "RECOVER", RECOVER_MERGE: "RECOVER", MAP_LIBRARIES: "MAP", PREFLIGHT_REBUILD: "PREFLIGHT", REBUILD: "REBUILD", APPLY_CONTINUITY: "CONTINUITY",
+  ABORT_MERGE: "ABORT", RECOVER_IMPORT: "RECOVER", RECOVER_MERGE: "RECOVER", MAP_LIBRARIES: "MAP", PREFLIGHT_REBUILD: "PREFLIGHT", CONFIGURE_REBUILD_AUTOMATION: "AUTO ADOPT", ADOPT_REBUILD_SOURCES: "ADOPT", REBUILD: "REBUILD", APPLY_CONTINUITY: "CONTINUITY",
 };
 
 export function ManagePortableMigrationPanel() {
@@ -31,8 +31,12 @@ export function ManagePortableMigrationPanel() {
   const [includeLifecycle, setIncludeLifecycle] = useState(false);
   const [includeFlags, setIncludeFlags] = useState(false);
   const [allowIncomplete, setAllowIncomplete] = useState(false);
+  const [exportProfile, setExportProfile] = useState<"CORE_CATALOG" | "GALLERY_IDENTITY_ASSISTED">("CORE_CATALOG");
   const [mergeDecisions, setMergeDecisions] = useState<Record<string, string>>({});
   const [libraryDecisions, setLibraryDecisions] = useState<Record<string, string>>({});
+  const [selectedRebuilds, setSelectedRebuilds] = useState<Record<string, boolean>>({});
+  const [autoAdopt, setAutoAdopt] = useState(false);
+  const [autoActivate, setAutoActivate] = useState(false);
   const [pendingAction, setPendingAction] = useState<PortableAction | null>(null);
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -90,6 +94,11 @@ export function ManagePortableMigrationPanel() {
   const selectedImport = (snapshot?.imports ?? []).find((item) => item.importID === selectedImportID);
   const selectedMerge = (snapshot?.merges ?? []).find((item) => item.mergeID === selectedMergeID);
 
+  useEffect(() => {
+    setAutoAdopt(Boolean(selectedImport?.autoAdoptEnabled));
+    setAutoActivate(Boolean(selectedImport?.autoActivateEnabled));
+  }, [selectedImport?.importID, selectedImport?.autoAdoptEnabled, selectedImport?.autoActivateEnabled]);
+
   function openAction(action: PortableAction) {
     setMessage("");
     setPassword("");
@@ -102,10 +111,13 @@ export function ManagePortableMigrationPanel() {
     const input = {
       action: pendingAction, path: pendingAction === "EXPORT" ? exportPath.trim() : pendingAction === "IMPORT" || pendingAction === "PREPARE_MERGE" ? checkedPackage?.path ?? "" : "", importID: selectedImportID,
       mergeID: pendingAction === "RECOVER_MERGE" ? maintenance?.restoreBackupID ?? selectedMergeID : selectedMergeID,
-      password, confirmation, allowIncompleteGallery: allowIncomplete,
-      includeGalleryLifecycle: includeLifecycle, includePersonalFlags: includeFlags,
+      password, confirmation, allowIncompleteGallery: exportProfile === "CORE_CATALOG" ? false : allowIncomplete,
+      profile: exportProfile,
+      includeGalleryLifecycle: exportProfile === "CORE_CATALOG" ? false : includeLifecycle, includePersonalFlags: exportProfile === "CORE_CATALOG" ? false : includeFlags,
       mergeDecisions: reviewConflicts.map((item) => ({ issueKey: item.issueKey, decision: mergeDecisions[item.issueKey] ?? "" })),
       libraryDecisions: (snapshot?.mappings ?? []).map((item) => ({ libraryKey: item.libraryKey, targetLibraryID: libraryDecisions[item.libraryKey] === "__SKIP__" ? null : Number(libraryDecisions[item.libraryKey]) })),
+      gallerySetIDs: pendingAction === "ADOPT_REBUILD_SOURCES" ? Object.keys(selectedRebuilds).filter((setID) => selectedRebuilds[setID]) : [],
+      autoAdopt, autoActivate: autoAdopt && autoActivate,
     };
     try {
       const result = await runAction({ variables: { input } });
@@ -130,6 +142,7 @@ export function ManagePortableMigrationPanel() {
   const mappingsReady = Boolean(snapshot) && (snapshot?.mappings ?? []).every((item) => Boolean(libraryDecisions[item.libraryKey]));
   const needsPath = pendingAction === "EXPORT" || pendingAction === "IMPORT" || pendingAction === "PREPARE_MERGE";
   const actionPath = pendingAction === "EXPORT" ? exportPath.trim() : checkedPackage?.path ?? "";
+  const adoptableRebuildCount = (snapshot?.rebuilds ?? []).filter((item) => selectedRebuilds[item.setID]).length;
 
   return <section className="operation-panel portable-workbench">
     <header><div><h3>{t("可移植迁移工作台", "Portable migration workbench")}</h3><p>{t("在新机器路径不同的情况下迁移核心实体并从 Manifest 重建 Gallery。导入包从容器内 /transfer 选择；不会复制原始媒体。", "Move core entities and rebuild Galleries from Manifests. Select import packages from /transfer inside the container; original media is never copied.")}</p></div></header>
@@ -138,10 +151,12 @@ export function ManagePortableMigrationPanel() {
 
     <div className="portable-workbench__source">
       <label>{t("导出目标路径（服务器/容器内）", "Export destination (server/container path)")}<input value={exportPath} onChange={(event) => setExportPath(event.target.value)} placeholder="/var/lib/cgm/backups/catalog.cgm-portable.zip" /></label>
+      <label>{t("迁移包档位", "Package profile")}<select value={exportProfile} onChange={(event) => setExportProfile(event.target.value as "CORE_CATALOG" | "GALLERY_IDENTITY_ASSISTED")}><option value="CORE_CATALOG">{t("核心目录包（推荐）", "Core catalog (recommended)")}</option><option value="GALLERY_IDENTITY_ASSISTED">{t("Gallery 身份辅助包", "Gallery identity assisted")}</option></select></label>
+      <p className="portable-workbench__boundary">{exportProfile === "CORE_CATALOG" ? t("只迁移 Coser、作品、角色、标签、网络帐号及 Coser 原始头像/Banner；Gallery Manifest 异常不会阻断导出。", "Moves only core entities, social accounts, and original Coser assets; Gallery Manifest issues cannot block export.") : t("额外迁移 Gallery／媒体／外部链接身份声明和来源定位，用于迁移工作台辅助重建。", "Also moves Gallery/item/link identity claims and source locators for assisted rebuilds.")}</p>
       <div className="portable-workbench__options">
-        <label><input type="checkbox" checked={allowIncomplete} onChange={(event) => setAllowIncomplete(event.target.checked)} />{t("允许不完整 Gallery 声明", "Allow incomplete Gallery claims")}</label>
-        <label><input type="checkbox" checked={includeLifecycle} onChange={(event) => setIncludeLifecycle(event.target.checked)} />{t("导出生命周期状态与首次收录时间", "Export lifecycle state and added-at time")}</label>
-        <label><input type="checkbox" checked={includeFlags} onChange={(event) => setIncludeFlags(event.target.checked)} />{t("导出收藏与隐藏标记", "Export favourite and hidden flags")}</label>
+        <label><input type="checkbox" disabled={exportProfile === "CORE_CATALOG"} checked={exportProfile !== "CORE_CATALOG" && allowIncomplete} onChange={(event) => setAllowIncomplete(event.target.checked)} />{t("允许不完整 Gallery 声明", "Allow incomplete Gallery claims")}</label>
+        <label><input type="checkbox" disabled={exportProfile === "CORE_CATALOG"} checked={exportProfile !== "CORE_CATALOG" && includeLifecycle} onChange={(event) => setIncludeLifecycle(event.target.checked)} />{t("导出生命周期状态与首次收录时间", "Export lifecycle state and added-at time")}</label>
+        <label><input type="checkbox" disabled={exportProfile === "CORE_CATALOG"} checked={exportProfile !== "CORE_CATALOG" && includeFlags} onChange={(event) => setIncludeFlags(event.target.checked)} />{t("导出收藏与隐藏标记", "Export favourite and hidden flags")}</label>
       </div>
       <p className="portable-workbench__boundary">{t("不会迁移：Gallery 地址、评分、最后浏览时间、最后浏览项目及其他浏览历史。评分继续由 .cosplay.json Manifest 负责。", "Never migrated: Gallery addresses, ratings, last-viewed time/item, or other browsing history. Ratings remain owned by the .cosplay.json Manifest.")}</p>
       <div className="portable-workbench__actions">
@@ -153,7 +168,7 @@ export function ManagePortableMigrationPanel() {
     <div className="portable-workbench__source">
       <label>{t("导入迁移包（/transfer）", "Import package (/transfer)")}<select value={selectedPackageName} onChange={(event) => { setSelectedPackageName(event.target.value); setCheckedPackage(null); }}><option value="">{t("选择迁移包", "Select a package")}</option>{(transfer?.packages ?? []).map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}</select></label>
       <div className="portable-workbench__actions"><button type="button" onClick={() => void refreshPackages()}>{t("刷新目录", "Refresh directory")}</button><button type="button" disabled={!selectedPackage || checkingPackage} onClick={() => void checkPackage()}>{checkingPackage ? t("正在检查…", "Checking…") : t("导入前检查", "Check before import")}</button></div>
-      {selectedPackage ? <dl className="setup-review"><dt>{t("文件名", "File name")}</dt><dd>{selectedPackage.name}</dd><dt>{t("大小", "Size")}</dt><dd>{formatPackageSize(selectedPackage.size)}</dd><dt>{t("创建时间（包内）", "Created (package)")}</dt><dd>{selectedPackage.createdAt || "—"}</dd><dt>{t("格式版本", "Format version")}</dt><dd>{selectedPackage.formatVersion || "—"}</dd><dt>{t("校验状态", "Check status")}</dt><dd>{packageStatusLabel(checkedPackage?.name === selectedPackage.name ? checkedPackage.checkStatus : selectedPackage.checkStatus, zh)}</dd></dl> : null}
+      {selectedPackage ? <dl className="setup-review"><dt>{t("文件名", "File name")}</dt><dd>{selectedPackage.name}</dd><dt>{t("大小", "Size")}</dt><dd>{formatPackageSize(selectedPackage.size)}</dd><dt>{t("创建时间（包内）", "Created (package)")}</dt><dd>{selectedPackage.createdAt || "—"}</dd><dt>{t("格式版本", "Format version")}</dt><dd>{selectedPackage.formatVersion || "—"}</dd><dt>{t("档位", "Profile")}</dt><dd>{selectedPackage.profile || "—"}</dd><dt>{t("校验状态", "Check status")}</dt><dd>{packageStatusLabel(checkedPackage?.name === selectedPackage.name ? checkedPackage.checkStatus : selectedPackage.checkStatus, zh)}</dd></dl> : null}
       {transferError ? <p className="manage-message" role="alert">{transferError}</p> : null}
       <div className="portable-workbench__actions"><button type="button" disabled={checkedPackage?.checkStatus !== "VALID" || checkedPackage.name !== selectedPackageName} onClick={() => openAction("IMPORT")}>{t("导入空业务库…", "Import into empty catalog…")}</button><button type="button" disabled={checkedPackage?.checkStatus !== "VALID" || checkedPackage.name !== selectedPackageName} onClick={() => openAction("PREPARE_MERGE")}>{t("准备合并…", "Prepare merge…")}</button></div>
     </div>
@@ -163,7 +178,7 @@ export function ManagePortableMigrationPanel() {
     {maintenance?.state === "PORTABLE_IMPORTING" || maintenance?.state === "PORTABLE_MERGING" ? <div className="portable-workbench__recovery" role="alert"><div><strong>{t("检测到中断的迁移维护状态", "Interrupted migration maintenance state detected")}</strong><small>{maintenance.state} · {maintenance.restoreBackupID}</small></div><button type="button" onClick={() => openAction(maintenance.state === "PORTABLE_IMPORTING" ? "RECOVER_IMPORT" : "RECOVER_MERGE")}>{t("执行安全恢复…", "Run safe recovery…")}</button></div> : null}
 
     <div className="portable-workbench__columns">
-      <SessionList title={t("导入 / 重建会话", "Import / rebuild sessions")} empty={t("暂无导入会话", "No import sessions")} items={(snapshot?.imports ?? []).map((item) => ({ id: item.importID, state: item.state, detail: `${item.galleryClaimCount} Gallery · ${item.itemClaimCount} Media`, error: item.errorCode }))} selected={selectedImportID} onSelect={(id) => setSelectedImportID(id)} />
+      <SessionList title={t("导入 / 重建会话", "Import / rebuild sessions")} empty={t("暂无导入会话", "No import sessions")} items={(snapshot?.imports ?? []).map((item) => ({ id: item.importID, state: item.state, detail: item.profile === "CORE_CATALOG" ? `CORE_CATALOG · ${item.coreEntityCount} Core` : `${item.galleryClaimCount} Gallery · ${item.itemClaimCount} Media`, error: item.errorCode }))} selected={selectedImportID} onSelect={(id) => setSelectedImportID(id)} />
       <SessionList title={t("合并会话", "Merge sessions")} empty={t("暂无合并会话", "No merge sessions")} items={(snapshot?.merges ?? []).map((item) => ({ id: item.mergeID, state: item.state, detail: `${item.reviewCount} Review · ${item.hardBlockingCount} Blocked`, error: item.errorCode }))} selected={selectedMergeID} onSelect={(id) => setSelectedMergeID(id)} />
     </div>
 
@@ -172,11 +187,13 @@ export function ManagePortableMigrationPanel() {
       <div className="portable-workbench__actions"><button type="button" disabled={!decisionsReady || selectedMerge.state !== "DECISIONS_PENDING"} onClick={() => openAction("DECIDE_MERGE")}>{t("保存全部决定…", "Save all decisions…")}</button><button type="button" disabled={selectedMerge.state !== "READY"} onClick={() => openAction("APPLY_MERGE")}>{t("应用合并…", "Apply merge…")}</button><button className="danger" type="button" disabled={!["BLOCKED", "DECISIONS_PENDING", "READY", "STALE", "FAILED"].includes(selectedMerge.state)} onClick={() => openAction("ABORT_MERGE")}>{t("终止会话…", "Abort session…")}</button></div>
     </div> : null}
 
-    {selectedImport ? <div className="portable-workbench__phase"><h4>{t("媒体库映射与 Gallery 重建", "Library mapping and Gallery rebuild")} · {selectedImport.state}</h4>
+    {selectedImport && selectedImport.profile === "CORE_CATALOG" ? <div className="portable-workbench__phase"><h4>{t("核心目录导入", "Core catalog import")} · {selectedImport.state}</h4><p className="state-message">{t("核心目录已导入。该档位没有媒体库映射、Gallery 身份认领、重建或所有者连续性待办。", "Core catalog imported. This profile has no library mapping, Gallery identity claims, rebuild, or owner-continuity tasks.")}</p></div> : null}
+    {selectedImport && selectedImport.profile !== "CORE_CATALOG" ? <div className="portable-workbench__phase"><h4>{t("媒体库映射与 Gallery 重建", "Library mapping and Gallery rebuild")} · {selectedImport.state}</h4>
       {snapshot?.owner ? <p className="portable-workbench__boundary">{snapshot.owner.available ? t(`此包包含可选连续性：${snapshot.owner.galleryLifecycle ? "生命周期" : ""}${snapshot.owner.galleryLifecycle && snapshot.owner.personalFlags ? "、" : ""}${snapshot.owner.personalFlags ? "收藏/隐藏" : ""}；${snapshot.owner.galleryCount} 个 Gallery，${snapshot.owner.itemCount} 个收藏媒体。`, `Optional continuity included: ${snapshot.owner.galleryLifecycle ? "lifecycle" : ""}${snapshot.owner.galleryLifecycle && snapshot.owner.personalFlags ? " and " : ""}${snapshot.owner.personalFlags ? "favourite/hidden flags" : ""}; ${snapshot.owner.galleryCount} Galleries and ${snapshot.owner.itemCount} favourite items.`) : t("此包不包含所有者连续性；无需执行连续性应用。", "This package has no owner continuity partition; no continuity apply is needed.")}</p> : null}
       {snapshot?.mappings.length ? <div className="manage-table-wrap"><table className="manage-table"><thead><tr><th>{t("源逻辑库", "Source library")}</th><th>{t("目标媒体库", "Target library")}</th><th>{t("当前状态", "Current state")}</th></tr></thead><tbody>{snapshot.mappings.map((item) => <tr key={item.libraryKey}><td>{item.libraryName}<small>{item.libraryKey}</small></td><td><select aria-label={`${item.libraryName} target library`} value={libraryDecisions[item.libraryKey] ?? ""} onChange={(event) => setLibraryDecisions((current) => ({ ...current, [item.libraryKey]: event.target.value }))}><option value="">{t("请选择", "Select")}</option><option value="__SKIP__">{t("明确跳过", "Explicitly skip")}</option>{(librariesQuery.data?.manageLibraries ?? []).filter((library) => library.enabled).map((library) => <option key={library.id} value={library.id}>{library.name} · {library.rootPath}</option>)}</select></td><td>{item.decision || "PENDING"}<small>{item.targetRoot}</small></td></tr>)}</tbody></table></div> : <p className="state-message">{t("此包没有待映射的逻辑媒体库。", "This package has no logical media libraries to map.")}</p>}
-      <div className="portable-workbench__actions"><button type="button" disabled={!mappingsReady || selectedImport.state !== "CORE_IMPORTED"} onClick={() => openAction("MAP_LIBRARIES")}>{t("保存媒体库映射…", "Save library mappings…")}</button><button type="button" disabled={!(["LIBRARIES_MAPPED", "GALLERIES_REBUILT"].includes(selectedImport.state))} onClick={() => openAction("PREFLIGHT_REBUILD")}>{t("重建预检…", "Preflight rebuild…")}</button><button type="button" disabled={selectedImport.state !== "LIBRARIES_MAPPED"} onClick={() => openAction("REBUILD")}>{t("重建 Gallery…", "Rebuild Galleries…")}</button><button type="button" disabled={selectedImport.state !== "GALLERIES_REBUILT" || !snapshot?.owner?.available} onClick={() => openAction("APPLY_CONTINUITY")}>{t("应用可选所有者连续性…", "Apply optional owner continuity…")}</button></div>
-      {snapshot?.rebuilds.length ? <div className="manage-table-wrap"><table className="manage-table"><thead><tr><th>Gallery</th><th>{t("来源", "Source")}</th><th>{t("定位 / Manifest", "Locator / Manifest")}</th><th>{t("状态", "State")}</th></tr></thead><tbody>{snapshot.rebuilds.map((item) => <tr key={item.setID}><td><small>{item.setID}</small></td><td>{item.sourceType}<small>{item.relativeSource}</small></td><td>{item.locatorStatus} · {item.manifestStatus}</td><td>{item.state}<small>{item.issueCode || "—"}</small></td></tr>)}</tbody></table></div> : null}
+      <div className="portable-workbench__options"><label><input type="checkbox" disabled={selectedImport.state !== "LIBRARIES_MAPPED"} checked={autoAdopt} onChange={(event) => { setAutoAdopt(event.target.checked); if (!event.target.checked) setAutoActivate(false); }} />{t("自动接管唯一且字节完全匹配的来源", "Auto-adopt unique byte-identical sources")}</label><label><input type="checkbox" disabled={selectedImport.state !== "LIBRARIES_MAPPED" || !autoAdopt} checked={autoActivate} onChange={(event) => setAutoActivate(event.target.checked)} />{t("重建后请求可信自动激活（仍遵守全部门禁）", "Request trusted auto-activation after rebuild (all gates still apply)")}</label></div>
+      <div className="portable-workbench__actions"><button type="button" disabled={!mappingsReady || selectedImport.state !== "CORE_IMPORTED"} onClick={() => openAction("MAP_LIBRARIES")}>{t("保存媒体库映射…", "Save library mappings…")}</button><button type="button" disabled={selectedImport.state !== "LIBRARIES_MAPPED"} onClick={() => openAction("CONFIGURE_REBUILD_AUTOMATION")}>{t("保存自动接管策略…", "Save auto-adoption policy…")}</button><button type="button" disabled={!(["LIBRARIES_MAPPED", "GALLERIES_REBUILT"].includes(selectedImport.state))} onClick={() => openAction("PREFLIGHT_REBUILD")}>{t("重建预检…", "Preflight rebuild…")}</button><button type="button" disabled={selectedImport.state !== "LIBRARIES_MAPPED" || adoptableRebuildCount === 0} onClick={() => openAction("ADOPT_REBUILD_SOURCES")}>{t("接管所选来源…", "Adopt selected sources…")} ({adoptableRebuildCount})</button><button type="button" disabled={selectedImport.state !== "LIBRARIES_MAPPED"} onClick={() => openAction("REBUILD")}>{t("重建就绪 Gallery…", "Rebuild ready Galleries…")}</button><button type="button" disabled={selectedImport.state !== "GALLERIES_REBUILT" || !snapshot?.owner?.available} onClick={() => openAction("APPLY_CONTINUITY")}>{t("应用可选所有者连续性…", "Apply optional owner continuity…")}</button></div>
+      {snapshot?.rebuilds.length ? <div className="manage-table-wrap"><table className="manage-table"><thead><tr><th>{t("选择", "Select")}</th><th>Gallery</th><th>{t("来源", "Source")}</th><th>{t("定位 / Manifest", "Locator / Manifest")}</th><th>{t("状态", "State")}</th></tr></thead><tbody>{snapshot.rebuilds.map((item) => { const canAdopt = item.state !== "REBUILT" && item.state !== "SKIPPED" && (item.sourceResolution === "EXACT" || item.sourceResolution === "RELOCATED_UNIQUE"); return <tr key={item.setID}><td><input type="checkbox" aria-label={`${item.setID} adopt`} disabled={!canAdopt} checked={Boolean(selectedRebuilds[item.setID]) && canAdopt} onChange={(event) => setSelectedRebuilds((current) => ({ ...current, [item.setID]: event.target.checked }))} /></td><td><small>{item.setID}</small></td><td>{item.sourceType}<small>{item.exportedRelativeSource || item.relativeSource}</small>{item.resolvedRelativeSource && item.resolvedRelativeSource !== item.exportedRelativeSource ? <small>→ {item.resolvedRelativeSource}</small> : null}</td><td>{item.sourceResolution || item.locatorStatus} · {item.manifestStatus}{item.adoptedManifestHash ? <small>{t("已接管当前 Manifest", "Current Manifest adopted")}</small> : null}</td><td>{item.state}<small>{item.issueCode || "—"}</small></td></tr>; })}</tbody></table></div> : null}
     </div> : null}
 
     {pendingAction ? <Dialog titleID="portable-action-title" dismissible={!actionState.loading} onClose={() => setPendingAction(null)}><p>{t("高影响迁移操作", "HIGH-IMPACT MIGRATION OPERATION")}</p><h3 id="portable-action-title">{pendingAction}</h3><ul><li>{t("将重新校验保留包、当前目标状态和阶段前置条件。", "The retained package, current target state, and phase prerequisites will be revalidated.")}</li><li>{t("导入和合并会在变更前创建安全备份。", "Import and merge create a safety backup before business data changes.")}</li><li>{t("原始媒体文件不会被复制或删除。", "Original media files are never copied or deleted.")}</li></ul>{needsPath ? <p><strong>{actionPath}</strong></p> : null}<label>{t("所有者密码", "Owner password")}<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /></label><label>{t(`输入 ${confirmations[pendingAction]} 继续`, `Type ${confirmations[pendingAction]} to continue`)}<input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><footer><button type="button" onClick={() => setPendingAction(null)}>{t("取消", "Cancel")}</button><button type="button" disabled={!password || confirmation !== confirmations[pendingAction] || actionState.loading} onClick={executeAction}>{actionState.loading ? t("正在执行…", "Running…") : t("确认执行", "Confirm")}</button></footer></Dialog> : null}

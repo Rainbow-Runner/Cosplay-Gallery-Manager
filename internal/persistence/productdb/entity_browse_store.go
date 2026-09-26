@@ -69,7 +69,7 @@ func (s *BrowseStore) EntityIndexFiltered(ctx context.Context, kind browse.Searc
 			recentScope = ` AND gallery_recent.content_rating=?`
 			queryArgs = append(queryArgs, scopeArg)
 		}
-		order = `(SELECT MAX(gallery_recent.added_at_utc) FROM gallery_credits recent_relation
+		order = `(SELECT MAX(COALESCE(CASE WHEN gallery_recent.media_added_status='COMPLETE' THEN NULLIF(gallery_recent.media_added_start_at_utc,'') END,gallery_recent.first_activated_at_utc,gallery_recent.added_at_utc,gallery_recent.created_at_utc)) FROM gallery_credits recent_relation
 			JOIN galleries gallery_recent ON gallery_recent.id=recent_relation.gallery_id
 			JOIN gallery_sources recent_source ON recent_source.gallery_id=gallery_recent.id
 			LEFT JOIN gallery_personal_states recent_personal ON recent_personal.gallery_id=gallery_recent.id

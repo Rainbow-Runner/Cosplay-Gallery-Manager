@@ -78,6 +78,56 @@ func TestScanInitialNaturalGroupedOrderAndAtomicAbort(t *testing.T) {
 	}
 }
 
+func TestCompleteScanAtomicallySummarisesStaticImageModificationRange(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 26, 10, 0, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	runID, err := db.Scans().Begin(ctx, source.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, second := scanPhoto("a.jpg", "a"), scanPhoto("b.jpg", "b")
+	first.SourceModifiedAtUTC, first.SourceModifiedStatus, first.SourceModifiedOrigin = "2024-01-02T03:04:05Z", "FOUND", "FILESYSTEM"
+	second.SourceModifiedAtUTC, second.SourceModifiedStatus, second.SourceModifiedOrigin = "2024-02-03T04:05:06Z", "FOUND", "FILESYSTEM"
+	for _, observation := range []ScanObservation{first, second, scanVideo("clip.mp4", "v")} {
+		if err := db.Scans().Stage(ctx, runID, observation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Scans().Commit(ctx, runID, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	var start, end, status string
+	var revision int64
+	if err := db.QueryRowContext(ctx, `SELECT media_added_start_at_utc,media_added_end_at_utc,media_added_status,media_added_revision FROM galleries WHERE id=?`, created.ID).Scan(&start, &end, &status, &revision); err != nil {
+		t.Fatal(err)
+	}
+	if start != first.SourceModifiedAtUTC || end != second.SourceModifiedAtUTC || status != "COMPLETE" || revision != 1 {
+		t.Fatalf("media-added summary = %q %q %q %d", start, end, status, revision)
+	}
+
+	aborted, err := db.Scans().Begin(ctx, source.ID, now.Add(2*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	changed := first
+	changed.SourceModifiedAtUTC = "2025-01-01T00:00:00Z"
+	if err := db.Scans().Stage(ctx, aborted, changed); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Abort(ctx, aborted, true, "USER_CANCELLED", now.Add(3*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	var retained string
+	if err := db.QueryRowContext(ctx, `SELECT media_added_start_at_utc FROM galleries WHERE id=?`, created.ID).Scan(&retained); err != nil {
+		t.Fatal(err)
+	}
+	if retained != first.SourceModifiedAtUTC {
+		t.Fatalf("aborted scan changed media-added summary to %q", retained)
+	}
+}
+
 func TestMissingSourceRecordsSpecificDiagnosticWithoutMarkingMembersMissing(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

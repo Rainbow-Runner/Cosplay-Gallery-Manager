@@ -29,11 +29,13 @@ type PortableCatalogReader struct {
 	tx            *sql.Tx
 	snapshot      PortableCatalogSnapshot
 	identityCount int
+	profile       portablecatalog.PackageProfile
 }
 
 type PortableOwnerContinuityOptions struct {
 	GalleryLifecycle bool
 	PersonalFlags    bool
+	Profile          portablecatalog.PackageProfile
 }
 
 // BeginPortableCatalogRead captures the non-identity documents and keeps the
@@ -44,6 +46,16 @@ func (db *Database) BeginPortableCatalogRead(ctx context.Context, manifest porta
 }
 
 func (db *Database) BeginPortableCatalogReadWithOwner(ctx context.Context, manifest portablecatalog.PackageManifest, owner PortableOwnerContinuityOptions) (*PortableCatalogReader, error) {
+	profile := owner.Profile
+	if profile == "" {
+		profile = portablecatalog.ProfileGalleryIdentityAssisted
+	}
+	if manifest.FormatVersion == portablecatalog.FormatVersion && manifest.Profile == "" {
+		manifest.Profile = profile
+	}
+	if profile == portablecatalog.ProfileCoreCatalog && (owner.GalleryLifecycle || owner.PersonalFlags) {
+		return nil, errors.New("core catalog export cannot include owner continuity")
+	}
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, err
@@ -77,8 +89,10 @@ func (db *Database) BeginPortableCatalogReadWithOwner(ctx context.Context, manif
 	if err := loadPortableRelations(ctx, tx, &result); err != nil {
 		return fail(err)
 	}
-	if err := loadPortableGalleryIndex(ctx, tx, &result); err != nil {
-		return fail(err)
+	if profile != portablecatalog.ProfileCoreCatalog {
+		if err := loadPortableGalleryIndex(ctx, tx, &result); err != nil {
+			return fail(err)
+		}
 	}
 	if owner.GalleryLifecycle || owner.PersonalFlags {
 		if err := loadPortableOwnerContinuity(ctx, tx, owner, &result); err != nil {
@@ -86,11 +100,15 @@ func (db *Database) BeginPortableCatalogReadWithOwner(ctx context.Context, manif
 		}
 	}
 	var identityCount int
-	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM portable_uuid_registry`).Scan(&identityCount); err != nil {
+	identityCountQuery := `SELECT COUNT(*) FROM portable_uuid_registry`
+	if profile == portablecatalog.ProfileCoreCatalog {
+		identityCountQuery += ` WHERE entity_kind NOT IN ('GALLERY','GALLERY_ITEM','EXTERNAL_LINK')`
+	}
+	if err := tx.QueryRowContext(ctx, identityCountQuery).Scan(&identityCount); err != nil {
 		return fail(err)
 	}
 	result.Bundle.Normalize()
-	return &PortableCatalogReader{tx: tx, snapshot: result, identityCount: identityCount}, nil
+	return &PortableCatalogReader{tx: tx, snapshot: result, identityCount: identityCount, profile: profile}, nil
 }
 
 func loadPortableOwnerContinuity(ctx context.Context, tx *sql.Tx, options PortableOwnerContinuityOptions, result *PortableCatalogSnapshot) error {
@@ -167,10 +185,14 @@ func (r *PortableCatalogReader) StreamIdentities(ctx context.Context, yield func
 	if r == nil || r.tx == nil || yield == nil {
 		return errors.New("portable catalog reader is closed")
 	}
+	identityWhere := ""
+	if r.profile == portablecatalog.ProfileCoreCatalog {
+		identityWhere = ` WHERE registry.entity_kind NOT IN ('GALLERY','GALLERY_ITEM','EXTERNAL_LINK')`
+	}
 	rows, err := r.tx.QueryContext(ctx, `SELECT registry.uuid,registry.entity_kind,registry.created_at_utc,
 		COALESCE(alias.target_uuid,''),COALESCE(alias.merged_at_utc,''),COALESCE(tombstone.deleted_at_utc,''),COALESCE(tombstone.reason,'')
 		FROM portable_uuid_registry registry LEFT JOIN portable_uuid_aliases alias ON alias.alias_uuid=registry.uuid
-		LEFT JOIN portable_uuid_tombstones tombstone ON tombstone.uuid=registry.uuid ORDER BY registry.uuid`)
+		LEFT JOIN portable_uuid_tombstones tombstone ON tombstone.uuid=registry.uuid`+identityWhere+` ORDER BY registry.uuid`)
 	if err != nil {
 		return err
 	}

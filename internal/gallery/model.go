@@ -95,25 +95,27 @@ const (
 )
 
 type Gallery struct {
-	ID                 int64
-	SetID              string
-	Slug               string
-	State              State
-	Title              string
-	Aliases            []string
-	Description        string
-	ShootDate          string
-	ShootDatePrecision ShootDatePrecision
-	ContentRating      ContentRating
-	PhotographerName   string
-	StudioName         string
-	CreatedAtUTC       time.Time
-	UpdatedAtUTC       time.Time
-	AddedAtUTC         *time.Time
-	MetadataRevision   int64
-	ScanRevision       int64
-	ScrubberRevision   int64
-	Browsable          bool
+	ID                   int64
+	SetID                string
+	Slug                 string
+	State                State
+	Title                string
+	Aliases              []string
+	Description          string
+	ShootDate            string
+	ShootDatePrecision   ShootDatePrecision
+	PublishDate          string
+	PublishDatePrecision ShootDatePrecision
+	ContentRating        ContentRating
+	PhotographerName     string
+	StudioName           string
+	CreatedAtUTC         time.Time
+	UpdatedAtUTC         time.Time
+	AddedAtUTC           *time.Time
+	MetadataRevision     int64
+	ScanRevision         int64
+	ScrubberRevision     int64
+	Browsable            bool
 }
 
 type Source struct {

@@ -41,18 +41,34 @@ func (s *BrowseStore) GalleriesByCollection(ctx context.Context, scope browse.Sc
 	return s.galleryPage(ctx, scope, page, sortBy, collectionSQL, nil, "")
 }
 
-// Timeline is the only Browse list that excludes unknown shoot dates and
-// normalizes MONTH precision to the first day of that month for ordering. A
-// Coser UUID optionally narrows the same ALL/LIST/MAGIC contract.
 func (s *BrowseStore) Timeline(ctx context.Context, scope browse.Scope, page int, coserUUID string) (browse.GalleryPage, error) {
-	extra := ` AND gallery.shoot_date IS NOT NULL`
+	return s.TimelineByDate(ctx, scope, page, coserUUID, browse.TimelineShoot)
+}
+
+// TimelineByDate omits galleries without the selected date. MONTH precision
+// sorts as the first day of its month, while retaining its original precision.
+func (s *BrowseStore) TimelineByDate(ctx context.Context, scope browse.Scope, page int, coserUUID string, date browse.TimelineDate) (browse.GalleryPage, error) {
+	var extra, dateOrder string
+	switch date {
+	case browse.TimelineShoot:
+		extra = ` AND gallery.shoot_date IS NOT NULL`
+		dateOrder = `CASE gallery.shoot_date_precision WHEN 'MONTH' THEN gallery.shoot_date||'-01' ELSE gallery.shoot_date END`
+	case browse.TimelineMediaAdded:
+		extra = ` AND gallery.media_added_status='COMPLETE' AND NULLIF(gallery.media_added_start_at_utc,'') IS NOT NULL`
+		dateOrder = `gallery.media_added_start_at_utc`
+	case browse.TimelinePublish:
+		extra = ` AND gallery.publish_date IS NOT NULL`
+		dateOrder = `CASE gallery.publish_date_precision WHEN 'MONTH' THEN gallery.publish_date||'-01' ELSE gallery.publish_date END`
+	default:
+		return browse.GalleryPage{}, errors.New("invalid timeline date")
+	}
 	var args []any
 	if coserUUID != "" {
 		extra += ` AND EXISTS(SELECT 1 FROM gallery_credits timeline_credit WHERE timeline_credit.gallery_id=gallery.id AND timeline_credit.coser_uuid=?)`
 		args = append(args, coserUUID)
 	}
-	order := `CASE gallery.shoot_date_precision WHEN 'MONTH' THEN gallery.shoot_date||'-01' ELSE gallery.shoot_date END DESC,
-		gallery.added_at_utc DESC,gallery.id DESC`
+	order := dateOrder + ` DESC,
+		COALESCE(CASE WHEN gallery.media_added_status='COMPLETE' THEN NULLIF(gallery.media_added_start_at_utc,'') END,gallery.first_activated_at_utc,gallery.added_at_utc,gallery.created_at_utc) DESC,gallery.id DESC`
 	return s.galleryPage(ctx, scope, page, browse.GallerySortShootDate, extra, args, order)
 }
 
@@ -86,7 +102,8 @@ func (s *BrowseStore) galleryPage(ctx context.Context, scope browse.Scope, page 
 	}
 	queryArgs := append(append([]any{}, args...), browseGalleryPageSize, (page-1)*browseGalleryPageSize)
 	rows, err := s.db.QueryContext(ctx, `SELECT gallery.id,gallery.set_id,gallery.slug,gallery.title,gallery.content_rating,
-		gallery.shoot_date,gallery.shoot_date_precision,gallery.added_at_utc,gallery.scrubber_revision,
+		gallery.shoot_date,gallery.shoot_date_precision,gallery.publish_date,gallery.publish_date_precision,gallery.added_at_utc,gallery.media_added_start_at_utc,
+		gallery.media_added_end_at_utc,gallery.media_added_status,gallery.scrubber_revision,
 		CASE WHEN EXISTS(SELECT 1 FROM gallery_cast cast_item WHERE cast_item.gallery_id=gallery.id) THEN 'COSPLAY' ELSE 'ALBUM' END,
 		COALESCE(personal.favorite,0),personal.rating_half_steps,
 		COALESCE(cover.effective_kind,'NONE'),COALESCE(cover.cover_revision,0),COALESCE(cover.warning_code,''),
@@ -115,7 +132,7 @@ func (s *BrowseStore) galleryPage(ctx context.Context, scope browse.Scope, page 
 	for rows.Next() {
 		var card browse.GalleryCard
 		var galleryID int64
-		var shootDate, precision sql.NullString
+		var shootDate, precision, publishDate, publishPrecision sql.NullString
 		var addedAt string
 		var favorite int
 		var rating sql.NullInt64
@@ -124,13 +141,15 @@ func (s *BrowseStore) galleryPage(ctx context.Context, scope browse.Scope, page 
 		var resourceItem, resourceProfile, resourceVariant, resourceMIME sql.NullString
 		var resourceRevision sql.NullInt64
 		if err := rows.Scan(&galleryID, &card.SetID, &card.Slug, &card.Title, &card.ContentRating,
-			&shootDate, &precision, &addedAt, &card.ScrubberRevision, &card.CollectionType,
+			&shootDate, &precision, &publishDate, &publishPrecision, &addedAt, &card.MediaAddedStartUTC, &card.MediaAddedEndUTC,
+			&card.MediaAddedStatus, &card.ScrubberRevision, &card.CollectionType,
 			&favorite, &rating, &coverKind, &card.Cover.Revision, &warning,
 			&resourceItem, &resourceRevision, &resourceProfile, &resourceVariant, &resourceMIME,
 			&card.Media.Photo, &card.Media.Selfie, &card.Media.GIF, &card.Media.Video, &card.ScrubberCount); err != nil {
 			return browse.GalleryPage{}, err
 		}
 		card.ShootDate, card.ShootDatePrecision = shootDate.String, gallery.ShootDatePrecision(precision.String)
+		card.PublishDate, card.PublishDatePrecision = publishDate.String, gallery.ShootDatePrecision(publishPrecision.String)
 		card.AddedAtUTC, err = parseTime(addedAt)
 		if err != nil {
 			return browse.GalleryPage{}, err
@@ -194,13 +213,13 @@ func browseCollectionPredicate(collectionType browse.CollectionType) (string, er
 func browseGalleryOrder(sortBy browse.GallerySort) (string, error) {
 	switch sortBy {
 	case "", browse.GallerySortRecentlyAdded:
-		return `gallery.added_at_utc DESC,gallery.id DESC`, nil
+		return `COALESCE(CASE WHEN gallery.media_added_status='COMPLETE' THEN NULLIF(gallery.media_added_start_at_utc,'') END,gallery.first_activated_at_utc,gallery.added_at_utc,gallery.created_at_utc) DESC,gallery.id DESC`, nil
 	case browse.GallerySortName:
 		return `gallery.title COLLATE NOCASE,gallery.id`, nil
 	case browse.GallerySortShootDate:
-		return `gallery.shoot_date IS NULL,gallery.shoot_date DESC,gallery.added_at_utc DESC,gallery.id DESC`, nil
+		return `gallery.shoot_date IS NULL,gallery.shoot_date DESC,COALESCE(CASE WHEN gallery.media_added_status='COMPLETE' THEN NULLIF(gallery.media_added_start_at_utc,'') END,gallery.first_activated_at_utc,gallery.added_at_utc,gallery.created_at_utc) DESC,gallery.id DESC`, nil
 	case browse.GallerySortRating:
-		return `personal.rating_half_steps IS NULL,personal.rating_half_steps DESC,gallery.added_at_utc DESC,gallery.id DESC`, nil
+		return `personal.rating_half_steps IS NULL,personal.rating_half_steps DESC,COALESCE(CASE WHEN gallery.media_added_status='COMPLETE' THEN NULLIF(gallery.media_added_start_at_utc,'') END,gallery.first_activated_at_utc,gallery.added_at_utc,gallery.created_at_utc) DESC,gallery.id DESC`, nil
 	default:
 		return "", errors.New("invalid Browse Gallery sort")
 	}

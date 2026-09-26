@@ -50,7 +50,7 @@ func (s *AutomationStore) ProcessClaimedRunBatch(ctx context.Context, runID int6
 			return fail("DRAFT_COUNT_FAILED", err)
 		}
 		snapshot, err := (&CandidateDiscoveryStore{db: s.db}).DiscoverFilesystemWithOptions(ctx, run.LibraryID,
-			DiscoveryOptions{AutoCreateArchives: policy.AutoImportArchives}, now)
+			DiscoveryOptions{AutoCreateArchives: policy.AutoImportArchives, AutoCreateTrustedManifests: policy.Mode == AutomationTrusted}, now)
 		if err != nil {
 			return fail("DISCOVERY_FAILED", err)
 		}
@@ -254,6 +254,7 @@ func (s *AutomationStore) applyAutomationPolicy(ctx context.Context, galleryID i
 		value, err = (&GalleryStore{db: s.db}).UpdateMetadata(ctx, galleryID, value.MetadataRevision, UpdateGalleryMetadataInput{
 			Title: value.Title, Aliases: value.Aliases, Description: value.Description,
 			ShootDate: value.ShootDate, ShootDatePrecision: value.ShootDatePrecision,
+			PublishDate: value.PublishDate, PublishDatePrecision: value.PublishDatePrecision,
 			ContentRating: policy.DefaultContentRating, PhotographerName: value.PhotographerName,
 			StudioName: value.StudioName,
 		}, now)

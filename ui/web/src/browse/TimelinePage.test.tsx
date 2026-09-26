@@ -1,0 +1,30 @@
+import "@testing-library/jest-dom/vitest";
+
+import { MockedProvider } from "@apollo/client/testing/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { IntlProvider } from "react-intl";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { TIMELINE_GALLERIES } from "../api/browse";
+import { messages } from "../i18n/messages";
+import { TimelinePage } from "./TimelinePage";
+
+afterEach(cleanup);
+
+describe("Coser timeline date modes", () => {
+  it("defaults to all works and switches date source without losing scope", async () => {
+    const page = { page: 1, pageSize: 24, totalItems: 0, totalPages: 0, items: [] };
+    const mocks = (["SHOOT", "PUBLISH"] as const).map((date) => ({
+      request: { query: TIMELINE_GALLERIES, variables: { scope: "ALL", page: 1, coserUUID: "coser-1", date } },
+      result: { data: { timelineGalleries: page } },
+    }));
+    render(<IntlProvider locale="en-GB" messages={messages["en-GB"]}><MockedProvider mocks={mocks}><MemoryRouter><TimelinePage coserUUID="coser-1" /></MemoryRouter></MockedProvider></IntlProvider>);
+    expect(await screen.findByText("No galleries in this scope.")).toBeInTheDocument();
+    const selector = screen.getByRole("combobox", { name: "Timeline date" });
+    expect(selector).toHaveValue("SHOOT");
+    fireEvent.change(selector, { target: { value: "PUBLISH" } });
+    expect(selector).toHaveValue("PUBLISH");
+    expect(await screen.findByText("No galleries in this scope.")).toBeInTheDocument();
+  });
+});

@@ -104,6 +104,65 @@ func TestGalleryManifestPushDirtyConflictAndMissingStates(t *testing.T) {
 	}
 }
 
+func TestGalleryPublicationDateManifestRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 27, 0, 0, 0, 0, time.UTC)
+	created, _ := createBrowseGallery(t, db, "Publication", gallery.ContentRatingNonAdult, now)
+	updated, err := db.Galleries().UpdateMetadata(ctx, created.ID, created.MetadataRevision, UpdateGalleryMetadataInput{
+		Title: created.Title, ContentRating: gallery.ContentRatingNonAdult,
+		PublishDate: "2025-06", PublishDatePrecision: gallery.ShootDatePrecisionMonth,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := db.Manifests().PushGallery(ctx, created.ID, updated.MetadataRevision, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _, err := manifest.ReadFile(state.Path, manifest.MaxGalleryBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	document, err := manifest.ParseGallery(bytesReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var date manifest.ShootDate
+	if err := json.Unmarshal(document.Extensions[manifest.PublishDateExtension], &date); err != nil {
+		t.Fatal(err)
+	}
+	if date.Value != "2025-06" || date.Precision != "MONTH" {
+		t.Fatalf("publication extension = %#v", date)
+	}
+	if _, err := db.Galleries().UpdateMetadata(ctx, created.ID, updated.MetadataRevision, UpdateGalleryMetadataInput{Title: created.Title, ContentRating: gallery.ContentRatingNonAdult}, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	checked, err := db.Manifests().CheckGallery(ctx, created.ID, now.Add(time.Minute))
+	if err != nil || checked.Status != ManifestDBDirty {
+		t.Fatalf("publication date dirty state = %#v, %v", checked, err)
+	}
+}
+
+func TestGalleryPublicationDateValidation(t *testing.T) {
+	for _, value := range []struct {
+		date      string
+		precision gallery.ShootDatePrecision
+		valid     bool
+	}{
+		{"2025-06", gallery.ShootDatePrecisionMonth, true},
+		{"2025-06-17", gallery.ShootDatePrecisionDay, true},
+		{"2025-02-30", gallery.ShootDatePrecisionDay, false},
+		{"2025-06", gallery.ShootDatePrecisionDay, false},
+		{"", gallery.ShootDatePrecisionDay, false},
+	} {
+		err := validateCalendarDate(value.date, value.precision, "publish")
+		if (err == nil) != value.valid {
+			t.Fatalf("validate %q/%q = %v", value.date, value.precision, err)
+		}
+	}
+}
+
 func TestGalleryManifestPushPreviewCountsForgottenMembers(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

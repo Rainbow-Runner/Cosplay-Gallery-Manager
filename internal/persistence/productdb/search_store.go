@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/stashapp/stash/internal/browse"
+	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/mediaprocessing"
 )
 
@@ -54,7 +55,12 @@ func (s *BrowseStore) searchGalleries(ctx context.Context, scope browse.Scope, q
 	args = append(args, query, prefix, contains, query, prefix, contains, contains)
 	args = append(args, mediaprocessing.VariantStaticPoster, mediaprocessing.VariantCard480)
 	rows, err := s.db.QueryContext(ctx, `WITH visible AS (
-		SELECT gallery.id,gallery.set_id,gallery.slug,gallery.title,gallery.added_at_utc FROM galleries gallery
+		SELECT gallery.id,gallery.set_id,gallery.slug,gallery.title,
+			CASE WHEN gallery.media_added_status='COMPLETE' THEN COALESCE(gallery.media_added_start_at_utc,'') ELSE '' END media_added_start,
+			CASE WHEN gallery.media_added_status='COMPLETE' THEN COALESCE(gallery.media_added_end_at_utc,'') ELSE '' END media_added_end,
+			COALESCE(gallery.shoot_date,'') shoot_date,COALESCE(gallery.shoot_date_precision,'') shoot_precision,
+			COALESCE(gallery.publish_date,'') publish_date,COALESCE(gallery.publish_date_precision,'') publish_precision,
+			COALESCE(CASE WHEN gallery.media_added_status='COMPLETE' THEN NULLIF(gallery.media_added_start_at_utc,'') END,gallery.first_activated_at_utc,gallery.added_at_utc,gallery.created_at_utc) recent_at FROM galleries gallery
 		JOIN gallery_sources source ON source.gallery_id=gallery.id LEFT JOIN gallery_personal_states personal ON personal.gallery_id=gallery.id
 		WHERE `+browseVisibleGalleryPredicate+scopeSQL+`), matches AS (
 		SELECT id,CASE WHEN lower(title)=lower(?) THEN 1 WHEN title LIKE ? ESCAPE '\' THEN 3 ELSE 5 END rank
@@ -72,6 +78,7 @@ func (s *BrowseStore) searchGalleries(ctx context.Context, scope browse.Scope, q
 			UNION ALL SELECT alias.alias FROM gallery_tags relation JOIN tag_aliases alias ON alias.tag_uuid=relation.tag_uuid WHERE relation.gallery_id=visible.id
 		) related WHERE related.value LIKE ? ESCAPE '\'))
 		SELECT visible.set_id,visible.slug,visible.title,MIN(matches.rank) rank,
+			visible.media_added_start,visible.media_added_end,visible.shoot_date,visible.shoot_precision,visible.publish_date,visible.publish_precision,
 			cover_derivative.item_uuid,cover_derivative.content_revision,cover_derivative.profile_hash,
 			cover_derivative.variant,cover_derivative.mime_type
 		FROM matches JOIN visible ON visible.id=matches.id
@@ -79,7 +86,7 @@ func (s *BrowseStore) searchGalleries(ctx context.Context, scope browse.Scope, q
 		LEFT JOIN media_derivatives cover_derivative ON cover_derivative.item_uuid=cover.effective_item_uuid
 			AND cover_derivative.is_current=1
 			AND cover_derivative.variant=CASE WHEN cover.effective_kind='VIDEO_POSTER' THEN ? ELSE ? END
-		GROUP BY visible.id ORDER BY rank,visible.added_at_utc DESC,visible.id DESC LIMIT 5`, args...)
+		GROUP BY visible.id ORDER BY rank,visible.recent_at DESC,visible.id DESC LIMIT 5`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -89,10 +96,14 @@ func (s *BrowseStore) searchGalleries(ctx context.Context, scope browse.Scope, q
 		value := browse.SearchHit{Kind: browse.SearchGallery}
 		var itemUUID, profileHash, variant, mimeType sql.NullString
 		var revision sql.NullInt64
+		var shootPrecision, publishPrecision string
 		if err := rows.Scan(&value.UUID, &value.Slug, &value.Name, &value.MatchLevel,
+			&value.MediaAddedStartUTC, &value.MediaAddedEndUTC, &value.ShootDate, &shootPrecision, &value.PublishDate, &publishPrecision,
 			&itemUUID, &revision, &profileHash, &variant, &mimeType); err != nil {
 			return nil, err
 		}
+		value.ShootDatePrecision = gallery.ShootDatePrecision(shootPrecision)
+		value.PublishDatePrecision = gallery.ShootDatePrecision(publishPrecision)
 		if itemUUID.Valid && revision.Valid {
 			value.CoverResource = &browse.ResourceIdentity{ItemUUID: itemUUID.String, ContentRevision: revision.Int64,
 				ProfileHash: profileHash.String, Variant: variant.String, MIMEType: mimeType.String}

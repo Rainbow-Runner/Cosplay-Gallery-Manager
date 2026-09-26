@@ -150,6 +150,48 @@ func TestTimelineNormalizesMonthPrecisionSkipsUnknownAndFiltersCoser(t *testing.
 	}
 }
 
+func TestTimelineDateModesOmitUnknownAndSortDeterministically(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 27, 0, 0, 0, 0, time.UTC)
+	first, _ := createBrowseGallery(t, db, "First", gallery.ContentRatingNonAdult, now)
+	second, _ := createBrowseGallery(t, db, "Second", gallery.ContentRatingNonAdult, now)
+	unknown, _ := createBrowseGallery(t, db, "Unknown", gallery.ContentRatingNonAdult, now)
+	for _, value := range []gallery.Gallery{first, second, unknown} {
+		activateBrowseFixture(t, db, value.ID, now)
+	}
+	for _, row := range []struct {
+		id                                                      int64
+		shoot, shootPrecision, publish, publishPrecision, added string
+	}{
+		{first.ID, "2024-05", "MONTH", "2025-01", "MONTH", "2023-01-01T00:00:00Z"},
+		{second.ID, "2024-06-01", "DAY", "2024-12-31", "DAY", "2024-01-01T00:00:00Z"},
+	} {
+		if _, err := db.ExecContext(ctx, `UPDATE galleries SET shoot_date=?,shoot_date_precision=?,publish_date=?,publish_date_precision=?,media_added_status='COMPLETE',media_added_start_at_utc=? WHERE id=?`, row.shoot, row.shootPrecision, row.publish, row.publishPrecision, row.added, row.id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, check := range []struct {
+		mode     browse.TimelineDate
+		expected []string
+	}{
+		{browse.TimelineShoot, []string{second.SetID, first.SetID}},
+		{browse.TimelineMediaAdded, []string{second.SetID, first.SetID}},
+		{browse.TimelinePublish, []string{first.SetID, second.SetID}},
+	} {
+		page, err := db.Browse().TimelineByDate(ctx, browse.ScopeList, 1, "", check.mode)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if page.TotalItems != 2 || len(page.Items) != 2 || page.Items[0].SetID != check.expected[0] || page.Items[1].SetID != check.expected[1] {
+			t.Fatalf("mode %s: %#v", check.mode, page)
+		}
+	}
+	if _, err := db.Browse().TimelineByDate(ctx, browse.ScopeList, 1, "", "INVALID"); err == nil {
+		t.Fatal("unknown timeline mode accepted")
+	}
+}
+
 func createBrowseGallery(t *testing.T, db *Database, title string, rating gallery.ContentRating, now time.Time) (gallery.Gallery, gallery.Source) {
 	t.Helper()
 	ctx := context.Background()

@@ -40,15 +40,22 @@ func galleryCard(value browse.GalleryCard) *BrowseGalleryCard {
 		Credits: personSummaries(value.Credits), CreditCount: value.CreditCount,
 		Characters: entitySummaries(value.Characters), CharacterCount: value.CharacterCount,
 		Works: entitySummaries(value.Works), WorkCount: value.WorkCount,
-		ShootDate: value.ShootDate, AddedAtUtc: value.AddedAtUTC.UTC().Format("2006-01-02T15:04:05Z"),
-		Media:    &MediaCounts{Photo: value.Media.Photo, Selfie: value.Media.Selfie, Gif: value.Media.GIF, Video: value.Media.Video},
-		Favorite: value.Favorite, RatingHalfSteps: value.RatingHalfSteps,
+		ShootDate: value.ShootDate, PublishDate: value.PublishDate, AddedAtUtc: value.AddedAtUTC.UTC().Format("2006-01-02T15:04:05Z"),
+		MediaAddedStartUtc: value.MediaAddedStartUTC, MediaAddedEndUtc: value.MediaAddedEndUTC,
+		MediaAddedStatus: value.MediaAddedStatus,
+		Media:            &MediaCounts{Photo: value.Media.Photo, Selfie: value.Media.Selfie, Gif: value.Media.GIF, Video: value.Media.Video},
+		Favorite:         value.Favorite, RatingHalfSteps: value.RatingHalfSteps,
 		ScrubberCount: value.ScrubberCount, ScrubberRevision: value.ScrubberRevision,
 	}
 	if value.ShootDatePrecision == "" {
 		result.ShootDatePrecision = ShootDatePrecisionUnknown
 	} else {
 		result.ShootDatePrecision = ShootDatePrecision(value.ShootDatePrecision)
+	}
+	if value.PublishDatePrecision == "" {
+		result.PublishDatePrecision = ShootDatePrecisionUnknown
+	} else {
+		result.PublishDatePrecision = ShootDatePrecision(value.PublishDatePrecision)
 	}
 	return result
 }
@@ -188,8 +195,17 @@ func searchPreviewModel(value browse.SearchPreview) *SearchPreview {
 func searchHits(values []browse.SearchHit) []*SearchHit {
 	result := make([]*SearchHit, 0, len(values))
 	for _, value := range values {
+		shootPrecision, publishPrecision := ShootDatePrecisionUnknown, ShootDatePrecisionUnknown
+		if value.ShootDatePrecision != "" {
+			shootPrecision = ShootDatePrecision(value.ShootDatePrecision)
+		}
+		if value.PublishDatePrecision != "" {
+			publishPrecision = ShootDatePrecision(value.PublishDatePrecision)
+		}
 		result = append(result, &SearchHit{Kind: SearchEntityKind(value.Kind), UUID: value.UUID, Slug: value.Slug,
-			Name: value.Name, MatchLevel: value.MatchLevel, CoverResource: resourceIdentity(value.CoverResource)})
+			Name: value.Name, MatchLevel: value.MatchLevel, CoverResource: resourceIdentity(value.CoverResource),
+			MediaAddedStartUtc: value.MediaAddedStartUTC, MediaAddedEndUtc: value.MediaAddedEndUTC,
+			ShootDate: value.ShootDate, ShootDatePrecision: shootPrecision, PublishDate: value.PublishDate, PublishDatePrecision: publishPrecision})
 	}
 	return result
 }
@@ -314,9 +330,13 @@ func manageGalleryDetail(value manage.GalleryDetail) *ManageGalleryDetail {
 		precision = ShootDatePrecision(value.ShootDatePrecision)
 	}
 	result := &ManageGalleryDetail{Row: manageGalleryRow(value.Row), Aliases: value.Aliases, Description: value.Description, ShootDate: value.ShootDate,
-		ShootDatePrecision: precision, PhotographerName: value.PhotographerName, StudioName: value.StudioName,
+		ShootDatePrecision: precision, PublishDate: value.PublishDate, PublishDatePrecision: ShootDatePrecisionUnknown, PhotographerName: value.PhotographerName, StudioName: value.StudioName,
 		ImageCaptureStart: value.ImageCaptureStart, ImageCaptureEnd: value.ImageCaptureEnd, VideoCaptureStart: value.VideoCaptureStart, VideoCaptureEnd: value.VideoCaptureEnd,
-		CaptureDateCandidate: value.CaptureDateCandidate, CaptureDateReviewStatus: value.CaptureDateReviewStatus}
+		CaptureDateCandidate: value.CaptureDateCandidate, CaptureDateReviewStatus: value.CaptureDateReviewStatus,
+		MediaAddedStartUtc: value.MediaAddedStartUTC, MediaAddedEndUtc: value.MediaAddedEndUTC, MediaAddedStatus: value.MediaAddedStatus}
+	if value.PublishDatePrecision != "" {
+		result.PublishDatePrecision = ShootDatePrecision(value.PublishDatePrecision)
+	}
 	for _, item := range value.Items {
 		var category *ImageCategory
 		if item.ImageCategory != "" {
@@ -469,7 +489,10 @@ func manageDiscoverySnapshot(value productdb.DiscoverySnapshot) *ManageDiscovery
 		result.CompletedAt = value.CompletedAt.UTC().Format("2006-01-02T15:04:05Z")
 	}
 	for _, candidate := range value.Candidates {
-		converted := &ManageCandidate{ID: candidate.ID, RootPath: candidate.RootPath, SourceType: string(candidate.SourceType), Method: candidate.Method, Status: candidate.Status, AutoCreateDraft: candidate.AutoCreateDraft, HasConflict: candidate.HasConflict, OverLimit: candidate.OverLimit, MediaCount: candidate.MediaCount}
+		converted := &ManageCandidate{ID: candidate.ID, RootPath: candidate.RootPath, SourceType: string(candidate.SourceType), Method: candidate.Method,
+			ManifestSchema: candidate.ManifestSchema, ManifestRevision: candidate.ManifestRevision, ManifestHash: candidate.ManifestHash,
+			IdentityClassification: candidate.IdentityClassification, IdentityIssueCode: candidate.IdentityIssueCode, InspectionToken: candidate.InspectionTokenHash,
+			Status: candidate.Status, AutoCreateDraft: candidate.AutoCreateDraft, HasConflict: candidate.HasConflict, OverLimit: candidate.OverLimit, MediaCount: candidate.MediaCount}
 		if candidate.ManifestSetID != "" {
 			converted.ManifestSetID = &candidate.ManifestSetID
 		}
@@ -645,6 +668,7 @@ func managePortableMigrationSnapshot(value PortableMigrationSnapshot) *ManagePor
 			GalleryClaimCount: item.GalleryClaimCount, ItemClaimCount: item.ItemClaimCount,
 			LinkClaimCount: item.LinkClaimCount, AssetCount: item.AssetCount,
 			ErrorCode: item.ErrorCode, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt,
+			AutoAdoptEnabled: item.AutoAdoptEnabled, AutoActivateEnabled: item.AutoActivateEnabled,
 		})
 	}
 	for _, item := range value.Merges {
@@ -673,7 +697,9 @@ func managePortableMigrationSnapshot(value PortableMigrationSnapshot) *ManagePor
 	for _, item := range value.Rebuilds {
 		result.Rebuilds = append(result.Rebuilds, &ManagePortableGalleryRebuild{
 			SetID: item.SetID, LibraryKey: item.LibraryKey, SourceType: string(item.SourceType),
-			RelativeSource: item.RelativeSource, LocatorStatus: item.LocatorStatus,
+			RelativeSource: item.RelativeSource, ExportedRelativeSource: item.ExportedRelativeSource,
+			ResolvedRelativeSource: item.ResolvedRelativeSource, SourceResolution: item.SourceResolution,
+			ResolutionToken: item.ResolutionTokenHash, AdoptedManifestHash: item.AdoptedManifestHash, LocatorStatus: item.LocatorStatus,
 			ManifestStatus: item.ManifestStatus, State: item.State, IssueCode: item.IssueCode,
 		})
 	}

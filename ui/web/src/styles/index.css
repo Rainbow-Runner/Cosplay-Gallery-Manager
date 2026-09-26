@@ -303,6 +303,8 @@ a { color: inherit; text-decoration: none; }
 .search-result__content { display: grid; min-width: 0; gap: .4rem; }
 .search-result__content strong { overflow: hidden; font: 500 .88rem/1.45 var(--cgm-font-sans); text-overflow: ellipsis; white-space: nowrap; }
 .search-result__content small { color: var(--ink-muted); font-size: .68rem; }
+.search-result__dates { display: flex; flex-wrap: wrap; gap: .15rem 1rem; color: var(--ink-muted); font-size: .68rem; }
+.timeline-date-selector, .manage-date-input { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .search-result__arrow { width: 1rem; color: var(--ink-muted); }
 @media (max-width: 540px) {
   .search-result { grid-template-columns: 4rem minmax(0, 1fr) 1rem; gap: .75rem; min-height: 5.25rem; padding: .45rem .25rem; }

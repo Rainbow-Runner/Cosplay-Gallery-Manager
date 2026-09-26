@@ -104,17 +104,27 @@
 - `state`：`DRAFT | ACTIVE | ARCHIVED`。
 - `title`、受限Markdown `description`。
 - 无时区日历 `shoot_date`及 `MONTH | DAY` 精度。
-- `created_at`：技术记录创建时间；`added_at`：首次成功激活时间。
+- 人工填写的无时区日历`publish_date`及`MONTH | DAY`精度；可留空，不由媒体元数据自动推断，也不作为激活门禁。
+- `created_at`：技术记录创建时间；`first_activated_at`：首次成功激活时间，仅承担生命周期与兼容证据。
+- `media_added_start_at`／`media_added_end_at`：当前可用、未排除静态图片文件修改时间的最早／最晚UTC时间；前台“加入时间”和按加入时间排序使用该派生区间。
 - `content_rating`：`NON_ADULT | ADULT`，DRAFT可空。
 - `photographer_name`、`studio_name`：单值自由文本，仅展示和Manifest同步。
 - `metadata_revision`、`scan_revision`。
 - preferred/effective cover。
 
-`added_at`规则：
+时间规则：
 
-- DRAFT为null，首次转ACTIVE写入UTC当前时间。
-- 归档恢复、重扫、元数据修改、Manifest同步和来源故障均不刷新。
-- 普通编辑不可改；管理端可审计地修正。
+- `first_activated_at`在DRAFT为null，首次转ACTIVE写入UTC当前时间；归档恢复、重扫、元数据修改、Manifest同步和来源故障均不刷新，普通编辑不可改。
+- 媒体加入时间的唯一来源是静态图片的文件修改时间（filesystem `mtime`），不是Linux `ctime`、不稳定的birth/creation time、EXIF拍摄时间、Gallery创建时间或首次激活时间。
+- 汇总范围仅含当前Source中`STATIC_IMAGE`、AVAILABLE、未排除且时间有效的Item；普通静态图片与RAW计入，动画和Video不计入。最早值为`media_added_start_at`，最晚值为`media_added_end_at`。
+- DIRECTORY扫描复用安全枚举取得的文件Info读取`mtime`，不为此打开或解码媒体；ARCHIVE只使用ZIP/CBZ、TAR/TAR.GZ或7z成员目录项明确保存的修改时间，缺失时标记不可用，不回退到存档容器文件本身的`mtime`。
+- Item保存修改时间、来源、状态和检查时间；Gallery保存开始、结束、`PENDING | COMPLETE | PARTIAL | NONE`汇总状态及独立revision。只有来源完整安全扫描提交后才原子替换当前区间；失败或中断保留上次完整结果并标记过期／部分，不提交半扫描区间。
+- 新增、删除、替换、排除或恢复静态图片，以及文件`mtime`变化，都重新汇总。该数据属于Source扫描派生状态，不增加`metadata_revision`、不产生Manifest `DB_DIRTY`，也不成为Activate门禁。
+- 已有Gallery通过有界持久化后台回填：DIRECTORY按既有安全相对路径执行`stat`，每个ARCHIVE只枚举一次成员目录；不重新生成派生图，也不为此读取完整图片内容。手工扫描某Gallery时，其待办任务按既有优先队列规则提前。
+- 修改时间与拍摄时间归入统一的“媒体时间证据”处理生命周期，但分别保存来源、状态和失效版本。新媒体扫描复用安全枚举已经取得的`FileInfo`／存档成员目录项写入`mtime`；静态图片首次`CARD_480`处理复用同一次物化来源提取EXIF，历史缺口才由有界补录兜底。仅`mtime`变化不得重新读取EXIF，仅解析器升级也不得触发来源时间重扫。
+- 时间证据调度允许合并执行机会而不得耦合成功状态：DIRECTORY历史媒体同时缺少两类证据时，可在一次安全打开中通过文件描述符`stat`并解析EXIF；仅缺`mtime`时只执行`stat`。ARCHIVE先按存档分组枚举一次目录项，再只物化仍缺拍摄时间的成员；物化临时文件的`mtime`绝不能冒充存档成员时间。任一证据失败不清除另一类已成功证据。
+- 没有可靠静态图片时间时前台不显示加入时间；排序以`first_activated_at`再到`created_at/id`稳定回退，但不得把回退值伪装成媒体加入时间。数据库升级先把旧`added_at`保存在`first_activated_at`，完成媒体时间回填后再让兼容`added_at`映射到区间开始值。
+- 发布时间属于人工Gallery业务元数据，修改会增加`metadata_revision`并参与Manifest差异；精度为`MONTH`时只展示`YYYY-MM`，排序才规范化为当月第一天。搜索结果把加入、拍摄、发布时间并列展示；缺失日期显示`--:--:--`。
 
 ### 6.2 GalleryCredit与GalleryCast
 
@@ -504,8 +514,9 @@ SocialAccount：
 - photographer_name、studio_name；
 - credits、cast、tags、external_links；
 - cover、items、excluded_items、extensions。
+- 发布时间存于`extensions.cgm.publish_date={value,precision}`；不提高Manifest顶层schema版本。该字段在显式Push/Pull与三方合并中按业务元数据处理。
 
-不保存：collection_type、state、slug、added_at、favorite、hidden、history、view_count、media_kind。
+不保存：collection_type、state、slug、first_activated_at、媒体加入时间区间及Item文件系统时间证据、favorite、hidden、history、view_count、media_kind。媒体加入时间始终由目标机实际Source重新扫描派生，不由Manifest覆盖。
 
 - 手写Manifest可部分提供；缺字段=不修改，显式null=清除；系统Push输出完整快照。
 - 初次导入items可凭精确相对path省略item_uuid，系统创建并首次Push补全；建立基线后既有Item更新必须用UUID。
@@ -577,13 +588,13 @@ SocialAccount：
 
 ### 18.2 首页
 
-- 只显示按 `added_at DESC, id DESC` 的近期收录Gallery，默认24项。
+- 只显示按`media_added_start_at DESC`、缺失时按`first_activated_at/created_at`稳定回退的近期Gallery，默认24项；卡片只有存在可靠媒体时间时才显示加入时间。
 - 无任何推荐、热门、最新Cosplay/Album或近期Coser模块。
 - 无结果时隐藏内容区；查看更多进入相应Gallery索引。
 
 ### 18.3 BrowseGalleryCard
 
-- 统一3:4封面；超宽/桌面/小桌面/平板/手机按6/5/4/3/2列响应。字段为id/slug/title、派生类型、content rating、cover、Credit/Cast/Work摘要及总数、shoot date precision、added_at、P/S/G/V、favorite、rating。
+- 统一3:4封面；超宽/桌面/小桌面/平板/手机按6/5/4/3/2列响应。字段为id/slug/title、派生类型、content rating、cover、Credit/Cast/Work摘要及总数、shoot date precision、媒体加入时间区间及状态、P/S/G/V、favorite、rating。
 - 成人三角徽标；不展示管理状态、路径、Tag全文、总大小或热门数据。
 - P/S/G/V只统计AVAILABLE原始成员；处理ERROR/PENDING若文件可访问仍计数，MISSING/排除不计；独立封面不计。
 
@@ -599,9 +610,9 @@ SocialAccount：
 
 ### 18.4 Gallery索引
 
-- `/list`和`/magic`默认最近收录；可按shoot_date新旧、名称、个人评分排序；搜索时默认相关度。
+- `/list`和`/magic`默认按媒体加入时间区间的开始值倒序；可按shoot_date新旧、名称、个人评分排序；搜索时默认相关度。没有完整媒体加入时间时仅用首次激活／技术创建时间稳定回退排序，UI不把回退值显示为媒体加入时间。
 - 不提供热门、浏览数、趋势或随机排序。
-- 筛选Coser、Work、Character、多Tag AND、媒体类型、shoot/added范围，写入URL Query。
+- 筛选Coser、Work、Character、多Tag AND、媒体类型、shoot/媒体加入时间范围，写入URL Query。
 - Gallery及个人列表默认24项/页，页码分页。
 
 ### 18.5 Gallery详情与Lightbox
@@ -613,7 +624,7 @@ SocialAccount：
 - 顺序Photo→Selfie→GIF→Video；当前媒体筛选启用时只遍历筛选结果；首尾不循环。
 - 关闭Lightbox自动展开并定位尚未渲染的Item；返回键先关Lightbox。
 - Lightbox停止上一动画/视频，只预取相邻图片代理，视频只预取Poster。
-- 详情“拍摄时间”为主、“收录于”为次，不显示文字标签，以图标、字体、字号、颜色区分，并保留Tooltip/aria-label。
+- 详情“拍摄时间”为主、“加入时间”为次，不显示常驻文字标签，以图标、字体、字号、颜色区分，并保留Tooltip/aria-label明确说明“静态图片文件修改时间”。媒体加入时间开始与结束落在同一显示日期时只显示一个日期，不同时显示`YYYY-MM-DD – YYYY-MM-DD`；没有可靠时间时整项不显示，后台可查看`PARTIAL/NONE`原因。
 - 总大小只统计当前AVAILABLE Item实际存储大小；归档用压缩后成员大小。
 - 已认证单所有者可在详情“更多详情”中查看该Gallery实际存在媒体的去重绝对父目录，并直达其Manage媒体页；这是Browse物理路径约束的有限例外。DIRECTORY包含被排除但非MISSING的Item，根目录优先、其余自然排序；ARCHIVE只显示归档文件所在目录。不得返回文件名、Item相对路径、指纹、缓存路径，也不得提供`file://`、文件管理器或外部命令入口。
 - “更多详情”点击弹层外或按`Escape`关闭，弹层内部操作不得误关闭。
@@ -646,9 +657,10 @@ SocialAccount：
 ### 18.9 时间线
 
 - 只包含有月/日精度shoot_date的Gallery；未知和年精度跳过。
-- 排序：shoot_month DESC、timeline_sort_date DESC、added_at DESC、id DESC；月精度排序日视为1号但UI只显示YYYY-MM。
+- 排序：shoot_month DESC、timeline_sort_date DESC、media_added_start_at DESC、first_activated_at DESC、id DESC；月精度排序日视为1号但UI只显示YYYY-MM，媒体加入时间缺失时按后续键稳定回退。
 - 默认24项，可配置12～120且为12倍数。
 - Coser详情可进入该Coser专属时间线，仍默认ALL并可切分级。
+- Coser专属时间线可以选择拍摄、媒体加入或发布时间作为排序依据，默认拍摄。媒体加入仅接受`COMPLETE`证据；所选日期未知的Gallery只从该模式略去，不影响普通作品列表。三种模式都保留稳定次级排序及分页；全局时间线继续维持原拍摄时间模式。
 
 ### 18.10 随机
 
@@ -670,7 +682,7 @@ SocialAccount：
 - 搜索Gallery标题；Coser/Work/Character/Tag主名、sort_name和Alias；Gallery可通过关联实体间接命中。
 - 不搜Item、Caption、路径、文件名、Description、Biography、URL或技术字段。
 - 相关度：主名完全、Alias完全、主名前缀、Alias前缀、主名包含、Alias包含、Gallery关系间接。
-- 同等级实体按名称/UUID，Gallery按added_at/id；不使用热度、浏览、收藏或评分加权。
+- 同等级实体按名称/UUID，Gallery按media_added_start_at、first_activated_at、id稳定破同序；不使用热度、浏览、收藏或评分加权。
 - 搜索框显式显示Home/List/Magic/All范围；实体必须至少关联当前范围可见Gallery才出现，点击统一详情后默认ALL。
 - 下拉每实体最多5项；完整搜索按Gallery24、Coser30、Work/Character/Tag60独立页码分页。
 
@@ -749,7 +761,7 @@ SocialAccount：
 - 目标UUID保留，源UUID为永久Alias；源Slug重定向；受影响Gallery标记Manifest待Push。
 - Coser合并人工处理Profile/资产/同Gallery Credit冲突；源Manifest变redirect。
 - Work合并处理同名Character；Character跨Work合并以目标Work为准并预览Gallery变化；Tag合并模拟DAG并禁止环。
-- 合并不修改Gallery added_at和个人状态，不移动媒体。
+- 核心实体合并不修改Gallery的首次激活时间、媒体文件时间证据或个人状态，不移动媒体；因Item排除／归属实际改变而需要重新汇总时只能由Source扫描事务执行。
 
 ### 21.3 删除
 
@@ -842,6 +854,7 @@ SocialAccount：
 - UI支持zh-CN和en-GB；元数据只有主名称、sort_name和aliases，不维护全文翻译。
 - shoot_date是无时区日历值；事件时间全部UTC/RFC3339，前端按全局IANA显示时区。
 - EXIF无Offset按媒体库capture_timezone，未设则全局时区解释，只用于日期建议。
+- DIRECTORY文件`mtime`本身按绝对时间转UTC保存；ARCHIVE成员缺少明确时区时按媒体库capture_timezone、未设则全局IANA时区解释，并记录来源，不能用服务器临时时区静默解释。零值、不可解析或不受支持的成员时间标记不可用。
 - 路由不本地化；前端文案中文“作品来源”，URL使用`parody`。
 
 ## 27. 备份与恢复
@@ -853,7 +866,7 @@ SocialAccount：
 - 恢复后撤销Session，取消旧可执行任务，自动计划SUSPENDED_AFTER_RESTORE；完成路径/依赖检查后用户显式恢复。
 - 搜索索引、Tag闭包、推荐缓存和计数可重建；不自动扫描或Manifest Pull/Push。
 - 异机可移植迁移与完整备份解耦：核心身份/实体和Gallery重建声明进入可移植包，旧机器绝对媒体路径不进入；Gallery由目标媒体根及Manifest重建。
-- 可选owner continuity只允许Gallery生命周期/首次收录时间和Gallery收藏隐藏/Item收藏，默认不导出且只在Gallery身份重建后应用。Gallery地址/Slug历史、最后浏览时间、最后浏览项目和其他浏览历史不迁移；Gallery/Item评分继续由Manifest负责。
+- 可选owner continuity只允许Gallery生命周期/首次激活时间和Gallery收藏隐藏/Item收藏，默认不导出且只在Gallery身份重建后应用。媒体加入时间区间和Item文件系统时间证据不迁移，必须在目标Source扫描后重新计算；旧迁移包的`added_at`只解释为旧版首次激活时间，不得覆盖新计算的媒体加入时间。Gallery地址/Slug历史、最后浏览时间、最后浏览项目和其他浏览历史不迁移；Gallery/Item评分继续由Manifest负责。
 
 ## 28. 日志与审计
 
@@ -933,6 +946,8 @@ SocialAccount：
 - Windows原生发行（含amd64/ARM）、macOS原生发行和移动原生应用。
 
 ## 35. 当前结论
+
+- 2026-09-26：迁移实测MT-00～MT-03已按依赖顺序完成源码闭环：format v3双档位、schema v17证据字段、共享Manifest身份检查、目标来源重新定位、显式／自动接管、READY部分重建、可信目录Manifest自动化和独立副本局部身份分叉均已实现；旧format v1/v2保持可读。自动激活只通过目标媒体库既有`TRUSTED + autoActivate`持久化队列继续，所有门禁保持不变。源码尚未提交、迁移正式业务库或部署，真实跨机迁移模拟仍由所有者在部署后执行。详细实现与限制见[迁移测试问题与改进备忘录](development/MIGRATION_TEST_ISSUES_AND_IMPROVEMENTS_2026-09-23.md)。
 
 - 2026-09-10：异机可移植迁移的CLI/Web业务闭环已完成源码收口；Web包含导出预检、owner-continuity范围摘要、最近200条会话窗口和中断恢复入口。Gallery地址、评分重复副本及浏览历史仍按已确认边界排除；真实迁移模拟由所有者在本轮提交部署后执行。
 

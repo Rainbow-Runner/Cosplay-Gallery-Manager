@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/portablecatalog"
@@ -60,14 +61,18 @@ func (s *Server) PortableMigrationSnapshot(ctx context.Context, importID, mergeI
 }
 
 func (s *Server) RunPortableMigration(ctx context.Context, request productapi.PortableMigrationRequest) (productapi.PortableMigrationRunResult, error) {
-	want := map[string]string{"PREFLIGHT_EXPORT": "PREFLIGHT", "EXPORT": "EXPORT", "IMPORT": "IMPORT", "PREPARE_MERGE": "PREPARE", "DECIDE_MERGE": "DECIDE", "APPLY_MERGE": "MERGE", "ABORT_MERGE": "ABORT", "RECOVER_IMPORT": "RECOVER", "RECOVER_MERGE": "RECOVER", "MAP_LIBRARIES": "MAP", "PREFLIGHT_REBUILD": "PREFLIGHT", "REBUILD": "REBUILD", "APPLY_CONTINUITY": "CONTINUITY"}
+	want := map[string]string{"PREFLIGHT_EXPORT": "PREFLIGHT", "EXPORT": "EXPORT", "IMPORT": "IMPORT", "PREPARE_MERGE": "PREPARE", "DECIDE_MERGE": "DECIDE", "APPLY_MERGE": "MERGE", "ABORT_MERGE": "ABORT", "RECOVER_IMPORT": "RECOVER", "RECOVER_MERGE": "RECOVER", "MAP_LIBRARIES": "MAP", "PREFLIGHT_REBUILD": "PREFLIGHT", "CONFIGURE_REBUILD_AUTOMATION": "AUTO ADOPT", "ADOPT_REBUILD_SOURCES": "ADOPT", "REBUILD": "REBUILD", "APPLY_CONTINUITY": "CONTINUITY"}
 	if expected := want[request.Action]; expected == "" || request.Confirmation != expected {
 		return productapi.PortableMigrationRunResult{}, errors.New("portable migration confirmation is invalid")
 	}
 	result := productapi.PortableMigrationRunResult{Code: "PORTABLE_" + request.Action + "_COMPLETED", ImportID: request.ImportID, MergeID: request.MergeID}
 	switch request.Action {
 	case "PREFLIGHT_EXPORT":
-		value, err := s.PreflightPortableMetadata(ctx)
+		profile := portablecatalog.PackageProfile(request.Profile)
+		if profile == "" {
+			profile = portablecatalog.ProfileGalleryIdentityAssisted
+		}
+		value, err := s.PreflightPortableMetadataProfile(ctx, profile)
 		if err != nil {
 			return result, err
 		}
@@ -78,7 +83,11 @@ func (s *Server) RunPortableMigration(ctx context.Context, request productapi.Po
 		if err != nil {
 			return result, err
 		}
-		value, err := s.ExportPortableMetadata(ctx, PortableExportOptions{TargetPath: path, AllowIncompleteGallery: request.AllowIncompleteGallery, IncludeGalleryLifecycle: request.IncludeGalleryLifecycle, IncludePersonalFlags: request.IncludePersonalFlags})
+		profile := portablecatalog.PackageProfile(request.Profile)
+		if profile == "" {
+			profile = portablecatalog.ProfileGalleryIdentityAssisted
+		}
+		value, err := s.ExportPortableMetadata(ctx, PortableExportOptions{TargetPath: path, Profile: profile, AllowIncompleteGallery: request.AllowIncompleteGallery, IncludeGalleryLifecycle: request.IncludeGalleryLifecycle, IncludePersonalFlags: request.IncludePersonalFlags})
 		if err != nil {
 			return result, err
 		}
@@ -139,12 +148,79 @@ func (s *Server) RunPortableMigration(ctx context.Context, request productapi.Po
 			return result, err
 		}
 		result.Count = value.Ready
+	case "CONFIGURE_REBUILD_AUTOMATION":
+		if err := s.Database.ConfigurePortableRebuildAutomation(ctx, request.ImportID, request.AutoAdopt, request.AutoActivate, time.Now()); err != nil {
+			return result, err
+		}
+	case "ADOPT_REBUILD_SOURCES":
+		value, err := s.AdoptPortableGalleryManifests(ctx, request.ImportID, request.GallerySetIDs)
+		if err != nil {
+			return result, err
+		}
+		result.Count = value
 	case "REBUILD":
+		session, err := s.Database.FindPortableImportSession(ctx, request.ImportID)
+		if err != nil {
+			return result, err
+		}
+		if session.AutoAdoptEnabled {
+			if _, err := s.PreflightPortableGalleryRebuild(ctx, request.ImportID); err != nil {
+				return result, err
+			}
+			rebuilds, err := s.Database.ListPortableGalleryRebuilds(ctx, request.ImportID)
+			if err != nil {
+				return result, err
+			}
+			var eligible []string
+			for _, rebuild := range rebuilds {
+				if rebuild.State != "REBUILT" && rebuild.State != "SKIPPED" && rebuild.AdoptionTokenHash == "" &&
+					(rebuild.SourceResolution == "EXACT" || rebuild.SourceResolution == "RELOCATED_UNIQUE") &&
+					rebuild.ResolutionManifestHash != "" && rebuild.ResolutionManifestHash == rebuild.ManifestHash {
+					eligible = append(eligible, rebuild.SetID)
+				}
+			}
+			for len(eligible) > 0 {
+				batch := eligible
+				if len(batch) > 100 {
+					batch = eligible[:100]
+				}
+				if _, err := s.AdoptPortableGalleryManifests(ctx, request.ImportID, batch); err != nil {
+					return result, err
+				}
+				eligible = eligible[len(batch):]
+			}
+		}
 		value, err := s.RebuildPortableGalleries(ctx, request.ImportID)
 		if err != nil {
 			return result, err
 		}
 		result.Count = value.Rebuilt
+		if session.AutoActivateEnabled {
+			mappings, err := s.Database.ListPortableLibraryMappings(ctx, request.ImportID)
+			if err != nil {
+				return result, err
+			}
+			seen := map[int64]bool{}
+			for _, mapping := range mappings {
+				if mapping.TargetLibraryID == nil || seen[*mapping.TargetLibraryID] {
+					continue
+				}
+				seen[*mapping.TargetLibraryID] = true
+				policy, err := s.Database.Automation().FindPolicy(ctx, *mapping.TargetLibraryID)
+				if err != nil || policy.Mode != productdb.AutomationTrusted || !policy.AutoActivate {
+					continue
+				}
+				active, err := s.Database.Automation().FindActiveRun(ctx, *mapping.TargetLibraryID)
+				if err != nil {
+					return result, err
+				}
+				if active == nil {
+					if _, err := s.Database.Automation().EnqueueRun(ctx, policy, time.Now()); err != nil {
+						return result, err
+					}
+				}
+			}
+		}
 	case "APPLY_CONTINUITY":
 		value, err := s.ApplyPortableOwnerContinuity(ctx, request.ImportID)
 		if err != nil {

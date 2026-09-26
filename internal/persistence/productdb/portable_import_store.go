@@ -27,6 +27,7 @@ type PortableImportSessionInput struct {
 	PackageSHA256       string
 	PackageRelativePath string
 	FormatVersion       int
+	Profile             portablecatalog.PackageProfile
 	IdentityCount       int
 	CoreEntityCount     int
 	GalleryClaimCount   int
@@ -44,36 +45,42 @@ type PortableCoreImportResult struct {
 }
 
 type PortableImportSession struct {
-	ImportID            string
-	ExportID            string
-	PackageSHA256       string
-	PackageRelativePath string
-	State               string
-	FormatVersion       int
-	IdentityCount       int
-	CoreEntityCount     int
-	GalleryClaimCount   int
-	ItemClaimCount      int
-	LinkClaimCount      int
-	AssetCount          int
-	ErrorCode           string
-	CreatedAt           string
-	UpdatedAt           string
+	ImportID               string
+	ExportID               string
+	PackageSHA256          string
+	PackageRelativePath    string
+	State                  string
+	FormatVersion          int
+	Profile                portablecatalog.PackageProfile
+	IdentityCount          int
+	CoreEntityCount        int
+	GalleryClaimCount      int
+	ItemClaimCount         int
+	LinkClaimCount         int
+	AssetCount             int
+	ErrorCode              string
+	CreatedAt              string
+	UpdatedAt              string
+	AutoAdoptEnabled       bool
+	AutoActivateEnabled    bool
+	AutomationAuthorizedAt string
 }
 
 func (db *Database) FindPortableImportSession(ctx context.Context, importID string) (PortableImportSession, error) {
 	var result PortableImportSession
-	err := db.QueryRowContext(ctx, `SELECT import_id,export_id,package_sha256,package_relative_path,state,format_version,identity_count,core_entity_count,gallery_claim_count,item_claim_count,link_claim_count,asset_count,error_code,created_at_utc,updated_at_utc
+	var autoAdopt, autoActivate int
+	err := db.QueryRowContext(ctx, `SELECT import_id,export_id,package_sha256,package_relative_path,state,format_version,package_profile,identity_count,core_entity_count,gallery_claim_count,item_claim_count,link_claim_count,asset_count,error_code,created_at_utc,updated_at_utc,auto_adopt_enabled,auto_activate_enabled,automation_authorized_at_utc
 		FROM portable_import_sessions WHERE import_id=?`, importID).Scan(
-		&result.ImportID, &result.ExportID, &result.PackageSHA256, &result.PackageRelativePath, &result.State, &result.FormatVersion, &result.IdentityCount, &result.CoreEntityCount, &result.GalleryClaimCount, &result.ItemClaimCount, &result.LinkClaimCount, &result.AssetCount, &result.ErrorCode, &result.CreatedAt, &result.UpdatedAt)
+		&result.ImportID, &result.ExportID, &result.PackageSHA256, &result.PackageRelativePath, &result.State, &result.FormatVersion, &result.Profile, &result.IdentityCount, &result.CoreEntityCount, &result.GalleryClaimCount, &result.ItemClaimCount, &result.LinkClaimCount, &result.AssetCount, &result.ErrorCode, &result.CreatedAt, &result.UpdatedAt, &autoAdopt, &autoActivate, &result.AutomationAuthorizedAt)
 	if err != nil {
 		return PortableImportSession{}, err
 	}
+	result.AutoAdoptEnabled, result.AutoActivateEnabled = autoAdopt == 1, autoActivate == 1
 	return result, nil
 }
 
 func (db *Database) ListPortableImportSessions(ctx context.Context) ([]PortableImportSession, error) {
-	rows, err := db.QueryContext(ctx, `SELECT import_id,export_id,package_sha256,package_relative_path,state,format_version,identity_count,core_entity_count,gallery_claim_count,item_claim_count,link_claim_count,asset_count,error_code,created_at_utc,updated_at_utc FROM portable_import_sessions ORDER BY created_at_utc DESC,import_id DESC LIMIT 200`)
+	rows, err := db.QueryContext(ctx, `SELECT import_id,export_id,package_sha256,package_relative_path,state,format_version,package_profile,identity_count,core_entity_count,gallery_claim_count,item_claim_count,link_claim_count,asset_count,error_code,created_at_utc,updated_at_utc,auto_adopt_enabled,auto_activate_enabled,automation_authorized_at_utc FROM portable_import_sessions ORDER BY created_at_utc DESC,import_id DESC LIMIT 200`)
 	if err != nil {
 		return nil, err
 	}
@@ -81,9 +88,11 @@ func (db *Database) ListPortableImportSessions(ctx context.Context) ([]PortableI
 	result := []PortableImportSession{}
 	for rows.Next() {
 		var value PortableImportSession
-		if err := rows.Scan(&value.ImportID, &value.ExportID, &value.PackageSHA256, &value.PackageRelativePath, &value.State, &value.FormatVersion, &value.IdentityCount, &value.CoreEntityCount, &value.GalleryClaimCount, &value.ItemClaimCount, &value.LinkClaimCount, &value.AssetCount, &value.ErrorCode, &value.CreatedAt, &value.UpdatedAt); err != nil {
+		var autoAdopt, autoActivate int
+		if err := rows.Scan(&value.ImportID, &value.ExportID, &value.PackageSHA256, &value.PackageRelativePath, &value.State, &value.FormatVersion, &value.Profile, &value.IdentityCount, &value.CoreEntityCount, &value.GalleryClaimCount, &value.ItemClaimCount, &value.LinkClaimCount, &value.AssetCount, &value.ErrorCode, &value.CreatedAt, &value.UpdatedAt, &autoAdopt, &autoActivate, &value.AutomationAuthorizedAt); err != nil {
 			return nil, err
 		}
+		value.AutoAdoptEnabled, value.AutoActivateEnabled = autoAdopt == 1, autoActivate == 1
 		result = append(result, value)
 	}
 	return result, rows.Err()
@@ -107,6 +116,15 @@ func (db *Database) PortableImportTargetEmpty(ctx context.Context) (bool, error)
 }
 
 func (db *Database) CreatePortableImportSession(ctx context.Context, input PortableImportSessionInput, now time.Time) error {
+	if input.Profile == "" {
+		input.Profile = portablecatalog.ProfileGalleryIdentityAssistedLegacy
+	}
+	if input.Profile != portablecatalog.ProfileCoreCatalog && input.Profile != portablecatalog.ProfileGalleryIdentityAssisted && input.Profile != portablecatalog.ProfileGalleryIdentityAssistedLegacy {
+		return errors.New("portable import package profile is invalid")
+	}
+	if input.Profile == portablecatalog.ProfileCoreCatalog && (input.GalleryClaimCount != 0 || input.ItemClaimCount != 0 || input.LinkClaimCount != 0 || len(input.GalleryIndex.Libraries) != 0 || len(input.GalleryIndex.Galleries) != 0) {
+		return errors.New("core catalog import contains Gallery state")
+	}
 	if _, err := portableid.Parse(input.ImportID); err != nil {
 		return err
 	}
@@ -136,10 +154,10 @@ func (db *Database) CreatePortableImportSession(ctx context.Context, input Porta
 	}
 	defer tx.Rollback()
 	if _, err = tx.ExecContext(ctx, `INSERT INTO portable_import_sessions(
-		import_id,export_id,package_sha256,package_relative_path,format_version,state,
+		import_id,export_id,package_sha256,package_relative_path,format_version,package_profile,state,
 		identity_count,core_entity_count,gallery_claim_count,item_claim_count,link_claim_count,asset_count,
-		created_at_utc,updated_at_utc) VALUES(?,?,?,?,?,'INSPECTED',?,?,?,?,?,?,?,?)`,
-		input.ImportID, input.ExportID, strings.ToLower(input.PackageSHA256), input.PackageRelativePath, input.FormatVersion,
+		created_at_utc,updated_at_utc) VALUES(?,?,?,?,?,?,'INSPECTED',?,?,?,?,?,?,?,?)`,
+		input.ImportID, input.ExportID, strings.ToLower(input.PackageSHA256), input.PackageRelativePath, input.FormatVersion, input.Profile,
 		input.IdentityCount, input.CoreEntityCount, input.GalleryClaimCount, input.ItemClaimCount, input.LinkClaimCount, input.AssetCount,
 		timestamp, timestamp); err != nil {
 		return err
@@ -150,8 +168,8 @@ func (db *Database) CreatePortableImportSession(ctx context.Context, input Porta
 		}
 	}
 	for _, value := range input.GalleryIndex.Galleries {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO portable_gallery_rebuilds(import_id,set_id,library_key,source_type,relative_source,locator_status,manifest_status,manifest_schema,manifest_revision,manifest_hash,updated_at_utc)
-			VALUES(?,?,NULLIF(?,''),?,?,?,?,?,?,?,?)`, input.ImportID, value.SetID, value.LibraryKey, value.SourceType, value.RelativeSource, value.LocatorStatus, value.ManifestStatus, value.ManifestSchema, value.ManifestRevision, value.ManifestHash, timestamp); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO portable_gallery_rebuilds(import_id,set_id,library_key,source_type,relative_source,exported_relative_source,locator_status,manifest_status,manifest_schema,manifest_revision,manifest_hash,updated_at_utc)
+			VALUES(?,?,NULLIF(?,''),?,?,?,?,?,?,?,?,?)`, input.ImportID, value.SetID, value.LibraryKey, value.SourceType, value.RelativeSource, value.RelativeSource, value.LocatorStatus, value.ManifestStatus, value.ManifestSchema, value.ManifestRevision, value.ManifestHash, timestamp); err != nil {
 			return err
 		}
 	}

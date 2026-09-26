@@ -38,7 +38,8 @@ const (
 	maxCompressionRatio = uint64(1000)
 )
 
-var requiredPayload = []string{"identity-ledger.json", "core-catalog.json", "gallery-index.json"}
+var coreRequiredPayload = []string{"identity-ledger.json", "core-catalog.json"}
+var assistedRequiredPayload = []string{"identity-ledger.json", "core-catalog.json", "gallery-index.json"}
 
 const ownerContinuityEntry = "owner-continuity.json"
 
@@ -86,6 +87,10 @@ func writePackage(writer io.Writer, bundle Bundle, assets []AssetSource, identit
 	bundle.Normalize()
 	bundle.Manifest.Format = Format
 	bundle.Manifest.FormatVersion = FormatVersion
+	if bundle.Manifest.Profile == "" {
+		bundle.Manifest.Profile = ProfileGalleryIdentityAssisted
+	}
+	profile := bundle.Manifest.EffectiveProfile()
 	if validateInMemory {
 		if err := bundle.Validate(); err != nil {
 			return err
@@ -98,6 +103,7 @@ func writePackage(writer io.Writer, bundle Bundle, assets []AssetSource, identit
 			return fmt.Errorf("invalid streaming portable export ID: %w", err)
 		}
 	}
+	requiredPayload := requiredPayloadForProfile(profile)
 	optionalEntries := 0
 	if bundle.Owner != nil {
 		optionalEntries = 1
@@ -143,18 +149,24 @@ func writePackage(writer io.Writer, bundle Bundle, assets []AssetSource, identit
 	checksums := ChecksumManifest{Algorithm: "SHA-256", Files: []ChecksumEntry{}}
 	createdAt, _ := time.Parse(time.RFC3339, bundle.Manifest.CreatedAt)
 
-	identityEntry, err := writeIdentityLedger(archive, identities, createdAt)
+	identityEntry, err := writeIdentityLedger(archive, identities, createdAt, profile)
 	if err != nil {
 		return err
 	}
 	checksums.Files = append(checksums.Files, identityEntry)
-	for _, item := range []struct {
+	documents := []struct {
 		name, kind string
 		value      any
 	}{
 		{"core-catalog.json", "CORE_CATALOG", bundle.Catalog},
-		{"gallery-index.json", "GALLERY_INDEX", bundle.Gallery},
-	} {
+	}
+	if profile != ProfileCoreCatalog {
+		documents = append(documents, struct {
+			name, kind string
+			value      any
+		}{"gallery-index.json", "GALLERY_INDEX", bundle.Gallery})
+	}
+	for _, item := range documents {
 		data, err := canonicalJSON(item.value)
 		if err != nil {
 			return err
@@ -262,12 +274,12 @@ func InspectFile(ctx context.Context, filename string) (Inspection, error) {
 		if entry.UncompressedSize64 > 1024*1024 && (entry.CompressedSize64 == 0 || entry.UncompressedSize64/entry.CompressedSize64 > maxCompressionRatio) {
 			return Inspection{}, fmt.Errorf("portable metadata entry %q has unsafe compression ratio", entry.Name)
 		}
-		if entry.Name != "package.json" && entry.Name != "checksums.json" && entry.Name != ownerContinuityEntry && !contains(requiredPayload, entry.Name) && !strings.HasPrefix(entry.Name, "coser-assets/") {
+		if entry.Name != "package.json" && entry.Name != "checksums.json" && entry.Name != ownerContinuityEntry && !contains(assistedRequiredPayload, entry.Name) && !strings.HasPrefix(entry.Name, "coser-assets/") {
 			return Inspection{}, fmt.Errorf("unknown portable metadata entry %q", entry.Name)
 		}
 		entries[entry.Name] = entry
 	}
-	for _, name := range append([]string{"package.json", "checksums.json"}, requiredPayload...) {
+	for _, name := range append([]string{"package.json", "checksums.json"}, coreRequiredPayload...) {
 		if entries[name] == nil {
 			return Inspection{}, fmt.Errorf("portable metadata package is missing %s", name)
 		}
@@ -280,6 +292,21 @@ func InspectFile(ctx context.Context, filename string) (Inspection, error) {
 	}
 	if err := strictJSON(manifestData, &result.Manifest); err != nil {
 		return Inspection{}, fmt.Errorf("decoding package.json: %w", err)
+	}
+	if err := validatePackageEnvelope(result.Manifest); err != nil {
+		return Inspection{}, err
+	}
+	profile := result.Manifest.EffectiveProfile()
+	requiredPayload := requiredPayloadForProfile(profile)
+	for _, name := range requiredPayload {
+		if entries[name] == nil {
+			return Inspection{}, fmt.Errorf("portable metadata package is missing %s", name)
+		}
+	}
+	if profile == ProfileCoreCatalog {
+		if entries["gallery-index.json"] != nil || entries[ownerContinuityEntry] != nil {
+			return Inspection{}, errors.New("core catalog package contains Gallery or owner continuity payload")
+		}
 	}
 	checksumsData, err := readEntry(entries["checksums.json"], maxJSONSize)
 	if err != nil {
@@ -328,15 +355,18 @@ func InspectFile(ctx context.Context, filename string) (Inspection, error) {
 	if err != nil {
 		return Inspection{}, err
 	}
-	galleryData, err := readEntry(entries["gallery-index.json"], maxJSONSize)
-	if err != nil {
-		return Inspection{}, err
-	}
 	if err := strictJSON(catalogData, &result.Bundle.Catalog); err != nil {
 		return Inspection{}, fmt.Errorf("decoding core catalog: %w", err)
 	}
-	if err := strictJSON(galleryData, &result.Bundle.Gallery); err != nil {
-		return Inspection{}, fmt.Errorf("decoding Gallery index: %w", err)
+	result.Bundle.Gallery = GalleryIndex{SchemaVersion: 1, Libraries: []LibraryLocator{}, Galleries: []GalleryLocator{}}
+	if profile != ProfileCoreCatalog {
+		galleryData, readErr := readEntry(entries["gallery-index.json"], maxJSONSize)
+		if readErr != nil {
+			return Inspection{}, readErr
+		}
+		if err := strictJSON(galleryData, &result.Bundle.Gallery); err != nil {
+			return Inspection{}, fmt.Errorf("decoding Gallery index: %w", err)
+		}
 	}
 	if entry := entries[ownerContinuityEntry]; entry != nil {
 		ownerData, readErr := readEntry(entry, maxJSONSize)
@@ -360,6 +390,9 @@ func InspectFile(ctx context.Context, filename string) (Inspection, error) {
 	}
 	retainedOwnerItems := []IdentityRecord{}
 	result.Bundle.Identity, identityCount, err = inspectIdentityLedger(ctx, entries["identity-ledger.json"], func(identity IdentityRecord) error {
+		if profile == ProfileCoreCatalog && isGalleryLocalKind(identity.Kind) {
+			return fmt.Errorf("core catalog package contains %s identity", identity.Kind)
+		}
 		if ownerItemIDs[identity.UUID] {
 			retainedOwnerItems = append(retainedOwnerItems, identity)
 		}
@@ -461,16 +494,43 @@ func ReadPackageManifest(ctx context.Context, filename string) (PackageManifest,
 	if err := strictJSON(data, &result); err != nil {
 		return PackageManifest{}, fmt.Errorf("decoding package.json: %w", err)
 	}
-	if result.Format != Format || result.FormatVersion != 1 && result.FormatVersion != FormatVersion || result.ProductID != product.ID {
-		return PackageManifest{}, errors.New("unsupported portable metadata package")
-	}
-	if _, err := portableid.Parse(result.ExportID); err != nil || !canonicalTime(result.CreatedAt) {
-		return PackageManifest{}, errors.New("portable package manifest identity is invalid")
-	}
-	if result.OwnerGalleryCount < 0 || result.OwnerItemCount < 0 || !result.OwnerContinuity && (result.OwnerGalleryLifecycle || result.OwnerPersonalFlags || result.OwnerGalleryCount != 0 || result.OwnerItemCount != 0) || result.OwnerContinuity && !result.OwnerGalleryLifecycle && !result.OwnerPersonalFlags || result.FormatVersion == 1 && result.OwnerContinuity {
-		return PackageManifest{}, errors.New("portable owner continuity summary is invalid")
+	if err := validatePackageEnvelope(result); err != nil {
+		return PackageManifest{}, err
 	}
 	return result, nil
+}
+
+func requiredPayloadForProfile(profile PackageProfile) []string {
+	if profile == ProfileCoreCatalog {
+		return coreRequiredPayload
+	}
+	return assistedRequiredPayload
+}
+
+func validatePackageEnvelope(result PackageManifest) error {
+	if result.Format != Format || !supportedFormatVersion(result.FormatVersion) || result.ProductID != product.ID {
+		return errors.New("unsupported portable metadata package")
+	}
+	profile := result.EffectiveProfile()
+	if result.FormatVersion < FormatVersion && result.Profile != "" {
+		return errors.New("legacy portable metadata package cannot declare a profile")
+	}
+	if result.FormatVersion == FormatVersion && result.Profile == "" || profile != ProfileCoreCatalog && profile != ProfileGalleryIdentityAssisted && profile != ProfileGalleryIdentityAssistedLegacy {
+		return errors.New("portable metadata package profile is invalid")
+	}
+	if result.FormatVersion == FormatVersion && profile == ProfileGalleryIdentityAssistedLegacy {
+		return errors.New("legacy package profile is invalid for the current format")
+	}
+	if _, err := portableid.Parse(result.ExportID); err != nil || !canonicalTime(result.CreatedAt) {
+		return errors.New("portable package manifest identity is invalid")
+	}
+	if result.OwnerGalleryCount < 0 || result.OwnerItemCount < 0 || !result.OwnerContinuity && (result.OwnerGalleryLifecycle || result.OwnerPersonalFlags || result.OwnerGalleryCount != 0 || result.OwnerItemCount != 0) || result.OwnerContinuity && !result.OwnerGalleryLifecycle && !result.OwnerPersonalFlags || result.FormatVersion == 1 && result.OwnerContinuity {
+		return errors.New("portable owner continuity summary is invalid")
+	}
+	if profile == ProfileCoreCatalog && (result.GalleryCount != 0 || result.OwnerContinuity || result.OwnerGalleryLifecycle || result.OwnerPersonalFlags || result.OwnerGalleryCount != 0 || result.OwnerItemCount != 0) {
+		return errors.New("core catalog package summary contains Gallery or owner continuity data")
+	}
+	return nil
 }
 
 func validateCoserAssetEntry(entry *zip.File) error {
@@ -618,7 +678,7 @@ func (w *countingWriter) Write(data []byte) (int, error) {
 	return written, err
 }
 
-func writeIdentityLedger(archive *zip.Writer, source IdentitySource, createdAt time.Time) (ChecksumEntry, error) {
+func writeIdentityLedger(archive *zip.Writer, source IdentitySource, createdAt time.Time, profile PackageProfile) (ChecksumEntry, error) {
 	header := &zip.FileHeader{Name: "identity-ledger.json", Method: zip.Deflate}
 	header.SetMode(0o600)
 	header.SetModTime(createdAt)
@@ -636,6 +696,9 @@ func writeIdentityLedger(archive *zip.Writer, source IdentitySource, createdAt t
 	err = source.Stream(func(identity IdentityRecord) error {
 		if err := validateStreamIdentity(identity); err != nil {
 			return err
+		}
+		if profile == ProfileCoreCatalog && isGalleryLocalKind(identity.Kind) {
+			return fmt.Errorf("core catalog package contains %s identity", identity.Kind)
 		}
 		if previous != "" && identity.UUID <= previous {
 			return errors.New("portable identities must be strictly ordered by UUID")

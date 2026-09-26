@@ -60,7 +60,7 @@ func (s *BrowseStore) StrongRecommendations(ctx context.Context, sourceSetID str
 		 WHERE source_cast.gallery_id=? AND candidate_character.work_uuid=source_character.work_uuid)
 		 OR EXISTS(SELECT 1 FROM gallery_credits source_credit JOIN gallery_credits candidate_credit ON candidate_credit.coser_uuid=source_credit.coser_uuid
 		 WHERE source_credit.gallery_id=? AND candidate_credit.gallery_id=gallery.id))
-		ORDER BY score DESC,gallery.added_at_utc DESC,gallery.id DESC LIMIT ?`, args...)
+		ORDER BY score DESC,COALESCE(CASE WHEN gallery.media_added_status='COMPLETE' THEN NULLIF(gallery.media_added_start_at_utc,'') END,gallery.first_activated_at_utc,gallery.added_at_utc,gallery.created_at_utc) DESC,gallery.id DESC LIMIT ?`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +204,7 @@ func (s *BrowseStore) visibleGalleryTimes(ctx context.Context, scope browse.Scop
 	if scopeArg != "" {
 		args = append(args, scopeArg)
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT gallery.id,gallery.added_at_utc FROM galleries gallery
+	rows, err := s.db.QueryContext(ctx, `SELECT gallery.id,COALESCE(CASE WHEN gallery.media_added_status='COMPLETE' THEN NULLIF(gallery.media_added_start_at_utc,'') END,gallery.first_activated_at_utc,gallery.added_at_utc,gallery.created_at_utc) FROM galleries gallery
 		JOIN gallery_sources source ON source.gallery_id=gallery.id LEFT JOIN gallery_personal_states personal ON personal.gallery_id=gallery.id
 		WHERE `+browseVisibleGalleryPredicate+scopeSQL, args...)
 	if err != nil {

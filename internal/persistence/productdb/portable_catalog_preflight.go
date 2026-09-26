@@ -53,6 +53,11 @@ func portableIssueCount(issues []PortablePreflightIssue, severity string) int {
 // transaction. It intentionally returns counts and stable issue codes rather
 // than entity names or local paths so callers can safely audit the result.
 func (db *Database) PortableCatalogPreflight(ctx context.Context) (PortableCatalogPreflight, error) {
+	return db.PortableCatalogPreflightForProfile(ctx, portablecatalog.ProfileGalleryIdentityAssisted)
+}
+
+func (db *Database) PortableCatalogPreflightForProfile(ctx context.Context, profile portablecatalog.PackageProfile) (PortableCatalogPreflight, error) {
+	coreOnly := profile == portablecatalog.ProfileCoreCatalog
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return PortableCatalogPreflight{}, err
@@ -64,12 +69,16 @@ func (db *Database) PortableCatalogPreflight(ctx context.Context) (PortableCatal
 		Assets:          []PortableAssetSource{},
 		Issues:          []PortablePreflightIssue{},
 	}
+	identityWhere := ""
+	if coreOnly {
+		identityWhere = ` WHERE registry.entity_kind NOT IN ('GALLERY','GALLERY_ITEM','EXTERNAL_LINK')`
+	}
 	rows, err := tx.QueryContext(ctx, `SELECT registry.entity_kind,
 		CASE WHEN alias.alias_uuid IS NOT NULL THEN 'ALIAS' WHEN tombstone.uuid IS NOT NULL THEN 'TOMBSTONE' ELSE 'ACTIVE' END,
 		COUNT(*) FROM portable_uuid_registry registry
 		LEFT JOIN portable_uuid_aliases alias ON alias.alias_uuid=registry.uuid
 		LEFT JOIN portable_uuid_tombstones tombstone ON tombstone.uuid=registry.uuid
-		GROUP BY registry.entity_kind,2`)
+		`+identityWhere+` GROUP BY registry.entity_kind,2`)
 	if err != nil {
 		return PortableCatalogPreflight{}, err
 	}
@@ -90,19 +99,25 @@ func (db *Database) PortableCatalogPreflight(ctx context.Context) (PortableCatal
 	if err := rows.Err(); err != nil {
 		return PortableCatalogPreflight{}, err
 	}
-	for table, target := range map[string]*int{
+	counts := map[string]*int{
 		"cosers": &result.CoserCount, "works": &result.WorkCount, "characters": &result.CharacterCount,
-		"tags": &result.TagCount, "coser_social_accounts": &result.AccountCount, "galleries": &result.GalleryCount,
-	} {
+		"tags": &result.TagCount, "coser_social_accounts": &result.AccountCount,
+	}
+	if !coreOnly {
+		counts["galleries"] = &result.GalleryCount
+	}
+	for table, target := range counts {
 		if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM "+table).Scan(target); err != nil {
 			return PortableCatalogPreflight{}, err
 		}
 	}
-	if err := preflightPortableObjectIdentities(ctx, tx, &result); err != nil {
+	if err := preflightPortableObjectIdentities(ctx, tx, &result, coreOnly); err != nil {
 		return PortableCatalogPreflight{}, err
 	}
-	if err := preflightPortableGalleries(ctx, tx, &result); err != nil {
-		return PortableCatalogPreflight{}, err
+	if !coreOnly {
+		if err := preflightPortableGalleries(ctx, tx, &result); err != nil {
+			return PortableCatalogPreflight{}, err
+		}
 	}
 	if err := preflightPortableAssets(ctx, tx, &result); err != nil {
 		return PortableCatalogPreflight{}, err
@@ -127,12 +142,15 @@ func (p *PortableCatalogPreflight) addIssue(code, severity string, count int) {
 	p.Issues = append(p.Issues, PortablePreflightIssue{Code: code, Severity: severity, Count: count})
 }
 
-func preflightPortableObjectIdentities(ctx context.Context, tx *sql.Tx, result *PortableCatalogPreflight) error {
+func preflightPortableObjectIdentities(ctx context.Context, tx *sql.Tx, result *PortableCatalogPreflight, coreOnly bool) error {
 	checks := []struct {
 		kind, table, column string
 	}{
 		{"COSER", "cosers", "uuid"}, {"WORK", "works", "uuid"}, {"CHARACTER", "characters", "uuid"},
-		{"TAG", "tags", "uuid"}, {"SOCIAL_ACCOUNT", "coser_social_accounts", "account_uuid"}, {"GALLERY", "galleries", "set_id"},
+		{"TAG", "tags", "uuid"}, {"SOCIAL_ACCOUNT", "coser_social_accounts", "account_uuid"},
+	}
+	if !coreOnly {
+		checks = append(checks, struct{ kind, table, column string }{"GALLERY", "galleries", "set_id"})
 	}
 	for _, check := range checks {
 		query := fmt.Sprintf(`SELECT COUNT(*) FROM portable_uuid_registry registry
@@ -156,21 +174,29 @@ func preflightPortableObjectIdentities(ctx context.Context, tx *sql.Tx, result *
 		result.addIssue("PORTABLE_OBJECT_WITHOUT_ACTIVE_IDENTITY", "BLOCKING", count)
 	}
 	var brokenAliases int
+	identityScope := ""
+	if coreOnly {
+		identityScope = ` AND source.entity_kind NOT IN ('GALLERY','GALLERY_ITEM','EXTERNAL_LINK')`
+	}
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM portable_uuid_aliases alias
 		LEFT JOIN portable_uuid_registry source ON source.uuid=alias.alias_uuid
 		LEFT JOIN portable_uuid_registry target ON target.uuid=alias.target_uuid
 		LEFT JOIN portable_uuid_tombstones source_tombstone ON source_tombstone.uuid=alias.alias_uuid
 		LEFT JOIN portable_uuid_aliases target_alias ON target_alias.alias_uuid=alias.target_uuid
 		LEFT JOIN portable_uuid_tombstones target_tombstone ON target_tombstone.uuid=alias.target_uuid
-		WHERE source.uuid IS NULL OR target.uuid IS NULL OR source.entity_kind<>alias.entity_kind OR target.entity_kind<>alias.entity_kind
-		OR source_tombstone.uuid IS NOT NULL OR target_alias.alias_uuid IS NOT NULL OR target_tombstone.uuid IS NOT NULL`).Scan(&brokenAliases); err != nil {
+		WHERE (source.uuid IS NULL OR target.uuid IS NULL OR source.entity_kind<>alias.entity_kind OR target.entity_kind<>alias.entity_kind
+		OR source_tombstone.uuid IS NOT NULL OR target_alias.alias_uuid IS NOT NULL OR target_tombstone.uuid IS NOT NULL)`+identityScope).Scan(&brokenAliases); err != nil {
 		return err
 	}
 	result.addIssue("PORTABLE_IDENTITY_ALIAS_INVALID", "BLOCKING", brokenAliases)
 	var brokenTombstones int
+	tombstoneScope := ""
+	if coreOnly {
+		tombstoneScope = ` AND tombstone.entity_kind NOT IN ('GALLERY','GALLERY_ITEM','EXTERNAL_LINK')`
+	}
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM portable_uuid_tombstones tombstone
 		LEFT JOIN portable_uuid_registry registry ON registry.uuid=tombstone.uuid
-		WHERE registry.uuid IS NULL OR registry.entity_kind<>tombstone.entity_kind`).Scan(&brokenTombstones); err != nil {
+		WHERE (registry.uuid IS NULL OR registry.entity_kind<>tombstone.entity_kind)`+tombstoneScope).Scan(&brokenTombstones); err != nil {
 		return err
 	}
 	result.addIssue("PORTABLE_IDENTITY_TOMBSTONE_INVALID", "BLOCKING", brokenTombstones)

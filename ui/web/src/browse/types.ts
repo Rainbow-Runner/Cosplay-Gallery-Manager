@@ -40,7 +40,12 @@ export interface BrowseGalleryCard {
   workCount: number;
   shootDate?: string | null;
   shootDatePrecision?: "MONTH" | "DAY" | null;
+  publishDate?: string;
+  publishDatePrecision?: "MONTH" | "DAY" | "UNKNOWN";
   addedAtUTC: string;
+  mediaAddedStartUTC?: string;
+  mediaAddedEndUTC?: string;
+  mediaAddedStatus?: "PENDING" | "COMPLETE" | "PARTIAL" | "NONE";
   media: { photo: number; selfie: number; gif: number; video: number };
   favorite: boolean;
   ratingHalfSteps?: number | null;
@@ -130,7 +135,7 @@ export interface VideoPlaybackStatus {
 export type SearchEntityKind = "GALLERY" | "COSER" | "WORK" | "CHARACTER" | "TAG";
 export interface EntityIndexItem { kind: SearchEntityKind; uuid: string; slug: string; name: string; aliases: string[]; avatarURL?: string | null }
 export interface EntityPage { items: EntityIndexItem[]; page: number; pageSize: number; totalItems: number; totalPages: number }
-export interface SearchHit { kind: SearchEntityKind; uuid: string; slug: string; name: string; matchLevel: number; coverResource?: ResourceIdentity | null }
+export interface SearchHit { kind: SearchEntityKind; uuid: string; slug: string; name: string; matchLevel: number; coverResource?: ResourceIdentity | null; mediaAddedStartUTC?: string; mediaAddedEndUTC?: string; shootDate?: string; shootDatePrecision?: "MONTH" | "DAY" | "UNKNOWN"; publishDate?: string; publishDatePrecision?: "MONTH" | "DAY" | "UNKNOWN" }
 export interface SearchPreview { scope: Scope; query: string; galleries: SearchHit[]; cosers: SearchHit[]; works: SearchHit[]; characters: SearchHit[]; tags: SearchHit[] }
 export interface RandomMediaItem {
   itemUUID: string; mediaKind: GalleryMember["mediaKind"]; imageCategory?: GalleryMember["imageCategory"];

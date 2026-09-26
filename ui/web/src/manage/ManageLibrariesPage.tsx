@@ -2,7 +2,7 @@ import { useLazyQuery, useMutation, useQuery } from "@apollo/client/react";
 import { type FormEvent, type RefObject, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
-import { APPLY_MEDIA_LIBRARY_CHANGE, CANCEL_LIBRARY_AUTOMATION, CONFIRM_GALLERY_SOURCE_REBIND, CREATE_MEDIA_LIBRARY, CREATE_RECOGNITION_RULE, DELETE_RECOGNITION_RULE, DISCOVER_MEDIA_LIBRARY, IMPORT_GALLERY_CANDIDATE, MANAGE_DISCOVERY, MANAGE_IGNORED_SOURCES, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, PREVIEW_IGNORED_SOURCE_REMOVAL, PREVIEW_MEDIA_LIBRARY_CHANGE, REVOKE_IGNORED_SOURCE, RUN_LIBRARY_AUTOMATION, SAVE_LIBRARY_AUTOMATION_POLICY, SET_MEDIA_LIBRARY_METADATA_WRITEBACK, TRANSFER_MEDIA_LIBRARY_SOURCE, UPDATE_RECOGNITION_RULE } from "../api/manage";
+import { APPLY_MEDIA_LIBRARY_CHANGE, CANCEL_LIBRARY_AUTOMATION, CONFIRM_GALLERY_SOURCE_REBIND, CREATE_MEDIA_LIBRARY, CREATE_RECOGNITION_RULE, DELETE_RECOGNITION_RULE, DISCOVER_MEDIA_LIBRARY, FORK_GALLERY_CANDIDATE, IMPORT_GALLERY_CANDIDATE, MANAGE_DISCOVERY, MANAGE_IGNORED_SOURCES, MANAGE_LIBRARIES, MANAGE_LIBRARY_AUTOMATION, PREVIEW_IGNORED_SOURCE_REMOVAL, PREVIEW_MEDIA_LIBRARY_CHANGE, REVOKE_IGNORED_SOURCE, RUN_LIBRARY_AUTOMATION, SAVE_LIBRARY_AUTOMATION_POLICY, SET_MEDIA_LIBRARY_METADATA_WRITEBACK, TRANSFER_MEDIA_LIBRARY_SOURCE, UPDATE_RECOGNITION_RULE } from "../api/manage";
 import { MediaClassificationRules } from "./MediaClassificationRules";
 import { MediaExclusionRules } from "./MediaExclusionRules";
 import type { ManageDiscoverySnapshot, ManageGalleryDetail, ManageIgnoredSourcePage, ManageIgnoredSourceRemovalPreview, ManageLibrary, ManageLibraryAutomation, ManageLibraryAutomationPolicy, ManageLibraryAutomationRun, ManageLibraryChangePreview, ManageRecognitionRule } from "./types";
@@ -33,6 +33,7 @@ export function ManageLibrariesPage() {
   const [discover, discoveryState] = useMutation<{ discoverMediaLibrary: ManageDiscoverySnapshot }>(DISCOVER_MEDIA_LIBRARY);
   const [importCandidate] = useMutation<{ importGalleryCandidate: ManageGalleryDetail }>(IMPORT_GALLERY_CANDIDATE);
   const [confirmRebind, confirmRebindState] = useMutation<{ confirmGallerySourceRebind: ManageGalleryDetail }>(CONFIRM_GALLERY_SOURCE_REBIND);
+  const [forkCandidate, forkCandidateState] = useMutation(FORK_GALLERY_CANDIDATE);
 
   useEffect(() => {
     if (selectedID === null && libraries[0]) setSelectedID(libraries[0].id);
@@ -123,6 +124,17 @@ export function ManageLibrariesPage() {
 			if (target) navigate(`/manage/gallery/${target}?tab=source`);
 		} catch (error) { setMessage(error instanceof Error ? error.message : "Unable to rebind Gallery source"); }
 	}
+	async function forkSource(candidate: ManageDiscoverySnapshot["candidates"][number]) {
+		if (!window.confirm("Create an independent Gallery identity for this duplicate source? Media files will not be changed.")) return;
+		const password = window.prompt("Owner password");
+		if (!password) return;
+		setMessage("");
+		try {
+			await forkCandidate({ variables: { candidateID: candidate.id, password, confirmation: "FORK" } });
+			await discoveryQuery.refetch();
+			setMessage("Independent Gallery identity created. Review the refreshed candidate before importing.");
+		} catch (error) { setMessage(error instanceof Error ? error.message : "Unable to fork Gallery identity"); }
+	}
 
   function prepareExactDirectoryRule(parentPath: string) {
     if (!selectedLibrary) return;
@@ -159,7 +171,7 @@ export function ManageLibrariesPage() {
         <LibraryChangeWorkbench key={`change-${selectedLibrary.id}`} library={selectedLibrary} libraries={libraries} onApplied={async (deleted) => { const refreshed = await librariesQuery.refetch(); if (deleted) setSelectedID(refreshed.data?.manageLibraries[0]?.id ?? null); }} />
         <LibraryAutomationPanel key={selectedLibrary.id} libraryID={selectedLibrary.id} report={setMessage} />
         <LibraryRules sectionRef={rulesSectionRef} library={selectedLibrary} draft={ruleDraft} setDraft={setRuleDraft} submit={saveRule} saving={createRuleState.loading || updateRuleState.loading} editingRuleID={editingRuleID} deletingRuleID={deletingRuleID} editRule={editRule} cancelEdit={resetRuleEditor} requestDelete={setDeletingRuleID} deleteRule={removeRule} />
-        <section className="candidate-section"><header><h3>{f("manage.library.latestDiscovery")}</h3><span>{snapshot?.completedAt || f("manage.library.notScanned")}</span></header>{snapshot?.candidates.map((candidate) => <article className={`candidate-card ${candidate.hasConflict || candidate.overLimit || candidate.status === "SOURCE_REBIND_CANDIDATE" ? "has-issue" : ""}`} key={candidate.id}><div><strong>{candidate.rootPath}</strong><p>{candidate.sourceType} · {candidate.method} · {f("manage.library.mediaCount", { count: candidate.mediaCount })}</p>{candidate.suggestions.length ? <ul>{candidate.suggestions.map((suggestion) => <li key={`${suggestion.field}:${suggestion.value}`}>{suggestion.field}: {suggestion.value}</li>)}</ul> : null}</div><div><span>{candidate.status}</span>{candidate.status === "SOURCE_REBIND_CANDIDATE" ? <button type="button" disabled={candidate.overLimit || confirmRebindState.loading} onClick={() => rebindSource(candidate)}>确认重新绑定 / Rebind</button> : <button type="button" disabled={candidate.status !== "PENDING" || candidate.hasConflict || candidate.overLimit} onClick={() => createDraft(candidate.id)}>{f("manage.library.createDraft")}</button>}</div></article>)}
+        <section className="candidate-section"><header><h3>{f("manage.library.latestDiscovery")}</h3><span>{snapshot?.completedAt || f("manage.library.notScanned")}</span></header>{snapshot?.candidates.map((candidate) => <article className={`candidate-card ${candidate.hasConflict || candidate.overLimit || candidate.status === "SOURCE_REBIND_CANDIDATE" ? "has-issue" : ""}`} key={candidate.id}><div><strong>{candidate.rootPath}</strong><p>{candidate.sourceType} · {candidate.method} · {f("manage.library.mediaCount", { count: candidate.mediaCount })}</p>{candidate.identityClassification ? <p><b>{f("manage.library.identityReview")}</b> {candidate.identityClassification}{candidate.identityIssueCode ? ` · ${candidate.identityIssueCode}` : ""}</p> : null}{candidate.suggestions.length ? <ul>{candidate.suggestions.map((suggestion) => <li key={`${suggestion.field}:${suggestion.value}`}>{suggestion.field}: {suggestion.value}</li>)}</ul> : null}</div><div><span>{candidate.status}</span><>{candidate.status === "SOURCE_REBIND_CANDIDATE" ? <button type="button" disabled={candidate.overLimit || confirmRebindState.loading} onClick={() => rebindSource(candidate)}>确认重新绑定 / Rebind</button> : <button type="button" disabled={candidate.status !== "PENDING" || candidate.hasConflict || candidate.overLimit} onClick={() => createDraft(candidate.id)}>{f("manage.library.createDraft")}</button>}{(candidate.identityClassification === "DUPLICATE_ACCESSIBLE_SOURCE" || candidate.identityClassification === "LOCAL_ITEM_OR_LINK_CONFLICT") ? <button type="button" disabled={candidate.overLimit || forkCandidateState.loading} onClick={() => forkSource(candidate)}>分叉为独立 Gallery / Fork</button> : null}{candidate.identityClassification === "PENDING_PORTABLE_CLAIM" ? <button type="button" onClick={() => navigate("/manage/operations")}>打开迁移工作台 / Open migration workbench</button> : null}</></div></article>)}
           {snapshot && snapshot.candidates.length === 0 ? <p className="state-message">{f("manage.library.noCandidates")}</p> : null}
           {snapshot ? <section className="coverage-report"><header><div><h4>{f("manage.library.coverage.title")}</h4><p>{f("manage.library.coverage.help")}</p></div><strong>{f("manage.library.coverage.issues", { count: snapshot.coverageSummary.actionableIssueCount })}</strong></header><dl>
             <div><dt>{f("manage.library.coverage.regular")}</dt><dd>{snapshot.coverageSummary.regularFileCount}</dd></div>

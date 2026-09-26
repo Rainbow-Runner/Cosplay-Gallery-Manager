@@ -47,7 +47,7 @@ func TestSchemaV11TagAssignmentMigrationKeepsExistingTagsAssignable(t *testing.T
 		t.Fatal(err)
 	}
 	defer migrated.Close()
-	if migrated.Identity().DatabaseSchemaVersion != 16 {
+	if migrated.Identity().DatabaseSchemaVersion != 18 {
 		t.Fatalf("schema version = %d", migrated.Identity().DatabaseSchemaVersion)
 	}
 	loaded, err := migrated.CoreEntities().ManageFind(ctx, "TAG", tag.UUID)

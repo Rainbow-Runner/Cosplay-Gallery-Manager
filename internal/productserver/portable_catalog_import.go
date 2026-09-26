@@ -135,6 +135,7 @@ func (s *Server) ImportPortableMetadata(ctx context.Context, options PortableImp
 	if err := s.Database.CreatePortableImportSession(ctx, productdb.PortableImportSessionInput{
 		ImportID: importID, ExportID: inspection.Manifest.ExportID, PackageSHA256: digest,
 		PackageRelativePath: relativePackage, FormatVersion: inspection.Manifest.FormatVersion,
+		Profile:       inspection.Manifest.EffectiveProfile(),
 		IdentityCount: inspection.Manifest.IdentityCount, CoreEntityCount: coreCount,
 		GalleryClaimCount: claimCounts["GALLERY"], ItemClaimCount: claimCounts["GALLERY_ITEM"], LinkClaimCount: claimCounts["EXTERNAL_LINK"],
 		AssetCount: inspection.Manifest.AssetCount, GalleryIndex: inspection.Bundle.Gallery,

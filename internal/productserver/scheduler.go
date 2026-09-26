@@ -23,6 +23,7 @@ func (s *Server) runSchedulerLoop(ctx context.Context) {
 	s.runCacheMaintenance(ctx, time.Now())
 	s.runVideoProbeBackfill(ctx, time.Now())
 	s.runCaptureDateBackfill(ctx, time.Now())
+	s.runMediaAddedBackfill(ctx, time.Now())
 	hourly := time.NewTicker(time.Hour)
 	scanTicker := time.NewTicker(time.Minute)
 	cacheTicker := time.NewTicker(time.Minute)
@@ -41,7 +42,33 @@ func (s *Server) runSchedulerLoop(ctx context.Context) {
 			s.runCacheMaintenance(ctx, now)
 			s.runVideoProbeBackfill(ctx, now)
 			s.runCaptureDateBackfill(ctx, now)
+			s.runMediaAddedBackfill(ctx, now)
 		}
+	}
+}
+
+func (s *Server) runMediaAddedBackfill(ctx context.Context, now time.Time) {
+	runtime, err := s.Database.Settings().Find(ctx)
+	if err != nil {
+		if ctx.Err() == nil {
+			slog.Error("CGM_MEDIA_ADDED_BACKFILL_FAILED", "stage", "settings")
+		}
+		return
+	}
+	limits := archivecheck.Limits{
+		MaxEntries: runtime.ArchiveMaxEntries, MaxEntryUncompressed: uint64(runtime.ArchiveMaxEntryBytes),
+		MaxTotalUncompressed: uint64(runtime.ArchiveMaxTotalBytes), MaxCompressionRatio: runtime.ArchiveMaxCompressionRatio,
+		MaxImagePixels: uint64(runtime.ArchiveMaxImagePixels),
+	}
+	processed, err := s.Database.MediaAdded().BackfillOne(ctx, limits, now)
+	if err != nil {
+		if ctx.Err() == nil {
+			slog.Error("CGM_MEDIA_ADDED_BACKFILL_FAILED", "stage", "source_metadata")
+		}
+		return
+	}
+	if processed {
+		slog.Info("CGM_MEDIA_ADDED_BACKFILL_COMPLETED")
 	}
 }
 

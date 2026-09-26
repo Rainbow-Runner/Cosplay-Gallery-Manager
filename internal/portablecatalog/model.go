@@ -17,7 +17,15 @@ import (
 
 const (
 	Format        = "cgm-portable-metadata"
-	FormatVersion = 2
+	FormatVersion = 3
+)
+
+type PackageProfile string
+
+const (
+	ProfileCoreCatalog                   PackageProfile = "CORE_CATALOG"
+	ProfileGalleryIdentityAssisted       PackageProfile = "GALLERY_IDENTITY_ASSISTED"
+	ProfileGalleryIdentityAssistedLegacy PackageProfile = "GALLERY_IDENTITY_ASSISTED_LEGACY"
 )
 
 type VersionSet struct {
@@ -32,26 +40,34 @@ func Versions(value product.Versions) VersionSet {
 }
 
 type PackageManifest struct {
-	Format                string     `json:"format"`
-	FormatVersion         int        `json:"format_version"`
-	ProductID             string     `json:"product_id"`
-	ExportID              string     `json:"export_id"`
-	CreatedAt             string     `json:"created_at"`
-	Versions              VersionSet `json:"versions"`
-	ChecksumsSHA256       string     `json:"checksums_sha256"`
-	IdentityCount         int        `json:"identity_count"`
-	CoserCount            int        `json:"coser_count"`
-	WorkCount             int        `json:"work_count"`
-	CharacterCount        int        `json:"character_count"`
-	TagCount              int        `json:"tag_count"`
-	AccountCount          int        `json:"account_count"`
-	GalleryCount          int        `json:"gallery_count"`
-	AssetCount            int        `json:"asset_count"`
-	OwnerContinuity       bool       `json:"owner_continuity"`
-	OwnerGalleryLifecycle bool       `json:"owner_gallery_lifecycle"`
-	OwnerPersonalFlags    bool       `json:"owner_personal_flags"`
-	OwnerGalleryCount     int        `json:"owner_gallery_count"`
-	OwnerItemCount        int        `json:"owner_item_count"`
+	Format                string         `json:"format"`
+	FormatVersion         int            `json:"format_version"`
+	Profile               PackageProfile `json:"profile,omitempty"`
+	ProductID             string         `json:"product_id"`
+	ExportID              string         `json:"export_id"`
+	CreatedAt             string         `json:"created_at"`
+	Versions              VersionSet     `json:"versions"`
+	ChecksumsSHA256       string         `json:"checksums_sha256"`
+	IdentityCount         int            `json:"identity_count"`
+	CoserCount            int            `json:"coser_count"`
+	WorkCount             int            `json:"work_count"`
+	CharacterCount        int            `json:"character_count"`
+	TagCount              int            `json:"tag_count"`
+	AccountCount          int            `json:"account_count"`
+	GalleryCount          int            `json:"gallery_count"`
+	AssetCount            int            `json:"asset_count"`
+	OwnerContinuity       bool           `json:"owner_continuity"`
+	OwnerGalleryLifecycle bool           `json:"owner_gallery_lifecycle"`
+	OwnerPersonalFlags    bool           `json:"owner_personal_flags"`
+	OwnerGalleryCount     int            `json:"owner_gallery_count"`
+	OwnerItemCount        int            `json:"owner_item_count"`
+}
+
+func (m PackageManifest) EffectiveProfile() PackageProfile {
+	if m.FormatVersion == 1 || m.FormatVersion == 2 {
+		return ProfileGalleryIdentityAssistedLegacy
+	}
+	return m.Profile
 }
 
 type ChecksumManifest struct {
@@ -314,8 +330,15 @@ func normalizeNamed(value *NamedEntity) {
 }
 
 func (b Bundle) Validate() error {
-	if b.Manifest.Format != Format || (b.Manifest.FormatVersion != 1 && b.Manifest.FormatVersion != FormatVersion) || b.Manifest.ProductID != product.ID {
+	if b.Manifest.Format != Format || !supportedFormatVersion(b.Manifest.FormatVersion) || b.Manifest.ProductID != product.ID {
 		return errors.New("unsupported portable metadata package")
+	}
+	profile := b.Manifest.EffectiveProfile()
+	if profile != ProfileCoreCatalog && profile != ProfileGalleryIdentityAssisted && profile != ProfileGalleryIdentityAssistedLegacy {
+		return errors.New("portable metadata package profile is invalid")
+	}
+	if b.Manifest.FormatVersion == FormatVersion && b.Manifest.Profile == "" {
+		return errors.New("portable metadata package profile is required")
 	}
 	if _, err := portableid.Parse(b.Manifest.ExportID); err != nil {
 		return fmt.Errorf("invalid export_id: %w", err)
@@ -333,6 +356,9 @@ func (b Bundle) Validate() error {
 		}
 		if err := portableid.ValidateKind(portableid.Kind(value.Kind)); err != nil {
 			return err
+		}
+		if profile == ProfileCoreCatalog && isGalleryLocalKind(value.Kind) {
+			return fmt.Errorf("core catalog package contains %s identity", value.Kind)
 		}
 		if _, duplicate := identities[value.UUID]; duplicate {
 			return fmt.Errorf("duplicate identity UUID %s", value.UUID)
@@ -443,6 +469,9 @@ func (b Bundle) Validate() error {
 		}
 	}
 	libraries := map[string]bool{}
+	if profile == ProfileCoreCatalog && (len(b.Gallery.Libraries) != 0 || len(b.Gallery.Galleries) != 0 || b.Owner != nil) {
+		return errors.New("core catalog package contains Gallery or owner continuity data")
+	}
 	for _, value := range b.Gallery.Libraries {
 		if value.Key == "" || value.Name == "" || libraries[value.Key] {
 			return errors.New("invalid or duplicate Gallery index library")
@@ -513,6 +542,14 @@ func (b Bundle) Validate() error {
 		return err
 	}
 	return nil
+}
+
+func supportedFormatVersion(version int) bool {
+	return version == 1 || version == 2 || version == FormatVersion
+}
+
+func isGalleryLocalKind(kind string) bool {
+	return kind == string(portableid.KindGallery) || kind == string(portableid.KindGalleryItem) || kind == string(portableid.KindExternalLink)
 }
 
 func validateOwnerContinuity(value *OwnerContinuity, active func(string, string) bool) error {

@@ -36,6 +36,13 @@ func (s *ManifestStore) applyGalleryBusinessSnapshot(
 	if err != nil {
 		return 0, err
 	}
+	publishDate, publishPrecision, err := snapshotShootDate(objectValue(snapshot["extensions"])[manifest.PublishDateExtension])
+	if err != nil {
+		return 0, err
+	}
+	if err := validateCalendarDate(publishDate, publishPrecision, "publish"); err != nil {
+		return 0, err
+	}
 	if err := validateGalleryMetadata(title, description, shootDate, shootPrecision, contentRating, photographer, studio); err != nil {
 		return 0, err
 	}
@@ -48,11 +55,12 @@ func (s *ManifestStore) applyGalleryBusinessSnapshot(
 	result, err := tx.ExecContext(ctx, `
 		UPDATE galleries SET title = ?, description = ?, shoot_date = NULLIF(?, ''),
 			shoot_date_precision = NULLIF(?, ''), content_rating = NULLIF(?, ''),
+			publish_date = NULLIF(?, ''), publish_date_precision = NULLIF(?, ''),
 			shoot_date_origin = 'MANUAL',
 			photographer_name = ?, studio_name = ?, metadata_revision = metadata_revision + 1,
 			updated_at_utc = ?
 		WHERE id = ? AND metadata_revision = ?
-	`, title, description, shootDate, shootPrecision, contentRating, photographer, studio,
+	`, title, description, shootDate, shootPrecision, contentRating, publishDate, publishPrecision, photographer, studio,
 		formatTime(normalisedTime(now)), galleryID, expectedRevision)
 	if err != nil {
 		return 0, err
@@ -60,7 +68,9 @@ func (s *ManifestStore) applyGalleryBusinessSnapshot(
 	if err := requireOneRevisionRow(result); err != nil {
 		return 0, err
 	}
-	if _,err:=tx.ExecContext(ctx,`DELETE FROM gallery_capture_date_reviews WHERE gallery_id=? AND manual_date<>COALESCE((SELECT shoot_date FROM galleries WHERE id=?),'')`,galleryID,galleryID);err!=nil{return 0,err}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM gallery_capture_date_reviews WHERE gallery_id=? AND manual_date<>COALESCE((SELECT shoot_date FROM galleries WHERE id=?),'')`, galleryID, galleryID); err != nil {
+		return 0, err
+	}
 
 	if err := applyManifestRating(ctx, tx, galleryID, 0, snapshot["rating"], now); err != nil {
 		return 0, err
@@ -88,6 +98,9 @@ func (s *ManifestStore) applyGalleryBusinessSnapshot(
 		return 0, err
 	}
 	if err := reconcileGalleryCaptureDate(ctx, tx, galleryID, now); err != nil {
+		return 0, err
+	}
+	if err := reconcileGalleryMediaAdded(ctx, tx, galleryID); err != nil {
 		return 0, err
 	}
 	if err := demoteInvalidActiveGallery(ctx, tx, galleryID); err != nil {

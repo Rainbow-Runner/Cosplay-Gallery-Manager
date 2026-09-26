@@ -64,4 +64,15 @@ func TestSearchUsesNamesAliasesIndirectGalleryAndCurrentScope(t *testing.T) {
 	if err != nil || len(direct.Galleries) != 1 || direct.Galleries[0].MatchLevel != 1 {
 		t.Fatalf("direct Gallery search = %#v, %v", direct.Galleries, err)
 	}
+	if _, err := db.ExecContext(ctx, `UPDATE galleries SET shoot_date='2024-05',shoot_date_precision='MONTH',publish_date='2025-06-17',publish_date_precision='DAY',media_added_status='COMPLETE',media_added_start_at_utc='2023-01-01T00:00:00Z',media_added_end_at_utc='2023-02-01T00:00:00Z' WHERE id=?`, listGallery.ID); err != nil {
+		t.Fatal(err)
+	}
+	dated, err := db.Browse().SearchPreview(ctx, browse.ScopeList, "Portrait Collection")
+	if err != nil {
+		t.Fatal(err)
+	}
+	hit := dated.Galleries[0]
+	if hit.ShootDate != "2024-05" || hit.PublishDate != "2025-06-17" || hit.MediaAddedStartUTC != "2023-01-01T00:00:00Z" || hit.MediaAddedEndUTC != "2023-02-01T00:00:00Z" {
+		t.Fatalf("search dates = %#v", hit)
+	}
 }

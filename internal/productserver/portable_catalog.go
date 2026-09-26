@@ -22,6 +22,7 @@ import (
 
 type PortableExportOptions struct {
 	TargetPath              string
+	Profile                 portablecatalog.PackageProfile
 	AllowIncompleteGallery  bool
 	IncludeGalleryLifecycle bool
 	IncludePersonalFlags    bool
@@ -74,6 +75,10 @@ func (r PortablePreflightResult) BlockingCount() int {
 // PreflightPortableMetadata validates the current database and managed Coser
 // originals without writing a package or changing product state.
 func (s *Server) PreflightPortableMetadata(ctx context.Context) (result PortablePreflightResult, returnErr error) {
+	return s.PreflightPortableMetadataProfile(ctx, portablecatalog.ProfileGalleryIdentityAssisted)
+}
+
+func (s *Server) PreflightPortableMetadataProfile(ctx context.Context, profile portablecatalog.PackageProfile) (result PortablePreflightResult, returnErr error) {
 	s.operationMu.Lock()
 	defer s.operationMu.Unlock()
 	defer func() {
@@ -83,10 +88,16 @@ func (s *Server) PreflightPortableMetadata(ctx context.Context) (result Portable
 		}
 		_ = s.Database.Operations().Audit(ctx, "PORTABLE_METADATA_PREFLIGHT", "PORTABLE_EXPORT", "preflight", outcome, code, map[string]any{"identities": result.IdentityCount, "core_entities": result.CoreEntityCount, "galleries": result.GalleryCount, "assets": result.AssetCount, "warnings": result.WarningCount(), "blocking": result.BlockingCount()}, time.Now())
 	}()
-	return s.preflightPortableMetadata(ctx)
+	return s.preflightPortableMetadata(ctx, profile)
 }
 
-func (s *Server) preflightPortableMetadata(ctx context.Context) (PortablePreflightResult, error) {
+func (s *Server) preflightPortableMetadata(ctx context.Context, profile portablecatalog.PackageProfile) (PortablePreflightResult, error) {
+	if profile == "" {
+		profile = portablecatalog.ProfileGalleryIdentityAssisted
+	}
+	if profile != portablecatalog.ProfileCoreCatalog && profile != portablecatalog.ProfileGalleryIdentityAssisted {
+		return PortablePreflightResult{}, errors.New("portable metadata export profile is invalid")
+	}
 	state, err := s.Database.Operations().Maintenance(ctx)
 	if err != nil {
 		return PortablePreflightResult{}, err
@@ -98,7 +109,7 @@ func (s *Server) preflightPortableMetadata(ctx context.Context) (PortablePreflig
 	if err != nil {
 		return PortablePreflightResult{}, err
 	}
-	preflight, err := s.Database.PortableCatalogPreflight(ctx)
+	preflight, err := s.Database.PortableCatalogPreflightForProfile(ctx, profile)
 	if err != nil {
 		return PortablePreflightResult{}, err
 	}
@@ -144,7 +155,13 @@ func (s *Server) ExportPortableMetadata(ctx context.Context, options PortableExp
 	if !filepath.IsAbs(options.TargetPath) || filepath.Ext(options.TargetPath) != ".zip" {
 		return result, errors.New("portable metadata target must be an absolute .zip path")
 	}
-	preflight, err := s.preflightPortableMetadata(ctx)
+	if options.Profile == "" {
+		options.Profile = portablecatalog.ProfileGalleryIdentityAssisted
+	}
+	if options.Profile == portablecatalog.ProfileCoreCatalog && (options.IncludeGalleryLifecycle || options.IncludePersonalFlags) {
+		return result, errors.New("core catalog export cannot include owner continuity")
+	}
+	preflight, err := s.preflightPortableMetadata(ctx, options.Profile)
 	if err != nil {
 		return result, err
 	}
@@ -167,8 +184,8 @@ func (s *Server) ExportPortableMetadata(ctx context.Context, options PortableExp
 		}
 	}()
 	version, _, _ := build.Version()
-	manifest := portablecatalog.PackageManifest{Format: portablecatalog.Format, FormatVersion: portablecatalog.FormatVersion, ProductID: product.ID, ExportID: exportID, CreatedAt: now.Format(time.RFC3339), Versions: portablecatalog.Versions(product.CurrentVersions(version))}
-	reader, err := s.Database.BeginPortableCatalogReadWithOwner(ctx, manifest, productdb.PortableOwnerContinuityOptions{GalleryLifecycle: options.IncludeGalleryLifecycle, PersonalFlags: options.IncludePersonalFlags})
+	manifest := portablecatalog.PackageManifest{Format: portablecatalog.Format, FormatVersion: portablecatalog.FormatVersion, Profile: options.Profile, ProductID: product.ID, ExportID: exportID, CreatedAt: now.Format(time.RFC3339), Versions: portablecatalog.Versions(product.CurrentVersions(version))}
+	reader, err := s.Database.BeginPortableCatalogReadWithOwner(ctx, manifest, productdb.PortableOwnerContinuityOptions{GalleryLifecycle: options.IncludeGalleryLifecycle, PersonalFlags: options.IncludePersonalFlags, Profile: options.Profile})
 	if err != nil {
 		return result, err
 	}

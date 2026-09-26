@@ -106,7 +106,12 @@ func (s *ManageStore) GalleryDetail(ctx context.Context, setID string) (manage.G
 		return manage.GalleryDetail{}, err
 	}
 	result := manage.GalleryDetail{Row: row}
-	if err := s.db.QueryRowContext(ctx, `SELECT description,COALESCE(shoot_date,''),COALESCE(shoot_date_precision,''),photographer_name,studio_name FROM galleries WHERE set_id=?`, setID).Scan(&result.Description, &result.ShootDate, &result.ShootDatePrecision, &result.PhotographerName, &result.StudioName); err != nil {
+	if err := s.db.QueryRowContext(ctx, `SELECT description,COALESCE(shoot_date,''),COALESCE(shoot_date_precision,''),
+		COALESCE(publish_date,''),COALESCE(publish_date_precision,''),photographer_name,studio_name,
+		media_added_start_at_utc,media_added_end_at_utc,media_added_status FROM galleries WHERE set_id=?`, setID).Scan(
+		&result.Description, &result.ShootDate, &result.ShootDatePrecision,
+		&result.PublishDate, &result.PublishDatePrecision, &result.PhotographerName, &result.StudioName,
+		&result.MediaAddedStartUTC, &result.MediaAddedEndUTC, &result.MediaAddedStatus); err != nil {
 		return manage.GalleryDetail{}, err
 	}
 	var galleryID int64

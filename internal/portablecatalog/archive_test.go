@@ -93,6 +93,7 @@ func TestPortableInspectorContinuesToReadFormatV1WithoutOwnerFields(t *testing.T
 			t.Fatal(err)
 		}
 		manifest["format_version"] = float64(1)
+		delete(manifest, "profile")
 		delete(manifest, "owner_continuity")
 		delete(manifest, "owner_gallery_lifecycle")
 		delete(manifest, "owner_personal_flags")
@@ -113,6 +114,40 @@ func TestPortableInspectorContinuesToReadFormatV1WithoutOwnerFields(t *testing.T
 	manifest, err := ReadPackageManifest(context.Background(), v1)
 	if err != nil || manifest.FormatVersion != 1 || manifest.OwnerContinuity {
 		t.Fatalf("format v1 manifest summary = %#v, %v", manifest, err)
+	}
+}
+
+func TestCoreCatalogProfileOmitsGalleryPayloadAndRejectsGalleryIdentities(t *testing.T) {
+	bundle := validBundle()
+	bundle.Manifest.Profile = ProfileCoreCatalog
+	bundle.Catalog.Cosers[0].Avatar = nil
+	bundle.Gallery = GalleryIndex{SchemaVersion: 1, Libraries: []LibraryLocator{}, Galleries: []GalleryLocator{}}
+	bundle.Identity.Identities = bundle.Identity.Identities[:len(bundle.Identity.Identities)-1]
+	target := filepath.Join(t.TempDir(), "core.cgm-portable.zip")
+	if err := WriteFileAtomic(target, bundle, nil); err != nil {
+		t.Fatal(err)
+	}
+	inspection, err := InspectFile(context.Background(), target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inspection.Manifest.EffectiveProfile() != ProfileCoreCatalog || inspection.Manifest.GalleryCount != 0 || len(inspection.Bundle.Gallery.Galleries) != 0 {
+		t.Fatalf("core profile inspection = %#v", inspection.Manifest)
+	}
+	archive, err := zip.OpenReader(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer archive.Close()
+	for _, entry := range archive.File {
+		if entry.Name == "gallery-index.json" || entry.Name == ownerContinuityEntry {
+			t.Fatalf("core package unexpectedly contains %s", entry.Name)
+		}
+	}
+
+	bundle.Identity.Identities = append(bundle.Identity.Identities, IdentityRecord{UUID: testGalleryUUID, Kind: "GALLERY", State: "ACTIVE", CreatedAt: testTime})
+	if err := WriteFileAtomic(filepath.Join(t.TempDir(), "invalid.zip"), bundle, nil); err == nil || !strings.Contains(err.Error(), "core catalog package contains GALLERY identity") {
+		t.Fatalf("Gallery identity error = %v", err)
 	}
 }
 

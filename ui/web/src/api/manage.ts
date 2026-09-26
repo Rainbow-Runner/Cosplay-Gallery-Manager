@@ -3,8 +3,9 @@ import { gql } from "@apollo/client";
 const MANAGE_GALLERY_DETAIL = gql`
   fragment ManageGalleryDetailFields on ManageGalleryDetail {
     row { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues lastScanErrorCode lastScanCompleted }
-    aliases description shootDate shootDatePrecision photographerName studioName
+    aliases description shootDate shootDatePrecision publishDate publishDatePrecision photographerName studioName
     imageCaptureStart imageCaptureEnd videoCaptureStart videoCaptureEnd captureDateCandidate captureDateReviewStatus
+    mediaAddedStartUTC mediaAddedEndUTC mediaAddedStatus
     items { uuid relativePath mediaKind contentFormat imageCategory position caption excluded availability processingState byteSize videoProbeState videoErrorCode videoContainer videoDurationSeconds videoWidth videoHeight videoCodec audioCodec }
     credits { coserUUID coserName position cast { characterUUID characterName workUUID workName position } }
     tags { uuid name position }
@@ -151,7 +152,7 @@ export const REVOKE_IGNORED_SOURCE = gql`
   }
 `;
 export const MANAGE_DISCOVERY = gql`
-  query ManageDiscovery($libraryID: Int64!) { manageDiscovery(libraryID: $libraryID) { id libraryID completedAt candidates { id rootPath sourceType method manifestSetID status autoCreateDraft hasConflict overLimit mediaCount suggestions { field value } } unassigned { parentPath mediaCount } coverageSummary { regularFileCount supportedMediaCount supportedArchiveCount unsupportedArchiveCount controlFileCount ignoredOtherCount actionableIssueCount registeredSourceCount indexedItemCount sourceNeedsScanCount } coverageDiagnostics { path entryKind reasonCode fileCount byteSize } } }
+  query ManageDiscovery($libraryID: Int64!) { manageDiscovery(libraryID: $libraryID) { id libraryID completedAt candidates { id rootPath sourceType method manifestSetID manifestSchema manifestRevision manifestHash identityClassification identityIssueCode inspectionToken status autoCreateDraft hasConflict overLimit mediaCount suggestions { field value } } unassigned { parentPath mediaCount } coverageSummary { regularFileCount supportedMediaCount supportedArchiveCount unsupportedArchiveCount controlFileCount ignoredOtherCount actionableIssueCount registeredSourceCount indexedItemCount sourceNeedsScanCount } coverageDiagnostics { path entryKind reasonCode fileCount byteSize } } }
 `;
 const LIBRARY_AUTOMATION_FIELDS = gql`fragment LibraryAutomationFields on ManageLibraryAutomation { policy { libraryID mode defaultContentRating excludeNewRootMedia autoImportArchives autoAcceptUniqueEntities autoAcceptMediaClassification autoActivate revision } preview { candidateCount autoCreateEligible draftCount activationReady needsReview } recentRuns { id libraryID policyRevision mode status phase processedTargets totalTargets currentGalleryTitle cancellationRequested candidatesSeen draftsCreated scanned activated needsReview issueCount errorCode startedAt completedAt } }`;
 export const MANAGE_LIBRARY_AUTOMATION = gql`${LIBRARY_AUTOMATION_FIELDS} query ManageLibraryAutomation($libraryID: Int64!) { manageLibraryAutomation(libraryID: $libraryID) { ...LibraryAutomationFields } }`;
@@ -199,10 +200,15 @@ export const PREVIEW_MEDIA_EXCLUSION_RULE = gql`mutation PreviewMediaExclusionRu
 export const EVALUATE_MEDIA_EXCLUSION_RULES = gql`mutation EvaluateMediaExclusionRules($libraryID: Int64) { evaluateMediaExclusionRules(libraryID: $libraryID) { evaluated matched pending superseded } }`;
 export const RESOLVE_MEDIA_EXCLUSION_DECISION = gql`mutation ResolveMediaExclusionDecision($id: Int64!, $accept: Boolean!, $expectedGalleryRevision: Int64!) { resolveMediaExclusionDecision(id: $id, accept: $accept, expectedGalleryRevision: $expectedGalleryRevision) { id galleryID galleryRevision status ruleID ruleRevision } }`;
 export const DISCOVER_MEDIA_LIBRARY = gql`
-  mutation DiscoverMediaLibrary($libraryID: Int64!) { discoverMediaLibrary(libraryID: $libraryID) { id libraryID completedAt candidates { id rootPath sourceType method manifestSetID status autoCreateDraft hasConflict overLimit mediaCount suggestions { field value } } unassigned { parentPath mediaCount } coverageSummary { regularFileCount supportedMediaCount supportedArchiveCount unsupportedArchiveCount controlFileCount ignoredOtherCount actionableIssueCount registeredSourceCount indexedItemCount sourceNeedsScanCount } coverageDiagnostics { path entryKind reasonCode fileCount byteSize } } }
+  mutation DiscoverMediaLibrary($libraryID: Int64!) { discoverMediaLibrary(libraryID: $libraryID) { id libraryID completedAt candidates { id rootPath sourceType method manifestSetID manifestSchema manifestRevision manifestHash identityClassification identityIssueCode inspectionToken status autoCreateDraft hasConflict overLimit mediaCount suggestions { field value } } unassigned { parentPath mediaCount } coverageSummary { regularFileCount supportedMediaCount supportedArchiveCount unsupportedArchiveCount controlFileCount ignoredOtherCount actionableIssueCount registeredSourceCount indexedItemCount sourceNeedsScanCount } coverageDiagnostics { path entryKind reasonCode fileCount byteSize } } }
 `;
 export const IMPORT_GALLERY_CANDIDATE = gql`
   mutation ImportGalleryCandidate($candidateID: Int64!) { importGalleryCandidate(candidateID: $candidateID) { row { setID } } }
+`;
+export const FORK_GALLERY_CANDIDATE = gql`
+  mutation ForkGalleryCandidate($candidateID: Int64!, $password: String!, $confirmation: String!) {
+    forkGalleryCandidate(candidateID: $candidateID, password: $password, confirmation: $confirmation) { id libraryID completedAt }
+  }
 `;
 export const CONFIRM_GALLERY_SOURCE_REBIND = gql`
   ${MANAGE_GALLERY_DETAIL}
@@ -255,11 +261,11 @@ export const MANAGE_OPERATIONS = gql`${BACKUP_FIELDS} query ManageOperations($pa
 export const CREATE_FULL_BACKUP = gql`${BACKUP_FIELDS} mutation CreateFullBackup { createFullBackup { ...BackupFields } }`;
 export const RESTORE_BACKUP = gql`mutation RestoreBackup($backupID: ID!) { restoreBackup(backupID: $backupID) { state restoreBackupID lastErrorCode updatedAt } }`;
 const PORTABLE_MIGRATION_SNAPSHOT_FIELDS = gql`fragment PortableMigrationSnapshotFields on ManagePortableMigrationSnapshot {
-  imports { importID exportID state formatVersion identityCount coreEntityCount galleryClaimCount itemClaimCount linkClaimCount assetCount errorCode createdAt updatedAt }
+  imports { importID exportID state formatVersion profile identityCount coreEntityCount galleryClaimCount itemClaimCount linkClaimCount assetCount errorCode createdAt updatedAt autoAdoptEnabled autoActivateEnabled }
   merges { mergeID exportID state hardBlockingCount reviewCount identityAddCount identityReuseCount entityAddCount entityReuseCount errorCode safetyBackupID createdAt updatedAt }
   conflicts { issueKey issueCode severity entityKind incomingUUID localUUID fieldKey decision }
   mappings { libraryKey libraryName decision targetLibraryID targetName targetRoot }
-  rebuilds { setID libraryKey sourceType relativeSource locatorStatus manifestStatus state issueCode }
+  rebuilds { setID libraryKey sourceType relativeSource exportedRelativeSource resolvedRelativeSource sourceResolution resolutionToken locatorStatus manifestStatus state issueCode adoptedManifestHash }
   owner { available galleryLifecycle personalFlags galleryCount itemCount }
 }`;
 export const MANAGE_PORTABLE_MIGRATION = gql`${PORTABLE_MIGRATION_SNAPSHOT_FIELDS} query ManagePortableMigration($importID: ID, $mergeID: ID) { managePortableMigration(importID: $importID, mergeID: $mergeID) { ...PortableMigrationSnapshotFields } manageMaintenance { state restoreBackupID lastErrorCode updatedAt } }`;

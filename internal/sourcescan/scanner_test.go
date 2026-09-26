@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stashapp/stash/internal/archivecheck"
 	"github.com/stashapp/stash/internal/gallery"
@@ -29,6 +30,10 @@ func TestScanDirectoryHashesAndClassifiesActualContent(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := imageFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+	modified := time.Date(2024, 5, 12, 13, 14, 15, 0, time.UTC)
+	if err := os.Chtimes(filepath.Join(root, "10.jpg"), modified, modified); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "2.gif"), []byte("GIF89a content"), 0o600); err != nil {
@@ -64,6 +69,9 @@ func TestScanDirectoryHashesAndClassifiesActualContent(t *testing.T) {
 	if !hasIssue(result.Issues, "CONTENT_EXTENSION_MISMATCH") {
 		t.Fatalf("format mismatch issue missing: %#v", result.Issues)
 	}
+	if got := byPath["10.jpg"]; got.SourceModifiedStatus != "FOUND" || got.SourceModifiedOrigin != "FILESYSTEM" || got.SourceModifiedAtUTC != modified.Format(time.RFC3339Nano) {
+		t.Fatalf("directory modification evidence = %#v", got)
+	}
 }
 
 func TestScanDirectoryNeverFollowsSymlinks(t *testing.T) {
@@ -91,7 +99,10 @@ func TestScanArchiveUsesCompressedSizeAndBlocksUnsafeMedia(t *testing.T) {
 		t.Fatal(err)
 	}
 	writer := zip.NewWriter(file)
-	part, err := writer.Create("photo.jpg")
+	header := &zip.FileHeader{Name: "photo.jpg", Method: zip.Deflate}
+	modified := time.Date(2023, 4, 2, 8, 30, 0, 0, time.UTC)
+	header.SetModTime(modified)
+	part, err := writer.CreateHeader(header)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,6 +133,10 @@ func TestScanArchiveUsesCompressedSizeAndBlocksUnsafeMedia(t *testing.T) {
 		if observation.ByteSize <= 0 {
 			t.Fatalf("archive member did not use compressed size: %#v", observation)
 		}
+	}
+	photo := result.Observations[0]
+	if photo.RelativePath == "photo.jpg" && (photo.SourceModifiedStatus != "FOUND" || photo.SourceModifiedOrigin != "ARCHIVE_ENTRY" || photo.SourceModifiedAtUTC == "") {
+		t.Fatalf("archive modification evidence = %#v", photo)
 	}
 }
 

@@ -3,6 +3,7 @@ enum GallerySort { RECENTLY_ADDED NAME SHOOT_DATE RATING }
 enum CollectionType { ALBUM COSPLAY }
 enum ContentRating { NON_ADULT ADULT }
 enum ShootDatePrecision { DAY MONTH UNKNOWN }
+enum TimelineDate { SHOOT MEDIA_ADDED PUBLISH }
 enum MediaKind { STATIC_IMAGE ANIMATED_IMAGE VIDEO }
 enum ImageCategory { PHOTO SELFIE }
 enum ContentFormat { IMAGE VIDEO RAW }
@@ -56,7 +57,12 @@ type BrowseGalleryCard {
   workCount: Int!
   shootDate: String!
   shootDatePrecision: ShootDatePrecision!
+  publishDate: String!
+  publishDatePrecision: ShootDatePrecision!
   addedAtUTC: String!
+  mediaAddedStartUTC: String!
+  mediaAddedEndUTC: String!
+  mediaAddedStatus: String!
   media: MediaCounts!
   favorite: Boolean!
   ratingHalfSteps: Int
@@ -177,6 +183,12 @@ type SearchHit {
   name: String!
   matchLevel: Int!
   coverResource: ResourceIdentity
+  mediaAddedStartUTC: String!
+  mediaAddedEndUTC: String!
+  shootDate: String!
+  shootDatePrecision: ShootDatePrecision!
+  publishDate: String!
+  publishDatePrecision: ShootDatePrecision!
 }
 
 type SearchPreview {
@@ -266,8 +278,10 @@ type ManageGalleryItem {
 }
 type ManageGalleryDetail {
   row: ManageGalleryRow! aliases: [String!]! description: String! shootDate: String! shootDatePrecision: ShootDatePrecision!
+  publishDate: String! publishDatePrecision: ShootDatePrecision!
   imageCaptureStart: String! imageCaptureEnd: String! videoCaptureStart: String! videoCaptureEnd: String!
   captureDateCandidate: String! captureDateReviewStatus: String!
+  mediaAddedStartUTC: String! mediaAddedEndUTC: String! mediaAddedStatus: String!
   photographerName: String! studioName: String! items: [ManageGalleryItem!]! credits: [ManageGalleryCredit!]! tags: [ManageGalleryTag!]! externalLinks: [ManageGalleryExternalLink!]!
   folderMatches: [ManageGalleryFolderMatch!]!
   scanRuns: [ManageGalleryScanRun!]!
@@ -286,6 +300,7 @@ type ManageGalleryManifestBatchResult { setID: ID! outcome: String! reason: Stri
 type ManageCoserManifestState { status: String! path: String! manifestRevision: Int! metadataRevision: Int64! conflicts: [ManageManifestConflict!]! }
 input UpdateGalleryMetadataInput {
   title: String! aliases: [String!]! description: String! shootDate: String! shootDatePrecision: ShootDatePrecision!
+  publishDate: String! publishDatePrecision: ShootDatePrecision!
   contentRating: ContentRating! photographerName: String! studioName: String!
 }
 input UpdateGalleryItemInput { imageCategory: ImageCategory caption: String! }
@@ -327,7 +342,25 @@ type ManageMediaExclusionPreview { totalMatches: Int! samples: [ManageMediaExclu
 type ManageMediaExclusionEvaluation { evaluated: Int! matched: Int! pending: Int! superseded: Int! }
 type ManageMediaExclusionDecision { id: Int64! galleryID: Int64! galleryRevision: Int64! gallerySetID: ID! galleryTitle: String! itemUUID: ID! relativePath: String! ruleID: Int64! ruleRevision: Int! ruleName: String! decision: String! matchedSubject: String! matchedValue: String! status: String! }
 type ManageSuggestion { field: String! value: String! }
-type ManageCandidate { id: Int64! rootPath: String! sourceType: String! method: String! manifestSetID: ID status: String! autoCreateDraft: Boolean! hasConflict: Boolean! overLimit: Boolean! mediaCount: Int! suggestions: [ManageSuggestion!]! }
+type ManageCandidate {
+  id: Int64!
+  rootPath: String!
+  sourceType: String!
+  method: String!
+  manifestSetID: ID
+  manifestSchema: Int!
+  manifestRevision: Int64!
+  manifestHash: String!
+  identityClassification: String!
+  identityIssueCode: String!
+  inspectionToken: String!
+  status: String!
+  autoCreateDraft: Boolean!
+  hasConflict: Boolean!
+  overLimit: Boolean!
+  mediaCount: Int!
+  suggestions: [ManageSuggestion!]!
+}
 type ManageUnassignedDiagnostic { parentPath: String! mediaCount: Int! }
 type ManageLibraryCoverageSummary { regularFileCount: Int! supportedMediaCount: Int! supportedArchiveCount: Int! unsupportedArchiveCount: Int! controlFileCount: Int! ignoredOtherCount: Int! actionableIssueCount: Int! registeredSourceCount: Int! indexedItemCount: Int! sourceNeedsScanCount: Int! }
 type ManageLibraryCoverageDiagnostic { path: String! entryKind: String! reasonCode: String! fileCount: Int! byteSize: Int64! }
@@ -380,23 +413,32 @@ type ManageBackupRecord {
   createdAt: String! completedAt: String lastErrorCode: String!
 }
 type ManageMaintenanceState { state: String! restoreBackupID: ID lastErrorCode: String! updatedAt: String! }
-enum PortableMigrationAction { PREFLIGHT_EXPORT EXPORT IMPORT PREPARE_MERGE DECIDE_MERGE APPLY_MERGE ABORT_MERGE RECOVER_IMPORT RECOVER_MERGE MAP_LIBRARIES PREFLIGHT_REBUILD REBUILD APPLY_CONTINUITY }
+enum PortableMigrationAction { PREFLIGHT_EXPORT EXPORT IMPORT PREPARE_MERGE DECIDE_MERGE APPLY_MERGE ABORT_MERGE RECOVER_IMPORT RECOVER_MERGE MAP_LIBRARIES PREFLIGHT_REBUILD CONFIGURE_REBUILD_AUTOMATION ADOPT_REBUILD_SOURCES REBUILD APPLY_CONTINUITY }
+enum PortablePackageProfile { CORE_CATALOG GALLERY_IDENTITY_ASSISTED }
 input PortableMergeDecisionInput { issueKey: String! decision: String! }
 input PortableLibraryDecisionInput { libraryKey: String! targetLibraryID: Int64 }
 input PortableMigrationActionInput {
   action: PortableMigrationAction! path: String! importID: ID! mergeID: ID! password: String! confirmation: String!
+  profile: PortablePackageProfile! = GALLERY_IDENTITY_ASSISTED
   allowIncompleteGallery: Boolean! includeGalleryLifecycle: Boolean! includePersonalFlags: Boolean!
-  mergeDecisions: [PortableMergeDecisionInput!]! libraryDecisions: [PortableLibraryDecisionInput!]!
+  autoAdopt: Boolean! = false autoActivate: Boolean! = false
+  mergeDecisions: [PortableMergeDecisionInput!]! libraryDecisions: [PortableLibraryDecisionInput!]! gallerySetIDs: [ID!]! = []
 }
 type ManagePortableImportSession {
-  importID: ID! exportID: ID! state: String! formatVersion: Int! identityCount: Int! coreEntityCount: Int! galleryClaimCount: Int! itemClaimCount: Int! linkClaimCount: Int! assetCount: Int! errorCode: String! createdAt: String! updatedAt: String!
+  importID: ID! exportID: ID! state: String! formatVersion: Int! profile: String! identityCount: Int! coreEntityCount: Int! galleryClaimCount: Int! itemClaimCount: Int! linkClaimCount: Int! assetCount: Int! errorCode: String! createdAt: String! updatedAt: String! autoAdoptEnabled: Boolean! autoActivateEnabled: Boolean!
 }
 type ManagePortableMergeSession {
   mergeID: ID! exportID: ID! state: String! hardBlockingCount: Int! reviewCount: Int! identityAddCount: Int! identityReuseCount: Int! entityAddCount: Int! entityReuseCount: Int! errorCode: String! safetyBackupID: ID createdAt: String! updatedAt: String!
 }
 type ManagePortableMergeConflict { issueKey: String! issueCode: String! severity: String! entityKind: String! incomingUUID: ID! localUUID: ID fieldKey: String! decision: String! }
 type ManagePortableLibraryMapping { libraryKey: String! libraryName: String! decision: String! targetLibraryID: Int64 targetName: String! targetRoot: String! }
-type ManagePortableGalleryRebuild { setID: ID! libraryKey: String! sourceType: String! relativeSource: String! locatorStatus: String! manifestStatus: String! state: String! issueCode: String! }
+type ManagePortableGalleryRebuild {
+  setID: ID! libraryKey: String! sourceType: String!
+  relativeSource: String! exportedRelativeSource: String! resolvedRelativeSource: String!
+  sourceResolution: String! resolutionToken: String!
+  locatorStatus: String! manifestStatus: String! state: String! issueCode: String!
+  adoptedManifestHash: String!
+}
 type ManagePortableOwnerContinuity { available: Boolean! galleryLifecycle: Boolean! personalFlags: Boolean! galleryCount: Int! itemCount: Int! }
 type ManagePortableMigrationSnapshot { imports: [ManagePortableImportSession!]! merges: [ManagePortableMergeSession!]! conflicts: [ManagePortableMergeConflict!]! mappings: [ManagePortableLibraryMapping!]! rebuilds: [ManagePortableGalleryRebuild!]! owner: ManagePortableOwnerContinuity }
 type ManagePortablePreflightIssue { code: String! severity: String! count: Int! }
@@ -445,7 +487,7 @@ input ExpectedTagRevisionInput { uuid: ID! metadataRevision: Int64! }
 type Query {
   homeGalleries(page: Int!): HomeGalleryPage!
   browseGalleries(scope: BrowseScope!, page: Int!, sort: GallerySort!, collectionType: CollectionType): GalleryPage!
-  timelineGalleries(scope: BrowseScope!, page: Int!, coserUUID: ID): GalleryPage!
+  timelineGalleries(scope: BrowseScope!, page: Int!, coserUUID: ID, date: TimelineDate! = SHOOT): GalleryPage!
   galleryDetail(slug: String!, scope: BrowseScope! = ALL): GalleryDetail!
   galleryMemberIndex(setID: ID!): GalleryMemberIndex!
   relatedGalleries(setID: ID!, scope: BrowseScope! = ALL): [GalleryRecommendation!]!
@@ -552,6 +594,7 @@ type Mutation {
   resolveMediaExclusionDecision(id: Int64!, accept: Boolean!, expectedGalleryRevision: Int64!): ManageMediaExclusionDecision!
   discoverMediaLibrary(libraryID: Int64!): ManageDiscoverySnapshot!
   importGalleryCandidate(candidateID: Int64!): ManageGalleryDetail!
+  forkGalleryCandidate(candidateID: Int64!, password: String!, confirmation: String!): ManageDiscoverySnapshot!
   scanGallerySource(setID: ID!, excludeNewRootMedia: Boolean! = true): ManageGalleryDetail!
   updateRuntimeSettings(expectedSettingsRevision: Int64!, input: RuntimeSettingsInput!): ManageRuntimeSettings!
   cancelProcessingJob(id: Int64!): ManageProcessingJobPage!

@@ -45,7 +45,7 @@ func TestSchemaV14UpgradePreservesManualShootDate(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer upgraded.Close()
-	if upgraded.Identity().DatabaseSchemaVersion != 16 {
+	if upgraded.Identity().DatabaseSchemaVersion != 18 {
 		t.Fatalf("schema=%d", upgraded.Identity().DatabaseSchemaVersion)
 	}
 	var date, origin string

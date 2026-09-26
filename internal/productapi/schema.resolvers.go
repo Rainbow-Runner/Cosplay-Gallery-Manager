@@ -197,9 +197,13 @@ func (r *mutationResolver) UpdateGalleryMetadata(ctx context.Context, setID stri
 	if input.ShootDatePrecision == ShootDatePrecisionUnknown {
 		precision = ""
 	}
+	publishPrecision := gallery.ShootDatePrecision(input.PublishDatePrecision)
+	if input.PublishDatePrecision == ShootDatePrecisionUnknown {
+		publishPrecision = ""
+	}
 	_, err = r.Database.Galleries().UpdateMetadata(ctx, id, expectedMetadataRevision, productdb.UpdateGalleryMetadataInput{
 		Title: input.Title, Aliases: input.Aliases, Description: input.Description, ShootDate: input.ShootDate,
-		ShootDatePrecision: precision, ContentRating: gallery.ContentRating(input.ContentRating),
+		ShootDatePrecision: precision, PublishDate: input.PublishDate, PublishDatePrecision: publishPrecision, ContentRating: gallery.ContentRating(input.ContentRating),
 		PhotographerName: input.PhotographerName, StudioName: input.StudioName}, time.Now())
 	if err != nil {
 		return nil, manageError(err)
@@ -719,6 +723,27 @@ func (r *mutationResolver) ImportGalleryCandidate(ctx context.Context, candidate
 	return r.loadManageGalleryDetail(ctx, created.SetID)
 }
 
+// ForkGalleryCandidate is the resolver for the forkGalleryCandidate field.
+func (r *mutationResolver) ForkGalleryCandidate(ctx context.Context, candidateID int64, password string, confirmation string) (*ManageDiscoverySnapshot, error) {
+	if confirmation != "FORK" {
+		return nil, manageError(errors.New("Gallery candidate fork confirmation is invalid"))
+	}
+	if r.OwnerPassword == nil {
+		return nil, manageError(errors.New("owner password verification is unavailable"))
+	}
+	if err := r.OwnerPassword.VerifyPassword(ctx, password); err != nil {
+		r.auditManage(ctx, "GALLERY_CANDIDATE_FORK", "CANDIDATE", strconv.FormatInt(candidateID, 10), "OWNER_REAUTH_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	value, err := r.Database.CandidateDiscovery().ForkCandidateManifest(ctx, candidateID, time.Now())
+	if err != nil {
+		r.auditManage(ctx, "GALLERY_CANDIDATE_FORK", "CANDIDATE", strconv.FormatInt(candidateID, 10), "GALLERY_CANDIDATE_FORK_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "GALLERY_CANDIDATE_FORK", "CANDIDATE", strconv.FormatInt(candidateID, 10), "", nil, map[string]any{"library_id": value.LibraryID})
+	return manageDiscoverySnapshot(value), nil
+}
+
 // ScanGallerySource is the resolver for the scanGallerySource field.
 func (r *mutationResolver) ScanGallerySource(ctx context.Context, setID string, excludeNewRootMedia bool) (*ManageGalleryDetail, error) {
 	sourceID, err := r.Database.Manage().GallerySourceID(ctx, setID)
@@ -884,9 +909,12 @@ func (r *mutationResolver) RunPortableMigration(ctx context.Context, input Porta
 		ImportID:                input.ImportID,
 		MergeID:                 input.MergeID,
 		Confirmation:            input.Confirmation,
+		Profile:                 string(input.Profile),
 		AllowIncompleteGallery:  input.AllowIncompleteGallery,
 		IncludeGalleryLifecycle: input.IncludeGalleryLifecycle,
 		IncludePersonalFlags:    input.IncludePersonalFlags,
+		AutoAdopt:               input.AutoAdopt,
+		AutoActivate:            input.AutoActivate,
 	}
 	for _, decision := range input.MergeDecisions {
 		request.MergeDecisions = append(request.MergeDecisions, productdb.PortableMergeDecision{IssueKey: decision.IssueKey, Decision: decision.Decision})
@@ -894,6 +922,7 @@ func (r *mutationResolver) RunPortableMigration(ctx context.Context, input Porta
 	for _, decision := range input.LibraryDecisions {
 		request.LibraryDecisions = append(request.LibraryDecisions, productdb.PortableLibraryDecision{LibraryKey: decision.LibraryKey, TargetLibraryID: decision.TargetLibraryID})
 	}
+	request.GallerySetIDs = append(request.GallerySetIDs, input.GallerySetIDs...)
 	value, err := service.RunPortableMigration(ctx, request)
 	targetID := value.ImportID
 	if targetID == "" {
@@ -1440,12 +1469,12 @@ func (r *queryResolver) BrowseGalleries(ctx context.Context, scope BrowseScope, 
 }
 
 // TimelineGalleries is the resolver for the timelineGalleries field.
-func (r *queryResolver) TimelineGalleries(ctx context.Context, scope BrowseScope, page int, coserUUID *string) (*GalleryPage, error) {
+func (r *queryResolver) TimelineGalleries(ctx context.Context, scope BrowseScope, page int, coserUUID *string, date TimelineDate) (*GalleryPage, error) {
 	coser := ""
 	if coserUUID != nil {
 		coser = *coserUUID
 	}
-	value, err := r.Database.Browse().Timeline(ctx, browse.Scope(scope), page, coser)
+	value, err := r.Database.Browse().TimelineByDate(ctx, browse.Scope(scope), page, coser, browse.TimelineDate(date))
 	if err != nil {
 		return nil, publicError(err)
 	}

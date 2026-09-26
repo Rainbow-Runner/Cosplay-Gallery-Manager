@@ -17,6 +17,7 @@ type portablePackageEntry struct {
 	Size          int64  `json:"size"`
 	CreatedAt     string `json:"createdAt"`
 	FormatVersion int    `json:"formatVersion"`
+	Profile       string `json:"profile"`
 	CheckStatus   string `json:"checkStatus"`
 }
 
@@ -66,6 +67,7 @@ func (s *Server) portablePackagesHandler(root string) http.Handler {
 				if err == nil {
 					item.CreatedAt = manifest.CreatedAt
 					item.FormatVersion = manifest.FormatVersion
+					item.Profile = string(manifest.EffectiveProfile())
 				} else {
 					item.CheckStatus = "UNRECOGNIZED"
 				}
@@ -98,6 +100,7 @@ func (s *Server) portablePackagesHandler(root string) http.Handler {
 				item.CheckStatus = "VALID"
 				item.CreatedAt = inspection.Manifest.CreatedAt
 				item.FormatVersion = inspection.Manifest.FormatVersion
+				item.Profile = string(inspection.Manifest.EffectiveProfile())
 			}
 			_ = json.NewEncoder(response).Encode(item)
 		default:

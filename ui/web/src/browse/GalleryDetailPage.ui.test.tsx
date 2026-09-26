@@ -41,7 +41,7 @@ function card(coverItemUUID = "photo-1"): BrowseGalleryCard {
     credits: [{ uuid: "coser-1", name: "Alice", avatarURL: null }], creditCount: 1,
     characters: [{ uuid: "character-1", name: "Saber" }], characterCount: 1,
     works: [{ uuid: "work-1", name: "Fate" }], workCount: 1,
-    shootDate: "2026-07", shootDatePrecision: "MONTH", addedAtUTC: "2026-08-01T00:00:00Z",
+    shootDate: "2026-07", shootDatePrecision: "MONTH", publishDate: "", publishDatePrecision: "UNKNOWN", addedAtUTC: "2026-08-01T00:00:00Z",
     media: { photo: 1, selfie: 1, gif: 1, video: 1 }, favorite: false, ratingHalfSteps: null, scrubberCount: 0, scrubberRevision: 0,
   } as BrowseGalleryCard;
 }
@@ -126,6 +126,33 @@ describe("GalleryDetailPage presentation and media actions", () => {
     expect(within(stats).getByLabelText("Photo capture date: 2024-05-12 – 2024-05-15")).toBeInTheDocument();
     expect(within(stats).getByLabelText("Video capture date: 2024-06-01")).toBeInTheDocument();
     expect(stats).not.toHaveTextContent("2026-07");
+  });
+
+  it("shows a complete static-image modification range and hides partial evidence", async () => {
+    const complete = queryMocks();
+    complete[0] = { request: { query: GALLERY_DETAIL, variables: { slug: "gallery-one" } }, result: { data: { galleryDetail: {
+      ...detail(), card: { ...card(), mediaAddedStartUTC: "2024-01-02T03:04:05Z", mediaAddedEndUTC: "2024-02-03T04:05:06Z", mediaAddedStatus: "COMPLETE" },
+    } } } };
+    const rendered = renderPage(complete);
+    expect(await screen.findByLabelText("Static image file modification time: 2024-01-02T03:04:05Z – 2024-02-03T04:05:06Z")).toBeInTheDocument();
+    rendered.unmount();
+
+    const partial = queryMocks();
+    partial[0] = { request: { query: GALLERY_DETAIL, variables: { slug: "gallery-one" } }, result: { data: { galleryDetail: {
+      ...detail(), card: { ...card(), mediaAddedStartUTC: "2024-01-02T03:04:05Z", mediaAddedEndUTC: "", mediaAddedStatus: "PARTIAL" },
+    } } } };
+    renderPage(partial);
+    await screen.findByRole("heading", { name: "Gallery one" });
+    expect(screen.queryByTitle("Static image file modification time")).not.toBeInTheDocument();
+  });
+
+  it("shows a manual publication month in the same time row", async () => {
+    const mocks = queryMocks();
+    mocks[0] = { request: { query: GALLERY_DETAIL, variables: { slug: "gallery-one" } }, result: { data: { galleryDetail: { ...detail(), card: { ...card(), publishDate: "2025-06", publishDatePrecision: "MONTH" } } } } };
+    renderPage(mocks);
+    const heading = await screen.findByRole("heading", { name: "Gallery one" });
+    const stats = heading.closest(".gallery-detail__title")?.querySelector(".gallery-detail__stats") as HTMLElement;
+    expect(within(stats).getByLabelText("Publication date: 2025-06")).toBeInTheDocument();
   });
 
   it("keeps the inline Tag editor available when the gallery has no tags", async () => {

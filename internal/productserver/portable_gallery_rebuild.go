@@ -3,9 +3,12 @@ package productserver
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +16,7 @@ import (
 	"github.com/stashapp/stash/internal/archivefile"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/manifest"
+	"github.com/stashapp/stash/internal/manifestidentity"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/portableid"
 	"github.com/stashapp/stash/internal/sourcescan"
@@ -101,6 +105,12 @@ func (s *Server) preflightPortableGalleryRebuild(ctx context.Context, importID s
 			result.Entries = append(result.Entries, entry)
 			continue
 		}
+		resolved, resolutionErr := s.refreshPortableSourceResolution(ctx, rebuild)
+		if resolutionErr != nil {
+			return result, resolutionErr
+		}
+		rebuild = resolved
+		entry.RelativeSource = rebuild.ResolvedRelativeSource
 		prepared, code := s.preparePortableGallery(ctx, rebuild, byKey, limits)
 		_ = prepared
 		switch {
@@ -149,6 +159,14 @@ func (s *Server) preparePortableGallery(ctx context.Context, rebuild productdb.P
 		return prepared, "PORTABLE_LOCATOR_UNRESOLVED"
 	}
 	mapping, ok := mappings[rebuild.LibraryKey]
+	if rebuild.ResolvedTargetLibraryID != nil {
+		for _, candidate := range mappings {
+			if candidate.TargetLibraryID != nil && *candidate.TargetLibraryID == *rebuild.ResolvedTargetLibraryID {
+				mapping, ok = candidate, true
+				break
+			}
+		}
+	}
 	if !ok || mapping.Decision == "UNMAPPED" {
 		return prepared, "PORTABLE_LIBRARY_UNMAPPED"
 	}
@@ -159,12 +177,27 @@ func (s *Server) preparePortableGallery(ctx context.Context, rebuild productdb.P
 		return prepared, "PORTABLE_LIBRARY_TARGET_MISSING"
 	}
 	prepared.mapping = mapping
+	if rebuild.SourceResolution == string(manifestidentity.ResolutionDuplicateAccessibleSource) {
+		return prepared, "PORTABLE_DUPLICATE_ACCESSIBLE_SOURCE"
+	}
+	if rebuild.SourceResolution == string(manifestidentity.ResolutionUnresolved) && rebuild.ResolutionTokenHash != "" {
+		return prepared, "PORTABLE_SOURCE_UNRESOLVED"
+	}
+	if rebuild.SourceResolution == string(manifestidentity.ResolutionRelocatedUnique) && rebuild.AdoptionTokenHash == "" {
+		return prepared, "PORTABLE_SOURCE_RELOCATION_CONFIRMATION_REQUIRED"
+	}
 	if rebuild.ManifestStatus != "CLEAN" || rebuild.ManifestHash == "" {
-		return prepared, "PORTABLE_MANIFEST_NOT_CLEAN"
+		if rebuild.AdoptedManifestHash == "" {
+			return prepared, "PORTABLE_MANIFEST_ADOPTION_REQUIRED"
+		}
 	}
 	sourcePath := mapping.TargetRoot
-	if rebuild.LocatorStatus == "MAPPED" {
-		sourcePath = filepath.Join(mapping.TargetRoot, filepath.FromSlash(rebuild.RelativeSource))
+	relativeSource := rebuild.RelativeSource
+	if rebuild.ResolvedRelativeSource != "" || rebuild.SourceResolution == string(manifestidentity.ResolutionExact) || rebuild.SourceResolution == string(manifestidentity.ResolutionRelocatedUnique) {
+		relativeSource = rebuild.ResolvedRelativeSource
+	}
+	if rebuild.LocatorStatus == "MAPPED" || relativeSource != "" {
+		sourcePath = filepath.Join(mapping.TargetRoot, filepath.FromSlash(relativeSource))
 	}
 	if err := validatePortableSourcePath(mapping.TargetRoot, sourcePath, rebuild.SourceType); err != nil {
 		return prepared, "PORTABLE_SOURCE_UNAVAILABLE"
@@ -177,11 +210,17 @@ func (s *Server) preparePortableGallery(ctx context.Context, rebuild productdb.P
 	if err != nil {
 		return prepared, "PORTABLE_MANIFEST_UNAVAILABLE"
 	}
-	if hash != rebuild.ManifestHash {
+	expectedHash := rebuild.ManifestHash
+	expectedRevision := rebuild.ManifestRevision
+	if rebuild.AdoptedManifestHash != "" {
+		expectedHash = rebuild.AdoptedManifestHash
+		expectedRevision = rebuild.AdoptedManifestRevision
+	}
+	if hash != expectedHash {
 		return prepared, "PORTABLE_MANIFEST_CHANGED"
 	}
 	document, err := manifest.ParseGallery(bytes.NewReader(data))
-	if err != nil || document.SetID != rebuild.SetID || document.Revision != rebuild.ManifestRevision {
+	if err != nil || document.SetID != rebuild.SetID || document.Revision != expectedRevision {
 		return prepared, "PORTABLE_MANIFEST_IDENTITY_MISMATCH"
 	}
 	var scan sourcescan.Result
@@ -215,8 +254,180 @@ func (s *Server) preparePortableGallery(ctx context.Context, rebuild productdb.P
 	if !s.portableClaimsValid(ctx, rebuild, itemUUIDs, linkUUIDs) {
 		return prepared, "PORTABLE_IDENTITY_CLAIM_INVALID"
 	}
+	if valid, err := s.Database.ManifestCoreReferencesValid(ctx, document); err != nil || !valid {
+		return prepared, "PORTABLE_CORE_REFERENCE_REVIEW"
+	}
 	prepared.path, prepared.doc = sourcePath, document
 	return prepared, ""
+}
+
+func (s *Server) refreshPortableSourceResolution(ctx context.Context, rebuild productdb.PortableGalleryRebuild) (productdb.PortableGalleryRebuild, error) {
+	candidates, err := s.Database.PortableSourceCandidates(ctx, rebuild.ImportID, rebuild.SetID)
+	if err != nil {
+		return rebuild, err
+	}
+	complete, err := s.Database.PortableMappingsHaveCompleteDiscovery(ctx, rebuild.ImportID)
+	if err != nil || !complete {
+		return rebuild, err
+	}
+	observed := make([]manifestidentity.ObservedSource, 0, len(candidates))
+	for _, candidate := range candidates {
+		observed = append(observed, manifestidentity.ObservedSource{SnapshotID: strconv.FormatInt(candidate.SnapshotID, 10), LibraryID: strconv.FormatInt(candidate.LibraryID, 10),
+			SetID: candidate.SetID, SourceType: string(candidate.SourceType), RelativeSource: candidate.RelativeSource,
+			ManifestSchema: candidate.ManifestSchema, Revision: candidate.ManifestRevision, ManifestHash: candidate.ManifestHash})
+	}
+	exported := rebuild.ExportedRelativeSource
+	if exported == "" {
+		exported = rebuild.RelativeSource
+	}
+	resolution := manifestidentity.ResolveSource(manifestidentity.ExpectedSource{SetID: rebuild.SetID, SourceType: string(rebuild.SourceType),
+		ExportedRelativeSource: exported, ManifestSchema: rebuild.ManifestSchema, ManifestRevision: rebuild.ManifestRevision, ManifestHash: rebuild.ManifestHash}, observed)
+	var targetLibraryID, snapshotID *int64
+	if resolution.ResolvedLibraryID != "" {
+		value, parseErr := strconv.ParseInt(resolution.ResolvedLibraryID, 10, 64)
+		if parseErr != nil {
+			return rebuild, parseErr
+		}
+		targetLibraryID = &value
+	}
+	if resolution.SnapshotID != "" {
+		value, parseErr := strconv.ParseInt(resolution.SnapshotID, 10, 64)
+		if parseErr != nil {
+			return rebuild, parseErr
+		}
+		snapshotID = &value
+	}
+	manifestHash := ""
+	if len(resolution.Candidates) == 1 {
+		manifestHash = resolution.Candidates[0].ManifestHash
+	}
+	digest := sha256.Sum256([]byte(strings.Join([]string{rebuild.ImportID, rebuild.SetID, string(resolution.Resolution), resolution.SnapshotID,
+		resolution.ResolvedLibraryID, resolution.ResolvedRelativeSource, manifestHash}, "\x00")))
+	token := hex.EncodeToString(digest[:])
+	if err := s.Database.SetPortableSourceResolution(ctx, rebuild.ImportID, rebuild.SetID, string(resolution.Resolution), targetLibraryID, snapshotID,
+		resolution.ResolvedRelativeSource, manifestHash, token, time.Now()); err != nil {
+		return rebuild, err
+	}
+	rebuild.ResolvedTargetLibraryID, rebuild.ResolutionSnapshotID = targetLibraryID, snapshotID
+	rebuild.ResolvedRelativeSource, rebuild.SourceResolution = resolution.ResolvedRelativeSource, string(resolution.Resolution)
+	rebuild.ResolutionManifestHash, rebuild.ResolutionTokenHash = manifestHash, token
+	return rebuild, nil
+}
+
+// AdoptPortableGalleryManifests records owner-authorized evidence for current
+// Manifests or relocated roots. It does not create a Gallery or claim a UUID;
+// the ordinary rebuild phase revalidates the evidence before doing either.
+func (s *Server) AdoptPortableGalleryManifests(ctx context.Context, importID string, setIDs []string) (int, error) {
+	s.operationMu.Lock()
+	defer s.operationMu.Unlock()
+	if _, err := portableid.Parse(importID); err != nil {
+		return 0, err
+	}
+	if len(setIDs) == 0 || len(setIDs) > 100 {
+		return 0, errors.New("portable Manifest adoption selection must contain 1 to 100 Galleries")
+	}
+	rebuilds, err := s.Database.ListPortableGalleryRebuilds(ctx, importID)
+	if err != nil {
+		return 0, err
+	}
+	selected := make(map[string]struct{}, len(setIDs))
+	for _, setID := range setIDs {
+		if _, err := portableid.Parse(setID); err != nil {
+			return 0, err
+		}
+		if _, duplicate := selected[setID]; duplicate {
+			return 0, errors.New("portable Manifest adoption selection contains duplicates")
+		}
+		selected[setID] = struct{}{}
+	}
+	mappings, err := s.Database.ListPortableLibraryMappings(ctx, importID)
+	if err != nil {
+		return 0, err
+	}
+	limits, err := s.portableArchiveLimits(ctx)
+	if err != nil {
+		return 0, err
+	}
+	adopted := 0
+	for _, rebuild := range rebuilds {
+		if _, ok := selected[rebuild.SetID]; !ok {
+			continue
+		}
+		delete(selected, rebuild.SetID)
+		rebuild, err = s.refreshPortableSourceResolution(ctx, rebuild)
+		if err != nil {
+			return adopted, err
+		}
+		if rebuild.SourceResolution != string(manifestidentity.ResolutionExact) && rebuild.SourceResolution != string(manifestidentity.ResolutionRelocatedUnique) || rebuild.ResolvedTargetLibraryID == nil || rebuild.ResolutionTokenHash == "" {
+			return adopted, errors.New("portable Gallery source is not uniquely resolved")
+		}
+		var mapping *productdb.PortableLibraryMapping
+		for index := range mappings {
+			if mappings[index].TargetLibraryID != nil && *mappings[index].TargetLibraryID == *rebuild.ResolvedTargetLibraryID {
+				mapping = &mappings[index]
+				break
+			}
+		}
+		if mapping == nil || mapping.TargetRoot == "" {
+			return adopted, errors.New("portable Gallery target library is unavailable")
+		}
+		sourcePath := filepath.Join(mapping.TargetRoot, filepath.FromSlash(rebuild.ResolvedRelativeSource))
+		if err := validatePortableSourcePath(mapping.TargetRoot, sourcePath, rebuild.SourceType); err != nil {
+			return adopted, errors.New("portable Gallery resolved source is unavailable")
+		}
+		manifestPath, err := manifest.GalleryPath(rebuild.SourceType, sourcePath)
+		if err != nil {
+			return adopted, err
+		}
+		data, hash, err := manifest.ReadFile(manifestPath, manifest.MaxGalleryBytes)
+		if err != nil || hash != rebuild.ResolutionManifestHash {
+			return adopted, errors.New("portable Manifest changed after source resolution")
+		}
+		document, err := manifest.ParseGallery(bytes.NewReader(data))
+		if err != nil || document.SetID != rebuild.SetID {
+			return adopted, errors.New("portable Manifest identity is invalid")
+		}
+		var scan sourcescan.Result
+		if rebuild.SourceType == gallery.SourceTypeArchive {
+			scan, err = sourcescan.ScanArchive(ctx, sourcePath, limits)
+		} else {
+			scan, err = sourcescan.ScanDirectory(ctx, sourcePath)
+		}
+		if err != nil || !scan.Complete || len(scan.Observations) > 1000 {
+			return adopted, errors.New("portable Gallery source scan is unsafe")
+		}
+		observed := make(map[string]int, len(scan.Observations))
+		for _, item := range scan.Observations {
+			observed[item.RelativePath]++
+		}
+		items, links, uniquePaths := portableManifestClaimedUUIDs(document)
+		if !uniquePaths {
+			return adopted, errors.New("portable Manifest item paths are not unique")
+		}
+		for path := range items {
+			if observed[path] != 1 {
+				return adopted, errors.New("portable Manifest item path is unavailable")
+			}
+		}
+		if !s.portableClaimsValid(ctx, rebuild, items, links) {
+			return adopted, errors.New("portable Manifest identities do not close over this import session")
+		}
+		if valid, err := s.Database.ManifestCoreReferencesValid(ctx, document); err != nil || !valid {
+			return adopted, errors.New("portable Manifest core references require review")
+		}
+		digest := sha256.Sum256([]byte(strings.Join([]string{importID, rebuild.SetID, rebuild.ResolutionTokenHash,
+			strconv.Itoa(document.SchemaVersion), strconv.FormatInt(document.Revision, 10), hash}, "\x00")))
+		if err := s.Database.AdoptPortableGalleryManifest(ctx, importID, rebuild.SetID, rebuild.ResolutionTokenHash,
+			document.SchemaVersion, document.Revision, hash, hex.EncodeToString(digest[:]), time.Now()); err != nil {
+			return adopted, err
+		}
+		adopted++
+	}
+	if len(selected) != 0 {
+		return adopted, errors.New("portable Manifest adoption selection contains an unknown Gallery")
+	}
+	_ = s.Database.Operations().Audit(ctx, "PORTABLE_MANIFEST_ADOPT", "PORTABLE_IMPORT", importID, "SUCCESS", "", map[string]any{"count": adopted}, time.Now())
+	return adopted, nil
 }
 
 func (s *Server) RebuildPortableGalleries(ctx context.Context, importID string) (report PortableGalleryRebuildReport, returnErr error) {
@@ -230,9 +441,6 @@ func (s *Server) RebuildPortableGalleries(ctx context.Context, importID string) 
 	preflight, err := s.preflightPortableGalleryRebuild(ctx, importID)
 	if err != nil {
 		return preflight, err
-	}
-	if preflight.Blocked != 0 {
-		return preflight, errors.New("portable Gallery rebuild is blocked by preflight findings")
 	}
 	mappings, err := s.Database.ListPortableLibraryMappings(ctx, importID)
 	if err != nil {
@@ -251,12 +459,15 @@ func (s *Server) RebuildPortableGalleries(ctx context.Context, importID string) 
 		return preflight, err
 	}
 	for _, rebuild := range rebuilds {
-		if rebuild.State == "REBUILT" || rebuild.State == "SKIPPED" {
+		if rebuild.State == "REBUILT" || rebuild.State == "SKIPPED" || rebuild.State == "BLOCKED" || rebuild.State == "PENDING" {
 			continue
 		}
 		prepared, code := s.preparePortableGallery(ctx, rebuild, byKey, limits)
 		if code != "" {
-			return preflight, errors.New(code)
+			if rebuild.State == "REBUILDING" {
+				_ = s.Database.SetPortableGalleryRebuildIssue(ctx, importID, rebuild.SetID, code, time.Now())
+			}
+			continue
 		}
 		galleryID, sourceID := int64(0), int64(0)
 		if rebuild.State == "REBUILDING" && rebuild.GalleryID != nil && rebuild.SourceID != nil {
@@ -272,7 +483,7 @@ func (s *Server) RebuildPortableGalleries(ctx context.Context, importID string) 
 		itemUUIDs, _, _ := portableManifestClaimedUUIDs(prepared.doc)
 		if err := s.Database.Scans().RunWithOptions(ctx, sourceID, limits, productdb.ScanOptions{ExcludeNewRootMedia: false, PortableImportID: importID, PortableItemUUIDByPath: itemUUIDs}, time.Now()); err != nil {
 			_ = s.Database.SetPortableGalleryRebuildIssue(ctx, importID, rebuild.SetID, "PORTABLE_SOURCE_SCAN_COMMIT_FAILED", time.Now())
-			return preflight, err
+			continue
 		}
 		current, err := s.Database.Galleries().Find(ctx, galleryID)
 		if err != nil {
@@ -280,11 +491,11 @@ func (s *Server) RebuildPortableGalleries(ctx context.Context, importID string) 
 		}
 		if _, err := s.Database.Manifests().PullPortableGallery(ctx, galleryID, current.MetadataRevision, importID, time.Now()); err != nil {
 			_ = s.Database.SetPortableGalleryRebuildIssue(ctx, importID, rebuild.SetID, "PORTABLE_MANIFEST_APPLY_FAILED", time.Now())
-			return preflight, err
+			continue
 		}
 		if _, err := s.Database.CaptureDates().EnqueueGallery(ctx, galleryID, s.VideoTools.FFprobe.Available, time.Now()); err != nil {
 			_ = s.Database.SetPortableGalleryRebuildIssue(ctx, importID, rebuild.SetID, "PORTABLE_CAPTURE_DATE_QUEUE_FAILED", time.Now())
-			return preflight, err
+			continue
 		}
 		if err := s.Database.FinishPortableGalleryRebuild(ctx, importID, rebuild.SetID, galleryID, sourceID, time.Now()); err != nil {
 			return preflight, err

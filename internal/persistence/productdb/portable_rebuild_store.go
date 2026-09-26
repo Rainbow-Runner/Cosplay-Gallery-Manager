@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/stashapp/stash/internal/gallery"
@@ -26,21 +28,62 @@ type PortableLibraryDecision struct {
 	TargetLibraryID *int64
 }
 
+func (db *Database) ConfigurePortableRebuildAutomation(ctx context.Context, importID string, autoAdopt, autoActivate bool, now time.Time) error {
+	if autoActivate && !autoAdopt {
+		return errors.New("portable automatic activation requires automatic adoption")
+	}
+	result, err := db.ExecContext(ctx, `UPDATE portable_import_sessions SET auto_adopt_enabled=?,auto_activate_enabled=?,
+		automation_authorized_at_utc=?,updated_at_utc=? WHERE import_id=? AND package_profile<>'CORE_CATALOG'
+		AND state='LIBRARIES_MAPPED'`, boolInt(autoAdopt), boolInt(autoActivate), formatTime(normalisedTime(now)),
+		formatTime(normalisedTime(now)), importID)
+	if err != nil {
+		return err
+	}
+	if changed, err := result.RowsAffected(); err != nil || changed != 1 {
+		return errors.New("portable import is not ready for rebuild automation")
+	}
+	return nil
+}
+
 type PortableGalleryRebuild struct {
-	ImportID         string
+	ImportID                string
+	SetID                   string
+	LibraryKey              string
+	SourceType              gallery.SourceType
+	RelativeSource          string
+	LocatorStatus           string
+	ManifestStatus          string
+	ManifestSchema          int
+	ManifestRevision        int64
+	ManifestHash            string
+	State                   string
+	IssueCode               string
+	GalleryID               *int64
+	SourceID                *int64
+	ExportedRelativeSource  string
+	ResolvedTargetLibraryID *int64
+	ResolvedRelativeSource  string
+	SourceResolution        string
+	ResolutionSnapshotID    *int64
+	ResolutionManifestHash  string
+	ResolutionTokenHash     string
+	AdoptedManifestSchema   int
+	AdoptedManifestRevision int64
+	AdoptedManifestHash     string
+	AdoptedFromStatus       string
+	AdoptedAt               string
+	AdoptionTokenHash       string
+}
+
+type PortableSourceCandidate struct {
+	SnapshotID       int64
+	LibraryID        int64
 	SetID            string
-	LibraryKey       string
 	SourceType       gallery.SourceType
 	RelativeSource   string
-	LocatorStatus    string
-	ManifestStatus   string
 	ManifestSchema   int
 	ManifestRevision int64
 	ManifestHash     string
-	State            string
-	IssueCode        string
-	GalleryID        *int64
-	SourceID         *int64
 }
 
 func (db *Database) ListPortableLibraryMappings(ctx context.Context, importID string) ([]PortableLibraryMapping, error) {
@@ -126,7 +169,10 @@ func (db *Database) SetPortableLibraryMappings(ctx context.Context, importID str
 
 func (db *Database) ListPortableGalleryRebuilds(ctx context.Context, importID string) ([]PortableGalleryRebuild, error) {
 	rows, err := db.QueryContext(ctx, `SELECT import_id,set_id,COALESCE(library_key,''),source_type,relative_source,locator_status,
-		manifest_status,manifest_schema,manifest_revision,manifest_hash,state,issue_code,gallery_id,source_id
+		manifest_status,manifest_schema,manifest_revision,manifest_hash,state,issue_code,gallery_id,source_id,
+		exported_relative_source,resolved_target_library_id,resolved_relative_source,source_resolution,resolution_snapshot_id,
+		resolution_manifest_hash,resolution_token_hash,adopted_manifest_schema,adopted_manifest_revision,adopted_manifest_hash,
+		adopted_from_status,adopted_at_utc,adoption_token_hash
 		FROM portable_gallery_rebuilds WHERE import_id=? ORDER BY set_id`, importID)
 	if err != nil {
 		return nil, err
@@ -135,10 +181,13 @@ func (db *Database) ListPortableGalleryRebuilds(ctx context.Context, importID st
 	var result []PortableGalleryRebuild
 	for rows.Next() {
 		var value PortableGalleryRebuild
-		var galleryID, sourceID sql.NullInt64
+		var galleryID, sourceID, resolvedLibraryID, resolutionSnapshotID sql.NullInt64
 		if err := rows.Scan(&value.ImportID, &value.SetID, &value.LibraryKey, &value.SourceType, &value.RelativeSource,
 			&value.LocatorStatus, &value.ManifestStatus, &value.ManifestSchema, &value.ManifestRevision, &value.ManifestHash,
-			&value.State, &value.IssueCode, &galleryID, &sourceID); err != nil {
+			&value.State, &value.IssueCode, &galleryID, &sourceID, &value.ExportedRelativeSource, &resolvedLibraryID,
+			&value.ResolvedRelativeSource, &value.SourceResolution, &resolutionSnapshotID, &value.ResolutionManifestHash,
+			&value.ResolutionTokenHash, &value.AdoptedManifestSchema, &value.AdoptedManifestRevision, &value.AdoptedManifestHash,
+			&value.AdoptedFromStatus, &value.AdoptedAt, &value.AdoptionTokenHash); err != nil {
 			return nil, err
 		}
 		if galleryID.Valid {
@@ -149,9 +198,105 @@ func (db *Database) ListPortableGalleryRebuilds(ctx context.Context, importID st
 			id := sourceID.Int64
 			value.SourceID = &id
 		}
+		if resolvedLibraryID.Valid {
+			id := resolvedLibraryID.Int64
+			value.ResolvedTargetLibraryID = &id
+		}
+		if resolutionSnapshotID.Valid {
+			id := resolutionSnapshotID.Int64
+			value.ResolutionSnapshotID = &id
+		}
 		result = append(result, value)
 	}
 	return result, rows.Err()
+}
+
+// PortableSourceCandidates returns only valid Manifest observations from the
+// latest completed discovery snapshot of enabled libraries mapped by this
+// import. It never traverses the filesystem or mutates a candidate.
+func (db *Database) PortableSourceCandidates(ctx context.Context, importID, setID string) ([]PortableSourceCandidate, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT candidate.snapshot_id,candidate.library_id,candidate.manifest_set_id,candidate.source_type,
+			candidate.root_path,library.root_path,candidate.manifest_schema,candidate.manifest_revision,candidate.manifest_hash
+		FROM portable_library_mappings mapping
+		JOIN media_libraries library ON library.id=mapping.target_library_id AND library.enabled=1
+		JOIN gallery_candidates candidate ON candidate.library_id=library.id
+		JOIN (SELECT library_id,MAX(id) snapshot_id FROM discovery_snapshots GROUP BY library_id) latest
+			ON latest.library_id=candidate.library_id AND latest.snapshot_id=candidate.snapshot_id
+		WHERE mapping.import_id=? AND mapping.decision='MAPPED' AND candidate.manifest_set_id=?
+			AND candidate.manifest_hash<>''
+		ORDER BY candidate.library_id,candidate.root_path`, importID, setID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []PortableSourceCandidate
+	for rows.Next() {
+		var value PortableSourceCandidate
+		var rootPath, libraryRoot string
+		if err := rows.Scan(&value.SnapshotID, &value.LibraryID, &value.SetID, &value.SourceType, &rootPath, &libraryRoot,
+			&value.ManifestSchema, &value.ManifestRevision, &value.ManifestHash); err != nil {
+			return nil, err
+		}
+		relative, err := filepath.Rel(filepath.Clean(libraryRoot), filepath.Clean(rootPath))
+		if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+			continue
+		}
+		if relative == "." {
+			relative = ""
+		}
+		value.RelativeSource = filepath.ToSlash(relative)
+		result = append(result, value)
+	}
+	return result, rows.Err()
+}
+
+func (db *Database) PortableMappingsHaveCompleteDiscovery(ctx context.Context, importID string) (bool, error) {
+	var mapped, discovered int
+	err := db.QueryRowContext(ctx, `SELECT COUNT(*),COALESCE(SUM(CASE WHEN EXISTS(
+		SELECT 1 FROM discovery_snapshots snapshot WHERE snapshot.library_id=mapping.target_library_id
+	) THEN 1 ELSE 0 END),0) FROM portable_library_mappings mapping
+	WHERE mapping.import_id=? AND mapping.decision='MAPPED'`, importID).Scan(&mapped, &discovered)
+	if err != nil {
+		return false, err
+	}
+	return mapped > 0 && mapped == discovered, nil
+}
+
+func (db *Database) SetPortableSourceResolution(ctx context.Context, importID, setID, resolution string, targetLibraryID, snapshotID *int64, relativeSource, manifestHash, tokenHash string, now time.Time) error {
+	result, err := db.ExecContext(ctx, `UPDATE portable_gallery_rebuilds SET
+		adopted_manifest_schema=CASE WHEN resolution_token_hash=? THEN adopted_manifest_schema ELSE 0 END,
+		adopted_manifest_revision=CASE WHEN resolution_token_hash=? THEN adopted_manifest_revision ELSE 0 END,
+		adopted_manifest_hash=CASE WHEN resolution_token_hash=? THEN adopted_manifest_hash ELSE '' END,
+		adopted_from_status=CASE WHEN resolution_token_hash=? THEN adopted_from_status ELSE '' END,
+		adopted_at_utc=CASE WHEN resolution_token_hash=? THEN adopted_at_utc ELSE '' END,
+		adoption_token_hash=CASE WHEN resolution_token_hash=? THEN adoption_token_hash ELSE '' END,
+		resolved_target_library_id=?,resolved_relative_source=?,source_resolution=?,resolution_snapshot_id=?,
+		resolution_manifest_hash=?,resolution_token_hash=?,updated_at_utc=?
+		WHERE import_id=? AND set_id=? AND state NOT IN ('REBUILT','SKIPPED')`, tokenHash, tokenHash, tokenHash, tokenHash, tokenHash, tokenHash,
+		targetLibraryID, relativeSource, resolution, snapshotID, manifestHash, tokenHash, formatTime(normalisedTime(now)), importID, setID)
+	if err != nil {
+		return err
+	}
+	if changed, err := result.RowsAffected(); err != nil || changed != 1 {
+		return errors.New("portable source resolution target is no longer available")
+	}
+	return nil
+}
+
+func (db *Database) AdoptPortableGalleryManifest(ctx context.Context, importID, setID, expectedResolutionToken string, schema int, revision int64, manifestHash, adoptionToken string, now time.Time) error {
+	result, err := db.ExecContext(ctx, `UPDATE portable_gallery_rebuilds SET adopted_manifest_schema=?,adopted_manifest_revision=?,
+		adopted_manifest_hash=?,adopted_from_status=manifest_status,adopted_at_utc=?,adoption_token_hash=?,state='PENDING',issue_code='',updated_at_utc=?
+		WHERE import_id=? AND set_id=? AND resolution_token_hash=? AND source_resolution IN ('EXACT','RELOCATED_UNIQUE')
+			AND state NOT IN ('REBUILT','SKIPPED')`, schema, revision, manifestHash, formatTime(normalisedTime(now)), adoptionToken,
+		formatTime(normalisedTime(now)), importID, setID, expectedResolutionToken)
+	if err != nil {
+		return err
+	}
+	if changed, err := result.RowsAffected(); err != nil || changed != 1 {
+		return errors.New("portable Manifest adoption evidence is stale")
+	}
+	return nil
 }
 
 func (db *Database) SetPortableGalleryInspection(ctx context.Context, importID, setID, state, issueCode string, now time.Time) error {

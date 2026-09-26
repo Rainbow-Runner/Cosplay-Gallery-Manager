@@ -18,6 +18,7 @@ import (
 
 const (
 	GallerySchemaVersion = 1
+	PublishDateExtension = "cgm.publish_date"
 	MaxGalleryBytes      = 16 * 1024 * 1024
 	MaxCoserBytes        = 2 * 1024 * 1024
 )
@@ -134,6 +135,17 @@ func (document GalleryDocument) Validate() error {
 	if document.ShootDate.Present && !document.ShootDate.Null {
 		if err := validateShootDate(document.ShootDate.Value); err != nil {
 			return err
+		}
+	}
+	if raw, present := document.Extensions[PublishDateExtension]; present && !bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		decoder := json.NewDecoder(bytes.NewReader(raw))
+		decoder.DisallowUnknownFields()
+		var date ShootDate
+		if err := decoder.Decode(&date); err != nil || requireJSONEOF(decoder) != nil {
+			return errors.New("Gallery Manifest publication date extension must be a date object or null")
+		}
+		if err := validateShootDate(date); err != nil {
+			return fmt.Errorf("Gallery Manifest publication date: %w", err)
 		}
 	}
 	if document.Title.Present && !document.Title.Null && len([]rune(norm.NFC.String(document.Title.Value))) > 300 {

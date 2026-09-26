@@ -36,7 +36,7 @@ func TestSchemaV12MigratesToManifestInspectionV13(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer migrated.Close()
-	if migrated.Identity().DatabaseSchemaVersion != 16 {
+	if migrated.Identity().DatabaseSchemaVersion != 18 {
 		t.Fatalf("schema = %d", migrated.Identity().DatabaseSchemaVersion)
 	}
 	if err := validateSchemaV13(ctx, migrated.DB); err != nil {

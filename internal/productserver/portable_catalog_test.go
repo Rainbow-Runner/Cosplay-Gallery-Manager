@@ -129,6 +129,66 @@ func TestPortableMetadataExportRequiresExplicitIncompleteGalleryOverride(t *test
 	}
 }
 
+func TestCoreCatalogProfileIgnoresGalleryManifestFailuresAndImportsWithoutGalleryTodo(t *testing.T) {
+	ctx := context.Background()
+	source := testServer(t)
+	sourceRoot := t.TempDir()
+	if _, err := source.Database.ExecContext(ctx, `UPDATE product_setup SET complete=1,coser_metadata_root=?,backup_root=?,completed_at_utc=? WHERE id=1`, filepath.Join(sourceRoot, "cosers"), filepath.Join(sourceRoot, "backups"), time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := source.Database.CoreEntities().CreateCoser(ctx, productdb.CreateCoserInput{CreateNamedEntityInput: productdb.CreateNamedEntityInput{Name: "Core Only"}}, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := source.Database.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Broken Gallery Manifest"}, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	preflight, err := source.PreflightPortableMetadataProfile(ctx, portablecatalog.ProfileCoreCatalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preflight.BlockingCount() != 0 || preflight.WarningCount() != 0 || preflight.GalleryCount != 0 || preflight.IncompleteGalleryCount != 0 {
+		t.Fatalf("core preflight was affected by Gallery state: %+v", preflight)
+	}
+	packagePath := filepath.Join(sourceRoot, "core.zip")
+	if _, err := source.ExportPortableMetadata(ctx, PortableExportOptions{TargetPath: packagePath, Profile: portablecatalog.ProfileCoreCatalog}); err != nil {
+		t.Fatal(err)
+	}
+	inspection, err := portablecatalog.InspectFile(ctx, packagePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inspection.Manifest.EffectiveProfile() != portablecatalog.ProfileCoreCatalog || inspection.Manifest.GalleryCount != 0 {
+		t.Fatalf("core package summary = %+v", inspection.Manifest)
+	}
+
+	target := testServer(t)
+	targetRoot := t.TempDir()
+	if _, err := target.Database.ExecContext(ctx, `UPDATE product_setup SET complete=1,coser_metadata_root=?,backup_root=?,completed_at_utc=? WHERE id=1`, filepath.Join(targetRoot, "cosers"), filepath.Join(targetRoot, "backups"), time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+		t.Fatal(err)
+	}
+	imported, err := target.ImportPortableMetadata(ctx, PortableImportOptions{SourcePath: packagePath})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if imported.ClaimCount != 0 {
+		t.Fatalf("core import claims = %d", imported.ClaimCount)
+	}
+	session, err := target.Database.FindPortableImportSession(ctx, imported.ImportID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if session.Profile != portablecatalog.ProfileCoreCatalog {
+		t.Fatalf("session profile = %q", session.Profile)
+	}
+	var mappings, rebuilds int
+	if err := target.Database.QueryRowContext(ctx, `SELECT (SELECT COUNT(*) FROM portable_library_mappings WHERE import_id=?),(SELECT COUNT(*) FROM portable_gallery_rebuilds WHERE import_id=?)`, imported.ImportID, imported.ImportID).Scan(&mappings, &rebuilds); err != nil {
+		t.Fatal(err)
+	}
+	if mappings != 0 || rebuilds != 0 {
+		t.Fatalf("core import created mappings=%d rebuilds=%d", mappings, rebuilds)
+	}
+}
+
 func TestPortableMetadataImportRestoresCoreAssetsAndReservesGallery(t *testing.T) {
 	ctx := context.Background()
 	source := testServer(t)
@@ -358,6 +418,10 @@ func TestPortableGalleryRebuildPreservesDirectoryIdentitiesAtNewRoot(t *testing.
 	if err := target.MapPortableLibraries(ctx, imported.ImportID, []productdb.PortableLibraryDecision{{LibraryKey: mappings[0].LibraryKey, TargetLibraryID: &targetLibrary.ID}}); err != nil {
 		t.Fatal(err)
 	}
+	discovered, err := target.Database.CandidateDiscovery().DiscoverFilesystem(ctx, targetLibrary.ID, now)
+	if err != nil || len(discovered.Candidates) != 1 || discovered.Candidates[0].IdentityClassification != "PENDING_PORTABLE_CLAIM" {
+		t.Fatalf("target discovery=%+v err=%v", discovered, err)
+	}
 	manifestPath := filepath.Join(targetSetPath, ".cosplay.json")
 	if err := os.WriteFile(manifestPath, append(targetManifest, '\n'), 0o600); err != nil {
 		t.Fatal(err)
@@ -366,8 +430,9 @@ func TestPortableGalleryRebuildPreservesDirectoryIdentitiesAtNewRoot(t *testing.
 	if err != nil || changed.Blocked != 1 || len(changed.Entries) != 1 || changed.Entries[0].IssueCode != "PORTABLE_MANIFEST_CHANGED" {
 		t.Fatalf("changed manifest preflight=%+v err=%v", changed, err)
 	}
-	if _, err := target.RebuildPortableGalleries(ctx, imported.ImportID); err == nil {
-		t.Fatal("blocked portable Gallery rebuild returned success")
+	blocked, err := target.RebuildPortableGalleries(ctx, imported.ImportID)
+	if err != nil || blocked.Blocked != 1 || blocked.Rebuilt != 0 {
+		t.Fatalf("partial rebuild blocked report=%+v err=%v", blocked, err)
 	}
 	var changedGalleryCount int
 	if err := target.Database.QueryRowContext(ctx, `SELECT COUNT(*) FROM galleries`).Scan(&changedGalleryCount); err != nil || changedGalleryCount != 0 {
@@ -379,6 +444,10 @@ func TestPortableGalleryRebuildPreservesDirectoryIdentitiesAtNewRoot(t *testing.
 	preflight, err := target.PreflightPortableGalleryRebuild(ctx, imported.ImportID)
 	if err != nil || preflight.Ready != 1 || preflight.Blocked != 0 {
 		t.Fatalf("preflight=%+v err=%v", preflight, err)
+	}
+	resolved, err := target.Database.ListPortableGalleryRebuilds(ctx, imported.ImportID)
+	if err != nil || len(resolved) != 1 || resolved[0].SourceResolution != "EXACT" || resolved[0].ResolvedRelativeSource != "Portable Coser/Moved Set" || resolved[0].ResolutionTokenHash == "" {
+		t.Fatalf("source resolution=%+v err=%v", resolved, err)
 	}
 	var before int
 	if err := target.Database.QueryRowContext(ctx, `SELECT COUNT(*) FROM galleries`).Scan(&before); err != nil || before != 0 {

@@ -56,8 +56,8 @@ func (db *Database) MergePortableCore(ctx context.Context, mergeID, targetFinger
 	}
 	timestamp := formatTime(normalisedTime(now))
 	coreCount := len(bundle.Catalog.Cosers) + len(bundle.Catalog.Works) + len(bundle.Catalog.Characters) + len(bundle.Catalog.Tags) + len(bundle.Catalog.Accounts)
-	if _, err := tx.ExecContext(ctx, `INSERT INTO portable_import_sessions(import_id,export_id,package_sha256,package_relative_path,format_version,state,identity_count,core_entity_count,gallery_claim_count,item_claim_count,link_claim_count,asset_count,created_at_utc,updated_at_utc)
-		SELECT merge_id,export_id,package_sha256,package_relative_path,format_version,'CORE_IMPORTED',identity_add_count+identity_reuse_count,?,0,0,0,0,?,? FROM portable_merge_sessions WHERE merge_id=?`, coreCount, timestamp, timestamp, mergeID); err != nil {
+	if _, err := tx.ExecContext(ctx, `INSERT INTO portable_import_sessions(import_id,export_id,package_sha256,package_relative_path,format_version,package_profile,state,identity_count,core_entity_count,gallery_claim_count,item_claim_count,link_claim_count,asset_count,created_at_utc,updated_at_utc)
+		SELECT merge_id,export_id,package_sha256,package_relative_path,format_version,?,'CORE_IMPORTED',identity_add_count+identity_reuse_count,?,0,0,0,0,?,? FROM portable_merge_sessions WHERE merge_id=?`, bundle.Manifest.EffectiveProfile(), coreCount, timestamp, timestamp, mergeID); err != nil {
 		return result, err
 	}
 	for _, value := range bundle.Gallery.Libraries {
@@ -132,8 +132,8 @@ func (db *Database) MergePortableCore(ctx context.Context, mergeID, targetFinger
 		if claimedGallery[value.SetID] {
 			state = "PENDING"
 		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO portable_gallery_rebuilds(import_id,set_id,library_key,source_type,relative_source,locator_status,manifest_status,manifest_schema,manifest_revision,manifest_hash,state,updated_at_utc)
-			VALUES(?,?,NULLIF(?,''),?,?,?,?,?,?,?,?,?)`, mergeID, value.SetID, value.LibraryKey, value.SourceType, value.RelativeSource, value.LocatorStatus, value.ManifestStatus, value.ManifestSchema, value.ManifestRevision, value.ManifestHash, state, timestamp); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO portable_gallery_rebuilds(import_id,set_id,library_key,source_type,relative_source,exported_relative_source,locator_status,manifest_status,manifest_schema,manifest_revision,manifest_hash,state,updated_at_utc)
+			VALUES(?,?,NULLIF(?,''),?,?,?,?,?,?,?,?,?,?)`, mergeID, value.SetID, value.LibraryKey, value.SourceType, value.RelativeSource, value.RelativeSource, value.LocatorStatus, value.ManifestStatus, value.ManifestSchema, value.ManifestRevision, value.ManifestHash, state, timestamp); err != nil {
 			return result, err
 		}
 	}

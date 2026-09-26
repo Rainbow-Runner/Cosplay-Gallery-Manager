@@ -54,7 +54,7 @@ func (db *Database) ApplyPortableOwnerContinuity(ctx context.Context, importID s
 			result.ArchivedCount++
 		}
 		if owner.IncludesGalleryLifecycle {
-			if _, err := tx.ExecContext(ctx, `UPDATE galleries SET state=?,added_at_utc=NULLIF(?,''),updated_at_utc=?,metadata_revision=metadata_revision+1 WHERE id=?`, incoming.State, incoming.AddedAt, timestamp, current.ID); err != nil {
+			if _, err := tx.ExecContext(ctx, `UPDATE galleries SET state=?,added_at_utc=NULLIF(?,''),first_activated_at_utc=NULLIF(?,''),updated_at_utc=?,metadata_revision=metadata_revision+1 WHERE id=?`, incoming.State, incoming.AddedAt, incoming.AddedAt, timestamp, current.ID); err != nil {
 				return result, err
 			}
 		}

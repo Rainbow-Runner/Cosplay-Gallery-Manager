@@ -16,6 +16,8 @@ import (
 	"github.com/stashapp/stash/internal/discovery"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/library"
+	"github.com/stashapp/stash/internal/manifest"
+	"github.com/stashapp/stash/internal/portableid"
 )
 
 func TestFilesystemDiscoveryHonoursMarkerRootAndSuppressesNestedDiagnostics(t *testing.T) {
@@ -832,6 +834,62 @@ func TestManifestSetIDDuplicateNeedsExplicitOverrideAndIgnoreWins(t *testing.T) 
 	}
 }
 
+func TestForkCandidateManifestReplacesOnlyGalleryLocalIdentities(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 26, 7, 0, 0, 0, time.UTC)
+	mediaLibrary := createTestLibrary(t, db, now)
+	created, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "Original"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	originalPath := filepath.Join(mediaLibrary.RootPath, "original")
+	if err := os.Mkdir(originalPath, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Galleries().AddSource(ctx, created.ID, CreateSourceInput{LibraryID: &mediaLibrary.ID, Type: gallery.SourceTypeDirectory, Path: originalPath, Availability: gallery.AvailabilityAvailable}, now); err != nil {
+		t.Fatal(err)
+	}
+	copyPath := filepath.Join(mediaLibrary.RootPath, "copy")
+	if err := os.Mkdir(copyPath, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(copyPath, "01.jpg"), []byte("image"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	oldItem := "b2345678-1234-4123-8123-123456789abc"
+	oldLink := "c2345678-1234-4123-8123-123456789abc"
+	raw := `{"schema_version":1,"revision":8,"set_id":"` + created.SetID + `","updated_at":"2026-09-26T07:00:00Z","title":"Copy","items":[{"item_uuid":"` + oldItem + `","path":"01.jpg","position":1}],"cover":{"kind":"ITEM","item_uuid":"` + oldItem + `"},"excluded_items":[{"item_uuid":"` + oldItem + `"}],"external_links":[{"link_uuid":"` + oldLink + `","type":"SOURCE","url":"https://example.test/copy","position":1}]}`
+	manifestPath := filepath.Join(copyPath, ".cosplay.json")
+	if err := os.WriteFile(manifestPath, []byte(raw), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := db.CandidateDiscovery().DiscoverFilesystem(ctx, mediaLibrary.ID, now)
+	if err != nil || len(snapshot.Candidates) != 1 || snapshot.Candidates[0].IdentityClassification != "DUPLICATE_ACCESSIBLE_SOURCE" {
+		t.Fatalf("duplicate discovery=%#v err=%v", snapshot, err)
+	}
+	refreshed, err := db.CandidateDiscovery().ForkCandidateManifest(ctx, snapshot.Candidates[0].ID, now.Add(time.Minute))
+	if err != nil || len(refreshed.Candidates) != 1 || refreshed.Candidates[0].IdentityClassification != "UNCLAIMED" {
+		t.Fatalf("forked discovery=%#v err=%v", refreshed, err)
+	}
+	data, _, err := manifest.ReadFile(manifestPath, manifest.MaxGalleryBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	document, err := manifest.ParseGallery(strings.NewReader(string(data)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.SetID == created.SetID || document.Revision != 0 || len(document.Items.Value) != 1 || document.Items.Value[0].ItemUUID == oldItem ||
+		document.Cover.Value.ItemUUID != document.Items.Value[0].ItemUUID || document.ExcludedItems.Value[0].ItemUUID != document.Items.Value[0].ItemUUID ||
+		document.ExternalLinks.Value[0].LinkUUID == oldLink {
+		t.Fatalf("forked Manifest=%#v", document)
+	}
+	if _, err := os.Stat(manifestPath + ".bak"); err != nil {
+		t.Fatalf("fork backup: %v", err)
+	}
+}
+
 func TestArchiveCandidateUsesSameTwoStageDraftFlow(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)
@@ -981,6 +1039,162 @@ func TestCandidateFirstImportUsesManifestSetIDAndPullsMetadata(t *testing.T) {
 	state, err := db.Manifests().CheckGallery(ctx, created.ID, now)
 	if err != nil || state.Status != ManifestClean {
 		t.Fatalf("first-import Manifest state = %#v, %v", state, err)
+	}
+}
+
+func TestCandidateManifestImportRegistersDeclaredItemUUIDBeforePull(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 26, 3, 0, 0, 0, time.UTC)
+	mediaLibrary := createTestLibrary(t, db, now)
+	setID := "a2345678-1234-4123-8123-123456789abc"
+	itemUUID := "b2345678-1234-4123-8123-123456789abc"
+	root := filepath.Join(mediaLibrary.RootPath, "manifest-items")
+	if err := os.Mkdir(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "01.jpg"), []byte("\xff\xd8\xff stable content"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	raw := `{
+		"schema_version":1,"revision":7,"set_id":"` + setID + `",
+		"updated_at":"2026-09-26T03:00:00Z","title":"Imported with item identity",
+		"content_rating":"NON_ADULT","items":[{"item_uuid":"` + itemUUID + `","path":"01.jpg","position":1}]
+	}`
+	if err := os.WriteFile(filepath.Join(root, ".cosplay.json"), []byte(raw), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := db.CandidateDiscovery().DiscoverFilesystem(ctx, mediaLibrary.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Candidates) != 1 || snapshot.Candidates[0].IdentityClassification != "UNCLAIMED" || snapshot.Candidates[0].InspectionTokenHash == "" {
+		t.Fatalf("Manifest candidate evidence = %#v", snapshot.Candidates)
+	}
+	created, err := db.CandidateDiscovery().ImportCandidate(ctx, snapshot.Candidates[0].ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var actualUUID string
+	if err := db.QueryRowContext(ctx, `SELECT item_uuid FROM gallery_items WHERE gallery_id=? AND relative_path='01.jpg'`, created.ID).Scan(&actualUUID); err != nil {
+		t.Fatal(err)
+	}
+	if actualUUID != itemUUID || created.Title != "Imported with item identity" {
+		t.Fatalf("imported item UUID=%q title=%q", actualUUID, created.Title)
+	}
+	// A repeated request is an idempotent resume, not a second Gallery.
+	resumed, err := db.CandidateDiscovery().ImportCandidate(ctx, snapshot.Candidates[0].ID, now.Add(time.Minute))
+	if err != nil || resumed.ID != created.ID {
+		t.Fatalf("resumed import = %#v, %v", resumed, err)
+	}
+	var galleryCount int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM galleries WHERE set_id=?`, setID).Scan(&galleryCount); err != nil || galleryCount != 1 {
+		t.Fatalf("Gallery count=%d err=%v", galleryCount, err)
+	}
+}
+
+func TestCandidateManifestImportRejectsChangedDiscoveryEvidence(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 26, 4, 0, 0, 0, time.UTC)
+	mediaLibrary := createTestLibrary(t, db, now)
+	root := filepath.Join(mediaLibrary.RootPath, "changed-manifest")
+	if err := os.Mkdir(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "01.jpg"), []byte("image"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(root, ".cosplay.json")
+	raw := `{"schema_version":1,"revision":0,"set_id":"a2345678-1234-4123-8123-123456789abc","updated_at":"2026-09-26T04:00:00Z","title":"Before"}`
+	if err := os.WriteFile(manifestPath, []byte(raw), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := db.CandidateDiscovery().DiscoverFilesystem(ctx, mediaLibrary.ID, now)
+	if err != nil || len(snapshot.Candidates) != 1 {
+		t.Fatalf("discovery=%#v err=%v", snapshot, err)
+	}
+	changed := strings.Replace(raw, `"title":"Before"`, `"title":"After"`, 1)
+	if err := os.WriteFile(manifestPath, []byte(changed), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.CandidateDiscovery().ImportCandidate(ctx, snapshot.Candidates[0].ID, now); err == nil || !strings.Contains(err.Error(), "changed after discovery") {
+		t.Fatalf("changed Manifest import error = %v", err)
+	}
+	var count int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM galleries`).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("Gallery count=%d err=%v", count, err)
+	}
+}
+
+func TestTrustedDiscoveryAutoImportsUnclaimedDirectoryManifest(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 26, 5, 0, 0, 0, time.UTC)
+	mediaLibrary := createTestLibrary(t, db, now)
+	root := filepath.Join(mediaLibrary.RootPath, "trusted-manifest")
+	if err := os.Mkdir(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "01.jpg"), []byte("\xff\xd8\xff stable content"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	raw := `{"schema_version":1,"revision":0,"set_id":"a2345678-1234-4123-8123-123456789abc","updated_at":"2026-09-26T05:00:00Z","title":"Trusted","content_rating":"NON_ADULT"}`
+	if err := os.WriteFile(filepath.Join(root, ".cosplay.json"), []byte(raw), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manual, err := db.CandidateDiscovery().DiscoverFilesystem(ctx, mediaLibrary.ID, now)
+	if err != nil || len(manual.Candidates) != 1 || manual.Candidates[0].AutoCreateDraft || manual.Candidates[0].Status != "PENDING" {
+		t.Fatalf("manual discovery=%#v err=%v", manual, err)
+	}
+	trusted, err := db.CandidateDiscovery().DiscoverFilesystemWithOptions(ctx, mediaLibrary.ID, DiscoveryOptions{AutoCreateTrustedManifests: true}, now.Add(time.Minute))
+	if err != nil || len(trusted.Candidates) != 1 || !trusted.Candidates[0].AutoCreateDraft || trusted.Candidates[0].Status != "IMPORTED" {
+		t.Fatalf("trusted discovery=%#v err=%v", trusted, err)
+	}
+	var count int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM galleries WHERE set_id='a2345678-1234-4123-8123-123456789abc' AND state='DRAFT'`).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("trusted Gallery count=%d err=%v", count, err)
+	}
+}
+
+func TestTrustedDiscoveryKeepsManifestIdentityConflictForReview(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 26, 6, 0, 0, 0, time.UTC)
+	mediaLibrary := createTestLibrary(t, db, now)
+	setID := "a2345678-1234-4123-8123-123456789abc"
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := registerPortableUUID(ctx, tx, setID, portableid.KindWork, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(mediaLibrary.RootPath, "conflicting-manifest")
+	if err := os.Mkdir(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "01.jpg"), []byte("image"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	raw := `{"schema_version":1,"revision":0,"set_id":"` + setID + `","updated_at":"2026-09-26T06:00:00Z","title":"Conflict"}`
+	if err := os.WriteFile(filepath.Join(root, ".cosplay.json"), []byte(raw), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := db.CandidateDiscovery().DiscoverFilesystemWithOptions(ctx, mediaLibrary.ID, DiscoveryOptions{AutoCreateTrustedManifests: true}, now)
+	if err != nil || len(snapshot.Candidates) != 1 {
+		t.Fatalf("discovery=%#v err=%v", snapshot, err)
+	}
+	candidate := snapshot.Candidates[0]
+	if candidate.IdentityClassification != "UUID_KIND_CONFLICT" || candidate.IdentityIssueCode != "MANIFEST_IDENTITY_UUID_KIND_CONFLICT" || !candidate.HasConflict || candidate.Status != "PENDING" {
+		t.Fatalf("identity conflict candidate=%#v", candidate)
+	}
+	var galleries int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM galleries`).Scan(&galleries); err != nil || galleries != 0 {
+		t.Fatalf("conflict created %d Galleries: %v", galleries, err)
 	}
 }
 

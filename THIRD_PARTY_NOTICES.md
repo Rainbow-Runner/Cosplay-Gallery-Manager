@@ -71,6 +71,7 @@ The machine-readable companion is `docs/legal/cgm.spdx.json`.
 | npm | `graphql-tag` | `2.12.7` | MIT |
 | npm | `hoist-non-react-statics` | `3.3.2` | BSD-3-Clause |
 | npm | `intl-messageformat` | `10.7.18` | BSD-3-Clause |
+| npm | `lucide-react` | `1.48.0` | ISC |
 | npm | `optimism` | `0.18.1` | MIT |
 | npm | `react` | `19.2.8` | MIT |
 | npm | `react-dom` | `19.2.8` | MIT |

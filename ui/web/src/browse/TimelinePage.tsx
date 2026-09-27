@@ -10,12 +10,13 @@ export function TimelinePage({ coserUUID }: { coserUUID?: string }) {
   const intl = useIntl(); const [parameters, setParameters] = useSearchParams();
   const scope = (parameters.get("scope") as Scope) || (coserUUID ? "ALL" : "LIST"); const page = Math.max(1, Number(parameters.get("page")) || 1);
   const requestedDate = parameters.get("date");
-  const date: "SHOOT" | "MEDIA_ADDED" | "PUBLISH" = coserUUID && (requestedDate === "MEDIA_ADDED" || requestedDate === "PUBLISH") ? requestedDate : "SHOOT";
+  const date: "SHOOT" | "MEDIA_ADDED" | "PUBLISH" | "COMBINED" = coserUUID && (requestedDate === "MEDIA_ADDED" || requestedDate === "PUBLISH" || requestedDate === "COMBINED") ? requestedDate : "SHOOT";
   const { data, loading, error } = useQuery<{ timelineGalleries: GalleryPage }>(TIMELINE_GALLERIES,
     { variables: { scope, page, coserUUID: coserUUID || null, date } });
   return <main className="browse-main"><header className="page-heading"><p>{scope}</p><h1>{intl.formatMessage({ id: "page.timeline" })}</h1></header>
     <ScopeSelector value={scope} onChange={(next) => setParameters({ scope: next, date, page: "1" })} />
-    {coserUUID ? <label className="timeline-date-selector">{intl.formatMessage({ id: "timeline.dateSource" })}<select aria-label={intl.formatMessage({ id: "timeline.dateSource" })} value={date} onChange={(event) => setParameters({ scope, date: event.target.value, page: "1" })}><option value="SHOOT">{intl.formatMessage({ id: "timeline.shoot" })}</option><option value="MEDIA_ADDED">{intl.formatMessage({ id: "timeline.added" })}</option><option value="PUBLISH">{intl.formatMessage({ id: "timeline.publish" })}</option></select></label> : null}
+    {coserUUID ? <label className="timeline-date-selector">{intl.formatMessage({ id: "timeline.dateSource" })}<select aria-label={intl.formatMessage({ id: "timeline.dateSource" })} value={date} onChange={(event) => setParameters({ scope, date: event.target.value, page: "1" })}><option value="SHOOT">{intl.formatMessage({ id: "timeline.shoot" })}</option><option value="MEDIA_ADDED">{intl.formatMessage({ id: "timeline.added" })}</option><option value="PUBLISH">{intl.formatMessage({ id: "timeline.publish" })}</option><option value="COMBINED">{intl.formatMessage({ id: "timeline.combined" })}</option></select></label> : null}
+    {coserUUID && date === "COMBINED" ? <p className="timeline-date-help">{intl.formatMessage({ id: "timeline.combinedHelp" })}</p> : null}
     {loading ? <p className="state-message">{intl.formatMessage({ id: "state.loading" })}</p> : null}
     {error ? <p className="state-message" role="alert">{intl.formatMessage({ id: "state.error" })}</p> : null}
     {data?.timelineGalleries.items.length ? <section className="gallery-grid">{data.timelineGalleries.items.map((card) => <GalleryCard key={card.setID} card={card} scrubberEnabled={false} />)}</section>

@@ -1180,7 +1180,7 @@ type ComplexityRoot struct {
 		RunLibraryAutomation                   func(childComplexity int, libraryID int64) int
 		RunPortableMigration                   func(childComplexity int, input PortableMigrationActionInput) int
 		SaveLibraryAutomationPolicy            func(childComplexity int, libraryID int64, expectedRevision int64, input LibraryAutomationPolicyInput) int
-		ScanGallerySource                      func(childComplexity int, setID string, excludeNewRootMedia bool) int
+		ScanGallerySource                      func(childComplexity int, setID string, excludeNewRootMedia bool, forceContentRead bool) int
 		SetGalleryCoverItem                    func(childComplexity int, setID string, itemUUID string, expectedMetadataRevision int64) int
 		SetGalleryFavorite                     func(childComplexity int, setID string, favorite bool) int
 		SetGalleryItemExcluded                 func(childComplexity int, setID string, itemUUID string, excluded bool, expectedMetadataRevision int64) int
@@ -1431,7 +1431,7 @@ type MutationResolver interface {
 	DiscoverMediaLibrary(ctx context.Context, libraryID int64) (*ManageDiscoverySnapshot, error)
 	ImportGalleryCandidate(ctx context.Context, candidateID int64) (*ManageGalleryDetail, error)
 	ForkGalleryCandidate(ctx context.Context, candidateID int64, password string, confirmation string) (*ManageDiscoverySnapshot, error)
-	ScanGallerySource(ctx context.Context, setID string, excludeNewRootMedia bool) (*ManageGalleryDetail, error)
+	ScanGallerySource(ctx context.Context, setID string, excludeNewRootMedia bool, forceContentRead bool) (*ManageGalleryDetail, error)
 	UpdateRuntimeSettings(ctx context.Context, expectedSettingsRevision int64, input RuntimeSettingsInput) (*ManageRuntimeSettings, error)
 	CancelProcessingJob(ctx context.Context, id int64) (*ManageProcessingJobPage, error)
 	RetryProcessingJob(ctx context.Context, id int64) (*ManageProcessingJobPage, error)
@@ -7582,7 +7582,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.ScanGallerySource(childComplexity, args["setID"].(string), args["excludeNewRootMedia"].(bool)), true
+		return e.complexity.Mutation.ScanGallerySource(childComplexity, args["setID"].(string), args["excludeNewRootMedia"].(bool), args["forceContentRead"].(bool)), true
 
 	case "Mutation.setGalleryCoverItem":
 		if e.complexity.Mutation.SetGalleryCoverItem == nil {
@@ -12129,6 +12129,11 @@ func (ec *executionContext) field_Mutation_scanGallerySource_args(ctx context.Co
 		return nil, err
 	}
 	args["excludeNewRootMedia"] = arg1
+	arg2, err := ec.field_Mutation_scanGallerySource_argsForceContentRead(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["forceContentRead"] = arg2
 	return args, nil
 }
 func (ec *executionContext) field_Mutation_scanGallerySource_argsSetID(
@@ -12160,6 +12165,24 @@ func (ec *executionContext) field_Mutation_scanGallerySource_argsExcludeNewRootM
 
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("excludeNewRootMedia"))
 	if tmp, ok := rawArgs["excludeNewRootMedia"]; ok {
+		return ec.unmarshalNBoolean2bool(ctx, tmp)
+	}
+
+	var zeroVal bool
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_scanGallerySource_argsForceContentRead(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (bool, error) {
+	if _, ok := rawArgs["forceContentRead"]; !ok {
+		var zeroVal bool
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("forceContentRead"))
+	if tmp, ok := rawArgs["forceContentRead"]; ok {
 		return ec.unmarshalNBoolean2bool(ctx, tmp)
 	}
 
@@ -55276,7 +55299,7 @@ func (ec *executionContext) _Mutation_scanGallerySource(ctx context.Context, fie
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().ScanGallerySource(rctx, fc.Args["setID"].(string), fc.Args["excludeNewRootMedia"].(bool))
+		return ec.resolvers.Mutation().ScanGallerySource(rctx, fc.Args["setID"].(string), fc.Args["excludeNewRootMedia"].(bool), fc.Args["forceContentRead"].(bool))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

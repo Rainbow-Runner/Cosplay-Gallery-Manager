@@ -218,8 +218,8 @@ export const CONFIRM_GALLERY_SOURCE_REBIND = gql`
 `;
 export const SCAN_GALLERY_SOURCE = gql`
   ${MANAGE_GALLERY_DETAIL}
-  mutation ScanGallerySource($setID: ID!, $excludeNewRootMedia: Boolean! = true) {
-    scanGallerySource(setID: $setID, excludeNewRootMedia: $excludeNewRootMedia) { ...ManageGalleryDetailFields }
+  mutation ScanGallerySource($setID: ID!, $excludeNewRootMedia: Boolean! = true, $forceContentRead: Boolean! = false) {
+    scanGallerySource(setID: $setID, excludeNewRootMedia: $excludeNewRootMedia, forceContentRead: $forceContentRead) { ...ManageGalleryDetailFields }
   }
 `;
 export const REPLACE_GALLERY_RELATIONS = gql`

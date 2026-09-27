@@ -2404,17 +2404,19 @@ const (
 	TimelineDateShoot      TimelineDate = "SHOOT"
 	TimelineDateMediaAdded TimelineDate = "MEDIA_ADDED"
 	TimelineDatePublish    TimelineDate = "PUBLISH"
+	TimelineDateCombined   TimelineDate = "COMBINED"
 )
 
 var AllTimelineDate = []TimelineDate{
 	TimelineDateShoot,
 	TimelineDateMediaAdded,
 	TimelineDatePublish,
+	TimelineDateCombined,
 }
 
 func (e TimelineDate) IsValid() bool {
 	switch e {
-	case TimelineDateShoot, TimelineDateMediaAdded, TimelineDatePublish:
+	case TimelineDateShoot, TimelineDateMediaAdded, TimelineDatePublish, TimelineDateCombined:
 		return true
 	}
 	return false

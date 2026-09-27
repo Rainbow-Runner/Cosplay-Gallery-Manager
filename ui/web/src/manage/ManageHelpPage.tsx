@@ -49,6 +49,7 @@ export function ManageHelpPage() {
               <tr><th>{f("manage.help.scans.source.name")}</th><td>{f("manage.help.scans.source.scope")}</td><td>{f("manage.help.scans.source.effect")}</td><td>{f("manage.help.scans.source.excludes")}</td></tr>
             </tbody>
           </table></div>
+          <p>{f("manage.help.scans.depth")}</p>
         </section>
 
         <section aria-labelledby="help-states-title">

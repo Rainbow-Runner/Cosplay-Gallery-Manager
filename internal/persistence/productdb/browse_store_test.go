@@ -192,6 +192,51 @@ func TestTimelineDateModesOmitUnknownAndSortDeterministically(t *testing.T) {
 	}
 }
 
+func TestCombinedTimelineChoosesFirstAvailableDateAndOmitsUnknown(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 27, 0, 0, 0, 0, time.UTC)
+	type fixture struct {
+		title, publish, publishPrecision, shoot, shootPrecision, added, addedStatus string
+	}
+	fixtures := []fixture{
+		// The newer shoot and media dates must not override publication.
+		{"published", "2025-02", "MONTH", "2026-01-01", "DAY", "2026-02-01T12:00:00Z", "COMPLETE"},
+		{"shot", "", "UNKNOWN", "2025-02-03", "DAY", "2026-03-01T12:00:00Z", "COMPLETE"},
+		{"added", "", "UNKNOWN", "", "UNKNOWN", "2025-02-02T23:59:59Z", "COMPLETE"},
+		{"partial", "", "UNKNOWN", "", "UNKNOWN", "2025-03-01T00:00:00Z", "PARTIAL"},
+		{"unknown", "", "UNKNOWN", "", "UNKNOWN", "", "NONE"},
+	}
+	var setIDs []string
+	for _, item := range fixtures {
+		created, _ := createBrowseGallery(t, db, item.title, gallery.ContentRatingNonAdult, now)
+		activateBrowseFixture(t, db, created.ID, now)
+		if _, err := db.ExecContext(ctx, `UPDATE galleries SET publish_date=NULLIF(?,''),publish_date_precision=NULLIF(?,'UNKNOWN'),
+			shoot_date=NULLIF(?,''),shoot_date_precision=NULLIF(?,'UNKNOWN'),media_added_start_at_utc=?,media_added_status=? WHERE id=?`,
+			item.publish, item.publishPrecision, item.shoot, item.shootPrecision, item.added, item.addedStatus, created.ID); err != nil {
+			t.Fatal(err)
+		}
+		setIDs = append(setIDs, created.SetID)
+	}
+	page, err := db.Browse().TimelineByDate(ctx, browse.ScopeList, 1, "", browse.TimelineCombined)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.TotalItems != 3 || len(page.Items) != 3 {
+		t.Fatalf("combined timeline included missing or incomplete dates: %#v", page)
+	}
+	for index, expected := range []string{setIDs[1], setIDs[2], setIDs[0]} {
+		if page.Items[index].SetID != expected {
+			t.Fatalf("combined timeline order at %d: got %s, want %s", index, page.Items[index].SetID, expected)
+		}
+	}
+	// Existing modes retain their own inclusion and ordering rules.
+	shoot, err := db.Browse().TimelineByDate(ctx, browse.ScopeList, 1, "", browse.TimelineShoot)
+	if err != nil || shoot.TotalItems != 2 || shoot.Items[0].SetID != setIDs[0] {
+		t.Fatalf("shoot mode changed: page=%#v err=%v", shoot, err)
+	}
+}
+
 func createBrowseGallery(t *testing.T, db *Database, title string, rating gallery.ContentRating, now time.Time) (gallery.Gallery, gallery.Source) {
 	t.Helper()
 	ctx := context.Background()

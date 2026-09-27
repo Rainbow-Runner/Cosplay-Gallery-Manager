@@ -25,6 +25,7 @@ const (
 	TimelineShoot      TimelineDate = "SHOOT"
 	TimelineMediaAdded TimelineDate = "MEDIA_ADDED"
 	TimelinePublish    TimelineDate = "PUBLISH"
+	TimelineCombined   TimelineDate = "COMBINED"
 )
 
 const (

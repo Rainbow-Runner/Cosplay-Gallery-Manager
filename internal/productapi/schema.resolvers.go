@@ -745,7 +745,7 @@ func (r *mutationResolver) ForkGalleryCandidate(ctx context.Context, candidateID
 }
 
 // ScanGallerySource is the resolver for the scanGallerySource field.
-func (r *mutationResolver) ScanGallerySource(ctx context.Context, setID string, excludeNewRootMedia bool) (*ManageGalleryDetail, error) {
+func (r *mutationResolver) ScanGallerySource(ctx context.Context, setID string, excludeNewRootMedia bool, forceContentRead bool) (*ManageGalleryDetail, error) {
 	sourceID, err := r.Database.Manage().GallerySourceID(ctx, setID)
 	if err != nil {
 		r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "GALLERY_SCAN_FAILED", err, nil)
@@ -757,8 +757,8 @@ func (r *mutationResolver) ScanGallerySource(ctx context.Context, setID string, 
 		return nil, manageError(err)
 	}
 	limits := archivecheck.Limits{MaxEntries: runtimeSettings.ArchiveMaxEntries, MaxEntryUncompressed: uint64(runtimeSettings.ArchiveMaxEntryBytes), MaxTotalUncompressed: uint64(runtimeSettings.ArchiveMaxTotalBytes), MaxCompressionRatio: runtimeSettings.ArchiveMaxCompressionRatio, MaxImagePixels: uint64(runtimeSettings.ArchiveMaxImagePixels)}
-	if err := r.Database.Scans().RunWithOptions(ctx, sourceID, limits, productdb.ScanOptions{ExcludeNewRootMedia: excludeNewRootMedia}, time.Now()); err != nil {
-		r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "GALLERY_SCAN_FAILED", err, map[string]any{"source_id": sourceID, "exclude_new_root_media": excludeNewRootMedia})
+	if err := r.Database.Scans().RunWithOptions(ctx, sourceID, limits, productdb.ScanOptions{ExcludeNewRootMedia: excludeNewRootMedia, ForceContentRead: forceContentRead}, time.Now()); err != nil {
+		r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "GALLERY_SCAN_FAILED", err, map[string]any{"source_id": sourceID, "exclude_new_root_media": excludeNewRootMedia, "force_content_read": forceContentRead})
 		return nil, manageError(err)
 	}
 	galleryID, err := r.Database.Manage().GalleryID(ctx, setID)
@@ -789,7 +789,7 @@ func (r *mutationResolver) ScanGallerySource(ctx context.Context, setID string, 
 		r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "GALLERY_SCAN_PRIORITY_FAILED", err, map[string]any{"source_id": sourceID})
 		return nil, errors.New("source scan completed; queue priority update failed")
 	}
-	r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "", nil, map[string]any{"source_id": sourceID, "exclude_new_root_media": excludeNewRootMedia, "date_jobs_queued": queued, "jobs_promoted": promoted})
+	r.auditManage(ctx, "GALLERY_SOURCE_SCAN", "GALLERY", setID, "", nil, map[string]any{"source_id": sourceID, "exclude_new_root_media": excludeNewRootMedia, "force_content_read": forceContentRead, "date_jobs_queued": queued, "jobs_promoted": promoted})
 	return r.loadManageGalleryDetail(ctx, setID)
 }
 

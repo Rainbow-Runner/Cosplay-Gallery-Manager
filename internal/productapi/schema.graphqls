@@ -3,7 +3,7 @@ enum GallerySort { RECENTLY_ADDED NAME SHOOT_DATE RATING }
 enum CollectionType { ALBUM COSPLAY }
 enum ContentRating { NON_ADULT ADULT }
 enum ShootDatePrecision { DAY MONTH UNKNOWN }
-enum TimelineDate { SHOOT MEDIA_ADDED PUBLISH }
+enum TimelineDate { SHOOT MEDIA_ADDED PUBLISH COMBINED }
 enum MediaKind { STATIC_IMAGE ANIMATED_IMAGE VIDEO }
 enum ImageCategory { PHOTO SELFIE }
 enum ContentFormat { IMAGE VIDEO RAW }
@@ -595,7 +595,7 @@ type Mutation {
   discoverMediaLibrary(libraryID: Int64!): ManageDiscoverySnapshot!
   importGalleryCandidate(candidateID: Int64!): ManageGalleryDetail!
   forkGalleryCandidate(candidateID: Int64!, password: String!, confirmation: String!): ManageDiscoverySnapshot!
-  scanGallerySource(setID: ID!, excludeNewRootMedia: Boolean! = true): ManageGalleryDetail!
+  scanGallerySource(setID: ID!, excludeNewRootMedia: Boolean! = true, forceContentRead: Boolean! = false): ManageGalleryDetail!
   updateRuntimeSettings(expectedSettingsRevision: Int64!, input: RuntimeSettingsInput!): ManageRuntimeSettings!
   cancelProcessingJob(id: Int64!): ManageProcessingJobPage!
   retryProcessingJob(id: Int64!): ManageProcessingJobPage!

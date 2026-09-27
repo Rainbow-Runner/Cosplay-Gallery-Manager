@@ -532,6 +532,9 @@ func TestScanRebindsUniqueFingerprintAndPreservesSamePathIdentity(t *testing.T) 
 	}
 	first := loadGalleryItemsForTest(t, db, created.ID)
 	byPath := map[string]gallery.Item{first[0].RelativePath: first[0], first[1].RelativePath: first[1]}
+	if _, err := db.ExecContext(ctx, `UPDATE gallery_items SET processing_state='READY' WHERE id=?`, byPath["old.jpg"].ID); err != nil {
+		t.Fatal(err)
+	}
 	oldItem := byPath["same.jpg"]
 	profile := mediaprocessing.DefaultProfileHash()
 	derivative, err := db.Derivatives().Publish(ctx, PublishDerivativeInput{ItemUUID: oldItem.UUID, Variant: mediaprocessing.VariantCard480,
@@ -563,6 +566,9 @@ func TestScanRebindsUniqueFingerprintAndPreservesSamePathIdentity(t *testing.T) 
 	secondByPath := map[string]gallery.Item{second[0].RelativePath: second[0], second[1].RelativePath: second[1]}
 	if secondByPath["moved.jpg"].UUID != byPath["old.jpg"].UUID {
 		t.Fatal("unique same-source fingerprint did not retain item_uuid after move")
+	}
+	if secondByPath["moved.jpg"].ProcessingState != gallery.ProcessingReady {
+		t.Fatalf("unique same-source move invalidated processing: %#v", secondByPath["moved.jpg"])
 	}
 	changed := secondByPath["same.jpg"]
 	if changed.UUID != byPath["same.jpg"].UUID || changed.ContentRevision != 2 || changed.ProcessingState != gallery.ProcessingPending {
@@ -740,11 +746,14 @@ func TestRunDirectoryScanIsIdempotentAndSourceFailurePreservesItems(t *testing.T
 	if len(first) != 1 {
 		t.Fatalf("first physical scan Items = %#v", first)
 	}
+	if _, err := db.DB.ExecContext(ctx, `UPDATE gallery_items SET processing_state='READY' WHERE id=?`, first[0].ID); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.Scans().Run(ctx, source.ID, archivecheck.DefaultLimits(), now.Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 	second := loadGalleryItemsForTest(t, db, created.ID)
-	if len(second) != 1 || second[0].UUID != first[0].UUID || second[0].ContentRevision != first[0].ContentRevision {
+	if len(second) != 1 || second[0].UUID != first[0].UUID || second[0].ContentRevision != first[0].ContentRevision || second[0].ProcessingState != gallery.ProcessingReady {
 		t.Fatalf("unchanged rescan was not idempotent: first %#v second %#v", first, second)
 	}
 
@@ -765,6 +774,61 @@ func TestRunDirectoryScanIsIdempotentAndSourceFailurePreservesItems(t *testing.T
 	}
 	if persistedSource.Availability != gallery.AvailabilityUnreadable || persistedSource.ReconcileState != gallery.ReconcileError {
 		t.Fatalf("failed physical Source state = %#v", persistedSource)
+	}
+}
+
+func TestConfirmedDirectorySourceMoveRetainsMemberIdentityAndProcessing(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 27, 0, 0, 0, 0, time.UTC)
+	parent := t.TempDir()
+	oldRoot := filepath.Join(parent, "old")
+	if err := os.Mkdir(oldRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(oldRoot, "photo.jpg"), []byte("\xff\xd8\xff unchanged"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	created, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "Moved Gallery"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := db.Galleries().AddSource(ctx, created.ID, CreateSourceInput{
+		Type: gallery.SourceTypeDirectory, Path: oldRoot, Availability: gallery.AvailabilityAvailable,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Run(ctx, source.ID, archivecheck.DefaultLimits(), now); err != nil {
+		t.Fatal(err)
+	}
+	initial := loadGalleryItemsForTest(t, db, created.ID)
+	if len(initial) != 1 {
+		t.Fatalf("initial Items=%#v", initial)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE gallery_items SET processing_state='READY' WHERE id=?`, initial[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	newRoot := filepath.Join(parent, "new")
+	if err := os.Rename(oldRoot, newRoot); err != nil {
+		t.Fatal(err)
+	}
+	// Discovery's explicit ConfirmSourceRebind owns this update in production.
+	if _, err := db.ExecContext(ctx, `UPDATE gallery_sources SET source_path=?,reconcile_state='NEEDS_RESCAN' WHERE id=?`, newRoot, source.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE galleries SET scan_revision=scan_revision+1 WHERE id=?`, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Run(ctx, source.ID, archivecheck.DefaultLimits(), now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	moved := loadGalleryItemsForTest(t, db, created.ID)
+	if len(moved) != 1 || moved[0].UUID != initial[0].UUID ||
+		moved[0].FullFingerprint != initial[0].FullFingerprint ||
+		moved[0].ContentRevision != initial[0].ContentRevision ||
+		moved[0].ProcessingState != gallery.ProcessingReady {
+		t.Fatalf("source move changed member identity/content: %#v", moved)
 	}
 }
 
@@ -829,6 +893,260 @@ func TestUnsafeArchiveScanKeepsLastCommittedSnapshot(t *testing.T) {
 	}
 	if blocking != 1 {
 		t.Fatal("unsafe archive issue was not persisted")
+	}
+}
+
+func TestArchiveScanEvidenceReusesUnchangedContainerAndDeepScanDetectsHiddenReplacement(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 27, 0, 0, 0, 0, time.UTC)
+	filename := filepath.Join(t.TempDir(), "gallery.cbz")
+	modified := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
+	writeArchive := func(body string) {
+		t.Helper()
+		file, err := os.Create(filename)
+		if err != nil {
+			t.Fatal(err)
+		}
+		writer := zip.NewWriter(file)
+		part, err := writer.CreateHeader(&zip.FileHeader{Name: "photo.jpg", Method: zip.Store})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := part.Write([]byte("\xff\xd8\xff " + body)); err != nil {
+			t.Fatal(err)
+		}
+		if err := writer.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err := file.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chtimes(filename, modified, modified); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeArchive("first")
+	created, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "Archive evidence"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := db.Galleries().AddSource(ctx, created.ID, CreateSourceInput{
+		Type: gallery.SourceTypeArchive, Path: filename, Availability: gallery.AvailabilityAvailable,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	limits := archivecheck.DefaultLimits()
+	if err := db.Scans().Run(ctx, source.ID, limits, now); err != nil {
+		t.Fatal(err)
+	}
+	first := loadGalleryItemsForTest(t, db, created.ID)
+	if len(first) != 1 {
+		t.Fatalf("first Items = %#v", first)
+	}
+	var recorded int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_source_scan_evidence WHERE source_id=?`, source.ID).Scan(&recorded); err != nil || recorded != 1 {
+		t.Fatalf("archive evidence count=%d err=%v", recorded, err)
+	}
+	info, err := os.Stat(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeArchive("other")
+	replacedInfo, err := os.Stat(filename)
+	if err != nil || info.Size() != replacedInfo.Size() {
+		t.Fatalf("archive sizes differ: %v, %v, %v", info.Size(), replacedInfo, err)
+	}
+	if err := db.Scans().Run(ctx, source.ID, limits, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	fast := loadGalleryItemsForTest(t, db, created.ID)
+	if fast[0].FullFingerprint != first[0].FullFingerprint {
+		t.Fatal("fast archive scan unexpectedly read unchanged container evidence")
+	}
+	if err := db.Scans().RunWithOptions(ctx, source.ID, limits, ScanOptions{ForceContentRead: true}, now.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	deep := loadGalleryItemsForTest(t, db, created.ID)
+	if deep[0].FullFingerprint == first[0].FullFingerprint || deep[0].ContentRevision <= first[0].ContentRevision {
+		t.Fatalf("deep scan did not detect replacement: %#v", deep)
+	}
+}
+
+func TestArchiveWithSuppressedMemberIssueNeverCachesReusableSnapshot(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 27, 0, 0, 0, 0, time.UTC)
+	filename := filepath.Join(t.TempDir(), "mixed.cbz")
+	file, err := os.Create(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := zip.NewWriter(file)
+	part, err := writer.CreateHeader(&zip.FileHeader{Name: "clip.mp4", Method: zip.Store})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := part.Write(append([]byte("\x00\x00\x00\x18ftypisom"), make([]byte, 20)...)); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	created, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "Suppressed archive issue"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := db.Galleries().AddSource(ctx, created.ID, CreateSourceInput{
+		Type: gallery.SourceTypeArchive, Path: filename, Availability: gallery.AvailabilityAvailable,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Run(ctx, source.ID, archivecheck.DefaultLimits(), now); err != nil {
+		t.Fatal(err)
+	}
+	var evidenceCount int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_source_scan_evidence WHERE source_id=?`, source.ID).Scan(&evidenceCount); err != nil || evidenceCount != 0 {
+		t.Fatalf("unsafe-to-reuse archive evidence=%d err=%v", evidenceCount, err)
+	}
+	items := loadGalleryItemsForTest(t, db, created.ID)
+	if len(items) != 1 || !items[0].Excluded {
+		t.Fatalf("root archive member exclusion=%#v", items)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE gallery_items SET excluded=0 WHERE id=?`, items[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Run(ctx, source.ID, archivecheck.DefaultLimits(), now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	var active int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_source_issues
+		WHERE source_id=? AND code='SCAN_UNSUPPORTED_ARCHIVE_MEDIA' AND resolved_at_utc IS NULL`, source.ID).Scan(&active); err != nil || active != 1 {
+		t.Fatalf("restored unsupported archive issue=%d err=%v", active, err)
+	}
+}
+
+func TestActiveScannerIssueForcesReadBeforeItCanResolve(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 27, 0, 0, 0, 0, time.UTC)
+	root := t.TempDir()
+	filename := filepath.Join(root, "photo.jpg")
+	firstContent := append([]byte("\x00\x00\x00\x18ftypisom"), make([]byte, 20)...)
+	if err := os.WriteFile(filename, firstContent, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	modified := time.Date(2024, 2, 3, 4, 5, 6, 0, time.UTC)
+	if err := os.Chtimes(filename, modified, modified); err != nil {
+		t.Fatal(err)
+	}
+	created, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "Issue revalidation"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := db.Galleries().AddSource(ctx, created.ID, CreateSourceInput{
+		Type: gallery.SourceTypeDirectory, Path: root, Availability: gallery.AvailabilityAvailable,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Run(ctx, source.ID, archivecheck.DefaultLimits(), now); err != nil {
+		t.Fatal(err)
+	}
+	var active int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_source_issues
+		WHERE source_id=? AND code='SCAN_CONTENT_EXTENSION_MISMATCH' AND resolved_at_utc IS NULL`, source.ID).Scan(&active); err != nil || active != 1 {
+		t.Fatalf("first active issue=%d err=%v", active, err)
+	}
+	first := loadGalleryItemsForTest(t, db, created.ID)
+	replacement := append([]byte("\xff\xd8\xff"), make([]byte, len(firstContent)-3)...)
+	if err := os.WriteFile(filename, replacement, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(filename, modified, modified); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Run(ctx, source.ID, archivecheck.DefaultLimits(), now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	second := loadGalleryItemsForTest(t, db, created.ID)
+	if second[0].FullFingerprint == first[0].FullFingerprint {
+		t.Fatal("active scanner issue allowed stale content evidence reuse")
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_source_issues
+		WHERE source_id=? AND code='SCAN_CONTENT_EXTENSION_MISMATCH' AND resolved_at_utc IS NULL`, source.ID).Scan(&active); err != nil || active != 0 {
+		t.Fatalf("active issue after revalidation=%d err=%v", active, err)
+	}
+}
+
+func TestPhysicalScanRejectsConcurrentRunWithoutChangingSourceState(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 27, 0, 0, 0, 0, time.UTC)
+	root := t.TempDir()
+	created, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "Concurrent scan"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := db.Galleries().AddSource(ctx, created.ID, CreateSourceInput{
+		Type: gallery.SourceTypeDirectory, Path: root, Availability: gallery.AvailabilityAvailable,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := physicalScanKey{db: db.DB, sourceID: source.ID}
+	activePhysicalScans.Store(key, struct{}{})
+	defer activePhysicalScans.Delete(key)
+	if err := db.Scans().Run(ctx, source.ID, archivecheck.DefaultLimits(), now); !errors.Is(err, ErrSourceScanInProgress) {
+		t.Fatalf("overlapping scan error=%v", err)
+	}
+	var runs int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_scan_runs WHERE source_id=?`, source.ID).Scan(&runs); err != nil || runs != 0 {
+		t.Fatalf("scan runs=%d err=%v", runs, err)
+	}
+}
+
+func TestScanRevisionConflictCannotCommitStaleObservation(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 27, 0, 0, 0, 0, time.UTC)
+	created, err := db.Galleries().Create(ctx, CreateGalleryInput{Title: "Revision conflict"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := db.Galleries().AddSource(ctx, created.ID, CreateSourceInput{
+		Type: gallery.SourceTypeDirectory, Path: t.TempDir(), Availability: gallery.AvailabilityAvailable,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var previous int64
+	if err := db.QueryRowContext(ctx, `SELECT scan_revision FROM galleries WHERE id=?`, created.ID).Scan(&previous); err != nil {
+		t.Fatal(err)
+	}
+	runID, err := db.Scans().Begin(ctx, source.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Stage(ctx, runID, scanPhoto("photo.jpg", "blake3-v1:old")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE galleries SET scan_revision=scan_revision+1 WHERE id=?`, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().CommitWithOptions(ctx, runID, ScanOptions{expectedScanRevision: &previous}, now); !errors.Is(err, ErrSourceScanConflict) {
+		t.Fatalf("stale scan commit error=%v", err)
+	}
+	if err := db.Scans().Abort(ctx, runID, false, "SCAN_COMMIT_FAILED", now); err != nil {
+		t.Fatal(err)
+	}
+	if got := loadGalleryItemsForTest(t, db, created.ID); len(got) != 0 {
+		t.Fatalf("stale scan committed Items: %#v", got)
 	}
 }
 

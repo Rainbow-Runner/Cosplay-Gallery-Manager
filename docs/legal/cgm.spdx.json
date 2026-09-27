@@ -955,8 +955,25 @@
       ]
     },
     {
-      "name": "optimism",
+      "name": "lucide-react",
       "SPDXID": "SPDXRef-Package-npm-58",
+      "versionInfo": "1.48.0",
+      "downloadLocation": "https://registry.npmjs.org/lucide-react/-/lucide-react-1.48.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "ISC",
+      "licenseDeclared": "ISC",
+      "homepage": "https://lucide.dev",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/lucide-react@1.48.0"
+        }
+      ]
+    },
+    {
+      "name": "optimism",
+      "SPDXID": "SPDXRef-Package-npm-59",
       "versionInfo": "0.18.1",
       "downloadLocation": "https://registry.npmjs.org/optimism/-/optimism-0.18.1.tgz",
       "filesAnalyzed": false,
@@ -973,7 +990,7 @@
     },
     {
       "name": "react",
-      "SPDXID": "SPDXRef-Package-npm-59",
+      "SPDXID": "SPDXRef-Package-npm-60",
       "versionInfo": "19.2.8",
       "downloadLocation": "https://registry.npmjs.org/react/-/react-19.2.8.tgz",
       "filesAnalyzed": false,
@@ -990,7 +1007,7 @@
     },
     {
       "name": "react-dom",
-      "SPDXID": "SPDXRef-Package-npm-60",
+      "SPDXID": "SPDXRef-Package-npm-61",
       "versionInfo": "19.2.8",
       "downloadLocation": "https://registry.npmjs.org/react-dom/-/react-dom-19.2.8.tgz",
       "filesAnalyzed": false,
@@ -1007,7 +1024,7 @@
     },
     {
       "name": "react-intl",
-      "SPDXID": "SPDXRef-Package-npm-61",
+      "SPDXID": "SPDXRef-Package-npm-62",
       "versionInfo": "7.1.14",
       "downloadLocation": "https://registry.npmjs.org/react-intl/-/react-intl-7.1.14.tgz",
       "filesAnalyzed": false,
@@ -1024,7 +1041,7 @@
     },
     {
       "name": "react-is",
-      "SPDXID": "SPDXRef-Package-npm-62",
+      "SPDXID": "SPDXRef-Package-npm-63",
       "versionInfo": "16.13.1",
       "downloadLocation": "https://registry.npmjs.org/react-is/-/react-is-16.13.1.tgz",
       "filesAnalyzed": false,
@@ -1041,7 +1058,7 @@
     },
     {
       "name": "react-router",
-      "SPDXID": "SPDXRef-Package-npm-63",
+      "SPDXID": "SPDXRef-Package-npm-64",
       "versionInfo": "7.18.1",
       "downloadLocation": "https://registry.npmjs.org/react-router/-/react-router-7.18.1.tgz",
       "filesAnalyzed": false,
@@ -1057,7 +1074,7 @@
     },
     {
       "name": "react-router-dom",
-      "SPDXID": "SPDXRef-Package-npm-64",
+      "SPDXID": "SPDXRef-Package-npm-65",
       "versionInfo": "7.18.1",
       "downloadLocation": "https://registry.npmjs.org/react-router-dom/-/react-router-dom-7.18.1.tgz",
       "filesAnalyzed": false,
@@ -1073,7 +1090,7 @@
     },
     {
       "name": "scheduler",
-      "SPDXID": "SPDXRef-Package-npm-65",
+      "SPDXID": "SPDXRef-Package-npm-66",
       "versionInfo": "0.27.0",
       "downloadLocation": "https://registry.npmjs.org/scheduler/-/scheduler-0.27.0.tgz",
       "filesAnalyzed": false,
@@ -1090,7 +1107,7 @@
     },
     {
       "name": "set-cookie-parser",
-      "SPDXID": "SPDXRef-Package-npm-66",
+      "SPDXID": "SPDXRef-Package-npm-67",
       "versionInfo": "2.7.2",
       "downloadLocation": "https://registry.npmjs.org/set-cookie-parser/-/set-cookie-parser-2.7.2.tgz",
       "filesAnalyzed": false,
@@ -1107,7 +1124,7 @@
     },
     {
       "name": "tslib",
-      "SPDXID": "SPDXRef-Package-npm-67",
+      "SPDXID": "SPDXRef-Package-npm-68",
       "versionInfo": "2.8.1",
       "downloadLocation": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
       "filesAnalyzed": false,
@@ -1463,6 +1480,11 @@
       "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Package-npm-67"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosplay-Gallery-Manager",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-npm-68"
     }
   ]
 }

@@ -47,6 +47,7 @@ func (s *BrowseStore) Timeline(ctx context.Context, scope browse.Scope, page int
 
 // TimelineByDate omits galleries without the selected date. MONTH precision
 // sorts as the first day of its month, while retaining its original precision.
+// Combined uses publication, then shoot, then complete media-added evidence.
 func (s *BrowseStore) TimelineByDate(ctx context.Context, scope browse.Scope, page int, coserUUID string, date browse.TimelineDate) (browse.GalleryPage, error) {
 	var extra, dateOrder string
 	switch date {
@@ -59,6 +60,17 @@ func (s *BrowseStore) TimelineByDate(ctx context.Context, scope browse.Scope, pa
 	case browse.TimelinePublish:
 		extra = ` AND gallery.publish_date IS NOT NULL`
 		dateOrder = `CASE gallery.publish_date_precision WHEN 'MONTH' THEN gallery.publish_date||'-01' ELSE gallery.publish_date END`
+	case browse.TimelineCombined:
+		// Normalize all three sources to a calendar day before comparing them.
+		// The source priority selects a date for each gallery, not a global
+		// priority between galleries with different sources.
+		extra = ` AND (gallery.publish_date IS NOT NULL OR gallery.shoot_date IS NOT NULL OR
+			(gallery.media_added_status='COMPLETE' AND NULLIF(gallery.media_added_start_at_utc,'') IS NOT NULL))`
+		dateOrder = `CASE WHEN gallery.publish_date IS NOT NULL THEN
+			CASE gallery.publish_date_precision WHEN 'MONTH' THEN gallery.publish_date||'-01' ELSE gallery.publish_date END
+			WHEN gallery.shoot_date IS NOT NULL THEN
+			CASE gallery.shoot_date_precision WHEN 'MONTH' THEN gallery.shoot_date||'-01' ELSE gallery.shoot_date END
+			ELSE substr(gallery.media_added_start_at_utc,1,10) END`
 	default:
 		return browse.GalleryPage{}, errors.New("invalid timeline date")
 	}

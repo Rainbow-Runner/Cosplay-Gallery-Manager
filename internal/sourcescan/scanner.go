@@ -51,6 +51,9 @@ type Issue struct {
 type Result struct {
 	Observations []Observation
 	Issues       []Issue
+	// Reused counts members whose previous content evidence was retained after
+	// a fresh filesystem enumeration and stat check.
+	Reused int
 	// Complete means the source was fully enumerated and is safe to commit as
 	// a replacement snapshot. False results may update source diagnostics only.
 	Complete bool
@@ -59,6 +62,13 @@ type Result struct {
 // ScanDirectory never follows symbolic links and only opens regular files
 // located beneath root.
 func ScanDirectory(ctx context.Context, root string) (Result, error) {
+	return ScanDirectoryWithEvidence(ctx, root, nil)
+}
+
+// ScanDirectoryWithEvidence still enumerates every member. Prior observations
+// only avoid opening files whose path, size and filesystem modification time
+// match a previously verified content observation.
+func ScanDirectoryWithEvidence(ctx context.Context, root string, prior map[string]Observation) (Result, error) {
 	absolute, err := filepath.Abs(root)
 	if err != nil {
 		return Result{}, err
@@ -73,6 +83,7 @@ func ScanDirectory(ctx context.Context, root string) (Result, error) {
 
 	result := Result{Complete: true}
 	seen := make(map[string]string)
+	verifiedFiles := make(map[string]fs.FileInfo)
 	err = filepath.WalkDir(absolute, func(filename string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -124,6 +135,13 @@ func ScanDirectory(ctx context.Context, root string) (Result, error) {
 			return nil
 		}
 		seen[folded] = relative
+		if cached, ok := prior[relative]; ok && reusableDirectoryObservation(cached, info) {
+			cached.SourceModifiedAtUTC = info.ModTime().UTC().Format(time.RFC3339Nano)
+			result.Observations = append(result.Observations, cached)
+			result.Reused++
+			verifiedFiles[filename] = info
+			return nil
+		}
 		file, err := os.Open(filename)
 		if err != nil {
 			return err
@@ -137,10 +155,16 @@ func ScanDirectory(ctx context.Context, root string) (Result, error) {
 			return errors.New("media source changed while scanning")
 		}
 		observation, issues, scanErr := observeReader(ctx, relative, openedInfo.Size(), file)
+		verifiedInfo, verifyErr := file.Stat()
 		closeErr := file.Close()
 		if scanErr != nil {
 			return scanErr
 		}
+		if verifyErr != nil || !os.SameFile(openedInfo, verifiedInfo) ||
+			verifiedInfo.Size() != openedInfo.Size() || !verifiedInfo.ModTime().Equal(openedInfo.ModTime()) {
+			return errors.New("media source changed while reading")
+		}
+		verifiedFiles[filename] = verifiedInfo
 		if closeErr != nil {
 			return closeErr
 		}
@@ -157,7 +181,21 @@ func ScanDirectory(ctx context.Context, root string) (Result, error) {
 		}
 		return nil
 	})
-	return result, err
+	if err != nil {
+		return result, err
+	}
+	currentRoot, err := os.Lstat(absolute)
+	if err != nil || !os.SameFile(rootInfo, currentRoot) {
+		return Result{}, errors.New("GallerySource root changed while scanning")
+	}
+	for filename, before := range verifiedFiles {
+		current, statErr := os.Lstat(filename)
+		if statErr != nil || !current.Mode().IsRegular() || !os.SameFile(before, current) ||
+			before.Size() != current.Size() || !before.ModTime().Equal(current.ModTime()) {
+			return Result{}, errors.New("media source changed while scanning")
+		}
+	}
+	return result, nil
 }
 
 // ScanArchive validates the complete archive directory before reading media.
@@ -227,6 +265,33 @@ func ScanArchive(ctx context.Context, filename string, limits archivecheck.Limit
 		return Result{}, err
 	}
 	return result, nil
+}
+
+func reusableDirectoryObservation(prior Observation, info fs.FileInfo) bool {
+	return info.Mode().IsRegular() && !info.ModTime().IsZero() &&
+		prior.ByteSize == info.Size() &&
+		prior.SourceModifiedStatus == "FOUND" &&
+		prior.SourceModifiedOrigin == "FILESYSTEM" &&
+		prior.SourceModifiedAtUTC == info.ModTime().UTC().Format(time.RFC3339Nano) &&
+		ValidContentFingerprints(prior) &&
+		prior.MediaKind != "" && prior.ContentFormat != ""
+}
+
+// ValidContentFingerprints rejects incomplete or malformed persisted evidence
+// before a scan can reuse it without opening the source media.
+func ValidContentFingerprints(observation Observation) bool {
+	for _, value := range []struct{ fingerprint, prefix string }{
+		{observation.QuickFingerprint, "blake3-sample-v1:"},
+		{observation.FullFingerprint, "blake3-v1:"},
+	} {
+		if !strings.HasPrefix(value.fingerprint, value.prefix) || len(value.fingerprint) != len(value.prefix)+64 {
+			return false
+		}
+		if _, err := hex.DecodeString(value.fingerprint[len(value.prefix):]); err != nil {
+			return false
+		}
+	}
+	return true
 }
 
 func observeReader(ctx context.Context, relative string, storedSize int64, reader io.Reader) (*Observation, []Issue, error) {

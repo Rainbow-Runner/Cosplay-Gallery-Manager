@@ -92,6 +92,67 @@ func TestScanDirectoryNeverFollowsSymlinks(t *testing.T) {
 	}
 }
 
+func TestScanDirectoryEvidenceReusesUnchangedFileAndDeepScanReadsIt(t *testing.T) {
+	root := t.TempDir()
+	filename := filepath.Join(root, "image.jpg")
+	first := []byte("\xff\xd8\xff first image")
+	if err := os.WriteFile(filename, first, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	modified := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
+	if err := os.Chtimes(filename, modified, modified); err != nil {
+		t.Fatal(err)
+	}
+	initial, err := ScanDirectory(context.Background(), root)
+	if err != nil || len(initial.Observations) != 1 {
+		t.Fatalf("initial scan = %#v, %v", initial, err)
+	}
+	prior := map[string]Observation{"image.jpg": initial.Observations[0]}
+	repeated, err := ScanDirectoryWithEvidence(context.Background(), root, prior)
+	if err != nil || repeated.Reused != 1 || repeated.Observations[0].FullFingerprint != prior["image.jpg"].FullFingerprint {
+		t.Fatalf("reused scan = %#v, %v", repeated, err)
+	}
+	// Size plus mtime are a fast change detector, not proof of identical bytes.
+	if err := os.WriteFile(filename, []byte("\xff\xd8\xff other image"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(filename, modified, modified); err != nil {
+		t.Fatal(err)
+	}
+	fast, err := ScanDirectoryWithEvidence(context.Background(), root, prior)
+	if err != nil || fast.Reused != 1 {
+		t.Fatalf("fast scan = %#v, %v", fast, err)
+	}
+	deep, err := ScanDirectory(context.Background(), root)
+	if err != nil || deep.Reused != 0 || deep.Observations[0].FullFingerprint == prior["image.jpg"].FullFingerprint {
+		t.Fatalf("deep scan = %#v, %v", deep, err)
+	}
+}
+
+func TestScanDirectoryEvidenceSurvivesGalleryRootMove(t *testing.T) {
+	parent := t.TempDir()
+	root := filepath.Join(parent, "old-place")
+	if err := os.Mkdir(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "photo.jpg"), []byte("\xff\xd8\xff unchanged"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	initial, err := ScanDirectory(context.Background(), root)
+	if err != nil || len(initial.Observations) != 1 {
+		t.Fatalf("initial scan = %#v, %v", initial, err)
+	}
+	newRoot := filepath.Join(parent, "new-place")
+	if err := os.Rename(root, newRoot); err != nil {
+		t.Fatal(err)
+	}
+	prior := map[string]Observation{"photo.jpg": initial.Observations[0]}
+	moved, err := ScanDirectoryWithEvidence(context.Background(), newRoot, prior)
+	if err != nil || moved.Reused != 1 || moved.Observations[0].FullFingerprint != prior["photo.jpg"].FullFingerprint {
+		t.Fatalf("moved scan = %#v, %v", moved, err)
+	}
+}
+
 func TestScanArchiveUsesCompressedSizeAndBlocksUnsafeMedia(t *testing.T) {
 	filename := filepath.Join(t.TempDir(), "set.cbz")
 	file, err := os.Create(filename)

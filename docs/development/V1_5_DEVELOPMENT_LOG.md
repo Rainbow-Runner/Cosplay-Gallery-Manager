@@ -2360,3 +2360,21 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 00:38 CST停服，确认`MainPID=0`、状态`inactive/dead`且SQLite WAL/SHM已关闭。在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-v18-c07fc8f-bJJdxb56`保存schema v16完整数据库、旧程序、启动配置、用户systemd单元及完整Coser托管资源；文件逐项`cmp`、资源树递归`diff`一致。备份库`integrity_check=ok`且七类计数与正式基线一致，库SHA-256为`41d2cfa505d62626dce7beca4fcae1c63cf8abdeec61b1aa48c9383a1379cf60`，旧程序为`f90ba0fd9e10ec751ef35dca4121c50a5e9eecedc683b72021c3fc50a12bec66`，配置为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`。备份不包含原始媒体、可重建缓存或日志。
 - 首次候选原子替换并启动后，正式库自动升级至schema v18，`integrity_check=ok`、七类业务计数不变；自动保留`product.sqlite.pre-schema-v16-1790440829973441161.bak`，单独核验为schema v16且完整性`ok`。发现首次候选虽有正确Go VCS元数据，但未注入About页的`githash/buildstamp`，导致`exactSourceAvailable=false`；随即用同一清洁提交补齐构建标记，第二次短暂停服后原子替换并启动，不再触发schema迁移。最终正式二进制SHA-256为`da344fa0d7fd207dfc2e9f23b07eb67334ef9ffb87fd91790a652aa0834a62fc`。
 - 最终服务`active/running`、`NRestarts=0`，Health/Ready均204；About精确报告提交`c07fc8f6a8b11eacd936d94046ad168bade58bc2`、构建时间`2026-09-26T16:41:03Z`及`exactSourceAvailable=true`。首页、管理和浏览深链以及嵌入JS/CSS均200，两个worker与FFmpeg/FFprobe/LibRaw正常启动；本轮journal无WARN、ERROR、panic或fatal。正式库schema v18、`integrity_check=ok`、七类计数仍为`135/108/697/23/9/9/600`，新增发布时间字段存在。媒体加入时间证据在首次检查为2个`COMPLETE`、7个`PENDING`，随后按每分钟至多一个Gallery渐进回填，复查已进展至5个`COMPLETE`、4个`PENDING`；未完成者不作为前台加入时间显示。未修改启动配置、原始媒体或Manifest，未远端推送或更新Docker镜像；真实跨机迁移和浏览器业务流程待所有者验收。
+
+## 2026-09-27 来源扫描增量内容处理（源码改进，未部署）
+
+- 对照Komga完整目录遍历与修改时间跳过、Jellyfin事件提示加定期扫描及Emby公开的实时监视/计划任务后，保持CGM既定“不做实时Watcher”约束：常规媒体库发现与Source扫描仍完整枚举路径，节省的是已验证且未变化成员的重复内容读取。提供Gallery来源页显式深度校验入口，强制重读内容；常规快速判断不承诺发现同大小、同mtime的隐蔽替换。
+- DIRECTORY复用已有Item的Gallery内相对路径、文件大小、filesystem mtime和当前版本BLAKE3指纹；命中时不打开媒体，目录根和被复用文件在扫描末尾再次`lstat`以拒绝并发移除、替换或软链切换。未解决扫描Issue时退回全量读取，以免旧Issue被错误解除。相同内容指纹的既有Item保留处理状态、Item UUID、排序、排除选择和派生缓存；来源移位人工确认后仍需一次来源扫描，但内部证据一致的成员可快速沿用。
+- 纯新增schema v19保存Item扫描证据版本及ARCHIVE容器大小、mtime、安全限额快照、扫描器证据版本和检查时间；旧Item升级后首次扫描重新验明格式和指纹，防止未来扫描器升级长期沿用旧分类结果。容器/限额变化仍完整进行结构安全检查与成员读取，只有已完成的安全扫描、没有任何扫描Issue且全部证据吻合时才复用成员快照；排除成员掩盖的Issue同样不能获得缓存资格，以免恢复成员时漏报。证据为可丢弃的本机技术状态，不进入Manifest、可移植包或owner continuity；v18→v19仍先生成一致迁移快照。来源不可读或扫描期间变化继续失败并保留前次完整成员状态。
+- 同一进程同一Source重叠物理扫描被拒绝；物理扫描在提交前复核Gallery `scan_revision`，拒绝来源改绑或另一扫描先行提交后的陈旧快照。失败Abort仅在Source仍为`SCANNING`时改写复核状态，避免覆盖更晚的复核决定。GraphQL `scanGallerySource`增加默认关闭的`forceContentRead`参数，管理界面显式选择深扫并将选择写入审计字段。
+- 目录快扫/深扫、移位复用、存档同属性伪装替换与深扫识别、被排除成员隐藏Issue不获得缓存资格、未解决扫描Issue强制重验、v18→v19迁移、并发/陈旧提交和未变化Item处理状态均有回归。Go `internal/sourcescan`、`internal/archivecheck`、`internal/persistence/productdb`、`internal/productapi`、`internal/productserver`、`internal/portablecatalog`及`cmd/cgm`相关包测试与Go Vet通过；正式三标签候选程序隔离编译通过。Web TypeScript检查、38文件139项Vitest和685模块生产构建通过，只有既有主chunk体积警告；`git diff --check`通过。正式业务库仍为schema v18，本轮未提交、备份、迁移正式库、部署或推送镜像；真实大库性能尚待验收。可选有界轮转深扫尚未实现。
+
+## 2026-09-27 Coser综合时间线（源码完成，未部署）
+
+- 在既有拍摄／媒体加入／发布时间三种依据之外加入`COMBINED`。每个Gallery依次选择非空的发布时间、拍摄时间、`COMPLETE`状态的媒体加入时间区间起点；日期均规范为日历日后排序，月精度仅排序时视为当月1日。全部缺失者不进入综合时间线，不以首次激活或技术创建时间伪装加入时间。查询在数据库分页前统一选择日期并延续稳定次级排序；Coser默认仍为拍摄，全局时间线与Gallery详情区间展示不变。
+- GraphQL枚举与前端下拉项、英文/中文说明同步更新；没有数据库schema、Manifest或扫描任务变化。新增优先级、两级降级、不完整加入证据与缺失日期回归；Go产品库、API、Server和Browse包测试通过，Web TypeScript、38文件139项测试及685模块正式构建通过（只有既有主chunk体积提示），`git diff --check`通过。上一轮来源增量扫描的未提交改动原样保留，本轮没有提交、正式库迁移或部署。
+
+## 2026-09-27 Gallery详情关联与时间信息行（源码改进，未部署）
+
+- 只读核对用户指定的GalleryEpic `/zh/cosplay/10531` 实际页面：信息行采用`flex-wrap`、水平16px/纵向8px间距、14px/20px灰色常规字重、16px/2px描边Lucide图标，Work为`BookOpen`，Character为`UserRound`，日期为`CalendarDays`。CGM保留自身业务时间含义，只借鉴视觉：按Work、Character、媒体数量、图片／视频拍摄时间、完整媒体加入时间、发布时间排列；多个Work/Character完整显示并链接到实体页；发布项使用同名日历图标。
+- 将此行统一为本地打包的Lucide图标和轻量灰色文字，不增加参考站广告、外链或运行时资源请求。`lucide-react@1.48.0`锁定版本，生成式第三方许可清单与SPDX随依赖更新。Gallery详情单元测试覆盖链接、顺序、多个Work/Character及三枚参考图标，原有日期区间和Tag行不变；未改GraphQL、产品数据库或Manifest。定向15项、前端全量38文件141项测试、TypeScript检查及2553模块正式构建通过（只有既有主chunk体积提示）；未提交或部署。

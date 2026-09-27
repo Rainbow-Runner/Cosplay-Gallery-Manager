@@ -79,6 +79,11 @@ describe("ManageGalleryEditorPage relations", () => {
     const option = await screen.findByRole("checkbox", { name: /Auto-exclude newly discovered media in Gallery root/ });
     expect(option).toBeChecked();
     expect(screen.getByText(/Existing Restore\/Exclude choices are never overwritten/)).toBeInTheDocument();
+    const deepScan = screen.getByRole("checkbox", { name: /Read all media content/ });
+    expect(deepScan).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Scan source now" })).toBeEnabled();
+    fireEvent.click(deepScan);
+    expect(screen.getByRole("button", { name: "Run deep scan" })).toBeEnabled();
   });
 
   it("makes missing members explicit and offers a database-only forget action", async () => {

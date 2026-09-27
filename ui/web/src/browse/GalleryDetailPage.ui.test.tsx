@@ -128,6 +128,38 @@ describe("GalleryDetailPage presentation and media actions", () => {
     expect(stats).not.toHaveTextContent("2026-07");
   });
 
+  it("orders linked works and characters before count and dates with reference-style icons", async () => {
+    const mocks = queryMocks();
+    mocks[0] = { request: { query: GALLERY_DETAIL, variables: { slug: "gallery-one" } }, result: { data: { galleryDetail: {
+      ...detail(), imageCaptureStart: "2024-05-12", imageCaptureEnd: "2024-05-12",
+      card: { ...card(), publishDate: "2025-06", publishDatePrecision: "MONTH", mediaAddedStartUTC: "2024-06-01T00:00:00Z", mediaAddedEndUTC: "2024-06-01T00:00:00Z", mediaAddedStatus: "COMPLETE" },
+    } } } };
+    renderPage(mocks);
+    const heading = await screen.findByRole("heading", { name: "Gallery one" });
+    const stats = heading.closest(".gallery-detail__title")?.querySelector(".gallery-detail__stats") as HTMLElement;
+    expect(within(stats).getByRole("link", { name: "Fate" })).toHaveAttribute("href", "/work/work-1");
+    expect(within(stats).getByRole("link", { name: "Saber" })).toHaveAttribute("href", "/character/character-1");
+    expect(Array.from(stats.children).map((item) => item.getAttribute("title"))).toEqual([
+      "Works", "Characters", "Media count", "Photo capture date", "Static image file modification time", "Publication date",
+    ]);
+    expect(stats.children[0].querySelector("svg path")?.getAttribute("d")).toContain("M12 5v16");
+    expect(stats.children[1].querySelector("svg circle")?.getAttribute("r")).toBe("5");
+    expect(stats.lastElementChild?.querySelector("svg path")?.getAttribute("d")).toContain("M8 2v3");
+  });
+
+  it("keeps every associated work and character accessible in the compact row", async () => {
+    const mocks = queryMocks();
+    mocks[0] = { request: { query: GALLERY_DETAIL, variables: { slug: "gallery-one" } }, result: { data: { galleryDetail: {
+      ...detail(), card: { ...card(), works: [{ uuid: "work-1", name: "Fate" }, { uuid: "work-2", name: "Other work" }],
+        characters: [{ uuid: "character-1", name: "Saber" }, { uuid: "character-2", name: "Other character" }] },
+    } } } };
+    renderPage(mocks);
+    const heading = await screen.findByRole("heading", { name: "Gallery one" });
+    const stats = heading.closest(".gallery-detail__title")?.querySelector(".gallery-detail__stats") as HTMLElement;
+    expect(within(stats).getByRole("link", { name: "Other work" })).toHaveAttribute("href", "/work/work-2");
+    expect(within(stats).getByRole("link", { name: "Other character" })).toHaveAttribute("href", "/character/character-2");
+  });
+
   it("shows a complete static-image modification range and hides partial evidence", async () => {
     const complete = queryMocks();
     complete[0] = { request: { query: GALLERY_DETAIL, variables: { slug: "gallery-one" } }, result: { data: { galleryDetail: {

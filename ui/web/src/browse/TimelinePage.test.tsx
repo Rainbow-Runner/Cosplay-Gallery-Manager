@@ -15,7 +15,7 @@ afterEach(cleanup);
 describe("Coser timeline date modes", () => {
   it("defaults to all works and switches date source without losing scope", async () => {
     const page = { page: 1, pageSize: 24, totalItems: 0, totalPages: 0, items: [] };
-    const mocks = (["SHOOT", "PUBLISH"] as const).map((date) => ({
+    const mocks = (["SHOOT", "PUBLISH", "COMBINED"] as const).map((date) => ({
       request: { query: TIMELINE_GALLERIES, variables: { scope: "ALL", page: 1, coserUUID: "coser-1", date } },
       result: { data: { timelineGalleries: page } },
     }));
@@ -26,5 +26,8 @@ describe("Coser timeline date modes", () => {
     fireEvent.change(selector, { target: { value: "PUBLISH" } });
     expect(selector).toHaveValue("PUBLISH");
     expect(await screen.findByText("No galleries in this scope.")).toBeInTheDocument();
+    fireEvent.change(selector, { target: { value: "COMBINED" } });
+    expect(selector).toHaveValue("COMBINED");
+    expect(await screen.findByText("Uses publication date, then shoot date, then added date for each gallery.")).toBeInTheDocument();
   });
 });

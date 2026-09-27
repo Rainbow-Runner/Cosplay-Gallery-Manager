@@ -10,6 +10,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/stashapp/stash/internal/archivecheck"
@@ -22,10 +23,19 @@ import (
 )
 
 var (
-	ErrScanNotStaging   = errors.New("Gallery scan is not in STAGING state")
-	ErrScanOverLimit    = errors.New("Gallery scan exceeds the 1000 member hard limit")
-	ErrSourceScanUnsafe = errors.New("GallerySource scan was not safe to commit")
+	ErrScanNotStaging       = errors.New("Gallery scan is not in STAGING state")
+	ErrScanOverLimit        = errors.New("Gallery scan exceeds the 1000 member hard limit")
+	ErrSourceScanUnsafe     = errors.New("GallerySource scan was not safe to commit")
+	ErrSourceScanInProgress = errors.New("GallerySource scan is already in progress")
+	ErrSourceScanConflict   = errors.New("GallerySource changed before scan commit")
 )
+
+var activePhysicalScans sync.Map
+
+type physicalScanKey struct {
+	db       *sql.DB
+	sourceID int64
+}
 
 type ScanStore struct {
 	db *sql.DB
@@ -36,6 +46,9 @@ type ScanStore struct {
 // an Item matched by path or rebound by fingerprint keeps its durable choice.
 type ScanOptions struct {
 	ExcludeNewRootMedia bool
+	// ForceContentRead bypasses reusable filesystem evidence. This is the
+	// explicit deep-validation policy; ordinary scans still enumerate all paths.
+	ForceContentRead bool
 	// PortableItemUUIDByPath is used only by the explicit portable rebuild
 	// workflow after an exact exported Manifest hash has been verified.
 	PortableImportID       string
@@ -43,6 +56,8 @@ type ScanOptions struct {
 	// RegisterManifestItemUUIDs is restricted to an explicitly revalidated
 	// unclaimed Manifest import. Portable rebuilds must use claims instead.
 	RegisterManifestItemUUIDs bool
+	archiveEvidence           *archiveScanEvidence
+	expectedScanRevision      *int64
 }
 
 func (db *Database) Scans() *ScanStore {
@@ -160,6 +175,7 @@ func (s *ScanStore) Abort(ctx context.Context, scanRunID int64, cancelled bool, 
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE gallery_sources SET reconcile_state = ?, updated_at_utc = ?
 		WHERE id = (SELECT source_id FROM gallery_scan_runs WHERE id = ?)
+		AND reconcile_state = 'SCANNING'
 	`, reconcile, formatTime(normalisedTime(now)), scanRunID); err != nil {
 		return err
 	}
@@ -197,6 +213,15 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 	}
 	if runStatus != "STAGING" {
 		return ErrScanNotStaging
+	}
+	if options.expectedScanRevision != nil {
+		var currentRevision int64
+		if err := tx.QueryRowContext(ctx, `SELECT scan_revision FROM galleries WHERE id=?`, galleryID).Scan(&currentRevision); err != nil {
+			return err
+		}
+		if currentRevision != *options.expectedScanRevision {
+			return ErrSourceScanConflict
+		}
 	}
 
 	observations, err := loadScanObservations(ctx, tx, scanRunID)
@@ -348,6 +373,22 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 		UPDATE gallery_source_issues SET resolved_at_utc = ?
 			WHERE source_id = ? AND code = 'OVER_LIMIT' AND resolved_at_utc IS NULL
 	`, scanRunID, timestamp, scanRunID, timestamp, sourceID, galleryID, timestamp, sourceID); err != nil {
+		return err
+	}
+	// Archive issues may be suppressed while a member is excluded. Retaining a
+	// reusable snapshot would hide that issue if the owner restores the member.
+	if sourceType == gallery.SourceTypeArchive && options.archiveEvidence != nil && len(issues) == 0 {
+		evidence := options.archiveEvidence
+		if _, err := tx.ExecContext(ctx, `INSERT INTO gallery_source_scan_evidence
+			(source_id,container_size,container_modified_at_utc,archive_limits_json,scanner_version,checked_at_utc)
+			VALUES (?,?,?,?,?,?) ON CONFLICT(source_id) DO UPDATE SET
+			container_size=excluded.container_size,container_modified_at_utc=excluded.container_modified_at_utc,
+			archive_limits_json=excluded.archive_limits_json,scanner_version=excluded.scanner_version,
+			checked_at_utc=excluded.checked_at_utc`, sourceID, evidence.Size, evidence.ModifiedAtUTC,
+			evidence.LimitsJSON, sourceScanEvidenceVersion, timestamp); err != nil {
+			return err
+		}
+	} else if _, err := tx.ExecContext(ctx, `DELETE FROM gallery_source_scan_evidence WHERE source_id=?`, sourceID); err != nil {
 		return err
 	}
 	if err := syncScanItemSuggestions(ctx, tx, galleryID, sourceID, now); err != nil {
@@ -504,6 +545,26 @@ func (s *ScanStore) RunWithOptions(
 	if err != nil {
 		return err
 	}
+	key := physicalScanKey{db: s.db, sourceID: sourceID}
+	if _, loaded := activePhysicalScans.LoadOrStore(key, struct{}{}); loaded {
+		return ErrSourceScanInProgress
+	}
+	defer activePhysicalScans.Delete(key)
+	var scanRevision int64
+	if err := s.db.QueryRowContext(ctx, `SELECT scan_revision FROM galleries WHERE id=?`, source.GalleryID).Scan(&scanRevision); err != nil {
+		return err
+	}
+	options.expectedScanRevision = &scanRevision
+	var prior map[string]sourcescan.Observation
+	if source.Type == gallery.SourceTypeDirectory && !options.ForceContentRead {
+		prior, err = s.reusableDirectoryEvidence(ctx, sourceID)
+		if err != nil {
+			return err
+		}
+	}
+	var archiveEvidence archiveScanEvidence
+	var archiveInfo os.FileInfo
+	var reuseArchive bool
 	runID, err := s.Begin(ctx, sourceID, now)
 	if err != nil {
 		return err
@@ -511,9 +572,31 @@ func (s *ScanStore) RunWithOptions(
 
 	var result sourcescan.Result
 	if source.Type == gallery.SourceTypeArchive {
-		result, err = sourcescan.ScanArchive(ctx, source.Path, archiveLimits)
+		archiveEvidence, archiveInfo, err = inspectArchiveEvidence(source.Path, archiveLimits)
+		if err == nil && !options.ForceContentRead {
+			reuseArchive, prior, err = s.reusableArchiveEvidence(ctx, sourceID, archiveEvidence)
+		}
+		if err == nil {
+			if reuseArchive {
+				result.Complete = true
+				for _, observation := range prior {
+					result.Observations = append(result.Observations, observation)
+					result.Reused++
+				}
+			} else {
+				result, err = sourcescan.ScanArchive(ctx, source.Path, archiveLimits)
+			}
+		}
+		if err == nil {
+			current, statErr := os.Lstat(source.Path)
+			if statErr != nil || !os.SameFile(archiveInfo, current) || current.Size() != archiveEvidence.Size ||
+				current.ModTime().UTC().Format(time.RFC3339Nano) != archiveEvidence.ModifiedAtUTC {
+				err = errors.New("archive source changed while scanning")
+			}
+		}
+		options.archiveEvidence = &archiveEvidence
 	} else {
-		result, err = sourcescan.ScanDirectory(ctx, source.Path)
+		result, err = sourcescan.ScanDirectoryWithEvidence(ctx, source.Path, prior)
 	}
 	if err != nil {
 		_ = s.Abort(ctx, runID, false, sourceReadErrorCode(err), now)
@@ -538,10 +621,49 @@ func (s *ScanStore) RunWithOptions(
 		}
 	}
 	if err := s.commit(ctx, runID, result.Issues, options, now); err != nil {
+		if !errors.Is(err, ErrScanOverLimit) {
+			_ = s.Abort(ctx, runID, false, "SCAN_COMMIT_FAILED", now)
+		}
 		return err
 	}
 	_, err = (&CoverStore{db: s.db, random: rand.Reader}).Initialize(ctx, source.GalleryID, now)
 	return err
+}
+
+// Active scanner issues must be revalidated before they can be resolved. They
+// are currently aggregated per source rather than persisted per member, so a
+// source with any such issue takes the conservative full-read path.
+func (s *ScanStore) reusableDirectoryEvidence(ctx context.Context, sourceID int64) (map[string]sourcescan.Observation, error) {
+	var activeIssues int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_source_issues
+		WHERE source_id=? AND code GLOB 'SCAN_*' AND resolved_at_utc IS NULL`, sourceID).Scan(&activeIssues); err != nil {
+		return nil, err
+	}
+	if activeIssues > 0 {
+		return nil, nil
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT relative_path,media_kind,content_format,image_category,
+		byte_size,quick_fingerprint,full_fingerprint,processing_state,
+		source_modified_at_utc,source_modified_status,source_modified_origin
+		FROM gallery_items WHERE source_id=? AND availability_state='AVAILABLE' AND scan_evidence_version=?`, sourceID, sourceScanEvidenceVersion)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	prior := make(map[string]sourcescan.Observation)
+	for rows.Next() {
+		var observation sourcescan.Observation
+		var category sql.NullString
+		if err := rows.Scan(&observation.RelativePath, &observation.MediaKind, &observation.ContentFormat,
+			&category, &observation.ByteSize, &observation.QuickFingerprint, &observation.FullFingerprint,
+			&observation.ProcessingState, &observation.SourceModifiedAtUTC, &observation.SourceModifiedStatus,
+			&observation.SourceModifiedOrigin); err != nil {
+			return nil, err
+		}
+		observation.ImageCategory = gallery.ImageCategory(category.String)
+		prior[observation.RelativePath] = observation
+	}
+	return prior, rows.Err()
 }
 
 func sourceReadErrorCode(err error) string {
@@ -625,7 +747,10 @@ func updateObservedItem(
 	contentChanged := item.FullFingerprint != "" && observation.FullFingerprint != "" &&
 		item.FullFingerprint != observation.FullFingerprint
 	category := effectiveScannedCategory(*item, observation)
-	processing := observation.ProcessingState
+	// A matching content fingerprint does not invalidate previously generated
+	// derivatives. Scanner observations start PENDING because new files need
+	// processing, but existing unchanged Items retain their durable state.
+	processing := item.ProcessingState
 	if contentChanged {
 		processing = gallery.ProcessingPending
 	}
@@ -633,12 +758,13 @@ func updateObservedItem(
 		UPDATE gallery_items SET media_kind = ?, content_format=?, image_category = NULLIF(?, ''),
 			availability_state = 'AVAILABLE', processing_state = ?, byte_size = ?,
 			quick_fingerprint = ?, full_fingerprint = ?,
+			scan_evidence_version = ?,
 			source_modified_at_utc=?,source_modified_status=?,source_modified_origin=?,source_modified_checked_at_utc=?,
 			content_revision = content_revision + ?, last_seen_scan_run_id = ?,
 			updated_at_utc = ?
 		WHERE id = ?
 	`, observation.MediaKind, observation.ContentFormat, category, processing, observation.ByteSize,
-		observation.QuickFingerprint, observation.FullFingerprint, observation.SourceModifiedAtUTC,
+		observation.QuickFingerprint, observation.FullFingerprint, sourceScanEvidenceVersion, observation.SourceModifiedAtUTC,
 		observation.SourceModifiedStatus, observation.SourceModifiedOrigin, formatTime(normalisedTime(now)), boolInt(contentChanged),
 		scanRunID, formatTime(normalisedTime(now)), item.ID)
 	if err != nil || !contentChanged {
@@ -671,12 +797,12 @@ func rebindObservedItem(
 		UPDATE gallery_items SET relative_path = ?, media_kind = ?, content_format=?,
 			image_category = NULLIF(?, ''), availability_state = 'AVAILABLE',
 			processing_state = ?, byte_size = ?, quick_fingerprint = ?,
-			full_fingerprint = ?,source_modified_at_utc=?,source_modified_status=?,source_modified_origin=?,
+			full_fingerprint = ?,scan_evidence_version=?,source_modified_at_utc=?,source_modified_status=?,source_modified_origin=?,
 			source_modified_checked_at_utc=?,last_seen_scan_run_id = ?, updated_at_utc = ?
 		WHERE id = ?
 	`, observation.RelativePath, observation.MediaKind, observation.ContentFormat, category,
-		observation.ProcessingState, observation.ByteSize, observation.QuickFingerprint,
-		observation.FullFingerprint, observation.SourceModifiedAtUTC, observation.SourceModifiedStatus,
+		item.ProcessingState, observation.ByteSize, observation.QuickFingerprint,
+		observation.FullFingerprint, sourceScanEvidenceVersion, observation.SourceModifiedAtUTC, observation.SourceModifiedStatus,
 		observation.SourceModifiedOrigin, formatTime(normalisedTime(now)), scanRunID, formatTime(normalisedTime(now)), item.ID)
 	return err
 }
@@ -717,12 +843,13 @@ func insertObservedItem(
 			item_uuid, gallery_id, source_id, relative_path, media_kind,
 			content_format, image_category, position, availability_state, processing_state,
 			byte_size, quick_fingerprint, full_fingerprint, excluded,
+			scan_evidence_version,
 			source_modified_at_utc,source_modified_status,source_modified_origin,source_modified_checked_at_utc,
 			last_seen_scan_run_id, created_at_utc, updated_at_utc
-		) VALUES (?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, 'AVAILABLE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, 'AVAILABLE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, itemUUID, galleryID, sourceID, observation.RelativePath, observation.MediaKind,
 		observation.ContentFormat, observation.ImageCategory, position, observation.ProcessingState,
-		observation.ByteSize, observation.QuickFingerprint, observation.FullFingerprint, boolInt(excluded),
+		observation.ByteSize, observation.QuickFingerprint, observation.FullFingerprint, boolInt(excluded), sourceScanEvidenceVersion,
 		observation.SourceModifiedAtUTC, observation.SourceModifiedStatus, observation.SourceModifiedOrigin, formatTime(timestamp),
 		scanRunID, formatTime(timestamp), formatTime(timestamp))
 	if err != nil {

@@ -442,6 +442,10 @@ export function GalleryDetailPage() {
           }} />
         </div>
         <div className="gallery-detail__actions">
+          <div className="media-layout-switch" role="group" aria-label={intl.formatMessage({ id: "gallery.layout" })}>
+            <button type="button" aria-label={intl.formatMessage({ id: "gallery.layout.grid" })} title={intl.formatMessage({ id: "gallery.layout.grid" })} aria-pressed={mediaLayout === "GRID"} onClick={() => changeMediaLayout("GRID")}><LayoutGrid className="cgm-icon" aria-hidden="true" /></button>
+            <button type="button" aria-label={intl.formatMessage({ id: "gallery.layout.justified" })} title={intl.formatMessage({ id: "gallery.layout.justified" })} aria-pressed={mediaLayout === "JUSTIFIED"} onClick={() => changeMediaLayout("JUSTIFIED")}><Rows3 className="cgm-icon" aria-hidden="true" /></button>
+          </div>
           {settings?.cardFavoriteControlVisible ? <button className={galleryFavorite ? "is-active" : ""} type="button" aria-label={intl.formatMessage({ id: galleryFavorite ? "gallery.unfavorite" : "gallery.favorite" })} aria-pressed={galleryFavorite} onClick={toggleGalleryFavorite}><Icon name="heart" /></button> : null}
           <details ref={moreDetailsRef} className="gallery-detail__more" open={moreDetailsOpen}>
             <summary onClick={(event) => { event.preventDefault(); setMoreDetailsOpen((open) => !open); }}><Icon name="info" />{intl.formatMessage({ id: "gallery.moreDetails" })}</summary>
@@ -473,7 +477,6 @@ export function GalleryDetailPage() {
 
       <div className="gallery-detail__columns">
         <section className="gallery-members" aria-label={intl.formatMessage({ id: "gallery.contents" })}>
-          <div className="gallery-media-toolbar">
           {settings?.detailMediaFilterEnabled ? (
             <div className="media-filters" role="group" aria-label={intl.formatMessage({ id: "gallery.filter" })}>
               {(["ALL", "PHOTO", "SELFIE", "GIF", "VIDEO"] as MediaFilter[]).map((value) => (
@@ -481,11 +484,6 @@ export function GalleryDetailPage() {
               ))}
             </div>
           ) : null}
-            <div className="media-layout-switch" role="group" aria-label={intl.formatMessage({ id: "gallery.layout" })}>
-              <button type="button" aria-pressed={mediaLayout === "GRID"} onClick={() => changeMediaLayout("GRID")}><LayoutGrid className="cgm-icon" aria-hidden="true" />{intl.formatMessage({ id: "gallery.layout.grid" })}</button>
-              <button type="button" aria-pressed={mediaLayout === "JUSTIFIED"} onClick={() => changeMediaLayout("JUSTIFIED")}><Rows3 className="cgm-icon" aria-hidden="true" />{intl.formatMessage({ id: "gallery.layout.justified" })}</button>
-            </div>
-          </div>
           {memberQuery.loading ? <p className="state-message">{intl.formatMessage({ id: "state.loading" })}</p> : null}
           <div ref={sequenceRef} className={`media-sequence${mediaLayout === "JUSTIFIED" ? " media-sequence--justified" : ""}`} data-layout={mediaLayout}>
             {groups.map((group) => (

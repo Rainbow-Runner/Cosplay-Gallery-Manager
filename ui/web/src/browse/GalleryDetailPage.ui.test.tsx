@@ -65,10 +65,10 @@ function memberIndex(metadataRevision = 7): GalleryMemberIndex {
   return { setID: "gallery-1", metadataRevision, scanRevision: 2, items: members.map((item, index) => ({ ...item, previewWidth: index === 0 ? 480 : 320, previewHeight: index === 0 ? 320 : 480 })) };
 }
 
-function queryMocks(options: { refetchedCover?: string; initialEntry?: string } = {}): MockedResponse[] {
+function queryMocks(options: { refetchedCover?: string; initialEntry?: string; filtersEnabled?: boolean } = {}): MockedResponse[] {
   const mocks: MockedResponse[] = [
     { request: { query: GALLERY_DETAIL, variables: { slug: "gallery-one" } }, result: { data: { galleryDetail: detail() } } },
-    { request: { query: BROWSE_UI_SETTINGS }, result: { data: { browseUISettings: { settingsRevision: 1, galleryScrubberEnabled: true, detailMediaFilterEnabled: false, galleryAnimatedPlaybackLimit: 12, galleryAnimatedLockIntervalMS: 800, cardFavoriteControlVisible: true, cardRatingSummaryVisible: true, detailRatingControlVisible: true } } } },
+    { request: { query: BROWSE_UI_SETTINGS }, result: { data: { browseUISettings: { settingsRevision: 1, galleryScrubberEnabled: true, detailMediaFilterEnabled: options.filtersEnabled ?? false, galleryAnimatedPlaybackLimit: 12, galleryAnimatedLockIntervalMS: 800, cardFavoriteControlVisible: true, cardRatingSummaryVisible: true, detailRatingControlVisible: true } } } },
     { request: { query: GALLERY_MEMBER_INDEX, variables: { setID: "gallery-1" } }, result: { data: { galleryMemberIndex: memberIndex() } } },
     { request: { query: RELATED_GALLERIES, variables: { setID: "gallery-1" } }, result: { data: { relatedGalleries: [] } } },
     { request: { query: RECORD_GALLERY_VIEW, variables: { setID: "gallery-1", itemUUID: null } }, result: { data: { recordGalleryView: true } } },
@@ -97,6 +97,21 @@ function renderPage(mocks: MockedResponse[], initialEntry = "/gallery/gallery-on
 }
 
 describe("GalleryDetailPage presentation and media actions", () => {
+  it("places compact accessible layout controls immediately before the header favourite, without a separate media toolbar", async () => {
+    renderPage(queryMocks());
+    const layout = await screen.findByRole("group", { name: "Media layout" });
+    const favourite = await screen.findByRole("button", { name: "Favourite gallery" });
+    expect(layout.parentElement).toHaveClass("gallery-detail__actions");
+    expect(layout.nextElementSibling).toBe(favourite);
+    for (const name of ["Card grid", "Justified rows"]) {
+      const button = within(layout).getByRole("button", { name });
+      expect(button).toHaveAttribute("title", name);
+      expect(button.textContent).toBe("");
+    }
+    expect(document.querySelector(".gallery-media-toolbar")).not.toBeInTheDocument();
+    expect(document.querySelector(".gallery-members .media-layout-switch")).not.toBeInTheDocument();
+  });
+
   it("switches layouts without remounting media, changing order or closing an open menu; remembers the choice", async () => {
     renderPage(queryMocks());
     await waitFor(() => expect(document.querySelectorAll(".media-tile")).toHaveLength(4));
@@ -116,6 +131,16 @@ describe("GalleryDetailPage presentation and media actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Card grid" }));
     expect((originalTiles[0] as HTMLElement).style.position).toBe("");
     expect(document.querySelector(".media-sequence")).toHaveAttribute("data-layout", "GRID");
+  });
+
+  it("keeps optional media filtering below the header independently of layout controls", async () => {
+    renderPage(queryMocks({ filtersEnabled: true }));
+    const filter = await screen.findByRole("group", { name: "Media filter" });
+    expect(filter.parentElement).toHaveClass("gallery-members");
+    fireEvent.click(within(filter).getByRole("button", { name: "VIDEO" }));
+    await waitFor(() => expect(document.querySelectorAll(".media-tile")).toHaveLength(1));
+    expect(document.querySelector(".media-tile")).toHaveAttribute("data-item-uuid", "video-1");
+    expect(screen.getByRole("button", { name: "Card grid" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("restores justified preference and keeps lightbox navigation in business order", async () => {

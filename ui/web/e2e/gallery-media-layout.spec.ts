@@ -20,7 +20,7 @@ test("gallery grid/justified switching, stable media identity, scroll anchor and
     const results: Record<string, unknown> = {
       GalleryDetail: { galleryDetail: detail },
       GalleryMemberIndex: { galleryMemberIndex: { setID: card.setID, metadataRevision: 1, scanRevision: 1, items } },
-      BrowseUISettings: { browseUISettings: { settingsRevision: 1, galleryScrubberEnabled: false, detailMediaFilterEnabled: false, galleryAnimatedPlaybackLimit: 12, galleryAnimatedLockIntervalMS: 800, cardFavoriteControlVisible: false, cardRatingSummaryVisible: false, detailRatingControlVisible: false } },
+      BrowseUISettings: { browseUISettings: { settingsRevision: 1, galleryScrubberEnabled: false, detailMediaFilterEnabled: false, galleryAnimatedPlaybackLimit: 12, galleryAnimatedLockIntervalMS: 800, cardFavoriteControlVisible: true, cardRatingSummaryVisible: false, detailRatingControlVisible: false } },
       RelatedGalleries: { relatedGalleries: [] },
       RecordGalleryView: { recordGalleryView: true },
     };
@@ -39,6 +39,19 @@ test("gallery grid/justified switching, stable media identity, scroll anchor and
     throw error;
   }
   await expect(page.getByRole("button", { name: "Card grid" })).toHaveAttribute("aria-pressed", "true");
+  const layoutSwitch = page.getByRole("group", { name: "Media layout" });
+  const favourite = page.getByRole("button", { name: "Favourite gallery", exact: true });
+  const checkCompactHeader = async () => {
+    await expect(page.locator(".gallery-media-toolbar")).toHaveCount(0);
+    await expect(page.locator(".gallery-detail__actions .media-layout-switch")).toHaveCount(1);
+    const layoutBox = (await layoutSwitch.boundingBox())!, favouriteBox = (await favourite.boundingBox())!;
+    expect(layoutBox.x + layoutBox.width).toBeLessThanOrEqual(favouriteBox.x);
+    expect(layoutBox.y).toBeCloseTo(favouriteBox.y);
+    expect(layoutBox.height).toBeCloseTo(favouriteBox.height);
+    expect(layoutBox.width).toBeLessThanOrEqual(72);
+    await expect(page.getByRole("button", { name: "Justified rows" })).toHaveAttribute("title", "Justified rows");
+  };
+  await checkCompactHeader();
   await page.locator(".media-tile").evaluateAll((elements) => elements.forEach((element) => element.setAttribute("data-original-node", "yes")));
   await page.getByRole("button", { name: "Justified rows" }).click();
   await expect(page.locator(".media-sequence")).toHaveAttribute("data-layout", "JUSTIFIED");
@@ -71,6 +84,7 @@ test("gallery grid/justified switching, stable media identity, scroll anchor and
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await checkCompactHeader();
   await page.screenshot({ path: testInfo.outputPath("justified-mobile-viewport.png") });
   await page.screenshot({ path: testInfo.outputPath("justified-mobile.png"), fullPage: true });
   await page.reload();

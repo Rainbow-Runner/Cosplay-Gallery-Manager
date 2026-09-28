@@ -2402,3 +2402,13 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 已有尺寸／待处理0值Go回归、横纵顺序／间距／尺寸上限／尾行／极端与未知比例／响应式／Storage容错及节点／菜单／大图深链测试通过；Web TypeScript、40文件149项测试和2555模块正式构建通过（仅既有主chunk体积提示）。productdb、productapi、productserver、portablecatalog全量回归与相关Go Vet通过，三标签候选程序隔离编译和`git diff --check`通过。
 - 独立Chrome模拟数据E2E通过，验证桌面和390px手机布局、无水平溢出、排序、节点保留、加载更多、切换滚动锚点、刷新偏好及无运行时错误；人工检查桌面／手机截图。初次模拟数据遗漏GraphQL片段`__typename`及展开按钮动态文案造成测试失败，补齐fixture后通过，未据此修改业务逻辑。截图保留在Git忽略的E2E结果目录，临时预览服务已关闭。原离线完整生命周期E2E未执行，旧Gallery像素快照尚未刷新，真实业务图片效果仍需用户体验后微调。
 - 原工作区缓存生命周期改动原样保留；本轮没有提交、推送、数据库迁移或部署，未访问正式业务库及原媒体。正式部署需要与累积schema v20改动一起另行安排备份／迁移，不能把该迁移归因于本次前端布局。
+
+## 2026-09-28 累计改动提交、schema v19→v20迁移及本机部署
+
+- 缓存生命周期和Gallery详情双布局累计51个文件提交为`4c54ba5dc3e5a76c31fb0feba13e406cb69d46fc`（`Complete derivative cache lifecycle and add gallery layout switching`）。提交前正式三标签mediaprocessing、processingworker、productdb、productapi、productserver、portablecatalog、cmd/cgm测试及相关Go Vet、`git diff --check`通过；复跑TypeScript和Web全量40文件149项测试通过。此前2555模块生产构建、定向缓存race及独立Chrome布局E2E证据继续有效，未重跑旧离线生命周期E2E或刷新旧像素基线。
+- 正式候选从该干净提交以`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，Go VCS为精确提交且`vcs.modified=false`；注入版本`1.5.0-dev`、完整提交和UTC构建时间`2026-09-28T14:57:02Z`。程序SHA-256为`6f0f015d1eee1c5404ba444bedfbbc50538a31e157da6ad2d2f3af5f113f2426`。
+- 22:58:36 CST停服，确认`MainPID=0`、`inactive/dead`及WAL／SHM已关闭。0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-v20-4c54ba5-gDaKLu54`保存完整schema v19数据库、旧程序、运行配置、systemd单元、外部Coser元数据／资源与product-state托管Coser目录；文件`cmp`和资源树递归`diff`一致。备份不包含原始媒体、可重建缓存、历史备份或日志。备份数据库完整性`ok`、七类业务计数为`135/108/697/23/9/9/600`，SHA-256为`e65a9851bf8e6b38894cf69e07f3b1f357ebeaeaf9e84787a1a7fff1697d7e80`；旧程序为`3e48755fe53fbb12bd2d0275720a0192d831f3a1fb4f66e2637ca6f79352e7a5`，配置为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`。
+- 在`/tmp/cgm-v20-rehearsal-0HcLsPLc/product.sqlite`仅打开备份副本预演v19→v20，不启动worker或读取媒体；完整性`ok`、七类计数不变。临时迁移检查程序源码已移除。预演通过后原子安装新程序，22:59:00 CST正式服务启动并升级至schema v20；自动快照`product.sqlite.pre-schema-v19-1790607540185024037.bak`独立核验仍为v19且完整性`ok`。
+- 正式库完整性`ok`、七类业务计数保持不变；两个清理表和两个触发器存在，巡检游标正常推进，删除待办为0。当前BASE READY为591条／22,296,562字节、ENHANCED READY为124条／171,064,913字节，与部署前基线一致。未在正式库人为制造删除、替换或手动清理案例，真实回收流程和大库性能仍待所有者验收。
+- 服务`active/running`、`NRestarts=0`，Health／Ready为204，About精确报告源码提交与构建时间；首页、管理／浏览深链、入口JS／CSS与Gallery详情／Browse查询／运维惰性加载资源均200，功能资源与本地构建逐字节一致。最初验收脚本误在入口JS寻找属于惰性加载块的字段，改为核验实际功能块后通过，并非功能缺失。缓存清理接口未认证返回401；两个worker、FFmpeg／FFprobe／LibRaw正常启动，本轮journal无WARN／ERROR／panic／fatal。首次健康探测在监听完成前短暂连接失败，自动重试后通过，未发生服务重启。
+- 未更改启动配置、原始媒体、Manifest或Coser资源；未推送远端、未构建／发布Docker镜像。部署记录另行本地提交，运行程序保持精确指向上述源码提交。真实浏览器业务布局和手动清理待用户验收，源码对应GitHub链接须后续显式推送才可远端访问。

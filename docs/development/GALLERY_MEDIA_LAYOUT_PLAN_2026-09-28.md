@@ -27,3 +27,9 @@
 - productdb、productapi、productserver及portablecatalog全量Go回归、相关Vet与正式三标签候选程序编译通过；`git diff --check`通过。
 - 独立Chrome模拟数据E2E通过，实测桌面／手机等高行、无水平溢出、原节点保留、业务顺序、展开、滚动锚点、刷新偏好及无浏览器运行时错误；人工检查桌面和手机视口截图。测试中补齐模拟数据的GraphQL片段类型标记并修正动态展开按钮选择器，未为这些测试数据问题改动业务逻辑。
 - 截图保存在被Git忽略的`ui/web/e2e/test-results/gallery-media-layout-galle-7acf4-ll-anchor-and-mobile-reflow/`；桌面、手机全页与手机视口均有样本。临时127.0.0.1预览服务已关闭，未触及正式服务／数据库／媒体。原离线完整生命周期E2E未执行，既有Gallery像素基线未刷新。
+
+## 2026-09-28 正式部署
+
+- 与缓存生命周期累计改动一同提交为`4c54ba5dc3e5a76c31fb0feba13e406cb69d46fc`，从该干净提交构建后部署至本机服务。此次v19→v20迁移由缓存生命周期引入，并非布局功能引入。
+- 提交前复跑TypeScript及40文件149项前端测试通过；正式入口、Gallery详情惰性加载资源及带派生宽高的Browse查询资源均200且与本地构建逐字节一致。Health／Ready为204，启动日志无WARN／ERROR。完整备份及验收见[1.5开发日志](V1_5_DEVELOPMENT_LOG.md)末尾。
+- 不推送远端、不更新Docker镜像；真实业务图片布局、旧像素基线及多浏览器验收仍待用户体验后确认，不把模拟数据E2E冒充正式业务浏览器验收。

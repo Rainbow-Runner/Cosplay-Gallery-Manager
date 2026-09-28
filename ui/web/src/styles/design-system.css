@@ -411,3 +411,9 @@
     transition: none;
   }
 }
+/* Cache lifecycle review stays compact without changing existing forms. */
+.cache-cleanup-summary { display: flex; flex-wrap: wrap; gap: 12px 24px; }
+.cache-cleanup-summary div { min-width: 140px; }
+.cache-cleanup-summary dt { color: var(--color-text-muted, #64748b); font-size: 12px; }
+.cache-cleanup-summary dd { margin: 4px 0; }
+.cache-cleanup-panel footer { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }

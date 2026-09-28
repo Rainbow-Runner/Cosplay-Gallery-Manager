@@ -174,6 +174,8 @@ type ComplexityRoot struct {
 		LargeResource   func(childComplexity int) int
 		MediaKind       func(childComplexity int) int
 		Position        func(childComplexity int) int
+		PreviewHeight   func(childComplexity int) int
+		PreviewWidth    func(childComplexity int) int
 		ProcessingState func(childComplexity int) int
 		RatingHalfSteps func(childComplexity int) int
 	}
@@ -2191,6 +2193,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.GalleryMember.Position(childComplexity), true
+
+	case "GalleryMember.previewHeight":
+		if e.complexity.GalleryMember.PreviewHeight == nil {
+			break
+		}
+
+		return e.complexity.GalleryMember.PreviewHeight(childComplexity), true
+
+	case "GalleryMember.previewWidth":
+		if e.complexity.GalleryMember.PreviewWidth == nil {
+			break
+		}
+
+		return e.complexity.GalleryMember.PreviewWidth(childComplexity), true
 
 	case "GalleryMember.processingState":
 		if e.complexity.GalleryMember.ProcessingState == nil {
@@ -20416,6 +20432,94 @@ func (ec *executionContext) fieldContext_GalleryMember_largeResource(_ context.C
 	return fc, nil
 }
 
+func (ec *executionContext) _GalleryMember_previewWidth(ctx context.Context, field graphql.CollectedField, obj *GalleryMember) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryMember_previewWidth(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PreviewWidth, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryMember_previewWidth(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryMember",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GalleryMember_previewHeight(ctx context.Context, field graphql.CollectedField, obj *GalleryMember) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryMember_previewHeight(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PreviewHeight, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryMember_previewHeight(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryMember",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _GalleryMember_favorite(ctx context.Context, field graphql.CollectedField, obj *GalleryMember) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_GalleryMember_favorite(ctx, field)
 	if err != nil {
@@ -20690,6 +20794,10 @@ func (ec *executionContext) fieldContext_GalleryMemberIndex_items(_ context.Cont
 				return ec.fieldContext_GalleryMember_cardResource(ctx, field)
 			case "largeResource":
 				return ec.fieldContext_GalleryMember_largeResource(ctx, field)
+			case "previewWidth":
+				return ec.fieldContext_GalleryMember_previewWidth(ctx, field)
+			case "previewHeight":
+				return ec.fieldContext_GalleryMember_previewHeight(ctx, field)
 			case "favorite":
 				return ec.fieldContext_GalleryMember_favorite(ctx, field)
 			case "ratingHalfSteps":
@@ -50353,6 +50461,10 @@ func (ec *executionContext) fieldContext_MediaDetail_item(_ context.Context, fie
 				return ec.fieldContext_GalleryMember_cardResource(ctx, field)
 			case "largeResource":
 				return ec.fieldContext_GalleryMember_largeResource(ctx, field)
+			case "previewWidth":
+				return ec.fieldContext_GalleryMember_previewWidth(ctx, field)
+			case "previewHeight":
+				return ec.fieldContext_GalleryMember_previewHeight(ctx, field)
 			case "favorite":
 				return ec.fieldContext_GalleryMember_favorite(ctx, field)
 			case "ratingHalfSteps":
@@ -69466,6 +69578,16 @@ func (ec *executionContext) _GalleryMember(ctx context.Context, sel ast.Selectio
 			out.Values[i] = ec._GalleryMember_cardResource(ctx, field, obj)
 		case "largeResource":
 			out.Values[i] = ec._GalleryMember_largeResource(ctx, field, obj)
+		case "previewWidth":
+			out.Values[i] = ec._GalleryMember_previewWidth(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "previewHeight":
+			out.Values[i] = ec._GalleryMember_previewHeight(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "favorite":
 			out.Values[i] = ec._GalleryMember_favorite(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

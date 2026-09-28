@@ -83,6 +83,10 @@ func (s *DerivativeStore) Publish(ctx context.Context, input PublishDerivativeIn
 		WHERE id=(SELECT gallery_id FROM gallery_items WHERE item_uuid=?)`, input.ItemUUID); err != nil {
 		return mediaprocessing.Derivative{}, err
 	}
+	// Republishing an evicted artifact cancels its pending file deletion.
+	if _, err := tx.ExecContext(ctx, `DELETE FROM cache_cleanup_outbox WHERE cache_relative_path=?`, input.CacheRelativePath); err != nil {
+		return mediaprocessing.Derivative{}, err
+	}
 	if err := tx.Commit(); err != nil {
 		return mediaprocessing.Derivative{}, err
 	}

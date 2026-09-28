@@ -32,7 +32,7 @@ func TestSchemaV15UpgradesToRecoveryV16(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer upgraded.Close()
-	if upgraded.Identity().DatabaseSchemaVersion != 19 {
+	if upgraded.Identity().DatabaseSchemaVersion != 20 {
 		t.Fatalf("schema = %d", upgraded.Identity().DatabaseSchemaVersion)
 	}
 	if err := validateSchemaV16(ctx, upgraded.DB); err != nil {

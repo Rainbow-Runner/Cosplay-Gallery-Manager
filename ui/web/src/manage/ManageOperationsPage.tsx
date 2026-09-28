@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { CREATE_FULL_BACKUP, MANAGE_OPERATIONS, RESTORE_BACKUP } from "../api/manage";
 import { Dialog } from "../ui/Patterns";
 import { ManageCoserAssetReviewPanel } from "./ManageCoserAssetReviewPanel";
+import { ManageCacheCleanupPanel } from "./ManageCacheCleanupPanel";
 import { ManagePortableMigrationPanel } from "./ManagePortableMigrationPanel";
 import type { ManageAuditPage, ManageBackupRecord, ManageMaintenanceState } from "./types";
 
@@ -64,6 +65,8 @@ export function ManageOperationsPage() {
     </section>
 
     <ManageCoserAssetReviewPanel />
+
+    <ManageCacheCleanupPanel />
 
     <ManagePortableMigrationPanel />
 

@@ -2,6 +2,7 @@ package processingworker
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/stashapp/stash/internal/mediaprocessing"
@@ -17,7 +18,7 @@ type CacheMaintenanceResult struct {
 
 // MaintainEnhancedCache deletes only database-confirmed ENHANCED derivatives.
 // BASE resources and all user media sources are outside this operation.
-func MaintainEnhancedCache(ctx context.Context, db *productdb.Database, cache mediaprocessing.CacheWriter, pressure mediaprocessing.CachePressure, limit int, _ time.Time) (CacheMaintenanceResult, error) {
+func MaintainEnhancedCache(ctx context.Context, db *productdb.Database, cache mediaprocessing.CacheWriter, pressure mediaprocessing.CachePressure, limit int, now time.Time) (CacheMaintenanceResult, error) {
 	plan := mediaprocessing.PlanCacheCleanup(pressure)
 	result := CacheMaintenanceResult{PlannedBytes: plan.BytesToFree, PauseNewProcessing: plan.PauseNewProcessing}
 	if plan.BytesToFree <= 0 {
@@ -28,18 +29,24 @@ func MaintainEnhancedCache(ctx context.Context, db *productdb.Database, cache me
 		return result, err
 	}
 	for _, candidate := range candidates {
-		if err := db.Derivatives().ForgetGenerated(ctx, candidate.ID); err != nil {
+		service := CacheLifecycleService{Database: db, Cache: cache}
+		entry, err := service.candidate(productdb.CacheCleanupEntry{
+			ID: candidate.ID, Path: candidate.CacheRelativePath, ItemUUID: candidate.ItemUUID,
+			Variant: candidate.Variant, ProfileHash: candidate.ProfileHash,
+			ContentRevision: candidate.ContentRevision, ByteSize: candidate.ByteSize, Reason: "LRU",
+		})
+		if err != nil {
 			return result, err
 		}
-		// The database stops serving the derivative before bytes are removed.
-		// A deletion failure therefore leaves only an unreachable generated
-		// orphan, never a database pointer to a missing cache file. Its terminal
-		// job deliberately stays terminal until a later on-demand request requeues it.
-		if err := cache.RemoveEnhanced(candidate.CacheRelativePath); err != nil {
+		var cleaned CacheCleanupResult
+		if err := service.remove(ctx, entry, true, now, &cleaned); err != nil {
 			return result, err
 		}
-		result.Removed++
-		result.FreedBytes += candidate.ByteSize
+		if cleaned.Failed > 0 {
+			return result, errors.New("CACHE_FILE_DELETE_FAILED")
+		}
+		result.Removed += cleaned.Removed
+		result.FreedBytes += cleaned.FreedBytes
 	}
 	return result, nil
 }

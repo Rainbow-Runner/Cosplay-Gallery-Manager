@@ -2385,3 +2385,20 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 正式服务停服前`active/running`、`NRestarts=0`，正式库schema v18、`integrity_check=ok`，Coser/Work/Character/Tag/Gallery/Source/Item计数为`135/108/697/23/9/9/600`。2026-09-27 20:04 CST停服确认`MainPID=0`且主数据库WAL/SHM消失，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-v19-a48601b-c24fX7`完整保存数据库、旧二进制、配置、用户systemd单元、原Coser资源和产品状态Coser目录；逐项`cmp`、递归`diff`一致。备份库schema v18、完整性`ok`及七类计数不变；数据库SHA-256为`924ef136f354fa3361615f993364ed5a7a2b76e5801220ae966497ba8a46488f`，旧程序为`da344fa0d7fd207dfc2e9f23b07eb67334ef9ffb87fd91790a652aa0834a62fc`。备份不含原始媒体、可重建缓存或日志。
 - 从清洁提交构建的候选程序VCS revision准确且`vcs.modified=false`，注入About提交与构建时间；候选与同目录暂存逐字节一致后原子替换。2026-09-27 20:06 CST启动一次，正式库自动升至schema v19，`integrity_check=ok`，七类计数保持`135/108/697/23/9/9/600`，新增扫描证据列与表均存在；内置迁移快照`product.sqlite.pre-schema-v18-1790510786119117287.bak`已生成。正式程序SHA-256为`3e48755fe53fbb12bd2d0275720a0192d831f3a1fb4f66e2637ca6f79352e7a5`，配置SHA-256仍为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`。
 - 最终服务`active/running`、`NRestarts=0`，Health/Ready均204；About报告提交`a48601b6cefeaec37df1db1a3db98f0efde24464`、构建时间`2026-09-27T12:00:00Z`及`exactSourceAvailable=true`。首页、`/manage/gallery`及新版Gallery详情／Timeline JS分块均200；两个worker、FFmpeg/FFprobe/LibRaw正常启动，本次启动后journal无warning以上条目。未修改原始媒体、Manifest或启动配置，未更新Docker镜像；本机业务界面人工交互和真实大媒体库扫描性能仍待所有者验收。
+
+## 2026-09-28 Gallery派生缓存生命周期闭环（源码完成，未提交／未部署）
+
+- 开始修改前完整读取开发备忘录、V1计划、实施状态和迁移交接文档，确认分支`agent/cgm-migration-handoff-20260726`与origin一致、工作区干净；保留已确认“缺失不删除媒体与属性、有效BASE免LRU、只操作生成资源、显式危险动作”的边界。具体方案与参数持久化在[缓存生命周期计划](CACHE_LIFECYCLE_PLAN_2026-09-28.md)。
+- schema v20纯新增本机删除outbox、分片游标及派生记录DELETE／路径变更触发器。忘记Item、替换缺失身份及永久删除Gallery的既有事务自动留下缓存待办，不依赖API层逐条捕捉。旧内容／旧Profile资源只有新版当前基础图READY且无未结束生成任务才可退役；引用删除与待办先提交，再复核并删除单个文件，避免文件已删但回滚恢复可服务引用。同路径重新发布撤销旧待办；失败保存稳定错误码、15分钟退避，关闭／重开数据库仍可继续。
+- 缓存原有每分钟调度新增有界生命周期清理及孤儿巡检，然后执行既有ENHANCED容量LRU；有效CARD_480／STATIC_POSTER、单纯MISSING／UNREADABLE／Excluded来源继续保留。孤儿至少24小时，限严格生成路径与已登记Item身份，保护未结束生成任务；每轮一个UUID前缀分片、最多10000目录节点／2秒、持久词典序游标。删除以no-follow目录描述符、inode／大小／mtime／单链接校验、不覆盖隔离改名和最终身份复核实现，只移除空缓存目录；符号链接、硬链接、未知文件、用户媒体、Manifest与Coser资料不在清理范围。
+- Manage → Operations增加双语缓存预览／容量摘要／最多100项手动选择／密码＋CLEAN确认面板，帮助模块同步规则和限制。只读预览不写游标或访问原媒体，容量区分DB引用与本次观察的孤儿；部分预览明确提示。认证REST和执行前复核拒绝陈旧选择，同源与维护模式门禁沿用；审计／日志仅记录聚合结果和稳定错误码，不返回缓存或媒体绝对路径。
+- 安全删除、替换、Profile、Forget、Gallery删除、失败退避／重启、孤儿宽限／任务保护、只读预览、有界游标、inode／链接、退役先提交及重新发布取消待办有定向回归；API涵盖认证、跨源、密码、确认词、陈旧预览、原媒体／Manifest保留和审计无敏感路径。正式三标签Go相关全量测试、Go Vet与定向race通过；Web TypeScript、39文件143项Vitest及2554模块生产构建通过（仅既有主chunk体积提示），隔离候选程序编译和`git diff --check`通过。v19→v20测试确认升级前快照确实仍为v19且不含新表。
+- 新状态是可再生本机运维数据，不进入Gallery Manifest或可移植包，portablecatalog完整回归通过；完整备份保留SQLite待办，恢复后依然复核实际缓存文件。未提交、推送、备份／迁移正式库或部署，正式环境仍沿用上轮schema v19；后续部署需先完整备份，再迁移并检查后台入口、自动轮转和服务。真实大库性能及浏览器人工业务验收待用户环境验证。
+
+## 2026-09-28 Gallery详情卡片网格／等高行首版（源码完成，未提交／未部署）
+
+- 在原3:4卡片网格之外新增等高自适应行，媒体区域顶部双语Lucide图标／文字按钮自由切换，浏览器本地记忆偏好；禁用Storage仍可使用。只影响详情列表，封面、搜索、实体页和大图外观不变。既有分组／顺序／每组24项展开、大图导航、动画锁定窗口和菜单继续共用同一批MediaTile节点，切换不重建图片并尽量保留可见媒体滚动锚点。
+- GalleryMember新增`previewWidth`／`previewHeight`只读GraphQL字段，直接取得现有当前派生记录宽高，未知／未处理返回0。等高行按序预排，目标240px、上限300px、间距12px、单框宽不超过480px；尾行左对齐不撑满，极端比例和未知比例采用受限框／稳定3:4占位，图片contain完整显示并取消悬浮放大。ResizeObserver或resize兜底响应容器变化；没有新源文件读取、图片解码、更高规格生成任务、schema或Manifest变化。详细参数、边界与后续调整点记录在[首版计划](GALLERY_MEDIA_LAYOUT_PLAN_2026-09-28.md)。
+- 已有尺寸／待处理0值Go回归、横纵顺序／间距／尺寸上限／尾行／极端与未知比例／响应式／Storage容错及节点／菜单／大图深链测试通过；Web TypeScript、40文件149项测试和2555模块正式构建通过（仅既有主chunk体积提示）。productdb、productapi、productserver、portablecatalog全量回归与相关Go Vet通过，三标签候选程序隔离编译和`git diff --check`通过。
+- 独立Chrome模拟数据E2E通过，验证桌面和390px手机布局、无水平溢出、排序、节点保留、加载更多、切换滚动锚点、刷新偏好及无运行时错误；人工检查桌面／手机截图。初次模拟数据遗漏GraphQL片段`__typename`及展开按钮动态文案造成测试失败，补齐fixture后通过，未据此修改业务逻辑。截图保留在Git忽略的E2E结果目录，临时预览服务已关闭。原离线完整生命周期E2E未执行，旧Gallery像素快照尚未刷新，真实业务图片效果仍需用户体验后微调。
+- 原工作区缓存生命周期改动原样保留；本轮没有提交、推送、数据库迁移或部署，未访问正式业务库及原媒体。正式部署需要与累积schema v20改动一起另行安排备份／迁移，不能把该迁移归因于本次前端布局。

@@ -106,6 +106,8 @@ export interface GalleryMember {
   processingState: "PENDING" | "PROCESSING" | "READY" | "ERROR";
   cardResource?: ResourceIdentity | null;
   largeResource?: ResourceIdentity | null;
+  previewWidth?: number;
+  previewHeight?: number;
   favorite: boolean;
   ratingHalfSteps?: number | null;
 }

@@ -137,7 +137,8 @@ func galleryMemberModel(item browse.GalleryMember) *GalleryMember {
 	return &GalleryMember{ItemUUID: item.ItemUUID, MediaKind: MediaKind(item.MediaKind), ContentFormat: ContentFormat(item.ContentFormat),
 		ImageCategory: category, Position: strconv.FormatInt(item.Position, 10), Caption: item.Caption,
 		ProcessingState: ProcessingState(item.ProcessingState), CardResource: resourceIdentity(item.CardResource),
-		LargeResource: resourceIdentity(item.LargeResource), Favorite: item.Favorite, RatingHalfSteps: item.RatingHalfSteps}
+		LargeResource: resourceIdentity(item.LargeResource), PreviewWidth: item.PreviewWidth, PreviewHeight: item.PreviewHeight,
+		Favorite: item.Favorite, RatingHalfSteps: item.RatingHalfSteps}
 }
 
 func mergeRecommendations(strong, tags []browse.GalleryRecommendation) []*GalleryRecommendation {

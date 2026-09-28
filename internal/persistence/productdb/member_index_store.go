@@ -24,7 +24,7 @@ func (s *BrowseStore) GalleryMemberIndex(ctx context.Context, setID string, scop
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT item.item_uuid,item.media_kind,item.content_format,item.image_category,
 		item.position,item.caption,item.processing_state,COALESCE(personal.favorite,0),personal.rating_half_steps,
-		card.item_uuid,card.content_revision,card.profile_hash,card.variant,card.mime_type,
+		card.item_uuid,card.content_revision,card.profile_hash,card.variant,card.mime_type,COALESCE(card.width,0),COALESCE(card.height,0),
 		large.item_uuid,large.content_revision,large.profile_hash,large.variant,large.mime_type
 		FROM gallery_items item
 		LEFT JOIN gallery_item_personal_states personal ON personal.gallery_item_id=item.id
@@ -52,7 +52,7 @@ func (s *BrowseStore) GalleryMemberIndex(ctx context.Context, setID string, scop
 		var largeRevision sql.NullInt64
 		if err := rows.Scan(&item.ItemUUID, &item.MediaKind, &item.ContentFormat, &category, &item.Position,
 			&item.Caption, &item.ProcessingState, &favorite, &rating,
-			&cardItem, &cardRevision, &cardProfile, &cardVariant, &cardMIME,
+			&cardItem, &cardRevision, &cardProfile, &cardVariant, &cardMIME, &item.PreviewWidth, &item.PreviewHeight,
 			&largeItem, &largeRevision, &largeProfile, &largeVariant, &largeMIME); err != nil {
 			return browse.GalleryMemberIndex{}, err
 		}

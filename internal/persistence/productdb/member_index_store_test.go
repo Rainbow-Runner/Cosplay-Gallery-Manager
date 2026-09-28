@@ -31,7 +31,7 @@ func TestGalleryMemberIndexIsCompleteGroupedPathFreeAndKeepsPending(t *testing.T
 		}
 		if _, err := db.Derivatives().Publish(ctx, PublishDerivativeInput{ItemUUID: photo.UUID, Variant: variant,
 			CacheTier: tier, ContentRevision: photo.ContentRevision, ProfileHash: profile,
-			CacheRelativePath: "members/" + variant + ".jpg", MIMEType: "image/jpeg", ByteSize: 10}, now); err != nil {
+			CacheRelativePath: "members/" + variant + ".jpg", MIMEType: "image/jpeg", ByteSize: 10, Width: 480, Height: 320}, now); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -49,5 +49,8 @@ func TestGalleryMemberIndexIsCompleteGroupedPathFreeAndKeepsPending(t *testing.T
 	if index.Items[0].CardResource == nil || index.Items[0].LargeResource == nil || index.Items[1].CardResource != nil ||
 		index.Items[1].ProcessingState != gallery.ProcessingPending || index.Items[2].CardResource != nil {
 		t.Fatalf("member resource/state contract = %#v", index.Items)
+	}
+	if index.Items[0].PreviewWidth != 480 || index.Items[0].PreviewHeight != 320 || index.Items[1].PreviewWidth != 0 || index.Items[1].PreviewHeight != 0 {
+		t.Fatalf("preview dimensions must come from existing derivatives, pending uses zero: %#v", index.Items)
 	}
 }

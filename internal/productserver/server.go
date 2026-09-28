@@ -206,6 +206,7 @@ func (s *Server) rebuildHandler() {
 	mux.Handle("/graphql", sameOrigin(productapi.NewHandlerWithServices(database, auth.AuthorizeRequest, s, auth)))
 	mux.Handle("/manage/portable/packages", sameOrigin(s.portablePackagesHandler(portableTransferRoot())))
 	mux.Handle(coserAssetReviewPath, sameOrigin(s.coserAssetReviewHandler(database)))
+	mux.Handle(cacheCleanupReviewPath, sameOrigin(s.cacheCleanupHandler(database)))
 	mux.Handle(coserAssetUploadPrefix, sameOrigin(s.coserAssetUploadHandler(database)))
 	mux.Handle(coserAssetResourcePrefix, s.coserAssetResourceHandler(database))
 	mux.Handle(coserMetadataPrefix, sameOrigin(s.coserMetadataHandler(database)))
@@ -480,6 +481,8 @@ func endpointCategory(path string) string {
 		return "MEDIA_RESOURCE"
 	case strings.HasPrefix(path, "/manage/coser-assets/"):
 		return "COSER_ASSET"
+	case strings.HasPrefix(path, "/manage/cache/"):
+		return "CACHE_MAINTENANCE"
 	case strings.HasPrefix(path, "/session/"):
 		return "SESSION"
 	case strings.HasPrefix(path, "/setup/"):

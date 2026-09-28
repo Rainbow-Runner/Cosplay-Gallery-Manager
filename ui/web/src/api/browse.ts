@@ -103,7 +103,7 @@ export const GALLERY_MEMBER_INDEX = gql`
     galleryMemberIndex(setID: $setID) {
       setID metadataRevision scanRevision
       items {
-        itemUUID mediaKind contentFormat imageCategory position caption processingState favorite ratingHalfSteps
+        itemUUID mediaKind contentFormat imageCategory position caption processingState favorite ratingHalfSteps previewWidth previewHeight
         cardResource { itemUUID contentRevision profileHash variant mimeType }
         largeResource { itemUUID contentRevision profileHash variant mimeType }
       }

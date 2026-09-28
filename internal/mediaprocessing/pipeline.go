@@ -216,8 +216,9 @@ func (writer CacheWriter) writeAtomic(relative string, pathProducer bool, produc
 	return target, info.Size(), nil
 }
 
-// RemoveEnhanced is intentionally the only deletion helper here. Its caller
-// must first prove the database record belongs to the ENHANCED cache tier.
+// RemoveEnhanced is a low-level helper, not the lifecycle maintenance entry
+// point. Maintenance uses the durable outbox and RemoveReviewedGenerated.
+// Its caller must first prove the record belongs to the ENHANCED cache tier.
 func (writer CacheWriter) RemoveEnhanced(relative string) error {
 	return writer.removeGenerated(relative)
 }

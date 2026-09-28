@@ -118,6 +118,8 @@ type GalleryMember {
   processingState: ProcessingState!
   cardResource: ResourceIdentity
   largeResource: ResourceIdentity
+  previewWidth: Int!
+  previewHeight: Int!
   favorite: Boolean!
   ratingHalfSteps: Int
 }

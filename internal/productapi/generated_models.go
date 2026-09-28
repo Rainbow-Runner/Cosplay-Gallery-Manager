@@ -190,6 +190,8 @@ type GalleryMember struct {
 	ProcessingState ProcessingState   `json:"processingState"`
 	CardResource    *ResourceIdentity `json:"cardResource,omitempty"`
 	LargeResource   *ResourceIdentity `json:"largeResource,omitempty"`
+	PreviewWidth    int               `json:"previewWidth"`
+	PreviewHeight   int               `json:"previewHeight"`
 	Favorite        bool              `json:"favorite"`
 	RatingHalfSteps *int              `json:"ratingHalfSteps,omitempty"`
 }

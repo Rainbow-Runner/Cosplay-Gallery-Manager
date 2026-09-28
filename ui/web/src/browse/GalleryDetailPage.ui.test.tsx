@@ -5,7 +5,7 @@ import { MockedProvider } from "@apollo/client/testing/react";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   BROWSE_TAG_OPTIONS,
@@ -23,7 +23,11 @@ import { messages } from "../i18n/messages";
 import { GalleryDetailPage } from "./GalleryDetailPage";
 import type { BrowseGalleryCard, GalleryDetail, GalleryMember, GalleryMemberIndex, ResourceIdentity } from "./types";
 
-afterEach(cleanup);
+beforeEach(() => {
+  const values = new Map<string, string>();
+  vi.stubGlobal("localStorage", { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), clear: () => values.clear() });
+});
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 const resource = (itemUUID: string, mimeType = "image/jpeg"): ResourceIdentity => ({ itemUUID, contentRevision: 1, profileHash: "profile", variant: "CARD_480", mimeType });
 const members: GalleryMember[] = [
@@ -42,6 +46,7 @@ function card(coverItemUUID = "photo-1"): BrowseGalleryCard {
     characters: [{ uuid: "character-1", name: "Saber" }], characterCount: 1,
     works: [{ uuid: "work-1", name: "Fate" }], workCount: 1,
     shootDate: "2026-07", shootDatePrecision: "MONTH", publishDate: "", publishDatePrecision: "UNKNOWN", addedAtUTC: "2026-08-01T00:00:00Z",
+    mediaAddedStartUTC: "", mediaAddedEndUTC: "", mediaAddedStatus: "NONE",
     media: { photo: 1, selfie: 1, gif: 1, video: 1 }, favorite: false, ratingHalfSteps: null, scrubberCount: 0, scrubberRevision: 0,
   } as BrowseGalleryCard;
 }
@@ -57,7 +62,7 @@ function detail(coverItemUUID = "photo-1"): GalleryDetail {
 }
 
 function memberIndex(metadataRevision = 7): GalleryMemberIndex {
-  return { setID: "gallery-1", metadataRevision, scanRevision: 2, items: members };
+  return { setID: "gallery-1", metadataRevision, scanRevision: 2, items: members.map((item, index) => ({ ...item, previewWidth: index === 0 ? 480 : 320, previewHeight: index === 0 ? 320 : 480 })) };
 }
 
 function queryMocks(options: { refetchedCover?: string; initialEntry?: string } = {}): MockedResponse[] {
@@ -92,6 +97,35 @@ function renderPage(mocks: MockedResponse[], initialEntry = "/gallery/gallery-on
 }
 
 describe("GalleryDetailPage presentation and media actions", () => {
+  it("switches layouts without remounting media, changing order or closing an open menu; remembers the choice", async () => {
+    renderPage(queryMocks());
+    await waitFor(() => expect(document.querySelectorAll(".media-tile")).toHaveLength(4));
+    const originalTiles = [...document.querySelectorAll(".media-tile")];
+    const originalImages = [...document.querySelectorAll(".media-tile__open img")];
+    const firstMenu = originalTiles[0].querySelector("details")!;
+    fireEvent.click(within(originalTiles[0] as HTMLElement).getByLabelText("Media actions"));
+    firstMenu.open = true;
+    fireEvent.click(screen.getByRole("button", { name: "Justified rows" }));
+    expect(screen.getByRole("button", { name: "Justified rows" })).toHaveAttribute("aria-pressed", "true");
+    expect(document.querySelector(".media-sequence")).toHaveAttribute("data-layout", "JUSTIFIED");
+    expect([...document.querySelectorAll(".media-tile")]).toEqual(originalTiles);
+    originalImages.forEach((image, index) => expect(document.querySelectorAll(".media-tile__open img")[index]).toBe(image));
+    expect((originalTiles[0] as HTMLElement).style.position).toBe("absolute");
+    expect(firstMenu.open).toBe(true);
+    expect(window.localStorage.getItem("cgm.gallery.media-layout")).toBe("JUSTIFIED");
+    fireEvent.click(screen.getByRole("button", { name: "Card grid" }));
+    expect((originalTiles[0] as HTMLElement).style.position).toBe("");
+    expect(document.querySelector(".media-sequence")).toHaveAttribute("data-layout", "GRID");
+  });
+
+  it("restores justified preference and keeps lightbox navigation in business order", async () => {
+    window.localStorage.setItem("cgm.gallery.media-layout", "JUSTIFIED");
+    renderPage(queryMocks({ initialEntry: "/gallery/gallery-one?item=photo-2" }), "/gallery/gallery-one?item=photo-2");
+    expect(await screen.findByRole("button", { name: "Justified rows" })).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() => expect(document.querySelectorAll(".media-tile")).toHaveLength(4));
+    expect([...document.querySelectorAll(".media-tile")].map((tile) => (tile as HTMLElement).dataset.itemUuid)).toEqual(members.map((item) => item.itemUUID));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
   it("renders ordered media groups without visible category headings", async () => {
     renderPage(queryMocks());
     expect(await screen.findByRole("heading", { name: "Gallery one" })).toBeInTheDocument();

@@ -1,6 +1,7 @@
 import { skipToken, useMutation, useQuery } from "@apollo/client/react";
-import { BookOpen, Calendar, CalendarDays, Image, Images, UserRound, Video } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { BookOpen, Calendar, CalendarDays, Image, Images, LayoutGrid, Rows3, UserRound, Video } from "lucide-react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { useIntl } from "react-intl";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
@@ -19,6 +20,8 @@ import { Breadcrumbs } from "../ui/Patterns";
 import { Icon } from "../ui/Icon";
 import { formatGalleryMediaCount } from "./galleryMediaCount";
 import { galleryCardPresentation } from "./galleryCardPresentation";
+import { justifiedMediaLayout, readGalleryMediaLayout, saveGalleryMediaLayout } from "./galleryMediaLayout";
+import type { GalleryMediaLayout } from "./galleryMediaLayout";
 import { GalleryTagEditor } from "./GalleryTagEditor";
 import { itemResourceURL } from "./resourceUrl";
 import type { BrowseGalleryCard, BrowseUISettings, GalleryDetail, GalleryMember, GalleryMemberIndex } from "./types";
@@ -84,6 +87,8 @@ export function GalleryDetailPage() {
   const [saveCover] = useMutation<{ setGalleryCoverItem: { row: { metadataRevision: number } } }>(SET_BROWSE_GALLERY_COVER_ITEM);
 
   const [filter, setFilter] = useState<MediaFilter>("ALL");
+  const [mediaLayout, setMediaLayout] = useState(readGalleryMediaLayout);
+  const [mediaWidth, setMediaWidth] = useState(0);
   const [visible, setVisible] = useState<Record<string, number>>({ photo: memberBatchSize, gif: memberBatchSize, video: memberBatchSize });
   const [galleryFavorite, setGalleryFavorite] = useState(false);
   const [favoriteOverrides, setFavoriteOverrides] = useState<Record<string, boolean>>({});
@@ -101,6 +106,8 @@ export function GalleryDetailPage() {
   const openedHere = useRef(false);
   const previouslyOpenItem = useRef<string | null>(null);
   const tileElements = useRef(new Map<string, HTMLElement>());
+  const sequenceRef = useRef<HTMLDivElement>(null);
+  const layoutAnchor = useRef<{ uuid: string; top: number } | null>(null);
   const moreDetailsRef = useRef<HTMLDetailsElement>(null);
   const animationHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animationHoverCandidate = useRef("");
@@ -168,6 +175,7 @@ export function GalleryDetailPage() {
 
   const members = memberQuery.data?.galleryMemberIndex.items ?? [];
   const groups = useMemo(() => visualMemberGroups(members, filter), [filter, members]);
+  const groupLayouts = useMemo(() => new Map(groups.map((group) => [group.key, justifiedMediaLayout(group.items.slice(0, visible[group.key]), mediaWidth || 720)])), [groups, mediaWidth, visible]);
   const navigationItems = useMemo(() => groups.flatMap((group) => group.items), [groups]);
   const orderedAnimatedUUIDs = useMemo(() => navigationItems.filter((item) => item.mediaKind === "ANIMATED_IMAGE").map((item) => item.itemUUID), [navigationItems]);
   const animatedPlaybackLimit = settingsQuery.data?.browseUISettings.galleryAnimatedPlaybackLimit ?? defaultAnimatedPlaybackLimit;
@@ -180,6 +188,44 @@ export function GalleryDetailPage() {
     .filter((item) => item.mediaKind === "ANIMATED_IMAGE").map((item) => item.itemUUID), [groups, visible]);
   const displayedAnimatedKey = displayedAnimatedUUIDs.join("|");
   const orderedAnimatedKey = orderedAnimatedUUIDs.join("|");
+
+  useLayoutEffect(() => {
+    const element = sequenceRef.current;
+    if (!element) return;
+    const measure = () => {
+      const width = element.getBoundingClientRect().width;
+      if (width > 0) setMediaWidth(width);
+    };
+    measure();
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(measure);
+      observer.observe(element);
+      return () => observer.disconnect();
+    }
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [detail?.card.setID]);
+
+  useLayoutEffect(() => {
+    const anchor = layoutAnchor.current;
+    if (!anchor) return;
+    layoutAnchor.current = null;
+    const element = tileElements.current.get(anchor.uuid);
+    if (element) {
+      const delta = element.getBoundingClientRect().top - anchor.top;
+      if (Math.abs(delta) > 1) window.scrollBy({ top: delta, behavior: "instant" });
+    }
+  }, [mediaLayout]);
+
+  function changeMediaLayout(layout: GalleryMediaLayout) {
+    if (layout === mediaLayout) return;
+    const candidates = [...tileElements.current.entries()].map(([uuid, element]) => ({ uuid, rect: element.getBoundingClientRect() }))
+      .filter(({ rect }) => rect.bottom > 0 && rect.top < window.innerHeight)
+      .sort((a, b) => Math.abs(a.rect.top) - Math.abs(b.rect.top));
+    if (candidates.length) layoutAnchor.current = { uuid: candidates[0].uuid, top: candidates[0].rect.top };
+    saveGalleryMediaLayout(layout);
+    setMediaLayout(layout);
+  }
 
   useEffect(() => {
     if (animationHoverTimer.current) clearTimeout(animationHoverTimer.current);
@@ -427,6 +473,7 @@ export function GalleryDetailPage() {
 
       <div className="gallery-detail__columns">
         <section className="gallery-members" aria-label={intl.formatMessage({ id: "gallery.contents" })}>
+          <div className="gallery-media-toolbar">
           {settings?.detailMediaFilterEnabled ? (
             <div className="media-filters" role="group" aria-label={intl.formatMessage({ id: "gallery.filter" })}>
               {(["ALL", "PHOTO", "SELFIE", "GIF", "VIDEO"] as MediaFilter[]).map((value) => (
@@ -434,15 +481,21 @@ export function GalleryDetailPage() {
               ))}
             </div>
           ) : null}
+            <div className="media-layout-switch" role="group" aria-label={intl.formatMessage({ id: "gallery.layout" })}>
+              <button type="button" aria-pressed={mediaLayout === "GRID"} onClick={() => changeMediaLayout("GRID")}><LayoutGrid className="cgm-icon" aria-hidden="true" />{intl.formatMessage({ id: "gallery.layout.grid" })}</button>
+              <button type="button" aria-pressed={mediaLayout === "JUSTIFIED"} onClick={() => changeMediaLayout("JUSTIFIED")}><Rows3 className="cgm-icon" aria-hidden="true" />{intl.formatMessage({ id: "gallery.layout.justified" })}</button>
+            </div>
+          </div>
           {memberQuery.loading ? <p className="state-message">{intl.formatMessage({ id: "state.loading" })}</p> : null}
-          <div className="media-sequence">
+          <div ref={sequenceRef} className={`media-sequence${mediaLayout === "JUSTIFIED" ? " media-sequence--justified" : ""}`} data-layout={mediaLayout}>
             {groups.map((group) => (
               <section className="media-group" key={group.key} aria-label={group.key}>
-                <div className="media-grid">
+                <div className="media-grid" style={mediaLayout === "JUSTIFIED" ? { height: groupLayouts.get(group.key)?.height } : undefined}>
                   {group.items.slice(0, visible[group.key]).map((item) => (
                     <MediaTile
                       key={item.itemUUID}
                       item={item}
+                      tileStyle={mediaLayout === "JUSTIFIED" ? { position: "absolute", ...groupLayouts.get(group.key)?.boxes.get(item.itemUUID) } : undefined}
                       animate={activeAnimatedUUIDs.has(item.itemUUID)}
                       favorite={favoriteOverrides[item.itemUUID] ?? item.favorite}
                       currentCover={coverItemUUID === item.itemUUID}
@@ -516,8 +569,9 @@ function RelatedGallery({ card }: { card: BrowseGalleryCard }) {
   );
 }
 
-function MediaTile({ item, animate, favorite, currentCover, personalControlsVisible, busy, setElement, onOpen, onAnimationHoverStart, onAnimationHoverEnd, onFavorite, onSetCover }: {
+function MediaTile({ item, tileStyle, animate, favorite, currentCover, personalControlsVisible, busy, setElement, onOpen, onAnimationHoverStart, onAnimationHoverEnd, onFavorite, onSetCover }: {
   item: GalleryMember;
+  tileStyle?: CSSProperties;
   animate: boolean;
   favorite: boolean;
   currentCover: boolean;
@@ -555,9 +609,9 @@ function MediaTile({ item, animate, favorite, currentCover, personalControlsVisi
     };
   }, [menuOpen]);
   return (
-    <article className="media-tile" ref={setElement} data-item-uuid={item.itemUUID} onPointerEnter={onAnimationHoverStart} onPointerLeave={onAnimationHoverEnd}>
+    <article className="media-tile" style={tileStyle} ref={setElement} data-item-uuid={item.itemUUID} onPointerEnter={onAnimationHoverStart} onPointerLeave={onAnimationHoverEnd}>
       <button className="media-tile__open" type="button" onClick={onOpen} aria-label={item.caption || item.imageCategory || item.mediaKind}>
-        {resource ? <img key={`${item.itemUUID}-${resource.variant}`} src={itemResourceURL(resource) ?? undefined} alt="" loading="lazy" /> : <span className="media-tile__pending">{item.processingState}</span>}
+        {resource ? <img key={`${item.itemUUID}-${resource.variant}`} src={itemResourceURL(resource) ?? undefined} width={item.previewWidth || undefined} height={item.previewHeight || undefined} alt="" loading="lazy" /> : <span className="media-tile__pending">{item.processingState}</span>}
         {item.mediaKind !== "STATIC_IMAGE" ? <span className="media-tile__kind">{item.mediaKind === "VIDEO" ? "VIDEO" : "GIF"}</span> : null}
         {item.caption ? <span className="media-tile__caption">{item.caption}</span> : null}
       </button>

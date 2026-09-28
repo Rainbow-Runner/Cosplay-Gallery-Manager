@@ -122,10 +122,19 @@ func (s *Server) runCacheMaintenance(ctx context.Context, now time.Time) {
 	}
 }
 
-// RunCacheMaintenanceOnce enforces the configured reclaimable cache limit.
-// It can delete only database-confirmed ENHANCED derivatives; user media and
-// permanent CARD_480/static-poster resources are outside its authority.
+// RunCacheMaintenanceOnce first reclaims eligible superseded/deleted/orphaned
+// resources, then enforces the ENHANCED quota. Current BASE resources and all
+// user media/Manifest files remain outside its deletion authority.
 func (s *Server) RunCacheMaintenanceOnce(ctx context.Context, now time.Time) (processingworker.CacheMaintenanceResult, error) {
+	cleaned, err := (processingworker.CacheLifecycleService{
+		Database: s.Database, Cache: mediaprocessing.CacheWriter{Root: s.Config.CachePath},
+	}).Maintain(ctx, now)
+	if err != nil {
+		return processingworker.CacheMaintenanceResult{}, err
+	}
+	if cleaned.Failed > 0 {
+		slog.Warn("CGM_CACHE_CLEANUP_RETRY_PENDING", "failed", cleaned.Failed)
+	}
 	settings, err := s.Database.Settings().Find(ctx)
 	if err != nil {
 		return processingworker.CacheMaintenanceResult{}, err
@@ -140,11 +149,14 @@ func (s *Server) RunCacheMaintenanceOnce(ctx context.Context, now time.Time) (pr
 	}
 	available := int64(stat.Bavail) * int64(stat.Bsize)
 	total := int64(stat.Blocks) * int64(stat.Bsize)
-	return processingworker.MaintainEnhancedCache(ctx, s.Database, mediaprocessing.CacheWriter{Root: s.Config.CachePath}, mediaprocessing.CachePressure{
+	result, err := processingworker.MaintainEnhancedCache(ctx, s.Database, mediaprocessing.CacheWriter{Root: s.Config.CachePath}, mediaprocessing.CachePressure{
 		EnhancedBytes: enhanced, AvailableBytes: available, TotalBytes: total,
 		MaximumEnhancedBytes: settings.EnhancedCacheMaximumBytes, MinimumFreeBytes: settings.MinimumFreeBytes,
 		MinimumFreePercent: settings.MinimumFreePercent,
-	}, 10000, now)
+	}, 100, now)
+	result.Removed += cleaned.Removed
+	result.FreedBytes += cleaned.FreedBytes
+	return result, err
 }
 
 func (s *Server) runAutomaticScan(ctx context.Context, now time.Time) {

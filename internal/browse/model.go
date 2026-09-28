@@ -166,6 +166,8 @@ type GalleryMember struct {
 	ProcessingState gallery.ProcessingState
 	CardResource    *ResourceIdentity
 	LargeResource   *ResourceIdentity
+	PreviewWidth    int
+	PreviewHeight   int
 	Favorite        bool
 	RatingHalfSteps *int
 }

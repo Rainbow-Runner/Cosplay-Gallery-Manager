@@ -53,7 +53,7 @@ func TestSchemaV13MigratesExistingLibraryWritebackPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer migrated.Close()
-	if migrated.Identity().DatabaseSchemaVersion != 19 {
+	if migrated.Identity().DatabaseSchemaVersion != 20 {
 		t.Fatalf("schema=%d", migrated.Identity().DatabaseSchemaVersion)
 	}
 	for _, check := range []struct {

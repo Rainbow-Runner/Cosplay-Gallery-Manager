@@ -2431,3 +2431,10 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 根据用户反馈，移除Gallery详情页媒体卡片“当前封面”常驻文字，只显示原Gallery图标；标记位置和高对比底色保留，内边距收紧为`.3rem`，不再为文字保留间距。用双语`title`及`role=img`／`aria-label`说明标记，避免丢失可理解性；媒体菜单和Lightbox的设封面／当前封面操作保持原状，封面身份、保存与刷新逻辑不变。
 - UI回归确认当前封面标记唯一、无可见文字、包含SVG且保留Tooltip／无障碍名称，原设封面后标记更新覆盖继续有效。TypeScript、详情页19项回归、Web全量40文件151项测试及2555模块生产构建通过；只有既有主chunk体积提示，`git diff --check`通过。
 - 本次仅修改前端和记录，无数据库迁移或媒体／Manifest写入，未提交、推送或部署；正式服务仍运行`3ea8ab9`。未新增浏览器像素基线或冒充已验证正式业务效果。
+
+## 2026-09-28 封面图标标记提交及增量部署
+
+- 提交上述5个文件为`78f7baa12578d6e93186f15bc86ce630ce5eeb88`（`Show gallery media cover marker as icon only`）。再次通过TypeScript和详情页19项测试；此前全量40文件151项测试及2555模块构建通过。正式三标签嵌入资源测试与CGM编译通过，干净提交构建的Go VCS为该提交且`vcs.modified=false`，About构建时间`2026-09-28T15:37:46Z`，程序SHA-256为`a05bb7292159b64a61ba2f862c094243cadec70395aad3d13eff26a085806de6`。
+- 23:38:33 CST停服，确认PID为0、WAL／SHM已关闭；0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-cover-icon-78f7baa-Ln9f6tqm`保存完整业务库、旧程序、运行配置、systemd单元及外部／product-state Coser元数据资源，逐项`cmp`和资源树`diff`一致。备份库schema v20、完整性`ok`，七类Coser／Work／Character／Tag／Gallery／Source／Item计数为`135/108/697/23/9/9/600`；备份库SHA-256为`078ed1385bcdd628ccbf50f66983566b2aad05578906720d74301744ca2074c3`，旧程序为`775acc83bd2fd8ca8d9707d6bd17f141533132c5a2651af06b99189c76b6151f`。备份不含原媒体、派生缓存、历史备份或日志。
+- 原子替换后同一分钟正式服务启动，`active/running`、`NRestarts=0`，Health／Ready均204；首次健康探测早于监听就绪短暂连接失败，自动重试通过。About精确对应功能提交。入口HTML、详情`GalleryDetailPage-D6z73I6t.js`及`index-CUXZufsW.css`均200且与本地构建逐字节相同，部署JS包含仅图标标记及ARIA／Tooltip。两个worker、FFmpeg／FFprobe／LibRaw正常启动，本轮journal无WARN／ERROR／panic／fatal。
+- 无数据库迁移或替换，正式库仍为v20、完整性`ok`、七类计数不变；配置及服务单元与备份一致，未改变媒体、Manifest或Coser资源。部署记录另行本地提交，正式程序保持指向`78f7baa`；未推送远端或更新Docker镜像，未进行正式业务浏览器像素验收。

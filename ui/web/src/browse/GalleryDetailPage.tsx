@@ -613,7 +613,7 @@ function MediaTile({ item, tileStyle, animate, favorite, currentCover, personalC
         {item.mediaKind !== "STATIC_IMAGE" ? <span className="media-tile__kind">{item.mediaKind === "VIDEO" ? "VIDEO" : "GIF"}</span> : null}
         {item.caption ? <span className="media-tile__caption">{item.caption}</span> : null}
       </button>
-      {currentCover ? <span className="media-tile__cover"><Icon name="gallery" />{intl.formatMessage({ id: "gallery.currentCover" })}</span> : null}
+      {currentCover ? <span className="media-tile__cover" role="img" aria-label={intl.formatMessage({ id: "gallery.currentCover" })} title={intl.formatMessage({ id: "gallery.currentCover" })}><Icon name="gallery" /></span> : null}
       {personalControlsVisible ? <button className={`media-tile__favorite${favorite ? " is-active" : ""}`} type="button" disabled={busy} aria-label={intl.formatMessage({ id: favorite ? "gallery.itemUnfavorite" : "gallery.itemFavorite" })} aria-pressed={favorite} onClick={onFavorite}><Icon name="heart" /></button> : null}
       <details ref={menuRef} className="media-tile__menu" onToggle={(event) => setMenuOpen(event.currentTarget.open)}>
         <summary aria-label={intl.formatMessage({ id: "gallery.itemMenu" })}><Icon name="more-horizontal" /></summary>

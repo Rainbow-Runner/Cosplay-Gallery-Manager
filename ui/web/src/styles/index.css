@@ -489,7 +489,7 @@ a { color: inherit; text-decoration: none; }
 .media-tile__menu :is(a, button) { display: flex; align-items: center; gap: .5rem; padding: .55rem .65rem; border: 0; border-radius: .25rem; background: transparent; color: var(--cgm-foreground); font: 500 .75rem/1.2 var(--cgm-font-sans); text-align: left; cursor: pointer; }
 .media-tile__menu :is(a, button):hover { background: var(--cgm-muted); }
 .media-tile__menu button:disabled { color: var(--cgm-muted-foreground); cursor: default; }
-.media-tile__cover { position: absolute; z-index: 2; bottom: .5rem; left: .5rem; display: inline-flex; align-items: center; gap: .3rem; padding: .3rem .45rem; border-radius: .25rem; background: rgb(10 9 10 / 72%); color: #fff; font-size: .62rem; }
+.media-tile__cover { position: absolute; z-index: 2; bottom: .5rem; left: .5rem; display: inline-flex; align-items: center; justify-content: center; padding: .3rem; border-radius: .25rem; background: rgb(10 9 10 / 72%); color: #fff; }
 .media-tile__cover .cgm-icon { width: .8rem; height: .8rem; }
 .load-more { display: block; grid-column: 1 / -1; min-width: 12rem; margin: 1.5rem auto 0; }
 .external-links { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 5rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: #696365; font-size: .65rem; }

@@ -2425,3 +2425,9 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 部署前正式库schema v20、完整性`ok`，七类Coser／Work／Character／Tag／Gallery／Source／Item计数为`135/108/697/23/9/9/600`。23:12:34 CST停服并确认PID为0、WAL／SHM关闭，在0700目录`/home/rainbowrunner/cos/bk/cgm-pre-layout-controls-3ea8ab9-5O8PtEN6`备份完整数据库、旧程序、配置、systemd单元及外部／product-state Coser托管资源；文件`cmp`、资源树`diff`一致。备份数据库完整性和计数复核通过，SHA-256为`df00453f56891453062cfd17c244c61b9c9664927f689bdd9384d446616806a8`，旧程序为`6f0f015d1eee1c5404ba444bedfbbc50538a31e157da6ad2d2f3af5f113f2426`。备份不含原媒体、可重建缓存、历史备份和日志。
 - 原子替换后23:12:35 CST启动新版，服务`active/running`、`NRestarts=0`、Health／Ready均204；首次探测在监听就绪前连接失败，自动重试通过。About精确报告源码提交及构建时间。正式入口HTML、Gallery详情`GalleryDetailPage-CwWkJCk4.js`和`index-9skzlLRs.css`返回200且与本地构建逐字节相同，详情资源已移除旧独立工具栏；管理深链200。两个worker、FFmpeg／FFprobe／LibRaw正常启动，部署journal无WARN／ERROR／panic／fatal。
 - 数据库没有迁移或替换，保持schema v20、完整性`ok`及原七类计数；配置和服务单元与备份逐字节一致。未修改媒体、Manifest或Coser资源，未推送远端或更新Docker镜像。部署记录另行提交，正式程序继续精确指向功能提交`3ea8ab9`，真实业务浏览效果由用户体验确认。
+
+## 2026-09-28 媒体卡片当前封面标记仅图标（源码完成，未提交／未部署）
+
+- 根据用户反馈，移除Gallery详情页媒体卡片“当前封面”常驻文字，只显示原Gallery图标；标记位置和高对比底色保留，内边距收紧为`.3rem`，不再为文字保留间距。用双语`title`及`role=img`／`aria-label`说明标记，避免丢失可理解性；媒体菜单和Lightbox的设封面／当前封面操作保持原状，封面身份、保存与刷新逻辑不变。
+- UI回归确认当前封面标记唯一、无可见文字、包含SVG且保留Tooltip／无障碍名称，原设封面后标记更新覆盖继续有效。TypeScript、详情页19项回归、Web全量40文件151项测试及2555模块生产构建通过；只有既有主chunk体积提示，`git diff --check`通过。
+- 本次仅修改前端和记录，无数据库迁移或媒体／Manifest写入，未提交、推送或部署；正式服务仍运行`3ea8ab9`。未新增浏览器像素基线或冒充已验证正式业务效果。

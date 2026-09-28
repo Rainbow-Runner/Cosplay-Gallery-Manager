@@ -160,6 +160,10 @@ describe("GalleryDetailPage presentation and media actions", () => {
     expect(screen.queryByRole("heading", { name: "GIF" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Video" })).not.toBeInTheDocument();
     expect(document.querySelectorAll(".media-tile__cover")).toHaveLength(1);
+    const coverMarker = screen.getByRole("img", { name: "Current cover" });
+    expect(coverMarker).toHaveAttribute("title", "Current cover");
+    expect(coverMarker.textContent).toBe("");
+    expect(coverMarker.querySelector("svg")).not.toBeNull();
   });
 
   it("shows linked tags below the gallery stats with all-scope tag browsing", async () => {

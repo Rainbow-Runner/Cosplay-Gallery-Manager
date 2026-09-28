@@ -2418,3 +2418,10 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 用户试用后反馈独立切换栏占用空间：移至详情页右上角收藏左侧，采用与收藏同高的两个36px紧凑图标分段按钮，去除常驻文字但保留双语Tooltip／ARIA名称、选中状态和键盘焦点。删除媒体列表独立工具栏；媒体筛选在启用时独立保留，关闭时不残留工具栏空白。布局逻辑、偏好记忆、媒体节点、滚动锚点和收藏语义不变，无后端／schema／Manifest改动。
 - 新增控件位置、Tooltip／名称、无文字及筛选正常工作的UI回归；独立Chrome模拟数据E2E增加收藏按钮及桌面／手机的相对位置和尺寸检查，原切换／展开／节点／滚动／刷新覆盖继续通过。TypeScript、40文件151项Vitest及2555模块生产构建通过，只有既有主chunk体积提示。初次类型检查发现测试误用Playwright式`exact`选项于Testing Library，移除该测试选项后复查通过；业务代码不受影响。
 - 检查390px手机截图，无横向溢出，按钮与收藏同高；临时本机预览服务已关闭，`git diff --check`通过。本轮不提交／推送／部署，未访问正式数据库或媒体；正式服务继续运行`4c54ba5`，等待用户另行安排部署。需求及当前UI约定同步到[双布局计划](GALLERY_MEDIA_LAYOUT_PLAN_2026-09-28.md)。
+
+## 2026-09-28 紧凑布局控件提交及增量部署
+
+- 用户授权后将上述7个文件提交为`3ea8ab9cc4d2496e693100bead9a8eb62ccbebab`（`Move compact gallery layout controls beside favourite`）。提交前复跑TypeScript及Gallery详情／布局2文件23项回归通过；前一阶段全量40文件151项测试、2555模块构建和Chrome模拟数据E2E通过。正式三标签`ui/web`嵌入资源测试及`cmd/cgm`编译通过。清洁提交构建的Go VCS精确对应提交、`vcs.modified=false`，About注入构建时间`2026-09-28T15:11:43Z`，程序SHA-256为`775acc83bd2fd8ca8d9707d6bd17f141533132c5a2651af06b99189c76b6151f`。
+- 部署前正式库schema v20、完整性`ok`，七类Coser／Work／Character／Tag／Gallery／Source／Item计数为`135/108/697/23/9/9/600`。23:12:34 CST停服并确认PID为0、WAL／SHM关闭，在0700目录`/home/rainbowrunner/cos/bk/cgm-pre-layout-controls-3ea8ab9-5O8PtEN6`备份完整数据库、旧程序、配置、systemd单元及外部／product-state Coser托管资源；文件`cmp`、资源树`diff`一致。备份数据库完整性和计数复核通过，SHA-256为`df00453f56891453062cfd17c244c61b9c9664927f689bdd9384d446616806a8`，旧程序为`6f0f015d1eee1c5404ba444bedfbbc50538a31e157da6ad2d2f3af5f113f2426`。备份不含原媒体、可重建缓存、历史备份和日志。
+- 原子替换后23:12:35 CST启动新版，服务`active/running`、`NRestarts=0`、Health／Ready均204；首次探测在监听就绪前连接失败，自动重试通过。About精确报告源码提交及构建时间。正式入口HTML、Gallery详情`GalleryDetailPage-CwWkJCk4.js`和`index-9skzlLRs.css`返回200且与本地构建逐字节相同，详情资源已移除旧独立工具栏；管理深链200。两个worker、FFmpeg／FFprobe／LibRaw正常启动，部署journal无WARN／ERROR／panic／fatal。
+- 数据库没有迁移或替换，保持schema v20、完整性`ok`及原七类计数；配置和服务单元与备份逐字节一致。未修改媒体、Manifest或Coser资源，未推送远端或更新Docker镜像。部署记录另行提交，正式程序继续精确指向功能提交`3ea8ab9`，真实业务浏览效果由用户体验确认。

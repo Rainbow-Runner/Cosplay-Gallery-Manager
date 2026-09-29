@@ -5,6 +5,14 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-09-29 多实体与存档视频提交及本机增量部署完成
+
+- 累计56个文件提交为`3fe7728575a112f8c3934015f21bd897ad917f6a`（`Complete multi-entity association and safe archive video playback`）。从干净提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，Go VCS为该提交且`vcs.modified=false`；About构建时间`2026-09-29T15:48:21Z`，正式二进制SHA-256为`37bf58c63733aa4555d8c4b1438f8aa6846f96def9f94ba41a9629197202cbff`。
+- 首次23:49:33 CST停服完成文件备份后，部署校验脚本误把产品版本列写成`schema_version`，因此在替换程序之前中止并自动恢复旧服务；正式字段为`database_schema_version`。首次备份保留在`/home/rainbowrunner/cos/bk/cgm-pre-archive-video-3fe7728-12DuNSmn`，没有数据库迁移或候选程序写入。修正脚本后23:49:56再次停服，确认PID为0、WAL／SHM关闭；不隐瞒此次短暂中断，也不把它归为业务代码缺陷。
+- 成功部署的0700完整回滚目录为`/home/rainbowrunner/cos/bk/cgm-pre-archive-video-3fe7728-VVn0ecQM`，包含完整一致业务库、旧程序、运行配置、用户systemd单元、外部Coser根和product-state Coser资源；文件`cmp`及资源树`diff`一致，不含原媒体、可再生缓存、历史备份或日志。备份库schema v20、完整性`ok`，七类Coser／Work／Character／Tag／Gallery／Source／Item计数`135/108/697/23/10/10/690`；数据库SHA-256为`741b1aa2d8e996bb7597b68ae6b894a7664633d962126a9272e5c42d9ff6e375`，旧程序为`a05bb7292159b64a61ba2f862c094243cadec70395aad3d13eff26a085806de6`，配置为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`。
+- 23:49:57原子替换后正式服务`active/running`、`NRestarts=0`，Health／Ready均204，About精确对应上述提交且`exactSourceAvailable=true`。首页、管理深链／帮助／Legal均200；入口HTML／JS／CSS，以及Gallery详情`GalleryDetailPage-CLenCLw8.js`、媒体详情、帮助和媒体库块均与本地生产构建逐字节相同。未认证视频请求按既定防泄漏语义返回404并带`Cache-Control: no-store`；初次验收脚本误期待401，核对Handler及测试后按正确语义复验通过，未为校验脚本改变接口。两个worker及FFmpeg／FFprobe／LibRaw正常启动，新版启动journal无warning以上事件。
+- 无数据库迁移或替换，正式库保持schema v20、完整性`ok`、维护`NORMAL`及原七类计数；配置、服务单元和Coser资源与备份一致。未执行媒体扫描、自动化或Manifest Push，未修改媒体或Manifest；旧存档仍需所有者显式再次来源扫描以更新容器证据v2和旧Video Issue。未推送远端、未构建／发布Docker镜像，真实业务浏览器视频／大存档性能验收留给所有者。部署记录另行本地提交，运行程序精确对应功能提交，不因记录提交再构建重启。
+
 ## 2026-09-29 多实体关联与存档视频累计提交、部署前验证
 
 - 所有者授权提交累计改动并本机增量部署；保留`agent/cgm-migration-handoff-20260726`分支，不合并、不推送远端、不更新Docker镜像。累计范围为多实体精确匹配与首位Cast，以及存档视频安全直接读取、后台临时提取、认证播放、拒绝提示、任务终态、迁移回归和帮助说明。

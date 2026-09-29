@@ -12,6 +12,7 @@ const MANAGE_GALLERY_DETAIL = gql`
     externalLinks { uuid type label url position }
     folderMatches { kind uuid name matchedName workUUID workName }
     scanRuns { id status startedAt completedAt errorCode }
+    review { blockers identitySuggestions { id kind value status resolvedAt options { uuid name workName } } sourceIssues { code severity message } automationIssues { runID stage errorCode runStatus createdAt } }
   }
 `;
 
@@ -226,6 +227,14 @@ export const REPLACE_GALLERY_RELATIONS = gql`
   ${MANAGE_GALLERY_DETAIL}
   mutation ReplaceGalleryRelations($setID: ID!, $expectedMetadataRevision: Int64!, $input: ReplaceGalleryRelationsInput!) {
     replaceGalleryRelations(setID: $setID, expectedMetadataRevision: $expectedMetadataRevision, input: $input) { ...ManageGalleryDetailFields }
+  }
+`;
+export const RESOLVE_GALLERY_IDENTITY_SUGGESTION = gql`
+  ${MANAGE_GALLERY_DETAIL}
+  mutation ResolveGalleryIdentitySuggestion($setID: ID!, $suggestionID: ID!, $expectedMetadataRevision: Int64!, $accept: Boolean!, $entityUUID: ID!) {
+    resolveGalleryIdentitySuggestion(setID: $setID, suggestionID: $suggestionID, expectedMetadataRevision: $expectedMetadataRevision, accept: $accept, entityUUID: $entityUUID) {
+      ...ManageGalleryDetailFields
+    }
   }
 `;
 export const ADD_GALLERY_EXTERNAL_LINK = gql`

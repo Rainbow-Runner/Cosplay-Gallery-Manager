@@ -97,7 +97,24 @@ type GalleryDetail struct {
 	ExternalLinks           []GalleryExternalLink
 	FolderMatches           []GalleryFolderMatch
 	ScanRuns                []GalleryScanRun
+	Review                  GalleryReview
 }
+
+type GalleryReview struct {
+	Blockers            []string
+	IdentitySuggestions []GalleryIdentitySuggestion
+	SourceIssues        []GallerySourceIssue
+	AutomationIssues    []GalleryAutomationIssue
+}
+
+type GalleryIdentitySuggestion struct {
+	ID, Kind, Value, Status, ResolvedAt string
+	Options                             []GalleryIdentityOption
+}
+
+type GalleryIdentityOption struct{ UUID, Name, WorkName string }
+type GallerySourceIssue struct{ Code, Severity, Message string }
+type GalleryAutomationIssue struct{ RunID, Stage, ErrorCode, RunStatus, CreatedAt string }
 
 type GalleryScanRun struct {
 	ID, Status, StartedAt, CompletedAt, ErrorCode string

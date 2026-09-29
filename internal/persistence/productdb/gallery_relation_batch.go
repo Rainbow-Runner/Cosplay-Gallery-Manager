@@ -85,22 +85,23 @@ func (s *GalleryStore) ReplaceTags(ctx context.Context, galleryID, expectedRevis
 	return tx.Commit()
 }
 
-// ReplaceRelations is one Gallery-scoped atomic save. It never creates core
-// entities and therefore cannot silently accept discovery suggestions.
+// ReplaceRelations is one Gallery-scoped atomic save. A manually saved
+// relation confirms only a uniquely identified, exactly matching suggestion.
+// Ambiguous or unrelated evidence remains pending for explicit review.
 func (s *GalleryStore) ReplaceRelations(ctx context.Context, galleryID, expectedRevision int64, input ReplaceGalleryRelationsInput, now time.Time) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
-	if err := replaceGalleryRelationsTx(ctx, tx, galleryID, expectedRevision, input, now); err != nil {
+	if err := replaceGalleryRelationsTx(ctx, tx, galleryID, expectedRevision, input, now, true); err != nil {
 		return err
 	}
 	return tx.Commit()
 }
 
 // Automation resolves evidence in this same transaction as the relation save.
-func replaceGalleryRelationsTx(ctx context.Context, tx *sql.Tx, galleryID, expectedRevision int64, input ReplaceGalleryRelationsInput, now time.Time) error {
+func replaceGalleryRelationsTx(ctx context.Context, tx *sql.Tx, galleryID, expectedRevision int64, input ReplaceGalleryRelationsInput, now time.Time, reconcileSuggestions bool) error {
 	if len(input.Credits) > 100 || len(input.Tags) > 200 {
 		return errors.New("Gallery relation limit exceeded")
 	}
@@ -169,6 +170,11 @@ func replaceGalleryRelationsTx(ctx context.Context, tx *sql.Tx, galleryID, expec
 	}
 	if err := touchGalleryMetadata(ctx, tx, galleryID, expectedRevision, now); err != nil {
 		return err
+	}
+	if reconcileSuggestions {
+		if err := reconcileSavedIdentitySuggestions(ctx, tx, galleryID, now); err != nil {
+			return err
+		}
 	}
 	if err := demoteInvalidActiveGallery(ctx, tx, galleryID); err != nil {
 		return err

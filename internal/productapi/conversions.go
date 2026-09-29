@@ -334,7 +334,21 @@ func manageGalleryDetail(value manage.GalleryDetail) *ManageGalleryDetail {
 		ShootDatePrecision: precision, PublishDate: value.PublishDate, PublishDatePrecision: ShootDatePrecisionUnknown, PhotographerName: value.PhotographerName, StudioName: value.StudioName,
 		ImageCaptureStart: value.ImageCaptureStart, ImageCaptureEnd: value.ImageCaptureEnd, VideoCaptureStart: value.VideoCaptureStart, VideoCaptureEnd: value.VideoCaptureEnd,
 		CaptureDateCandidate: value.CaptureDateCandidate, CaptureDateReviewStatus: value.CaptureDateReviewStatus,
-		MediaAddedStartUtc: value.MediaAddedStartUTC, MediaAddedEndUtc: value.MediaAddedEndUTC, MediaAddedStatus: value.MediaAddedStatus}
+		MediaAddedStartUtc: value.MediaAddedStartUTC, MediaAddedEndUtc: value.MediaAddedEndUTC, MediaAddedStatus: value.MediaAddedStatus,
+		Review: &ManageGalleryReview{Blockers: value.Review.Blockers}}
+	for _, item := range value.Review.IdentitySuggestions {
+		converted := &ManageGalleryIdentitySuggestion{ID: item.ID, Kind: item.Kind, Value: item.Value, Status: item.Status, ResolvedAt: item.ResolvedAt}
+		for _, option := range item.Options {
+			converted.Options = append(converted.Options, &ManageGalleryIdentityOption{UUID: option.UUID, Name: option.Name, WorkName: option.WorkName})
+		}
+		result.Review.IdentitySuggestions = append(result.Review.IdentitySuggestions, converted)
+	}
+	for _, issue := range value.Review.SourceIssues {
+		result.Review.SourceIssues = append(result.Review.SourceIssues, &ManageGallerySourceIssue{Code: issue.Code, Severity: issue.Severity, Message: issue.Message})
+	}
+	for _, issue := range value.Review.AutomationIssues {
+		result.Review.AutomationIssues = append(result.Review.AutomationIssues, &ManageGalleryAutomationIssue{RunID: issue.RunID, Stage: issue.Stage, ErrorCode: issue.ErrorCode, RunStatus: issue.RunStatus, CreatedAt: issue.CreatedAt})
+	}
 	if value.PublishDatePrecision != "" {
 		result.PublishDatePrecision = ShootDatePrecision(value.PublishDatePrecision)
 	}

@@ -7,7 +7,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MANAGE_GALLERY, MANAGE_GALLERY_MANIFEST, REPLACE_GALLERY_RELATIONS } from "../api/manage";
+import { MANAGE_GALLERY, MANAGE_GALLERY_MANIFEST, REPLACE_GALLERY_RELATIONS, RESOLVE_GALLERY_IDENTITY_SUGGESTION } from "../api/manage";
 import { messages } from "../i18n/messages";
 import { ManageGalleryEditorPage } from "./ManageGalleryEditorPage";
 
@@ -37,6 +37,7 @@ const gallery = {
     { kind: "CHARACTER", uuid: "character-1", name: "Saber", matchedName: "Saber", workUUID: "work-1", workName: "Fate" },
   ],
   scanRuns: [],
+  review: { blockers: [], identitySuggestions: [], sourceIssues: [], automationIssues: [] },
 };
 
 function renderPage(mocks: ReadonlyArray<MockedResponse>, tab = "cast", locale: "en-GB" | "zh-CN" = "en-GB") {
@@ -48,6 +49,54 @@ function renderPage(mocks: ReadonlyArray<MockedResponse>, tab = "cast", locale: 
 }
 
 describe("ManageGalleryEditorPage relations", () => {
+  it("shows current blockers separately from old automation failures and source issues", async () => {
+    renderPage([{ request: { query: MANAGE_GALLERY, variables: { setID } }, result: { data: { manageGallery: { ...gallery, review: {
+      blockers: ["BLOCKING_SOURCE_ISSUE", "IDENTITY_SUGGESTION_UNRESOLVED"], identitySuggestions: [{ id: "5", kind: "COSER", value: "Alice", status: "PENDING", resolvedAt: "", options: [{ uuid: "coser-1", name: "Alice", workName: "" }] }],
+      sourceIssues: [{ code: "SCAN_CONTENT_EXTENSION_MISMATCH", severity: "BLOCKING", message: "photo.jpg" }],
+      automationIssues: [{ runID: "7", stage: "ACTIVATION", errorCode: "ACTIVATION_BLOCKING_SOURCE_ISSUE", runStatus: "COMPLETED", createdAt: "yesterday" }],
+    } } } } }]);
+    expect(await screen.findByText("IDENTITY_SUGGESTION_UNRESOLVED")).toBeInTheDocument();
+    expect(screen.getByText(/SCAN_CONTENT_EXTENSION_MISMATCH/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirm relation" })).toBeEnabled();
+    fireEvent.click(screen.getByText(/Review history/));
+    expect(screen.getByText(/ACTIVATION_BLOCKING_SOURCE_ISSUE/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Source →" }));
+    expect(screen.getByRole("button", { name: "Scan source now" })).toBeInTheDocument();
+  });
+
+  it("requires an explicit review of an ambiguous pending suggestion and preserves saved relations", async () => {
+    const pending = { id: "5", kind: "COSER", value: "Same", status: "PENDING", resolvedAt: "", options: [{ uuid: "coser-1", name: "Alice", workName: "" }, { uuid: "coser-2", name: "Bob", workName: "" }] };
+    const initial = { ...gallery, credits: [...gallery.credits, { coserUUID: "coser-2", coserName: "Bob", position: "2048", cast: [] }], review: { blockers: ["IDENTITY_SUGGESTION_UNRESOLVED"], identitySuggestions: [pending], sourceIssues: [], automationIssues: [] } };
+    const saved = { ...initial, review: { ...initial.review, blockers: [], identitySuggestions: [{ ...pending, status: "ACCEPTED", resolvedAt: "today", options: [] }] } };
+    const mutation = vi.fn(() => ({ data: { resolveGalleryIdentitySuggestion: saved } }));
+    renderPage([
+      { request: { query: MANAGE_GALLERY, variables: { setID } }, result: { data: { manageGallery: initial } } },
+      { request: { query: RESOLVE_GALLERY_IDENTITY_SUGGESTION, variables: { setID, suggestionID: "5", expectedMetadataRevision: 7, accept: true, entityUUID: "coser-2" } }, result: mutation },
+      { request: { query: MANAGE_GALLERY, variables: { setID } }, result: { data: { manageGallery: saved } } },
+    ]);
+    const confirm = await screen.findByRole("button", { name: "Confirm relation" });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(screen.getByRole("combobox", { name: "COSER Same Saved matching relation" }), { target: { value: "coser-2" } });
+    expect(confirm).toBeEnabled();
+    expect(mutation).not.toHaveBeenCalled();
+    fireEvent.click(confirm);
+    await waitFor(() => expect(mutation).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("No current activation blockers")).toBeInTheDocument();
+    expect(screen.queryByText("Pending identity suggestions")).not.toBeInTheDocument();
+    expect(screen.getByText("Bob", { selector: ".manage-entity-selector > span" })).toBeInTheDocument();
+  });
+
+  it("prevents review while Cast has unsaved edits and never hides unmatched suggestions", async () => {
+    const initial = { ...gallery, review: { blockers: ["IDENTITY_SUGGESTION_UNRESOLVED"], identitySuggestions: [{ id: "6", kind: "WORK", value: "Unknown", status: "PENDING", resolvedAt: "", options: [] }], sourceIssues: [], automationIssues: [] } };
+    renderPage([{ request: { query: MANAGE_GALLERY, variables: { setID } }, result: { data: { manageGallery: initial } } }]);
+    expect(await screen.findByText(/No exact matching saved relation/)).toBeInTheDocument();
+    const reject = screen.getByRole("button", { name: "Reject suggestion" });
+    expect(reject).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Add Coser" }));
+    expect(screen.getByText(/Save or discard relation edits/)).toBeInTheDocument();
+    expect(reject).toBeDisabled();
+  });
+
   it("moves a character between existing cosers only in the draft and persists on explicit save", async () => {
     const otherCast = { characterUUID: "character-2", characterName: "Rin", workUUID: "work-1", workName: "Fate", position: "1024" };
     const bob = { coserUUID: "coser-2", coserName: "Bob", position: "2048", cast: [otherCast] };

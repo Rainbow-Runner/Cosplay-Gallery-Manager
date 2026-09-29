@@ -23,6 +23,12 @@ export interface ManageGalleryDetail {
   photographerName: string; studioName: string; items: ManageGalleryItem[]; credits: ManageGalleryCredit[]; tags: ManageGalleryTag[]; externalLinks: ManageGalleryExternalLink[];
   folderMatches: ManageGalleryFolderMatch[];
   scanRuns: { id: string; status: string; startedAt: string; completedAt: string; errorCode: string }[];
+  review: {
+    blockers: string[];
+    identitySuggestions: { id: string; kind: "COSER" | "WORK" | "CHARACTER"; value: string; status: "PENDING" | "ACCEPTED" | "REJECTED"; resolvedAt: string; options: { uuid: string; name: string; workName: string }[] }[];
+    sourceIssues: { code: string; severity: string; message: string }[];
+    automationIssues: { runID: string; stage: string; errorCode: string; runStatus: string; createdAt: string }[];
+  };
 }
 export interface ManageGalleryDeletePreview {
   setID: string; state: "DRAFT" | "ACTIVE" | "ARCHIVED"; metadataRevision: number; itemCount: number;

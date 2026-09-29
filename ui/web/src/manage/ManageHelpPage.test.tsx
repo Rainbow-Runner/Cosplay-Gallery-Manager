@@ -26,6 +26,7 @@ describe("ManageHelpPage", () => {
     expect(screen.getByText(/Saving a policy never starts a task/)).toBeInTheDocument();
     expect(screen.getByText(/Roles are assigned to the first matched coser/)).toBeInTheDocument();
     expect(screen.getByText(/Coser and Character match independently/)).toBeInTheDocument();
+    expect(screen.getByText(/shows current blockers separately from historical run issues/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Videos inside archives" })).toBeInTheDocument();
     expect(screen.getByText(/Playback never extracts or starts a remux\/transcode job/)).toBeInTheDocument();
   });

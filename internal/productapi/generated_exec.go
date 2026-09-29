@@ -390,6 +390,14 @@ type ComplexityRoot struct {
 		Y func(childComplexity int) int
 	}
 
+	ManageGalleryAutomationIssue struct {
+		CreatedAt func(childComplexity int) int
+		ErrorCode func(childComplexity int) int
+		RunID     func(childComplexity int) int
+		RunStatus func(childComplexity int) int
+		Stage     func(childComplexity int) int
+	}
+
 	ManageGalleryCast struct {
 		CharacterName func(childComplexity int) int
 		CharacterUUID func(childComplexity int) int
@@ -433,6 +441,7 @@ type ComplexityRoot struct {
 		PhotographerName        func(childComplexity int) int
 		PublishDate             func(childComplexity int) int
 		PublishDatePrecision    func(childComplexity int) int
+		Review                  func(childComplexity int) int
 		Row                     func(childComplexity int) int
 		ScanRuns                func(childComplexity int) int
 		ShootDate               func(childComplexity int) int
@@ -458,6 +467,21 @@ type ComplexityRoot struct {
 		UUID        func(childComplexity int) int
 		WorkName    func(childComplexity int) int
 		WorkUUID    func(childComplexity int) int
+	}
+
+	ManageGalleryIdentityOption struct {
+		Name     func(childComplexity int) int
+		UUID     func(childComplexity int) int
+		WorkName func(childComplexity int) int
+	}
+
+	ManageGalleryIdentitySuggestion struct {
+		ID         func(childComplexity int) int
+		Kind       func(childComplexity int) int
+		Options    func(childComplexity int) int
+		ResolvedAt func(childComplexity int) int
+		Status     func(childComplexity int) int
+		Value      func(childComplexity int) int
 	}
 
 	ManageGalleryItem struct {
@@ -521,6 +545,13 @@ type ComplexityRoot struct {
 		TotalPages func(childComplexity int) int
 	}
 
+	ManageGalleryReview struct {
+		AutomationIssues    func(childComplexity int) int
+		Blockers            func(childComplexity int) int
+		IdentitySuggestions func(childComplexity int) int
+		SourceIssues        func(childComplexity int) int
+	}
+
 	ManageGalleryRow struct {
 		BlockingIssues          func(childComplexity int) int
 		Browsable               func(childComplexity int) int
@@ -553,6 +584,12 @@ type ComplexityRoot struct {
 		ID          func(childComplexity int) int
 		StartedAt   func(childComplexity int) int
 		Status      func(childComplexity int) int
+	}
+
+	ManageGallerySourceIssue struct {
+		Code     func(childComplexity int) int
+		Message  func(childComplexity int) int
+		Severity func(childComplexity int) int
 	}
 
 	ManageGalleryTag struct {
@@ -1171,6 +1208,7 @@ type ComplexityRoot struct {
 		ResetGalleryCover                      func(childComplexity int, setID string, expectedMetadataRevision int64) int
 		ResolveCoserManifest                   func(childComplexity int, coserUUID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
 		ResolveGalleryCaptureDate              func(childComplexity int, setID string, expectedMetadataRevision int64, candidate string, decision string) int
+		ResolveGalleryIdentitySuggestion       func(childComplexity int, setID string, suggestionID string, expectedMetadataRevision int64, accept bool, entityUUID string) int
 		ResolveGalleryManifest                 func(childComplexity int, setID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) int
 		ResolveMediaClassificationSuggestion   func(childComplexity int, id int64, accept bool, expectedGalleryRevision int64) int
 		ResolveMediaExclusionDecision          func(childComplexity int, id int64, accept bool, expectedGalleryRevision int64) int
@@ -1450,6 +1488,7 @@ type MutationResolver interface {
 	DeleteGallery(ctx context.Context, setID string, expectedMetadataRevision int64, password string, confirmation string) (bool, error)
 	ReplaceGalleryTags(ctx context.Context, setID string, expectedMetadataRevision int64, tags []*ReplaceGalleryTagInput) (*GalleryTagEditResult, error)
 	ReplaceGalleryRelations(ctx context.Context, setID string, expectedMetadataRevision int64, input ReplaceGalleryRelationsInput) (*ManageGalleryDetail, error)
+	ResolveGalleryIdentitySuggestion(ctx context.Context, setID string, suggestionID string, expectedMetadataRevision int64, accept bool, entityUUID string) (*ManageGalleryDetail, error)
 	AddGalleryExternalLink(ctx context.Context, setID string, expectedMetadataRevision int64, input GalleryExternalLinkInput) (*ManageGalleryDetail, error)
 	PushGalleryManifest(ctx context.Context, setID string, expectedMetadataRevision int64) (*ManageGalleryManifestState, error)
 	PushGalleryManifests(ctx context.Context, items []*GalleryManifestBatchPushInput, overwriteLocal bool) ([]*ManageGalleryManifestBatchResult, error)
@@ -3188,6 +3227,41 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageFocalPoint.Y(childComplexity), true
 
+	case "ManageGalleryAutomationIssue.createdAt":
+		if e.complexity.ManageGalleryAutomationIssue.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryAutomationIssue.CreatedAt(childComplexity), true
+
+	case "ManageGalleryAutomationIssue.errorCode":
+		if e.complexity.ManageGalleryAutomationIssue.ErrorCode == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryAutomationIssue.ErrorCode(childComplexity), true
+
+	case "ManageGalleryAutomationIssue.runID":
+		if e.complexity.ManageGalleryAutomationIssue.RunID == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryAutomationIssue.RunID(childComplexity), true
+
+	case "ManageGalleryAutomationIssue.runStatus":
+		if e.complexity.ManageGalleryAutomationIssue.RunStatus == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryAutomationIssue.RunStatus(childComplexity), true
+
+	case "ManageGalleryAutomationIssue.stage":
+		if e.complexity.ManageGalleryAutomationIssue.Stage == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryAutomationIssue.Stage(childComplexity), true
+
 	case "ManageGalleryCast.characterName":
 		if e.complexity.ManageGalleryCast.CharacterName == nil {
 			break
@@ -3419,6 +3493,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageGalleryDetail.PublishDatePrecision(childComplexity), true
 
+	case "ManageGalleryDetail.review":
+		if e.complexity.ManageGalleryDetail.Review == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryDetail.Review(childComplexity), true
+
 	case "ManageGalleryDetail.row":
 		if e.complexity.ManageGalleryDetail.Row == nil {
 			break
@@ -3551,6 +3632,69 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageGalleryFolderMatch.WorkUUID(childComplexity), true
+
+	case "ManageGalleryIdentityOption.name":
+		if e.complexity.ManageGalleryIdentityOption.Name == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryIdentityOption.Name(childComplexity), true
+
+	case "ManageGalleryIdentityOption.uuid":
+		if e.complexity.ManageGalleryIdentityOption.UUID == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryIdentityOption.UUID(childComplexity), true
+
+	case "ManageGalleryIdentityOption.workName":
+		if e.complexity.ManageGalleryIdentityOption.WorkName == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryIdentityOption.WorkName(childComplexity), true
+
+	case "ManageGalleryIdentitySuggestion.id":
+		if e.complexity.ManageGalleryIdentitySuggestion.ID == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryIdentitySuggestion.ID(childComplexity), true
+
+	case "ManageGalleryIdentitySuggestion.kind":
+		if e.complexity.ManageGalleryIdentitySuggestion.Kind == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryIdentitySuggestion.Kind(childComplexity), true
+
+	case "ManageGalleryIdentitySuggestion.options":
+		if e.complexity.ManageGalleryIdentitySuggestion.Options == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryIdentitySuggestion.Options(childComplexity), true
+
+	case "ManageGalleryIdentitySuggestion.resolvedAt":
+		if e.complexity.ManageGalleryIdentitySuggestion.ResolvedAt == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryIdentitySuggestion.ResolvedAt(childComplexity), true
+
+	case "ManageGalleryIdentitySuggestion.status":
+		if e.complexity.ManageGalleryIdentitySuggestion.Status == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryIdentitySuggestion.Status(childComplexity), true
+
+	case "ManageGalleryIdentitySuggestion.value":
+		if e.complexity.ManageGalleryIdentitySuggestion.Value == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryIdentitySuggestion.Value(childComplexity), true
 
 	case "ManageGalleryItem.audioCodec":
 		if e.complexity.ManageGalleryItem.AudioCodec == nil {
@@ -3874,6 +4018,34 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageGalleryPage.TotalPages(childComplexity), true
 
+	case "ManageGalleryReview.automationIssues":
+		if e.complexity.ManageGalleryReview.AutomationIssues == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryReview.AutomationIssues(childComplexity), true
+
+	case "ManageGalleryReview.blockers":
+		if e.complexity.ManageGalleryReview.Blockers == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryReview.Blockers(childComplexity), true
+
+	case "ManageGalleryReview.identitySuggestions":
+		if e.complexity.ManageGalleryReview.IdentitySuggestions == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryReview.IdentitySuggestions(childComplexity), true
+
+	case "ManageGalleryReview.sourceIssues":
+		if e.complexity.ManageGalleryReview.SourceIssues == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryReview.SourceIssues(childComplexity), true
+
 	case "ManageGalleryRow.blockingIssues":
 		if e.complexity.ManageGalleryRow.BlockingIssues == nil {
 			break
@@ -4069,6 +4241,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageGalleryScanRun.Status(childComplexity), true
+
+	case "ManageGallerySourceIssue.code":
+		if e.complexity.ManageGallerySourceIssue.Code == nil {
+			break
+		}
+
+		return e.complexity.ManageGallerySourceIssue.Code(childComplexity), true
+
+	case "ManageGallerySourceIssue.message":
+		if e.complexity.ManageGallerySourceIssue.Message == nil {
+			break
+		}
+
+		return e.complexity.ManageGallerySourceIssue.Message(childComplexity), true
+
+	case "ManageGallerySourceIssue.severity":
+		if e.complexity.ManageGallerySourceIssue.Severity == nil {
+			break
+		}
+
+		return e.complexity.ManageGallerySourceIssue.Severity(childComplexity), true
 
 	case "ManageGalleryTag.name":
 		if e.complexity.ManageGalleryTag.Name == nil {
@@ -7460,6 +7653,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.ResolveGalleryCaptureDate(childComplexity, args["setID"].(string), args["expectedMetadataRevision"].(int64), args["candidate"].(string), args["decision"].(string)), true
+
+	case "Mutation.resolveGalleryIdentitySuggestion":
+		if e.complexity.Mutation.ResolveGalleryIdentitySuggestion == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_resolveGalleryIdentitySuggestion_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ResolveGalleryIdentitySuggestion(childComplexity, args["setID"].(string), args["suggestionID"].(string), args["expectedMetadataRevision"].(int64), args["accept"].(bool), args["entityUUID"].(string)), true
 
 	case "Mutation.resolveGalleryManifest":
 		if e.complexity.Mutation.ResolveGalleryManifest == nil {
@@ -11593,6 +11798,126 @@ func (ec *executionContext) field_Mutation_resolveGalleryCaptureDate_argsDecisio
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("decision"))
 	if tmp, ok := rawArgs["decision"]; ok {
 		return ec.unmarshalNString2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_resolveGalleryIdentitySuggestion_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_resolveGalleryIdentitySuggestion_argsSetID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["setID"] = arg0
+	arg1, err := ec.field_Mutation_resolveGalleryIdentitySuggestion_argsSuggestionID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["suggestionID"] = arg1
+	arg2, err := ec.field_Mutation_resolveGalleryIdentitySuggestion_argsExpectedMetadataRevision(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["expectedMetadataRevision"] = arg2
+	arg3, err := ec.field_Mutation_resolveGalleryIdentitySuggestion_argsAccept(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["accept"] = arg3
+	arg4, err := ec.field_Mutation_resolveGalleryIdentitySuggestion_argsEntityUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["entityUUID"] = arg4
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_resolveGalleryIdentitySuggestion_argsSetID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["setID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("setID"))
+	if tmp, ok := rawArgs["setID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_resolveGalleryIdentitySuggestion_argsSuggestionID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["suggestionID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("suggestionID"))
+	if tmp, ok := rawArgs["suggestionID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_resolveGalleryIdentitySuggestion_argsExpectedMetadataRevision(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int64, error) {
+	if _, ok := rawArgs["expectedMetadataRevision"]; !ok {
+		var zeroVal int64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedMetadataRevision"))
+	if tmp, ok := rawArgs["expectedMetadataRevision"]; ok {
+		return ec.unmarshalNInt642int64(ctx, tmp)
+	}
+
+	var zeroVal int64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_resolveGalleryIdentitySuggestion_argsAccept(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (bool, error) {
+	if _, ok := rawArgs["accept"]; !ok {
+		var zeroVal bool
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("accept"))
+	if tmp, ok := rawArgs["accept"]; ok {
+		return ec.unmarshalNBoolean2bool(ctx, tmp)
+	}
+
+	var zeroVal bool
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_resolveGalleryIdentitySuggestion_argsEntityUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["entityUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("entityUUID"))
+	if tmp, ok := rawArgs["entityUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
 	}
 
 	var zeroVal string
@@ -27151,6 +27476,226 @@ func (ec *executionContext) fieldContext_ManageFocalPoint_y(_ context.Context, f
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageGalleryAutomationIssue_runID(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryAutomationIssue) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryAutomationIssue_runID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RunID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryAutomationIssue_runID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryAutomationIssue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryAutomationIssue_stage(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryAutomationIssue) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryAutomationIssue_stage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Stage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryAutomationIssue_stage(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryAutomationIssue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryAutomationIssue_errorCode(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryAutomationIssue) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryAutomationIssue_errorCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ErrorCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryAutomationIssue_errorCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryAutomationIssue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryAutomationIssue_runStatus(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryAutomationIssue) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryAutomationIssue_runStatus(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RunStatus, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryAutomationIssue_runStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryAutomationIssue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryAutomationIssue_createdAt(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryAutomationIssue) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryAutomationIssue_createdAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryAutomationIssue_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryAutomationIssue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageGalleryCast_characterUUID(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryCast) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageGalleryCast_characterUUID(ctx, field)
 	if err != nil {
@@ -29111,6 +29656,60 @@ func (ec *executionContext) fieldContext_ManageGalleryDetail_scanRuns(_ context.
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageGalleryDetail_review(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryDetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryDetail_review(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Review, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageGalleryReview)
+	fc.Result = res
+	return ec.marshalNManageGalleryReview2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryReview(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryDetail_review(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "blockers":
+				return ec.fieldContext_ManageGalleryReview_blockers(ctx, field)
+			case "identitySuggestions":
+				return ec.fieldContext_ManageGalleryReview_identitySuggestions(ctx, field)
+			case "sourceIssues":
+				return ec.fieldContext_ManageGalleryReview_sourceIssues(ctx, field)
+			case "automationIssues":
+				return ec.fieldContext_ManageGalleryReview_automationIssues(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryReview", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageGalleryExternalLink_uuid(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryExternalLink) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageGalleryExternalLink_uuid(ctx, field)
 	if err != nil {
@@ -29590,6 +30189,410 @@ func (ec *executionContext) fieldContext_ManageGalleryFolderMatch_workName(_ con
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryIdentityOption_uuid(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryIdentityOption) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryIdentityOption_uuid(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryIdentityOption_uuid(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryIdentityOption",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryIdentityOption_name(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryIdentityOption) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryIdentityOption_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryIdentityOption_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryIdentityOption",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryIdentityOption_workName(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryIdentityOption) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryIdentityOption_workName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.WorkName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryIdentityOption_workName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryIdentityOption",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryIdentitySuggestion_id(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryIdentitySuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryIdentitySuggestion_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryIdentitySuggestion_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryIdentitySuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryIdentitySuggestion_kind(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryIdentitySuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryIdentitySuggestion_kind(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Kind, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryIdentitySuggestion_kind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryIdentitySuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryIdentitySuggestion_value(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryIdentitySuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryIdentitySuggestion_value(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Value, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryIdentitySuggestion_value(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryIdentitySuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryIdentitySuggestion_status(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryIdentitySuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryIdentitySuggestion_status(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Status, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryIdentitySuggestion_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryIdentitySuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryIdentitySuggestion_resolvedAt(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryIdentitySuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryIdentitySuggestion_resolvedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ResolvedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryIdentitySuggestion_resolvedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryIdentitySuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryIdentitySuggestion_options(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryIdentitySuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryIdentitySuggestion_options(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Options, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageGalleryIdentityOption)
+	fc.Result = res
+	return ec.marshalNManageGalleryIdentityOption2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryIdentityOptionᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryIdentitySuggestion_options(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryIdentitySuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "uuid":
+				return ec.fieldContext_ManageGalleryIdentityOption_uuid(ctx, field)
+			case "name":
+				return ec.fieldContext_ManageGalleryIdentityOption_name(ctx, field)
+			case "workName":
+				return ec.fieldContext_ManageGalleryIdentityOption_workName(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryIdentityOption", field.Name)
 		},
 	}
 	return fc, nil
@@ -31696,6 +32699,216 @@ func (ec *executionContext) fieldContext_ManageGalleryPage_totalPages(_ context.
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageGalleryReview_blockers(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryReview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryReview_blockers(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Blockers, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryReview_blockers(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryReview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryReview_identitySuggestions(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryReview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryReview_identitySuggestions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IdentitySuggestions, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageGalleryIdentitySuggestion)
+	fc.Result = res
+	return ec.marshalNManageGalleryIdentitySuggestion2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryIdentitySuggestionᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryReview_identitySuggestions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryReview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ManageGalleryIdentitySuggestion_id(ctx, field)
+			case "kind":
+				return ec.fieldContext_ManageGalleryIdentitySuggestion_kind(ctx, field)
+			case "value":
+				return ec.fieldContext_ManageGalleryIdentitySuggestion_value(ctx, field)
+			case "status":
+				return ec.fieldContext_ManageGalleryIdentitySuggestion_status(ctx, field)
+			case "resolvedAt":
+				return ec.fieldContext_ManageGalleryIdentitySuggestion_resolvedAt(ctx, field)
+			case "options":
+				return ec.fieldContext_ManageGalleryIdentitySuggestion_options(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryIdentitySuggestion", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryReview_sourceIssues(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryReview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryReview_sourceIssues(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SourceIssues, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageGallerySourceIssue)
+	fc.Result = res
+	return ec.marshalNManageGallerySourceIssue2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGallerySourceIssueᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryReview_sourceIssues(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryReview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "code":
+				return ec.fieldContext_ManageGallerySourceIssue_code(ctx, field)
+			case "severity":
+				return ec.fieldContext_ManageGallerySourceIssue_severity(ctx, field)
+			case "message":
+				return ec.fieldContext_ManageGallerySourceIssue_message(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageGallerySourceIssue", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryReview_automationIssues(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryReview) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryReview_automationIssues(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AutomationIssues, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageGalleryAutomationIssue)
+	fc.Result = res
+	return ec.marshalNManageGalleryAutomationIssue2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryAutomationIssueᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryReview_automationIssues(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryReview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "runID":
+				return ec.fieldContext_ManageGalleryAutomationIssue_runID(ctx, field)
+			case "stage":
+				return ec.fieldContext_ManageGalleryAutomationIssue_stage(ctx, field)
+			case "errorCode":
+				return ec.fieldContext_ManageGalleryAutomationIssue_errorCode(ctx, field)
+			case "runStatus":
+				return ec.fieldContext_ManageGalleryAutomationIssue_runStatus(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ManageGalleryAutomationIssue_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryAutomationIssue", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageGalleryRow_setID(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryRow) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageGalleryRow_setID(ctx, field)
 	if err != nil {
@@ -32915,6 +34128,138 @@ func (ec *executionContext) _ManageGalleryScanRun_errorCode(ctx context.Context,
 func (ec *executionContext) fieldContext_ManageGalleryScanRun_errorCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ManageGalleryScanRun",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGallerySourceIssue_code(ctx context.Context, field graphql.CollectedField, obj *ManageGallerySourceIssue) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGallerySourceIssue_code(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Code, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGallerySourceIssue_code(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGallerySourceIssue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGallerySourceIssue_severity(ctx context.Context, field graphql.CollectedField, obj *ManageGallerySourceIssue) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGallerySourceIssue_severity(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Severity, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGallerySourceIssue_severity(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGallerySourceIssue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGallerySourceIssue_message(ctx context.Context, field graphql.CollectedField, obj *ManageGallerySourceIssue) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGallerySourceIssue_message(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Message, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGallerySourceIssue_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGallerySourceIssue",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -51423,6 +52768,8 @@ func (ec *executionContext) fieldContext_Mutation_forgetGalleryItem(ctx context.
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -51528,6 +52875,8 @@ func (ec *executionContext) fieldContext_Mutation_forgetMissingGalleryItems(ctx 
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -51633,6 +52982,8 @@ func (ec *executionContext) fieldContext_Mutation_replaceMissingGalleryItem(ctx 
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -51738,6 +53089,8 @@ func (ec *executionContext) fieldContext_Mutation_confirmGallerySourceRebind(ctx
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -52329,6 +53682,8 @@ func (ec *executionContext) fieldContext_Mutation_updateGalleryMetadata(ctx cont
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -52434,6 +53789,8 @@ func (ec *executionContext) fieldContext_Mutation_resolveGalleryCaptureDate(ctx 
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -52539,6 +53896,8 @@ func (ec *executionContext) fieldContext_Mutation_setGalleryState(ctx context.Co
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -52644,6 +54003,8 @@ func (ec *executionContext) fieldContext_Mutation_updateGalleryItem(ctx context.
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -52749,6 +54110,8 @@ func (ec *executionContext) fieldContext_Mutation_setGalleryItemExcluded(ctx con
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -52854,6 +54217,8 @@ func (ec *executionContext) fieldContext_Mutation_moveGalleryItem(ctx context.Co
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -52959,6 +54324,8 @@ func (ec *executionContext) fieldContext_Mutation_reorderGalleryItems(ctx contex
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -53064,6 +54431,8 @@ func (ec *executionContext) fieldContext_Mutation_setGalleryCoverItem(ctx contex
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -53169,6 +54538,8 @@ func (ec *executionContext) fieldContext_Mutation_resetGalleryCover(ctx context.
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -55308,6 +56679,8 @@ func (ec *executionContext) fieldContext_Mutation_importGalleryCandidate(ctx con
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -55484,6 +56857,8 @@ func (ec *executionContext) fieldContext_Mutation_scanGallerySource(ctx context.
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -56731,6 +58106,8 @@ func (ec *executionContext) fieldContext_Mutation_replaceGalleryRelations(ctx co
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -56743,6 +58120,113 @@ func (ec *executionContext) fieldContext_Mutation_replaceGalleryRelations(ctx co
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_replaceGalleryRelations_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_resolveGalleryIdentitySuggestion(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_resolveGalleryIdentitySuggestion(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().ResolveGalleryIdentitySuggestion(rctx, fc.Args["setID"].(string), fc.Args["suggestionID"].(string), fc.Args["expectedMetadataRevision"].(int64), fc.Args["accept"].(bool), fc.Args["entityUUID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ManageGalleryDetail)
+	fc.Result = res
+	return ec.marshalNManageGalleryDetail2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryDetail(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_resolveGalleryIdentitySuggestion(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "row":
+				return ec.fieldContext_ManageGalleryDetail_row(ctx, field)
+			case "aliases":
+				return ec.fieldContext_ManageGalleryDetail_aliases(ctx, field)
+			case "description":
+				return ec.fieldContext_ManageGalleryDetail_description(ctx, field)
+			case "shootDate":
+				return ec.fieldContext_ManageGalleryDetail_shootDate(ctx, field)
+			case "shootDatePrecision":
+				return ec.fieldContext_ManageGalleryDetail_shootDatePrecision(ctx, field)
+			case "publishDate":
+				return ec.fieldContext_ManageGalleryDetail_publishDate(ctx, field)
+			case "publishDatePrecision":
+				return ec.fieldContext_ManageGalleryDetail_publishDatePrecision(ctx, field)
+			case "imageCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureStart(ctx, field)
+			case "imageCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_imageCaptureEnd(ctx, field)
+			case "videoCaptureStart":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureStart(ctx, field)
+			case "videoCaptureEnd":
+				return ec.fieldContext_ManageGalleryDetail_videoCaptureEnd(ctx, field)
+			case "captureDateCandidate":
+				return ec.fieldContext_ManageGalleryDetail_captureDateCandidate(ctx, field)
+			case "captureDateReviewStatus":
+				return ec.fieldContext_ManageGalleryDetail_captureDateReviewStatus(ctx, field)
+			case "mediaAddedStartUTC":
+				return ec.fieldContext_ManageGalleryDetail_mediaAddedStartUTC(ctx, field)
+			case "mediaAddedEndUTC":
+				return ec.fieldContext_ManageGalleryDetail_mediaAddedEndUTC(ctx, field)
+			case "mediaAddedStatus":
+				return ec.fieldContext_ManageGalleryDetail_mediaAddedStatus(ctx, field)
+			case "photographerName":
+				return ec.fieldContext_ManageGalleryDetail_photographerName(ctx, field)
+			case "studioName":
+				return ec.fieldContext_ManageGalleryDetail_studioName(ctx, field)
+			case "items":
+				return ec.fieldContext_ManageGalleryDetail_items(ctx, field)
+			case "credits":
+				return ec.fieldContext_ManageGalleryDetail_credits(ctx, field)
+			case "tags":
+				return ec.fieldContext_ManageGalleryDetail_tags(ctx, field)
+			case "externalLinks":
+				return ec.fieldContext_ManageGalleryDetail_externalLinks(ctx, field)
+			case "folderMatches":
+				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
+			case "scanRuns":
+				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_resolveGalleryIdentitySuggestion_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -56836,6 +58320,8 @@ func (ec *executionContext) fieldContext_Mutation_addGalleryExternalLink(ctx con
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -59675,6 +61161,8 @@ func (ec *executionContext) fieldContext_Query_manageGallery(ctx context.Context
 				return ec.fieldContext_ManageGalleryDetail_folderMatches(ctx, field)
 			case "scanRuns":
 				return ec.fieldContext_ManageGalleryDetail_scanRuns(ctx, field)
+			case "review":
+				return ec.fieldContext_ManageGalleryDetail_review(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryDetail", field.Name)
 		},
@@ -71100,6 +72588,65 @@ func (ec *executionContext) _ManageFocalPoint(ctx context.Context, sel ast.Selec
 	return out
 }
 
+var manageGalleryAutomationIssueImplementors = []string{"ManageGalleryAutomationIssue"}
+
+func (ec *executionContext) _ManageGalleryAutomationIssue(ctx context.Context, sel ast.SelectionSet, obj *ManageGalleryAutomationIssue) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageGalleryAutomationIssueImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageGalleryAutomationIssue")
+		case "runID":
+			out.Values[i] = ec._ManageGalleryAutomationIssue_runID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "stage":
+			out.Values[i] = ec._ManageGalleryAutomationIssue_stage(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "errorCode":
+			out.Values[i] = ec._ManageGalleryAutomationIssue_errorCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "runStatus":
+			out.Values[i] = ec._ManageGalleryAutomationIssue_runStatus(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._ManageGalleryAutomationIssue_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var manageGalleryCastImplementors = []string{"ManageGalleryCast"}
 
 func (ec *executionContext) _ManageGalleryCast(ctx context.Context, sel ast.SelectionSet, obj *ManageGalleryCast) graphql.Marshaler {
@@ -71418,6 +72965,11 @@ func (ec *executionContext) _ManageGalleryDetail(ctx context.Context, sel ast.Se
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "review":
+			out.Values[i] = ec._ManageGalleryDetail_review(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -71538,6 +73090,119 @@ func (ec *executionContext) _ManageGalleryFolderMatch(ctx context.Context, sel a
 			}
 		case "workName":
 			out.Values[i] = ec._ManageGalleryFolderMatch_workName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageGalleryIdentityOptionImplementors = []string{"ManageGalleryIdentityOption"}
+
+func (ec *executionContext) _ManageGalleryIdentityOption(ctx context.Context, sel ast.SelectionSet, obj *ManageGalleryIdentityOption) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageGalleryIdentityOptionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageGalleryIdentityOption")
+		case "uuid":
+			out.Values[i] = ec._ManageGalleryIdentityOption_uuid(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._ManageGalleryIdentityOption_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "workName":
+			out.Values[i] = ec._ManageGalleryIdentityOption_workName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageGalleryIdentitySuggestionImplementors = []string{"ManageGalleryIdentitySuggestion"}
+
+func (ec *executionContext) _ManageGalleryIdentitySuggestion(ctx context.Context, sel ast.SelectionSet, obj *ManageGalleryIdentitySuggestion) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageGalleryIdentitySuggestionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageGalleryIdentitySuggestion")
+		case "id":
+			out.Values[i] = ec._ManageGalleryIdentitySuggestion_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "kind":
+			out.Values[i] = ec._ManageGalleryIdentitySuggestion_kind(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "value":
+			out.Values[i] = ec._ManageGalleryIdentitySuggestion_value(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._ManageGalleryIdentitySuggestion_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resolvedAt":
+			out.Values[i] = ec._ManageGalleryIdentitySuggestion_resolvedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "options":
+			out.Values[i] = ec._ManageGalleryIdentitySuggestion_options(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -71961,6 +73626,60 @@ func (ec *executionContext) _ManageGalleryPage(ctx context.Context, sel ast.Sele
 	return out
 }
 
+var manageGalleryReviewImplementors = []string{"ManageGalleryReview"}
+
+func (ec *executionContext) _ManageGalleryReview(ctx context.Context, sel ast.SelectionSet, obj *ManageGalleryReview) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageGalleryReviewImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageGalleryReview")
+		case "blockers":
+			out.Values[i] = ec._ManageGalleryReview_blockers(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "identitySuggestions":
+			out.Values[i] = ec._ManageGalleryReview_identitySuggestions(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sourceIssues":
+			out.Values[i] = ec._ManageGalleryReview_sourceIssues(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "automationIssues":
+			out.Values[i] = ec._ManageGalleryReview_automationIssues(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var manageGalleryRowImplementors = []string{"ManageGalleryRow"}
 
 func (ec *executionContext) _ManageGalleryRow(ctx context.Context, sel ast.SelectionSet, obj *ManageGalleryRow) graphql.Marshaler {
@@ -72140,6 +73859,55 @@ func (ec *executionContext) _ManageGalleryScanRun(ctx context.Context, sel ast.S
 			}
 		case "errorCode":
 			out.Values[i] = ec._ManageGalleryScanRun_errorCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageGallerySourceIssueImplementors = []string{"ManageGallerySourceIssue"}
+
+func (ec *executionContext) _ManageGallerySourceIssue(ctx context.Context, sel ast.SelectionSet, obj *ManageGallerySourceIssue) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageGallerySourceIssueImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageGallerySourceIssue")
+		case "code":
+			out.Values[i] = ec._ManageGallerySourceIssue_code(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "severity":
+			out.Values[i] = ec._ManageGallerySourceIssue_severity(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "message":
+			out.Values[i] = ec._ManageGallerySourceIssue_message(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -76493,6 +78261,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "resolveGalleryIdentitySuggestion":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_resolveGalleryIdentitySuggestion(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "addGalleryExternalLink":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_addGalleryExternalLink(ctx, field)
@@ -80379,6 +82154,60 @@ func (ec *executionContext) marshalNManageDiscoverySnapshot2ᚖgithubᚗcomᚋst
 	return ec._ManageDiscoverySnapshot(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNManageGalleryAutomationIssue2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryAutomationIssueᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageGalleryAutomationIssue) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageGalleryAutomationIssue2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryAutomationIssue(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageGalleryAutomationIssue2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryAutomationIssue(ctx context.Context, sel ast.SelectionSet, v *ManageGalleryAutomationIssue) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageGalleryAutomationIssue(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNManageGalleryCast2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryCastᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageGalleryCast) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -80623,6 +82452,114 @@ func (ec *executionContext) marshalNManageGalleryFolderMatch2ᚖgithubᚗcomᚋs
 	return ec._ManageGalleryFolderMatch(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNManageGalleryIdentityOption2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryIdentityOptionᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageGalleryIdentityOption) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageGalleryIdentityOption2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryIdentityOption(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageGalleryIdentityOption2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryIdentityOption(ctx context.Context, sel ast.SelectionSet, v *ManageGalleryIdentityOption) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageGalleryIdentityOption(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageGalleryIdentitySuggestion2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryIdentitySuggestionᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageGalleryIdentitySuggestion) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageGalleryIdentitySuggestion2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryIdentitySuggestion(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageGalleryIdentitySuggestion2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryIdentitySuggestion(ctx context.Context, sel ast.SelectionSet, v *ManageGalleryIdentitySuggestion) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageGalleryIdentitySuggestion(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNManageGalleryItem2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryItemᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageGalleryItem) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -80813,6 +82750,16 @@ func (ec *executionContext) marshalNManageGalleryPage2ᚖgithubᚗcomᚋstashapp
 	return ec._ManageGalleryPage(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNManageGalleryReview2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryReview(ctx context.Context, sel ast.SelectionSet, v *ManageGalleryReview) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageGalleryReview(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNManageGalleryRow2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryRowᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageGalleryRow) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -80919,6 +82866,60 @@ func (ec *executionContext) marshalNManageGalleryScanRun2ᚖgithubᚗcomᚋstash
 		return graphql.Null
 	}
 	return ec._ManageGalleryScanRun(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageGallerySourceIssue2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGallerySourceIssueᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageGallerySourceIssue) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageGallerySourceIssue2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGallerySourceIssue(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageGallerySourceIssue2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGallerySourceIssue(ctx context.Context, sel ast.SelectionSet, v *ManageGallerySourceIssue) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageGallerySourceIssue(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNManageGalleryTag2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageGalleryTagᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageGalleryTag) graphql.Marshaler {

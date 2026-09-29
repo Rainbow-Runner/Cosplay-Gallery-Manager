@@ -5,6 +5,14 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-09-30 自动化阻断后人工接续闭环（源码完成，未提交／部署）
+
+- 问题证据：媒体库2的自动化run 5已`COMPLETED`，旧问题`ACTIVATION_BLOCKING_SOURCE_ISSUE`为历史；Gallery 10来源现已可用、86P4V均READY，09-30 00:33:08人物关系保存成功，但同名持久COSER建议仍PENDING，于00:33:17／00:33:51激活失败。任务生命周期、当前激活门禁、持久建议状态和历史问题记录原本未衔接。
+- 管理详情新读模型按现有激活函数读取阻断码、当前来源Issue、待审/最近20条已决实体建议及最近20条自动化run Issue（标明run状态）。编辑页中英双语显示阻断、处理入口与折叠历史；来源问题只指引修复后来源扫描，不提供确认勾选绕过安全门禁。历史run issue不会被删除或误当当前门禁。
+- 手工`ReplaceRelations`与唯一精确建议的接受在同一个事务完成，匹配须是已有实体的规范主名或Alias全局唯一，且UUID在本次已保存的Coser、Cast或由Cast派生的Work中；身份歧义、未匹配或未保存关系仍待审，失败整体回滚。原自动化关系路径不改动；已有人工关系不被自动化覆盖。待审建议可在编辑页显式选择已保存且精确匹配的实体接受，或二次确认拒绝；后端复核Gallery作用域、PENDING状态、版本和当前保存关系，记录管理审计但不改关系、元数据revision及Manifest；不新增schema。
+- 数据库回归覆盖唯一Alias确认、未匹配保留、同名歧义显式选择、非关联UUID拒绝、过期revision、重复提交、拒绝仍保持人物关系及历史、建议写入失败导致关系事务回滚；API回归校核新GraphQL人工复核返回完整历史，前端回归校核当前/历史分离、来源问题跳转、歧义选择后显式复核、无匹配与未保存草稿门禁。此阶段不做业务数据操作、服务部署或自动化重新运行。
+- 最终验证：Go产品库定向新增测试与定向race通过，正式三标签产品库／API／Server／Gallery／Discovery／Archive／嵌入Web／CMD完整回归通过，同范围Go Vet通过；Web TypeScript检查、42文件181项全量测试和生产构建通过（保留既有主chunk超过500KiB提示）；`git diff --check`通过。GraphQL生成文件由项目既有gqlgen配置重生，不手写执行器；一次从错误工作目录生成的3个未跟踪文件在确认目标后立即移除，未触碰现有源码。新功能仍未做真实浏览器业务验收，正式服务仍为已部署的`44c612c`。完整输出保存在`/tmp/cgm-review-web-full.log`、`/tmp/cgm-review-web-build.log`、`/tmp/cgm-review-go-full.log`、`/tmp/cgm-review-go-race.log`及`/tmp/cgm-review-vet.log`。
+
 ## 2026-09-30 独立实体候选与Cast交互累计提交及本机增量部署
 
 - 用户授权提交累计改动并部署。15文件功能／测试／记录提交为`44c612c5fb732296959bd2d88d0b50471e923fa8`（`Improve gallery source matches and cast editing interactions`）。确认重复限制仅为同一Coser下重复同一Character，不禁止不同人物扮演相同角色。

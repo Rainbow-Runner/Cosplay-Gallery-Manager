@@ -489,7 +489,7 @@ func (s *AutomationStore) acceptDeterminateIdentities(ctx context.Context, value
 	if err := rows.Close(); err != nil {
 		return err
 	}
-	if err := replaceGalleryRelationsTx(ctx, tx, value.ID, value.MetadataRevision, input, now); err != nil {
+	if err := replaceGalleryRelationsTx(ctx, tx, value.ID, value.MetadataRevision, input, now, false); err != nil {
 		return err
 	}
 	for _, item := range pending {

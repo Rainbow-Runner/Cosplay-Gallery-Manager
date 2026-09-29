@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -1089,4 +1090,32 @@ func openTestDatabase(t *testing.T) *productdb.Database {
 	}
 	t.Cleanup(func() { _ = database.Close() })
 	return database
+}
+func TestManualIdentityReviewGraphQLRetainsHistory(t *testing.T) {
+	database := openTestDatabase(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 30, 2, 0, 0, 0, time.UTC)
+	galleryValue, err := database.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Review API"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := database.ExecContext(ctx, `INSERT INTO gallery_identity_suggestions(gallery_id,suggestion_kind,value,status,created_at_utc) VALUES(?,'COSER','Unmatched','PENDING',?)`, galleryValue.ID, now.Format(time.RFC3339Nano))
+	if err != nil {
+		t.Fatal(err)
+	}
+	suggestionID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	query := fmt.Sprintf(`mutation { resolveGalleryIdentitySuggestion(setID:%q,suggestionID:%q,expectedMetadataRevision:1,accept:false,entityUUID:"") {
+		row { metadataRevision } review { blockers identitySuggestions { id kind value status resolvedAt options { uuid } } } } }`, galleryValue.SetID, strconv.FormatInt(suggestionID, 10))
+	request := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(fmt.Sprintf(`{"query":%q}`, query)))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	NewHandler(database, func(*http.Request) bool { return true }).ServeHTTP(response, request)
+	if response.Code != http.StatusOK || bytes.Contains(response.Body.Bytes(), []byte(`"errors"`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(`"status":"REJECTED"`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(`"metadataRevision":1`)) {
+		t.Fatalf("manual review response = %d %s", response.Code, response.Body.String())
+	}
 }

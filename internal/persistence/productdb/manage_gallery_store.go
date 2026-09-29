@@ -266,7 +266,8 @@ func (s *ManageStore) GalleryDetail(ctx context.Context, setID string) (manage.G
 			return manage.GalleryDetail{}, err
 		}
 	}
-	return result, nil
+	result.Review, err = s.galleryReview(ctx, galleryID)
+	return result, err
 }
 
 type folderEntityToken struct {

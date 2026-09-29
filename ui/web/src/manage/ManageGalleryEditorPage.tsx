@@ -2,7 +2,7 @@ import { useApolloClient, useMutation, useQuery } from "@apollo/client/react";
 import { type FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useIntl } from "react-intl";
-import { ADD_GALLERY_EXTERNAL_LINK, FORGET_GALLERY_ITEM, FORGET_MISSING_GALLERY_ITEMS, MANAGE_GALLERY, MANAGE_GALLERY_MANIFEST, PULL_GALLERY_MANIFEST, PUSH_GALLERY_MANIFEST, REORDER_GALLERY_ITEMS, REPLACE_GALLERY_RELATIONS, REPLACE_MISSING_GALLERY_ITEM, RESET_GALLERY_COVER, RESOLVE_GALLERY_CAPTURE_DATE, RESOLVE_GALLERY_MANIFEST, RETRY_GALLERY_ITEM_VIDEO, SCAN_GALLERY_SOURCE, SET_GALLERY_COVER_ITEM, SET_GALLERY_ITEM_EXCLUDED, SET_GALLERY_STATE, UPDATE_GALLERY_ITEM, UPDATE_GALLERY_METADATA } from "../api/manage";
+import { ADD_GALLERY_EXTERNAL_LINK, FORGET_GALLERY_ITEM, FORGET_MISSING_GALLERY_ITEMS, MANAGE_GALLERY, MANAGE_GALLERY_MANIFEST, PULL_GALLERY_MANIFEST, PUSH_GALLERY_MANIFEST, REORDER_GALLERY_ITEMS, REPLACE_GALLERY_RELATIONS, REPLACE_MISSING_GALLERY_ITEM, RESET_GALLERY_COVER, RESOLVE_GALLERY_CAPTURE_DATE, RESOLVE_GALLERY_IDENTITY_SUGGESTION, RESOLVE_GALLERY_MANIFEST, RETRY_GALLERY_ITEM_VIDEO, SCAN_GALLERY_SOURCE, SET_GALLERY_COVER_ITEM, SET_GALLERY_ITEM_EXCLUDED, SET_GALLERY_STATE, UPDATE_GALLERY_ITEM, UPDATE_GALLERY_METADATA } from "../api/manage";
 import { buildGalleryMediaFolderTree, flattenGalleryMediaFolders, galleryMediaFileName, galleryMediaGroupKey, galleryMediaParentPath, groupGalleryMedia, moveGalleryMediaFolderTreeNode, naturalFileNameCompare, type GalleryMediaFolder, type GalleryMediaFolderNode, type GalleryMediaGroup } from "./galleryMediaFolders";
 import { ManageEntitySelector } from "./ManageEntitySelector";
 import { ManageGalleryDeletePanel } from "./ManageGalleryDeletePanel";
@@ -21,6 +21,7 @@ function isAbsoluteHTTPURL(value: string) {
 export function ManageGalleryEditorPage() {
   const intl = useIntl();
   const matchText = (key: string) => intl.formatMessage({ id: `manage.galleryMatches.${key}` });
+  const reviewText = (key: string) => intl.formatMessage({ id: `manage.review.${key}` });
   const client = useApolloClient();
   const navigate = useNavigate();
   const { setID = "" } = useParams(); const [parameters, setParameters] = useSearchParams(); const tab = tabs.includes(parameters.get("tab") as typeof tabs[number]) ? parameters.get("tab") as typeof tabs[number] : "basic";
@@ -36,6 +37,7 @@ export function ManageGalleryEditorPage() {
   const [scanSource, scanState] = useMutation<{ scanGallerySource: ManageGalleryDetail }>(SCAN_GALLERY_SOURCE);
 	const [retryVideo, retryVideoState] = useMutation<{ retryGalleryItemVideo: boolean }>(RETRY_GALLERY_ITEM_VIDEO);
   const [replaceRelations, relationState] = useMutation<{ replaceGalleryRelations: ManageGalleryDetail }>(REPLACE_GALLERY_RELATIONS);
+  const [resolveIdentity, identityState] = useMutation<{ resolveGalleryIdentitySuggestion: ManageGalleryDetail }>(RESOLVE_GALLERY_IDENTITY_SUGGESTION);
   const [addExternalLink, externalLinkState] = useMutation<{ addGalleryExternalLink: ManageGalleryDetail }>(ADD_GALLERY_EXTERNAL_LINK);
   const manifestQuery = useQuery<{ manageGalleryManifest: ManageGalleryManifestState }>(MANAGE_GALLERY_MANIFEST, { variables: { setID }, skip: tab !== "manifest", fetchPolicy: "network-only" });
   const [pushManifest, pushManifestState] = useMutation<{ pushGalleryManifest: ManageGalleryManifestState }>(PUSH_GALLERY_MANIFEST);
@@ -43,6 +45,7 @@ export function ManageGalleryEditorPage() {
   const [resolveManifest, resolveManifestState] = useMutation<{ resolveGalleryManifest: ManageGalleryManifestState }>(RESOLVE_GALLERY_MANIFEST);
   const [resolveCaptureDate, captureDateState] = useMutation<{ resolveGalleryCaptureDate: ManageGalleryDetail }>(RESOLVE_GALLERY_CAPTURE_DATE);
   const [draft, setDraft] = useState<ManageGalleryDetail | null>(null); const [message, setMessage] = useState("");
+  const [identityChoices, setIdentityChoices] = useState<Record<string, string>>({});
   const [excludeNewRootMedia, setExcludeNewRootMedia] = useState(true);
   const [forceContentRead, setForceContentRead] = useState(false);
   const [missingOnly, setMissingOnly] = useState(false);
@@ -109,6 +112,10 @@ export function ManageGalleryEditorPage() {
   function editTag(index: number, patch: Partial<ManageGalleryTag>) { setDraft({ ...current, tags: current.tags.map((tag, position) => position === index ? { ...tag, ...patch } : tag) }); }
   const relationsValid = current.credits.every((credit) => credit.coserUUID && credit.cast.every((cast) => cast.characterUUID)) &&
     current.tags.every((tag) => tag.uuid);
+  const savedRelations = query.data?.manageGallery;
+  const unsavedRelations = !!savedRelations && (JSON.stringify(current.credits) !== JSON.stringify(savedRelations.credits) || JSON.stringify(current.tags) !== JSON.stringify(savedRelations.tags));
+  const pendingIdentities = current.review?.identitySuggestions.filter((suggestion) => suggestion.status === "PENDING") || [];
+  const reviewedIdentities = current.review?.identitySuggestions.filter((suggestion) => suggestion.status !== "PENDING") || [];
   function folderMatchApplied(match: ManageGalleryFolderMatch) {
     if (match.kind === "COSER") return current.credits.some((credit) => credit.coserUUID === match.uuid);
     if (match.kind === "CHARACTER") return current.credits.some((credit) => credit.cast.some((cast) => cast.characterUUID === match.uuid));
@@ -164,6 +171,20 @@ export function ManageGalleryEditorPage() {
       if (refreshed.data) setDraft(refreshed.data.manageGallery);
       setMessage("People, characters and tags saved");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Relation save failed"); }
+  }
+  async function decideIdentity(suggestionID: string, accept: boolean, entityUUID: string) {
+    if (unsavedRelations || identityState.loading) return;
+    if (!accept && !window.confirm(reviewText("rejectConfirm"))) return;
+    setMessage("");
+    try {
+      const result = await resolveIdentity({ variables: { setID, suggestionID, expectedMetadataRevision: current.row.metadataRevision, accept, entityUUID } });
+      if (!result.data) throw new Error("Server did not return the updated review");
+      setDraft(result.data.resolveGalleryIdentitySuggestion);
+      setIdentityChoices((previous) => { const next = { ...previous }; delete next[suggestionID]; return next; });
+      const refreshed = await query.refetch();
+      if (refreshed.data) setDraft(refreshed.data.manageGallery);
+      setMessage(reviewText("done"));
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Identity review failed"); }
   }
   async function createExternalLink(event: FormEvent) {
     event.preventDefault(); if (!externalLinkValid) return; setMessage("");
@@ -256,6 +277,28 @@ export function ManageGalleryEditorPage() {
     <div className="manage-actions">{draft.row.state !== "ACTIVE" ? <button onClick={() => transition("ACTIVE")}>Activate</button> : <button onClick={() => transition("DRAFT")}>Draft</button>}<button onClick={() => transition("ARCHIVED")}>Archive</button></div></header>
     <nav className="editor-tabs">{tabs.map((value) => <button key={value} className={tab === value ? "is-active" : ""} onClick={() => setParameters({ tab: value })}>{value}</button>)}</nav>
     {message ? <p className="manage-message" role="status">{message}</p> : null}
+    {draft.row.state !== "ACTIVE" || pendingIdentities.length || (draft.review?.sourceIssues.length || 0) > 0 || reviewedIdentities.length || (draft.review?.automationIssues.length || 0) > 0 ? <section className="manage-panel manage-activation-review" aria-label={reviewText("title")}>
+      <h3>{reviewText("title")}</h3>
+      <p>{draft.review?.blockers.length ? intl.formatMessage({ id: "manage.review.blocked" }, { count: draft.review.blockers.length }) : reviewText("ready")}</p>
+      {draft.review?.blockers.length ? <ul>{draft.review.blockers.map((code) => <li key={code}><strong>{code}</strong> · {reviewText(code)}</li>)}</ul> : null}
+      {pendingIdentities.length ? <div className="manage-review-pending"><h4>{reviewText("pending")}</h4>
+        {unsavedRelations ? <p className="manage-error">{reviewText("savedOnly")}</p> : null}
+        {pendingIdentities.map((suggestion) => {
+          const selected = identityChoices[suggestion.id] || (suggestion.options.length === 1 ? suggestion.options[0].uuid : "");
+          return <div className="manage-review-suggestion" key={suggestion.id}>
+            <strong>{suggestion.kind} · {suggestion.value}</strong>
+            {suggestion.options.length ? <label>{reviewText("choose")}<select aria-label={`${suggestion.kind} ${suggestion.value} ${reviewText("choose")}`} value={selected} disabled={unsavedRelations || identityState.loading} onChange={(event) => setIdentityChoices({ ...identityChoices, [suggestion.id]: event.target.value })}>
+              {suggestion.options.length > 1 ? <option value="">—</option> : null}
+              {suggestion.options.map((option) => <option key={option.uuid} value={option.uuid}>{option.name}{option.workName ? ` · ${option.workName}` : ""}</option>)}
+            </select></label> : <p>{reviewText("noMatch")}</p>}
+            <div className="manage-review-actions"><button type="button" disabled={!selected || unsavedRelations || identityState.loading} onClick={() => void decideIdentity(suggestion.id, true, selected)}>{reviewText("accept")}</button>
+              <button type="button" disabled={unsavedRelations || identityState.loading} onClick={() => void decideIdentity(suggestion.id, false, "")}>{reviewText("reject")}</button></div>
+          </div>;
+        })}
+      </div> : null}
+      {draft.review?.sourceIssues.length ? <div className="manage-review-source"><h4>{reviewText("sourceIssues")}</h4><p>{reviewText("sourceHint")}</p><ul>{draft.review.sourceIssues.map((issue) => <li key={issue.code}><strong>{issue.severity} · {issue.code}</strong> · {issue.message}</li>)}</ul><button type="button" onClick={() => setParameters({ tab: "source" })}>Source →</button></div> : null}
+      {reviewedIdentities.length || draft.review?.automationIssues.length ? <details><summary>{reviewText("history")}</summary><ul>{reviewedIdentities.map((item) => <li key={item.id}>{item.kind} · {item.value} · {item.status}</li>)}{draft.review.automationIssues.map((issue) => <li key={`${issue.runID}-${issue.stage}-${issue.createdAt}`}>#{issue.runID} · {issue.runStatus} · {issue.stage} · {issue.errorCode}</li>)}</ul></details> : null}
+    </section> : null}
     {tab === "basic" ? <><form className="metadata-form" onSubmit={submit}><label>Title<input value={draft.row.title} onChange={(event) => setDraft({ ...draft, row: { ...draft.row, title: event.target.value } })} /></label>
       <label>Aliases<input value={draft.aliases.join(" / ")} onChange={(event) => setDraft({ ...draft, aliases: event.target.value.split("/").map((value) => value.trim()).filter(Boolean) })} /></label>
       <label className="span-2">Description<textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>

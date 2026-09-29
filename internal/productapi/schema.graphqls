@@ -287,7 +287,18 @@ type ManageGalleryDetail {
   photographerName: String! studioName: String! items: [ManageGalleryItem!]! credits: [ManageGalleryCredit!]! tags: [ManageGalleryTag!]! externalLinks: [ManageGalleryExternalLink!]!
   folderMatches: [ManageGalleryFolderMatch!]!
   scanRuns: [ManageGalleryScanRun!]!
+  review: ManageGalleryReview!
 }
+type ManageGalleryReview {
+  blockers: [String!]!
+  identitySuggestions: [ManageGalleryIdentitySuggestion!]!
+  sourceIssues: [ManageGallerySourceIssue!]!
+  automationIssues: [ManageGalleryAutomationIssue!]!
+}
+type ManageGalleryIdentitySuggestion { id: ID! kind: String! value: String! status: String! resolvedAt: String! options: [ManageGalleryIdentityOption!]! }
+type ManageGalleryIdentityOption { uuid: ID! name: String! workName: String! }
+type ManageGallerySourceIssue { code: String! severity: String! message: String! }
+type ManageGalleryAutomationIssue { runID: ID! stage: String! errorCode: String! runStatus: String! createdAt: String! }
 type ManageGalleryScanRun { id: ID! status: String! startedAt: String! completedAt: String! errorCode: String! }
 type ManageGalleryFolderMatch { kind: SearchEntityKind! uuid: ID! name: String! matchedName: String! workUUID: ID! workName: String! }
 type ManageGalleryCast { characterUUID: ID! characterName: String! workUUID: ID! workName: String! position: String! }
@@ -614,6 +625,7 @@ type Mutation {
   deleteGallery(setID: ID!, expectedMetadataRevision: Int64!, password: String!, confirmation: String!): Boolean!
   replaceGalleryTags(setID: ID!, expectedMetadataRevision: Int64!, tags: [ReplaceGalleryTagInput!]!): GalleryTagEditResult!
   replaceGalleryRelations(setID: ID!, expectedMetadataRevision: Int64!, input: ReplaceGalleryRelationsInput!): ManageGalleryDetail!
+  resolveGalleryIdentitySuggestion(setID: ID!, suggestionID: ID!, expectedMetadataRevision: Int64!, accept: Boolean!, entityUUID: ID!): ManageGalleryDetail!
   addGalleryExternalLink(setID: ID!, expectedMetadataRevision: Int64!, input: GalleryExternalLinkInput!): ManageGalleryDetail!
   pushGalleryManifest(setID: ID!, expectedMetadataRevision: Int64!): ManageGalleryManifestState!
   pushGalleryManifests(items: [GalleryManifestBatchPushInput!]!, overwriteLocal: Boolean!): [ManageGalleryManifestBatchResult!]!

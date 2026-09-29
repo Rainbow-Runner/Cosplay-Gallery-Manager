@@ -1261,6 +1261,25 @@ func (r *mutationResolver) ReplaceGalleryRelations(ctx context.Context, setID st
 	return r.loadManageGalleryDetail(ctx, setID)
 }
 
+// ResolveGalleryIdentitySuggestion is the resolver for the resolveGalleryIdentitySuggestion field.
+func (r *mutationResolver) ResolveGalleryIdentitySuggestion(ctx context.Context, setID string, suggestionID string, expectedMetadataRevision int64, accept bool, entityUUID string) (*ManageGalleryDetail, error) {
+	galleryID, err := r.Database.Manage().GalleryID(ctx, setID)
+	if err != nil {
+		r.auditManage(ctx, "GALLERY_IDENTITY_REVIEW", "GALLERY", setID, "GALLERY_IDENTITY_REVIEW_FAILED", err, nil)
+		return nil, manageError(err)
+	}
+	id, err := strconv.ParseInt(suggestionID, 10, 64)
+	if err != nil || id <= 0 {
+		return nil, manageError(errors.New("invalid identity suggestion ID"))
+	}
+	if err := r.Database.Galleries().ResolveIdentitySuggestion(ctx, galleryID, id, expectedMetadataRevision, accept, entityUUID, time.Now()); err != nil {
+		r.auditManage(ctx, "GALLERY_IDENTITY_REVIEW", "GALLERY", setID, "GALLERY_IDENTITY_REVIEW_FAILED", err, map[string]any{"suggestion_id": id, "accept": accept})
+		return nil, manageError(err)
+	}
+	r.auditManage(ctx, "GALLERY_IDENTITY_REVIEW", "GALLERY", setID, "", nil, map[string]any{"suggestion_id": id, "accept": accept})
+	return r.loadManageGalleryDetail(ctx, setID)
+}
+
 // AddGalleryExternalLink is the resolver for the addGalleryExternalLink field.
 func (r *mutationResolver) AddGalleryExternalLink(ctx context.Context, setID string, expectedMetadataRevision int64, input GalleryExternalLinkInput) (*ManageGalleryDetail, error) {
 	galleryID, err := r.Database.Manage().GalleryID(ctx, setID)

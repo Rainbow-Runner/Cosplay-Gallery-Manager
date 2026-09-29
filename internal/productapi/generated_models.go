@@ -416,6 +416,14 @@ type ManageFocalPoint struct {
 	Y float64 `json:"y"`
 }
 
+type ManageGalleryAutomationIssue struct {
+	RunID     string `json:"runID"`
+	Stage     string `json:"stage"`
+	ErrorCode string `json:"errorCode"`
+	RunStatus string `json:"runStatus"`
+	CreatedAt string `json:"createdAt"`
+}
+
 type ManageGalleryCast struct {
 	CharacterUUID string `json:"characterUUID"`
 	CharacterName string `json:"characterName"`
@@ -467,6 +475,7 @@ type ManageGalleryDetail struct {
 	ExternalLinks           []*ManageGalleryExternalLink `json:"externalLinks"`
 	FolderMatches           []*ManageGalleryFolderMatch  `json:"folderMatches"`
 	ScanRuns                []*ManageGalleryScanRun      `json:"scanRuns"`
+	Review                  *ManageGalleryReview         `json:"review"`
 }
 
 type ManageGalleryExternalLink struct {
@@ -484,6 +493,21 @@ type ManageGalleryFolderMatch struct {
 	MatchedName string           `json:"matchedName"`
 	WorkUUID    string           `json:"workUUID"`
 	WorkName    string           `json:"workName"`
+}
+
+type ManageGalleryIdentityOption struct {
+	UUID     string `json:"uuid"`
+	Name     string `json:"name"`
+	WorkName string `json:"workName"`
+}
+
+type ManageGalleryIdentitySuggestion struct {
+	ID         string                         `json:"id"`
+	Kind       string                         `json:"kind"`
+	Value      string                         `json:"value"`
+	Status     string                         `json:"status"`
+	ResolvedAt string                         `json:"resolvedAt"`
+	Options    []*ManageGalleryIdentityOption `json:"options"`
 }
 
 type ManageGalleryItem struct {
@@ -547,6 +571,13 @@ type ManageGalleryPage struct {
 	TotalPages int                 `json:"totalPages"`
 }
 
+type ManageGalleryReview struct {
+	Blockers            []string                           `json:"blockers"`
+	IdentitySuggestions []*ManageGalleryIdentitySuggestion `json:"identitySuggestions"`
+	SourceIssues        []*ManageGallerySourceIssue        `json:"sourceIssues"`
+	AutomationIssues    []*ManageGalleryAutomationIssue    `json:"automationIssues"`
+}
+
 type ManageGalleryRow struct {
 	SetID                   string         `json:"setID"`
 	Slug                    string         `json:"slug"`
@@ -579,6 +610,12 @@ type ManageGalleryScanRun struct {
 	StartedAt   string `json:"startedAt"`
 	CompletedAt string `json:"completedAt"`
 	ErrorCode   string `json:"errorCode"`
+}
+
+type ManageGallerySourceIssue struct {
+	Code     string `json:"code"`
+	Severity string `json:"severity"`
+	Message  string `json:"message"`
 }
 
 type ManageGalleryTag struct {

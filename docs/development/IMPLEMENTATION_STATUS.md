@@ -13,6 +13,8 @@
 
 ## 已完成
 
+- 2026-09-30最新部署：自动化阻断后人工接续闭环已提交为`03d2f9300c340bb1147b9d4c93ad47f80d792299`并完成本机增量部署。下方“源码完成、未部署”为阶段记录，当前以本条为准。正式schema仍v20、完整性ok，Coser／Work／Character／Tag／Gallery／Source／Item计数`135/108/697/23/10/10/690`不变；Health／Ready均204，About及前端资源对应提交，回滚备份位于`/home/rainbowrunner/cos/bk/cgm-pre-identity-review-03d2f93-LJPfwRC4`。旧 Gallery 10的建议仍PENDING、状态仍DRAFT，用户须在新版编辑页显式确认后再激活；未远端推送，详见[开发日志](V1_5_DEVELOPMENT_LOG.md)。
+
 - 1.5（自动化阻断后人工接续闭环，源码完成、未提交／部署）：Gallery编辑页新增当前激活阻断、来源Issue、待审实体建议及历史自动任务问题的分层展示。人工保存关系同事务确认唯一精确对应的旧建议，歧义／不匹配建议保持待审，可显式选择已有精确关联接受或拒绝；拒绝不移除已保存关系，来源安全问题须修复重扫。建议人工决议不提升Gallery元数据revision、不污染Manifest；留存审计与历史。GraphQL及Web接口回归、数据库原子回滚／并发revision测试见[开发日志](V1_5_DEVELOPMENT_LOG.md)。无需schema升级或数据迁移；正式业务库／服务尚未更改。
 
 - 2026-09-30最新部署状态：本轮独立目录／存档候选、Character所属Coser快捷切换、搜索列表自动关闭累计15文件已提交为`44c612c5fb732296959bd2d88d0b50471e923fa8`并部署。下方“未提交／部署”为阶段历史记录，本条覆盖当前状态。Web42文件178项、TypeScript、生产构建及正式三标签相关Go回归／Vet通过；Health／Ready均204，About与实际管理页资源对应提交。schema v20、完整性ok、七类业务计数不变；回滚备份为`/home/rainbowrunner/cos/bk/cgm-pre-cast-44c612c-AZ48Pdbp`，详见开发日志。未推送远端或更新Docker镜像，实际业务UI验收待所有者操作。

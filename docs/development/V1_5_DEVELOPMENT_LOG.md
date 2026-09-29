@@ -5,6 +5,13 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-09-30 人工接续闭环提交及本机增量部署
+
+- 用户授权提交并部署。23个文件提交为`03d2f9300c340bb1147b9d4c93ad47f80d792299`（`Close manual review after blocked gallery automation`），工作区干净后以Go1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建。程序Go VCS与该提交一致且`vcs.modified=false`，About构建时间`2026-09-29T17:03:33Z`，新程序SHA-256为`bf15790d1b32efc8512303502185618f899fbcd363a370fe1bb13d488fcd5303`。提交前Web42文件181项、TypeScript、生产构建、相关正式标签Go完整回归、Vet与定向race均通过；只有既有主chunk大于500KiB提示。
+- 01:04:14 CST停服，确认MainPID为0且WAL／SHM已关闭，在0700目录`/home/rainbowrunner/cos/bk/cgm-pre-identity-review-03d2f93-LJPfwRC4`备份一致数据库、旧程序、配置、用户systemd单元和外部／product-state Coser资源；文件cmp、资源树diff及备份库完整性与业务计数复核通过。备份库schema v20、`integrity_check=ok`，Coser／Work／Character／Tag／Gallery／Source／Item计数为`135/108/697/23/10/10/690`；备份库SHA-256为`831131a87036c6a7a6eb34c525011bccfbe3b73de81d4872f31c7d7b3d44b6f8`，旧程序为`6004cd46596f9b70fa5b2d431d78016090214197970e8509c9868b625f8d8edd`，配置为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`。备份不含原始媒体、可重建缓存、历史备份或日志。
+- 原子替换并于01:04:15启动，服务active/running、NRestarts=0，Health／Ready均204；About精确指向功能提交且`exactSourceAvailable=true`。入口HTML/JS/CSS、Gallery编辑页`ManageGalleryEditorPage-CdOAe-CV.js`和帮助页`ManageHelpPage-C_mWM36k.js`与本地生产构建逐字节一致，管理帮助深链200。首次Health请求早于监听完成短暂连接失败，自动重试通过；两个worker与FFmpeg／FFprobe／LibRaw正常启动，新版启动日志未见WARN／ERROR。
+- 正式库没有迁移或替换，升级前后schema v20、完整性ok及上述七类计数不变；配置、单元和Coser资源不变，没有扫描媒体、修改Manifest或自动接受建议。只读核验Gallery 10的旧COSER建议仍PENDING、Gallery仍DRAFT、revision为6：部署不会自动替所有者确认，需在新版编辑页显式复核后再尝试激活。未进行真实登录浏览器UI验收、远端推送或Docker镜像更新。部署记录另行本地提交，正式二进制保持精确对应功能提交，不因记录提交重建。
+
 ## 2026-09-30 自动化阻断后人工接续闭环（源码完成，未提交／部署）
 
 - 问题证据：媒体库2的自动化run 5已`COMPLETED`，旧问题`ACTIVATION_BLOCKING_SOURCE_ISSUE`为历史；Gallery 10来源现已可用、86P4V均READY，09-30 00:33:08人物关系保存成功，但同名持久COSER建议仍PENDING，于00:33:17／00:33:51激活失败。任务生命周期、当前激活门禁、持久建议状态和历史问题记录原本未衔接。

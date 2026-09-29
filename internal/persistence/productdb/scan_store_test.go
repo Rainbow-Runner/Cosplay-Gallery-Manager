@@ -984,11 +984,11 @@ func TestArchiveWithSuppressedMemberIssueNeverCachesReusableSnapshot(t *testing.
 		t.Fatal(err)
 	}
 	writer := zip.NewWriter(file)
-	part, err := writer.CreateHeader(&zip.FileHeader{Name: "clip.mp4", Method: zip.Store})
+	part, err := writer.CreateHeader(&zip.FileHeader{Name: "photo.avif", Method: zip.Store})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := part.Write(append([]byte("\x00\x00\x00\x18ftypisom"), make([]byte, 20)...)); err != nil {
+	if _, err := part.Write(append([]byte("\x00\x00\x00\x18ftypavif"), make([]byte, 20)...)); err != nil {
 		t.Fatal(err)
 	}
 	if err := writer.Close(); err != nil {

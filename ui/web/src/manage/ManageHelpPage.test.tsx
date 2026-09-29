@@ -24,6 +24,9 @@ describe("ManageHelpPage", () => {
     expect(within(activeRow as HTMLElement).getByText(/reconciled by the scheduled source-scan phase/)).toBeInTheDocument();
     expect(within(screen.getByRole("heading", { name: "Libraries & import" }).closest("article") as HTMLElement).getByRole("link", { name: "Open Libraries & import" })).toHaveAttribute("href", "/manage/libraries");
     expect(screen.getByText(/Saving a policy never starts a task/)).toBeInTheDocument();
+    expect(screen.getByText(/Roles are assigned to the first matched coser/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Videos inside archives" })).toBeInTheDocument();
+    expect(screen.getByText(/Playback never extracts or starts a remux\/transcode job/)).toBeInTheDocument();
   });
 
   it("explains Gallery Source and Manifest list statuses without changing the list", () => {
@@ -55,5 +58,8 @@ describe("ManageHelpPage", () => {
     expect(section.getByText(/自定义 INCLUDE 规则不能覆盖/)).toBeInTheDocument();
     expect(section.getByText(/没有随程序预置的硬编码文件夹名或文件名排除清单/)).toBeInTheDocument();
     expect(section.getByText(/不支持的扩展名不会成为媒体 Item/)).toBeInTheDocument();
+    expect(screen.getByText(/Work只通过Character所属作品体现/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "存档内视频" })).toBeInTheDocument();
+    expect(screen.getByText(/旧存档来源需要再次来源扫描/)).toBeInTheDocument();
   });
 });

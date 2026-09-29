@@ -22,7 +22,7 @@ func TestActivationBlockers(t *testing.T) {
 	}
 }
 
-func TestCosplayRequiresCharacterForEveryCredit(t *testing.T) {
+func TestCosplayAllowsCreditsWithoutKnownCharacter(t *testing.T) {
 	gallery := Gallery{Title: "Cosplay", ContentRating: ContentRatingNonAdult}
 	blockers := gallery.ActivationBlockers(ActivationFacts{
 		HasSource:                    true,
@@ -32,7 +32,7 @@ func TestCosplayRequiresCharacterForEveryCredit(t *testing.T) {
 		CastCount:                    1,
 		CreditsWithoutCharacterCount: 1,
 	})
-	if len(blockers) != 1 || blockers[0].Code != "CAST_REQUIRED_FOR_EACH_CREDIT" {
+	if len(blockers) != 0 {
 		t.Fatalf("blockers = %#v", blockers)
 	}
 }

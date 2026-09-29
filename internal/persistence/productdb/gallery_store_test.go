@@ -234,7 +234,7 @@ func TestItemsRemainIndependentAcrossGallerySources(t *testing.T) {
 	}
 }
 
-func TestCosplayActivationRequiresCastForEveryCredit(t *testing.T) {
+func TestCosplayActivationAllowsUnknownRoleForOtherCredits(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)
 	store := db.Galleries()
@@ -286,9 +286,8 @@ func TestCosplayActivationRequiresCastForEveryCredit(t *testing.T) {
 		gallery.StateActive,
 		now,
 	)
-	var activationErr *ActivationError
-	if !errors.As(err, &activationErr) || !hasActivationBlocker(activationErr, "CAST_REQUIRED_FOR_EACH_CREDIT") {
-		t.Fatalf("partial Cast activation error = %#v, want per-Credit blocker", err)
+	if err != nil {
+		t.Fatalf("activating with an unassigned second Credit: %v", err)
 	}
 
 	if err := store.AddCast(
@@ -297,7 +296,7 @@ func TestCosplayActivationRequiresCastForEveryCredit(t *testing.T) {
 		secondCreditID,
 		characterB,
 		1024,
-		created.MetadataRevision+2,
+		created.MetadataRevision+3,
 		now,
 	); err != nil {
 		t.Fatalf("adding second Cast: %v", err)
@@ -305,7 +304,7 @@ func TestCosplayActivationRequiresCastForEveryCredit(t *testing.T) {
 	if _, err := store.SetState(
 		ctx,
 		created.ID,
-		created.MetadataRevision+3,
+		created.MetadataRevision+4,
 		gallery.StateActive,
 		now,
 	); err != nil {

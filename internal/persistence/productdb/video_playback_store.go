@@ -8,6 +8,7 @@ import (
 
 	"github.com/stashapp/stash/internal/browse"
 	"github.com/stashapp/stash/internal/gallery"
+	"github.com/stashapp/stash/internal/mediaaccess"
 	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/product"
 )
@@ -16,6 +17,8 @@ type videoPlaybackIdentity struct {
 	galleryID int64
 	revision  int64
 	metadata  mediaprocessing.VideoTechnicalMetadata
+	source    mediaaccess.Source
+	sourceID  int64
 }
 
 func (s *BrowseStore) VideoPlaybackStatus(ctx context.Context, itemUUID, ffmpegVersion, ffmpegUnavailableCode string) (browse.VideoPlaybackStatus, error) {
@@ -32,6 +35,9 @@ func (s *BrowseStore) RequestVideoPlayback(ctx context.Context, itemUUID, ffmpeg
 		return browse.VideoPlaybackStatus{}, err
 	}
 	status, err := s.videoPlaybackStatus(ctx, itemUUID, identity, ffmpegVersion, ffmpegUnavailableCode)
+	if identity.source.Type == gallery.SourceTypeArchive {
+		return status, err
+	}
 	if err != nil || status.Status == gallery.ProcessingReady || status.Status == gallery.ProcessingError ||
 		identity.metadata.ProbeState != mediaprocessing.VideoProbeReady || identity.metadata.ContentRevision != identity.revision {
 		return status, err
@@ -66,11 +72,11 @@ func (s *BrowseStore) RequestVideoPlayback(ctx context.Context, itemUUID, ffmpeg
 
 func (s *BrowseStore) authorizeVideoPlayback(ctx context.Context, itemUUID string) (videoPlaybackIdentity, error) {
 	var result videoPlaybackIdentity
-	err := s.db.QueryRowContext(ctx, `SELECT gallery.id,item.content_revision FROM gallery_items item JOIN galleries gallery ON gallery.id=item.gallery_id JOIN gallery_sources source ON source.id=item.source_id
+	err := s.db.QueryRowContext(ctx, `SELECT gallery.id,item.content_revision,source.id,source.source_type,source.source_path,item.relative_path FROM gallery_items item JOIN galleries gallery ON gallery.id=item.gallery_id JOIN gallery_sources source ON source.id=item.source_id
 		LEFT JOIN gallery_personal_states personal ON personal.gallery_id=gallery.id WHERE item.item_uuid=? AND item.media_kind='VIDEO' AND item.excluded=0
-		AND item.availability_state='AVAILABLE' AND source.source_type='DIRECTORY' AND source.availability_state='AVAILABLE' AND source.over_limit=0
+		AND item.availability_state='AVAILABLE' AND source.source_type IN ('DIRECTORY','ARCHIVE') AND source.availability_state='AVAILABLE' AND source.over_limit=0
 		AND NOT EXISTS(SELECT 1 FROM gallery_source_issues issue WHERE issue.source_id=source.id AND issue.severity='BLOCKING' AND issue.resolved_at_utc IS NULL)
-		AND `+browseVisibleGalleryPredicate, itemUUID).Scan(&result.galleryID, &result.revision)
+		AND `+browseVisibleGalleryPredicate, itemUUID).Scan(&result.galleryID, &result.revision, &result.sourceID, &result.source.Type, &result.source.Path, &result.source.RelativePath)
 	if errors.Is(err, sql.ErrNoRows) {
 		return result, ErrBrowseGalleryNotVisible
 	}
@@ -92,16 +98,39 @@ func (s *BrowseStore) authorizeVideoPlayback(ctx context.Context, itemUUID strin
 
 func (s *BrowseStore) videoPlaybackStatus(ctx context.Context, itemUUID string, identity videoPlaybackIdentity, ffmpegVersion, ffmpegUnavailableCode string) (browse.VideoPlaybackStatus, error) {
 	result := browse.VideoPlaybackStatus{ItemUUID: itemUUID, ContentRevision: identity.revision, Status: gallery.ProcessingPending}
+	if identity.metadata.ContentRevision != identity.revision {
+		return s.archiveProbePendingStatus(ctx, result, identity)
+	}
 	if identity.metadata.ProbeState == mediaprocessing.VideoProbeError {
 		result.Status = gallery.ProcessingError
 		result.ErrorCode = identity.metadata.LastErrorCode
 		return result, nil
 	}
 	if identity.metadata.ProbeState != mediaprocessing.VideoProbeReady || identity.metadata.ContentRevision != identity.revision {
-		return result, nil
+		return s.archiveProbePendingStatus(ctx, result, identity)
 	}
 	plan := mediaprocessing.PlaybackPlanFromMetadata(identity.metadata)
 	result.Mode = string(plan.Mode)
+	if identity.source.Type == gallery.SourceTypeArchive {
+		limits, evidence, err := (&Database{DB: s.db}).ArchiveAccessEvidence(ctx, identity.sourceID)
+		if err == nil {
+			var member *mediaaccess.DirectArchiveMember
+			member, err = mediaaccess.OpenArchiveMember(ctx, identity.source, limits, evidence)
+			if member != nil {
+				_ = member.Close()
+			}
+		}
+		if err != nil {
+			result.Status, result.Mode, result.ErrorCode = gallery.ProcessingError, "", mediaaccess.ArchiveVideoErrorCode(err)
+			return result, nil
+		}
+		if !mediaprocessing.ArchiveVideoBrowserCompatible(identity.metadata) {
+			result.Status, result.Mode, result.ErrorCode = gallery.ProcessingError, "", mediaaccess.ArchivePlaybackCodec
+			return result, nil
+		}
+		result.Status = gallery.ProcessingReady
+		return result, nil // No proxy cache/job lookup or enqueue for archive videos.
+	}
 	if plan.Mode == mediaprocessing.PlaybackDirect {
 		result.Status = gallery.ProcessingReady
 		return result, nil
@@ -138,6 +167,32 @@ func (s *BrowseStore) videoPlaybackStatus(ctx context.Context, itemUUID string, 
 	case mediaprocessing.JobFailed, mediaprocessing.JobCancelled:
 		result.Status = gallery.ProcessingError
 		result.ErrorCode = job.LastErrorCode
+	}
+	return result, nil
+}
+
+func (s *BrowseStore) archiveProbePendingStatus(ctx context.Context, result browse.VideoPlaybackStatus, identity videoPlaybackIdentity) (browse.VideoPlaybackStatus, error) {
+	if identity.source.Type != gallery.SourceTypeArchive {
+		return result, nil
+	}
+	var status, code string
+	err := s.db.QueryRowContext(ctx, `SELECT status,last_error_code FROM processing_jobs WHERE item_uuid=? AND content_revision=? AND job_kind='ITEM_TECHNICAL_METADATA' AND variant=''
+		ORDER BY CASE WHEN status IN ('PENDING','RUNNING','RETRY_WAIT','PAUSED') THEN 0 ELSE 1 END,id DESC LIMIT 1`, result.ItemUUID, identity.revision).Scan(&status, &code)
+	if errors.Is(err, sql.ErrNoRows) {
+		result.Status, result.ErrorCode = gallery.ProcessingError, "VIDEO_PROBE_UNAVAILABLE"
+		return result, nil
+	}
+	if err != nil {
+		return result, err
+	}
+	switch mediaprocessing.JobStatus(status) {
+	case mediaprocessing.JobRunning:
+		result.Status = gallery.ProcessingProcessing
+	case mediaprocessing.JobFailed, mediaprocessing.JobCancelled, mediaprocessing.JobCompleted:
+		result.Status, result.ErrorCode = gallery.ProcessingError, code
+		if result.ErrorCode == "" {
+			result.ErrorCode = "VIDEO_PROBE_UNAVAILABLE"
+		}
 	}
 	return result, nil
 }

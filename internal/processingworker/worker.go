@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/stashapp/stash/internal/gallery"
@@ -85,7 +86,10 @@ func (worker Worker) RunOne(ctx context.Context, owner string, lease time.Durati
 	}
 	if processErr != nil {
 		code := ErrorCode(processErr)
-		structural := errors.Is(processErr, ErrUnsupportedGeneration) || errors.Is(processErr, ErrStaleContent) || code == mediaprocessing.ErrorFFprobeUnavailable || code == mediaprocessing.ErrorFFprobeVersionUnsupported || code == mediaprocessing.ErrorFFmpegUnavailable || code == mediaprocessing.ErrorFFmpegVersionUnsupported || code == mediaprocessing.ErrorVideoTrackMissing
+		if job.Kind == mediaprocessing.JobItemTechnicalMetadata && job.Variant == "" && job.ContentRevision != nil {
+			_ = worker.Database.VideoMetadata().PublishError(ctx, job.ItemUUID, *job.ContentRevision, job.ProfileHash, code, time.Now())
+		}
+		structural := errors.Is(processErr, ErrUnsupportedGeneration) || errors.Is(processErr, ErrStaleContent) || strings.HasPrefix(code, "ARCHIVE_VIDEO_") || code == mediaprocessing.ErrorFFprobeUnavailable || code == mediaprocessing.ErrorFFprobeVersionUnsupported || code == mediaprocessing.ErrorFFmpegUnavailable || code == mediaprocessing.ErrorFFmpegVersionUnsupported || code == mediaprocessing.ErrorVideoTrackMissing
 		_, failErr := worker.Database.ProcessingJobs().Fail(ctx, job.ID, owner, code, structural, time.Now())
 		if failErr != nil {
 			return job, fmt.Errorf("processing failed (%v) and recording failure failed: %w", processErr, failErr)
@@ -106,12 +110,14 @@ func (worker Worker) processCaptureDate(ctx context.Context, job mediaprocessing
 	if job.ContentRevision == nil || item.ContentRevision != *job.ContentRevision || item.Excluded || item.Availability != gallery.AvailabilityAvailable || (item.MediaKind != gallery.MediaKindStaticImage && item.MediaKind != gallery.MediaKindVideo) {
 		return ErrStaleContent
 	}
+	ctx, cancelInput := archiveVideoTaskContext(ctx, item)
+	defer cancelInput()
 	if done, err := worker.Database.CaptureDates().HasCurrent(ctx, item.ItemUUID, item.ContentRevision); err != nil {
 		return err
 	} else if done {
 		return nil
 	}
-	materialized, err := worker.Materializer.Open(ctx, mediaaccess.Source{Type: item.SourceType, Path: item.SourcePath, RelativePath: item.RelativePath})
+	materialized, err := worker.openInput(ctx, item)
 	if err != nil {
 		return err
 	}
@@ -131,6 +137,9 @@ func (worker Worker) processCaptureDate(ctx context.Context, job mediaprocessing
 		if err != nil {
 			return err
 		}
+	}
+	if err := materialized.Validate(); err != nil {
+		return err
 	}
 	return worker.Database.CaptureDates().Publish(ctx, item.ItemUUID, item.ContentRevision, date, tag, time.Now())
 }
@@ -182,9 +191,11 @@ func (worker Worker) processVideoProbe(ctx context.Context, job mediaprocessing.
 	if err != nil {
 		return err
 	}
-	if job.ContentRevision == nil || item.ContentRevision != *job.ContentRevision || item.MediaKind != gallery.MediaKindVideo || item.SourceType != gallery.SourceTypeDirectory || item.Excluded || item.Availability != gallery.AvailabilityAvailable {
+	if job.ContentRevision == nil || item.ContentRevision != *job.ContentRevision || item.MediaKind != gallery.MediaKindVideo || item.Excluded || item.Availability != gallery.AvailabilityAvailable {
 		return ErrStaleContent
 	}
+	ctx, cancelInput := archiveVideoTaskContext(ctx, item)
+	defer cancelInput()
 	if worker.ProbeProfileHash != "" && job.ProfileHash != worker.ProbeProfileHash {
 		if err := worker.Database.VideoMetadata().MarkPending(ctx, item.ItemUUID, item.ContentRevision, worker.ProbeProfileHash); err != nil {
 			return err
@@ -204,7 +215,7 @@ func (worker Worker) processVideoProbe(ctx context.Context, job mediaprocessing.
 		_ = worker.Database.VideoMetadata().PublishError(ctx, item.ItemUUID, item.ContentRevision, job.ProfileHash, mediaprocessing.VideoErrorCode(err), time.Now())
 		return err
 	}
-	materialized, err := worker.Materializer.Open(ctx, mediaaccess.Source{Type: item.SourceType, Path: item.SourcePath, RelativePath: item.RelativePath})
+	materialized, err := worker.openInput(ctx, item)
 	if err != nil {
 		return err
 	}
@@ -230,6 +241,9 @@ func (worker Worker) processVideoProbe(ctx context.Context, job mediaprocessing.
 		return err
 	}
 	metadata.ItemUUID, metadata.ContentRevision, metadata.ProbeProfileHash = item.ItemUUID, item.ContentRevision, job.ProfileHash
+	if err := materialized.Validate(); err != nil {
+		return err
+	}
 	if err := worker.Database.VideoMetadata().PublishReady(ctx, metadata, time.Now()); err != nil {
 		return err
 	}
@@ -271,15 +285,34 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 	if item.Excluded || item.Availability != gallery.AvailabilityAvailable {
 		return ErrStaleContent
 	}
-	if item.MediaKind == gallery.MediaKindVideo && item.SourceType != gallery.SourceTypeDirectory {
-		return ErrStaleContent
+	ctx, cancelInput := archiveVideoTaskContext(ctx, item)
+	defer cancelInput()
+	if item.MediaKind == gallery.MediaKindVideo && item.SourceType == gallery.SourceTypeArchive && job.Variant != mediaprocessing.VariantStaticPoster {
+		return ErrUnsupportedGeneration // Archive playback NEVER materializes or creates a proxy.
+	}
+	if item.MediaKind == gallery.MediaKindVideo && item.SourceType == gallery.SourceTypeArchive {
+		canGenerate := false
+		preflight := mediaprocessing.GenerateRequest{MediaKind: item.MediaKind, ContentFormat: item.ContentFormat, Variant: job.Variant}
+		for _, generator := range worker.Generators {
+			if generator.Supports(preflight) {
+				canGenerate = true
+				break
+			}
+		}
+		if !canGenerate {
+			code := worker.FFmpegUnavailableCode
+			if code == "" {
+				code = mediaprocessing.ErrorFFmpegUnavailable
+			}
+			return &mediaprocessing.VideoProcessingError{Code: code, Err: errors.New("ffmpeg is unavailable")}
+		}
 	}
 	if job.Variant == mediaprocessing.VariantVideoPlayback {
 		if err := worker.requireVideoProxyCapacity(ctx); err != nil {
 			return err
 		}
 	}
-	materialized, err := worker.Materializer.Open(ctx, mediaaccess.Source{Type: item.SourceType, Path: item.SourcePath, RelativePath: item.RelativePath})
+	materialized, err := worker.openInput(ctx, item)
 	if err != nil {
 		return err
 	}
@@ -330,6 +363,9 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 		request.DestinationPath = destination
 		var generateErr error
 		generated, generateErr = generator.Generate(ctx, request)
+		if generateErr == nil {
+			generateErr = materialized.Validate()
+		}
 		return generateErr
 	})
 	if err != nil {
@@ -361,6 +397,32 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 		_, _ = worker.Database.Covers().Initialize(ctx, item.GalleryID, time.Now())
 	}
 	return nil
+}
+
+func archiveVideoTaskContext(ctx context.Context, item productdb.ProcessingItem) (context.Context, context.CancelFunc) {
+	if item.SourceType == gallery.SourceTypeArchive && item.MediaKind == gallery.MediaKindVideo {
+		return context.WithTimeout(ctx, 10*time.Minute)
+	}
+	return ctx, func() {}
+}
+
+func (worker Worker) openInput(ctx context.Context, item productdb.ProcessingItem) (mediaaccess.Materialized, error) {
+	source := mediaaccess.Source{Type: item.SourceType, Path: item.SourcePath, RelativePath: item.RelativePath}
+	if item.MediaKind != gallery.MediaKindVideo || item.SourceType != gallery.SourceTypeArchive {
+		return worker.Materializer.Open(ctx, source)
+	}
+	if !item.SourceUsable {
+		return mediaaccess.Materialized{}, ErrStaleContent
+	}
+	limits, evidence, err := worker.Database.ArchiveAccessEvidence(ctx, item.SourceID)
+	if err == nil {
+		var result mediaaccess.Materialized
+		result, err = worker.Materializer.OpenArchiveVideo(ctx, source, limits, evidence)
+		if err == nil {
+			return result, nil
+		}
+	}
+	return mediaaccess.Materialized{}, &mediaprocessing.VideoProcessingError{Code: mediaaccess.ArchiveVideoErrorCode(err), Err: errors.New("archive video input unavailable; rescan or extract the source manually")}
 }
 
 func (worker Worker) requireVideoProxyCapacity(ctx context.Context) error {

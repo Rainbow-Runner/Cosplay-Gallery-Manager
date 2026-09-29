@@ -221,6 +221,9 @@ func (s *ProcessingJobStore) ClaimNext(ctx context.Context, owner string, leaseD
 	if err != nil {
 		return mediaprocessing.Job{}, err
 	}
+	if err := updateArchiveVideoJobState(ctx, tx, job.ID, "PROCESSING", timestamp); err != nil {
+		return mediaprocessing.Job{}, err
+	}
 	if err := tx.Commit(); err != nil {
 		return mediaprocessing.Job{}, err
 	}
@@ -275,6 +278,11 @@ func (s *ProcessingJobStore) Fail(ctx context.Context, id int64, owner, errorCod
 		status, errorCode, structural, formatTime(notBefore), formatTime(timestamp), id); err != nil {
 		return "", err
 	}
+	if status == mediaprocessing.JobFailed {
+		if err := updateArchiveVideoJobState(ctx, tx, id, "ERROR", timestamp); err != nil {
+			return "", err
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		return "", err
 	}
@@ -283,7 +291,12 @@ func (s *ProcessingJobStore) Fail(ctx context.Context, id int64, owner, errorCod
 
 func (s *ProcessingJobStore) Cancel(ctx context.Context, id int64, now time.Time) error {
 	timestamp := formatTime(normalisedTime(now))
-	result, err := s.db.ExecContext(ctx, `UPDATE processing_jobs SET status='CANCELLED',lease_owner=NULL,
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	result, err := tx.ExecContext(ctx, `UPDATE processing_jobs SET status='CANCELLED',lease_owner=NULL,
 		lease_expires_at_utc=NULL,last_heartbeat_at_utc=NULL,updated_at_utc=?
 		WHERE id=? AND status IN ('PENDING','RUNNING','RETRY_WAIT','PAUSED')`, timestamp, id)
 	if err != nil {
@@ -296,7 +309,10 @@ func (s *ProcessingJobStore) Cancel(ctx context.Context, id int64, now time.Time
 	if rows != 1 {
 		return errors.New("processing job is terminal or missing")
 	}
-	return nil
+	if err := updateArchiveVideoJobState(ctx, tx, id, "ERROR", normalisedTime(now)); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // Requeue is an explicit technical operation used after an ENHANCED cache
@@ -304,7 +320,12 @@ func (s *ProcessingJobStore) Cancel(ctx context.Context, id int64, now time.Time
 // never silently reopens a terminal job.
 func (s *ProcessingJobStore) Requeue(ctx context.Context, key string, priority int, now time.Time) (mediaprocessing.Job, error) {
 	timestamp := formatTime(normalisedTime(now))
-	result, err := s.db.ExecContext(ctx, `UPDATE processing_jobs SET status='PENDING',priority=MAX(priority,?),
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return mediaprocessing.Job{}, err
+	}
+	defer tx.Rollback()
+	result, err := tx.ExecContext(ctx, `UPDATE processing_jobs SET status='PENDING',priority=MAX(priority,?),
 		attempt_count=0,not_before_utc=?,lease_owner=NULL,lease_expires_at_utc=NULL,last_heartbeat_at_utc=NULL,
 		last_error_code='',structural_failure=0,completed_at_utc=NULL,updated_at_utc=?
 		WHERE job_key=? AND status IN ('COMPLETED','FAILED','CANCELLED')`, priority, timestamp, timestamp, key)
@@ -317,6 +338,16 @@ func (s *ProcessingJobStore) Requeue(ctx context.Context, key string, priority i
 	}
 	if rows != 1 {
 		return mediaprocessing.Job{}, errors.New("processing job is not terminal or missing")
+	}
+	var id int64
+	if err := tx.QueryRowContext(ctx, `SELECT id FROM processing_jobs WHERE job_key=?`, key).Scan(&id); err != nil {
+		return mediaprocessing.Job{}, err
+	}
+	if err := updateArchiveVideoJobState(ctx, tx, id, "PENDING", normalisedTime(now)); err != nil {
+		return mediaprocessing.Job{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return mediaprocessing.Job{}, err
 	}
 	return s.FindByKey(ctx, key)
 }

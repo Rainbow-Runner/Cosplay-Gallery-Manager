@@ -130,7 +130,7 @@ func validateEntry(result *Result, seenPaths map[string]string, entry archivefil
 	}
 	if isBlockedArchiveMedia(entryPath) {
 		result.add("UNSUPPORTED_ARCHIVE_MEDIA", entryPath, false,
-			"video, RAW and AVIF entries must be excluded or imported as a DIRECTORY source")
+			"RAW and AVIF entries must be excluded or imported as a DIRECTORY source")
 	}
 	if math.MaxUint64-result.TotalUncompressed < entry.UncompressedSize {
 		result.TotalUncompressed = math.MaxUint64
@@ -236,8 +236,7 @@ func isNestedArchive(value string) bool {
 
 func isBlockedArchiveMedia(value string) bool {
 	switch strings.ToLower(path.Ext(value)) {
-	case ".avif", ".mp4", ".m4v", ".mkv", ".mov", ".avi", ".webm", ".wmv",
-		".3gp", ".mts", ".m2ts", ".cr2", ".cr3", ".nef", ".nrw", ".arw",
+	case ".avif", ".cr2", ".cr3", ".nef", ".nrw", ".arw",
 		".dng", ".raf", ".rw2", ".orf", ".pef", ".srw", ".raw":
 		return true
 	default:

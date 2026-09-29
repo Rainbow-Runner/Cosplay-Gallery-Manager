@@ -97,7 +97,7 @@ func TestValidateFileRejectsStructuralArchiveEntries(t *testing.T) {
 
 func TestValidateFileEnforcesLimitsAndArchiveMediaPolicy(t *testing.T) {
 	filename := filepath.Join(t.TempDir(), "limited.zip")
-	writeArchive(t, filename, []archiveEntry{{name: "clip.mp4", body: "0123456789"}})
+	writeArchive(t, filename, []archiveEntry{{name: "photo.avif", body: "0123456789"}})
 	limits := DefaultLimits()
 	limits.MaxEntryUncompressed = 5
 	result, err := ValidateFile(filename, limits)

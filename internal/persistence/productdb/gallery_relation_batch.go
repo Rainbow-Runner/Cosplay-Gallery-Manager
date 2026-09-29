@@ -2,6 +2,7 @@ package productdb
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"time"
 
@@ -87,14 +88,22 @@ func (s *GalleryStore) ReplaceTags(ctx context.Context, galleryID, expectedRevis
 // ReplaceRelations is one Gallery-scoped atomic save. It never creates core
 // entities and therefore cannot silently accept discovery suggestions.
 func (s *GalleryStore) ReplaceRelations(ctx context.Context, galleryID, expectedRevision int64, input ReplaceGalleryRelationsInput, now time.Time) error {
-	if len(input.Credits) > 100 || len(input.Tags) > 200 {
-		return errors.New("Gallery relation limit exceeded")
-	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if err := replaceGalleryRelationsTx(ctx, tx, galleryID, expectedRevision, input, now); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// Automation resolves evidence in this same transaction as the relation save.
+func replaceGalleryRelationsTx(ctx context.Context, tx *sql.Tx, galleryID, expectedRevision int64, input ReplaceGalleryRelationsInput, now time.Time) error {
+	if len(input.Credits) > 100 || len(input.Tags) > 200 {
+		return errors.New("Gallery relation limit exceeded")
+	}
 	current, err := findGallery(ctx, tx, galleryID)
 	if err != nil {
 		return err
@@ -164,5 +173,5 @@ func (s *GalleryStore) ReplaceRelations(ctx context.Context, galleryID, expected
 	if err := demoteInvalidActiveGallery(ctx, tx, galleryID); err != nil {
 		return err
 	}
-	return tx.Commit()
+	return nil
 }

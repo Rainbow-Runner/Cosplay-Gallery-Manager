@@ -12,6 +12,7 @@ type ProcessingItem struct {
 	ItemUUID        string
 	GalleryID       int64
 	SourceType      gallery.SourceType
+	SourceID        int64
 	SourcePath      string
 	RelativePath    string
 	MediaKind       gallery.MediaKind
@@ -19,16 +20,18 @@ type ProcessingItem struct {
 	ContentRevision int64
 	Availability    gallery.AvailabilityState
 	Excluded        bool
+	SourceUsable    bool
 }
 
 func (db *Database) FindProcessingItem(ctx context.Context, itemUUID string) (ProcessingItem, error) {
 	var result ProcessingItem
 	var excluded int
-	err := db.QueryRowContext(ctx, `SELECT item.item_uuid,item.gallery_id,source.source_type,source.source_path,
-		item.relative_path,item.media_kind,item.content_format,item.content_revision,item.availability_state,item.excluded
+	err := db.QueryRowContext(ctx, `SELECT item.item_uuid,item.gallery_id,source.source_type,source.id,source.source_path,
+		item.relative_path,item.media_kind,item.content_format,item.content_revision,item.availability_state,item.excluded,
+		(source.availability_state='AVAILABLE' AND source.over_limit=0 AND NOT EXISTS(SELECT 1 FROM gallery_source_issues issue WHERE issue.source_id=source.id AND issue.severity='BLOCKING' AND issue.resolved_at_utc IS NULL))
 		FROM gallery_items item JOIN gallery_sources source ON source.id=item.source_id WHERE item.item_uuid=?`, itemUUID).Scan(
-		&result.ItemUUID, &result.GalleryID, &result.SourceType, &result.SourcePath, &result.RelativePath,
-		&result.MediaKind, &result.ContentFormat, &result.ContentRevision, &result.Availability, &excluded)
+		&result.ItemUUID, &result.GalleryID, &result.SourceType, &result.SourceID, &result.SourcePath, &result.RelativePath,
+		&result.MediaKind, &result.ContentFormat, &result.ContentRevision, &result.Availability, &excluded, &result.SourceUsable)
 	result.Excluded = excluded == 1
 	return result, err
 }

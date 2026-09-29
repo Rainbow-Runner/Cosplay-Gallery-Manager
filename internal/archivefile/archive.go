@@ -127,6 +127,33 @@ func walkZIP(filename string, visit func(Entry) error) error {
 		return fmt.Errorf("opening ZIP/CBZ: %w", err)
 	}
 	defer reader.Close()
+	return visitZIP(&reader.Reader, visit)
+}
+
+// WalkReaderAt visits an already-open, bounded container. The caller retains
+// descriptor ownership and must supply cancellation/source checks in ReaderAt.
+func WalkReaderAt(format Format, input io.ReaderAt, size int64, visit func(Entry) error) error {
+	switch format {
+	case FormatZIP:
+		reader, err := zip.NewReader(input, size)
+		if err != nil {
+			return err
+		}
+		return visitZIP(reader, visit)
+	case FormatSevenZIP:
+		reader, err := sevenzip.NewReader(input, size)
+		if err != nil {
+			return err
+		}
+		return visitSevenZIP(reader, visit)
+	case FormatTAR, FormatTARGZIP:
+		return visitTAR(io.NewSectionReader(input, 0, size), format == FormatTARGZIP, visit)
+	default:
+		return errors.New("unsupported archive format")
+	}
+}
+
+func visitZIP(reader *zip.Reader, visit func(Entry) error) error {
 	for _, file := range reader.File {
 		current := file
 		modified := current.Modified
@@ -145,10 +172,14 @@ func walkTAR(filename string, compressed bool, visit func(Entry) error) error {
 		return err
 	}
 	defer file.Close()
-	var input io.Reader = file
+	return visitTAR(file, compressed, visit)
+}
+
+func visitTAR(input io.Reader, compressed bool, visit func(Entry) error) error {
 	var compressedReader *gzip.Reader
 	if compressed {
-		compressedReader, err = gzip.NewReader(file)
+		var err error
+		compressedReader, err = gzip.NewReader(input)
 		if err != nil {
 			return fmt.Errorf("opening gzip-compressed TAR: %w", err)
 		}
@@ -188,6 +219,10 @@ func walkSevenZIP(filename string, visit func(Entry) error) error {
 		return fmt.Errorf("opening 7z: %w", err)
 	}
 	defer reader.Close()
+	return visitSevenZIP(&reader.Reader, visit)
+}
+
+func visitSevenZIP(reader *sevenzip.Reader, visit func(Entry) error) error {
 	for _, file := range reader.File {
 		current := file
 		if err := visit(Entry{Name: current.Name, Mode: current.Mode(),

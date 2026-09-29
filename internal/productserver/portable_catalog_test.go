@@ -507,93 +507,121 @@ func TestPortableGalleryRebuildPreservesDirectoryIdentitiesAtNewRoot(t *testing.
 }
 
 func TestPortableGalleryRebuildPreservesArchiveIdentityAtNewRoot(t *testing.T) {
-	ctx := context.Background()
-	now := time.Date(2026, 9, 9, 13, 0, 0, 0, time.UTC)
-	source := testServer(t)
-	sourceBase := t.TempDir()
-	configurePortableTestServer(t, source, sourceBase)
-	sourceMedia := filepath.Join(sourceBase, "old-archives")
-	if err := os.MkdirAll(filepath.Join(sourceMedia, "sets"), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	archivePath := filepath.Join(sourceMedia, "sets", "archive-set.zip")
-	writePortableTestZIP(t, archivePath)
-	sourceLibrary, err := source.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{Name: "Archive library", RootPath: sourceMedia, Enabled: true}, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	created, err := source.Database.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Archive Set", ContentRating: gallery.ContentRatingNonAdult}, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	gallerySource, err := source.Database.Galleries().AddSource(ctx, created.ID, productdb.CreateSourceInput{LibraryID: &sourceLibrary.ID, Type: gallery.SourceTypeArchive, Path: archivePath, Availability: gallery.AvailabilityAvailable}, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := source.Database.Scans().Run(ctx, gallerySource.ID, archivecheck.DefaultLimits(), now); err != nil {
-		t.Fatal(err)
-	}
-	var itemUUID string
-	if err := source.Database.QueryRowContext(ctx, `SELECT item_uuid FROM gallery_items WHERE gallery_id=?`, created.ID).Scan(&itemUUID); err != nil {
-		t.Fatal(err)
-	}
-	current, _ := source.Database.Galleries().Find(ctx, created.ID)
-	manifestState, err := source.Database.Manifests().PushGallery(ctx, created.ID, current.MetadataRevision, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	packagePath := filepath.Join(sourceBase, "archive-portable.zip")
-	if _, err := source.ExportPortableMetadata(ctx, PortableExportOptions{TargetPath: packagePath}); err != nil {
-		t.Fatal(err)
-	}
+	for _, media := range []string{"image", "video"} {
+		t.Run(media, func(t *testing.T) {
+			ctx := context.Background()
+			now := time.Date(2026, 9, 9, 13, 0, 0, 0, time.UTC)
+			source := testServer(t)
+			sourceBase := t.TempDir()
+			configurePortableTestServer(t, source, sourceBase)
+			sourceMedia := filepath.Join(sourceBase, "old-archives")
+			if err := os.MkdirAll(filepath.Join(sourceMedia, "sets"), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			archivePath := filepath.Join(sourceMedia, "sets", "archive-set.zip")
+			writePortableTestZIP(t, archivePath)
+			if media == "video" {
+				file, err := os.Create(archivePath)
+				if err != nil {
+					t.Fatal(err)
+				}
+				writer := zip.NewWriter(file)
+				part, err := writer.CreateHeader(&zip.FileHeader{Name: "video/clip.mp4", Method: zip.Store})
+				if err != nil {
+					t.Fatal(err)
+				}
+				part.Write(append([]byte("\x00\x00\x00\x18ftypisom"), make([]byte, 20)...))
+				writer.Close()
+				file.Close()
+			}
+			sourceLibrary, err := source.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{Name: "Archive library", RootPath: sourceMedia, Enabled: true}, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			created, err := source.Database.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Archive Set", ContentRating: gallery.ContentRatingNonAdult}, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gallerySource, err := source.Database.Galleries().AddSource(ctx, created.ID, productdb.CreateSourceInput{LibraryID: &sourceLibrary.ID, Type: gallery.SourceTypeArchive, Path: archivePath, Availability: gallery.AvailabilityAvailable}, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := source.Database.Scans().Run(ctx, gallerySource.ID, archivecheck.DefaultLimits(), now); err != nil {
+				t.Fatal(err)
+			}
+			var itemUUID string
+			if err := source.Database.QueryRowContext(ctx, `SELECT item_uuid FROM gallery_items WHERE gallery_id=?`, created.ID).Scan(&itemUUID); err != nil {
+				t.Fatal(err)
+			}
+			current, _ := source.Database.Galleries().Find(ctx, created.ID)
+			manifestState, err := source.Database.Manifests().PushGallery(ctx, created.ID, current.MetadataRevision, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			packagePath := filepath.Join(sourceBase, "archive-portable.zip")
+			if _, err := source.ExportPortableMetadata(ctx, PortableExportOptions{TargetPath: packagePath}); err != nil {
+				t.Fatal(err)
+			}
 
-	target := testServer(t)
-	targetBase := t.TempDir()
-	configurePortableTestServer(t, target, targetBase)
-	targetMedia := filepath.Join(targetBase, "new-archives")
-	targetArchive := filepath.Join(targetMedia, "sets", "archive-set.zip")
-	if err := os.MkdirAll(filepath.Dir(targetArchive), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	for sourcePath, targetPath := range map[string]string{
-		archivePath:        targetArchive,
-		manifestState.Path: filepath.Join(filepath.Dir(targetArchive), filepath.Base(manifestState.Path)),
-	} {
-		data, err := os.ReadFile(sourcePath)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(targetPath, data, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	targetLibrary, err := target.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{Name: "Archive target", RootPath: targetMedia, Enabled: true}, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	imported, err := target.ImportPortableMetadata(ctx, PortableImportOptions{SourcePath: packagePath})
-	if err != nil {
-		t.Fatal(err)
-	}
-	mappings, err := target.Database.ListPortableLibraryMappings(ctx, imported.ImportID)
-	if err != nil || len(mappings) != 1 {
-		t.Fatalf("mappings=%+v err=%v", mappings, err)
-	}
-	if err := target.MapPortableLibraries(ctx, imported.ImportID, []productdb.PortableLibraryDecision{{LibraryKey: mappings[0].LibraryKey, TargetLibraryID: &targetLibrary.ID}}); err != nil {
-		t.Fatal(err)
-	}
-	report, err := target.RebuildPortableGalleries(ctx, imported.ImportID)
-	if err != nil || report.Rebuilt != 1 {
-		t.Fatalf("archive rebuild=%+v err=%v", report, err)
-	}
-	var rebuiltItem, rebuiltSource, rebuiltType string
-	if err := target.Database.QueryRowContext(ctx, `SELECT item.item_uuid,source.source_path,source.source_type
+			target := testServer(t)
+			targetBase := t.TempDir()
+			configurePortableTestServer(t, target, targetBase)
+			targetMedia := filepath.Join(targetBase, "new-archives")
+			targetArchive := filepath.Join(targetMedia, "sets", "archive-set.zip")
+			if err := os.MkdirAll(filepath.Dir(targetArchive), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			for sourcePath, targetPath := range map[string]string{
+				archivePath:        targetArchive,
+				manifestState.Path: filepath.Join(filepath.Dir(targetArchive), filepath.Base(manifestState.Path)),
+			} {
+				data, err := os.ReadFile(sourcePath)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(targetPath, data, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			targetLibrary, err := target.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{Name: "Archive target", RootPath: targetMedia, Enabled: true}, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			imported, err := target.ImportPortableMetadata(ctx, PortableImportOptions{SourcePath: packagePath})
+			if err != nil {
+				t.Fatal(err)
+			}
+			mappings, err := target.Database.ListPortableLibraryMappings(ctx, imported.ImportID)
+			if err != nil || len(mappings) != 1 {
+				t.Fatalf("mappings=%+v err=%v", mappings, err)
+			}
+			if err := target.MapPortableLibraries(ctx, imported.ImportID, []productdb.PortableLibraryDecision{{LibraryKey: mappings[0].LibraryKey, TargetLibraryID: &targetLibrary.ID}}); err != nil {
+				t.Fatal(err)
+			}
+			report, err := target.RebuildPortableGalleries(ctx, imported.ImportID)
+			if err != nil || report.Rebuilt != 1 {
+				t.Fatalf("archive rebuild=%+v err=%v", report, err)
+			}
+			var rebuiltItem, rebuiltSource, rebuiltType string
+			if err := target.Database.QueryRowContext(ctx, `SELECT item.item_uuid,source.source_path,source.source_type
 		FROM gallery_items item JOIN gallery_sources source ON source.id=item.source_id
 		JOIN galleries gallery ON gallery.id=item.gallery_id WHERE gallery.set_id=?`, created.SetID).Scan(&rebuiltItem, &rebuiltSource, &rebuiltType); err != nil {
-		t.Fatal(err)
-	}
-	if rebuiltItem != itemUUID || rebuiltSource != targetArchive || rebuiltType != string(gallery.SourceTypeArchive) {
-		t.Fatalf("archive identity/source changed: %q %q %q", rebuiltItem, rebuiltSource, rebuiltType)
+				t.Fatal(err)
+			}
+			if rebuiltItem != itemUUID || rebuiltSource != targetArchive || rebuiltType != string(gallery.SourceTypeArchive) {
+				t.Fatalf("archive identity/source changed: %q %q %q", rebuiltItem, rebuiltSource, rebuiltType)
+			}
+			if media == "video" {
+				var state string
+				var queued int
+				if err := target.Database.QueryRowContext(ctx, `SELECT probe_state FROM video_technical_metadata WHERE item_uuid=?`, rebuiltItem).Scan(&state); err != nil || state != "PENDING" {
+					t.Fatalf("destination video probe state %s %v", state, err)
+				}
+				if err := target.Database.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_jobs WHERE item_uuid=? AND job_kind='ITEM_TECHNICAL_METADATA' AND variant='' AND status='PENDING'`, rebuiltItem).Scan(&queued); err != nil || queued != 1 {
+					t.Fatalf("destination video probe queue %d %v", queued, err)
+				}
+			}
+		})
 	}
 }
 

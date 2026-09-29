@@ -8,6 +8,7 @@ import { itemResourceURL } from "./resourceUrl";
 import type { BrowseUISettings, MediaDetail, MediaInformation } from "./types";
 import { useImageDisplay } from "./useImageDisplay";
 import { useOnDemandVideoPlayback } from "./useOnDemandVideoPlayback";
+import { VideoPlaybackNotice } from "./VideoPlaybackNotice";
 
 export function MediaDetailPage() {
   const intl = useIntl(); const { uuid = "" } = useParams(); const query = useQuery<{ mediaDetail: MediaDetail }>(MEDIA_DETAIL, { variables: { itemUUID: uuid }, fetchPolicy: "cache-and-network" });
@@ -28,8 +29,8 @@ export function MediaDetailPage() {
   const mediaInformation = metadataQuery.data?.mediaEmbeddedMetadata;
 	const informationGroups = groupMediaInformation(mediaInformation?.entries ?? []);
   return <main className="media-detail"><section className="media-detail__stage">{detail.item.mediaKind === "VIDEO" && videoPlayback.url
-    ? <video key={detail.item.itemUUID} src={videoPlayback.url} controls playsInline /> : resourceURL ? <img src={resourceURL} alt={detail.item.caption} />
-      : <span>{detail.item.processingState}</span>}{detail.item.mediaKind === "VIDEO" && videoPlayback.preparing ? <span className="media-detail__status">Preparing compatible video…</span> : null}{detail.item.mediaKind === "VIDEO" && videoPlayback.failed ? <span className="media-detail__status" role="alert">Video is temporarily unavailable{videoPlayback.errorCode ? ` (${videoPlayback.errorCode})` : ""}. <button type="button" onClick={videoPlayback.retry}>Retry</button></span> : null}{detail.item.mediaKind !== "VIDEO" && imageDisplay.preparing ? <span className="media-detail__status">Preparing full-size view…</span> : null}{detail.item.mediaKind !== "VIDEO" && imageDisplay.failed ? <span className="media-detail__status" role="alert">Full-size view is temporarily unavailable.</span> : null}{detail.item.caption ? <p>{detail.item.caption}</p> : null}</section>
+    ? <video key={detail.item.itemUUID} src={videoPlayback.url} controls playsInline onError={videoPlayback.onPlaybackError} /> : resourceURL ? <img src={resourceURL} alt={detail.item.caption} />
+      : <span>{detail.item.processingState}</span>}{detail.item.mediaKind === "VIDEO" ? <VideoPlaybackNotice state={videoPlayback} className="media-detail__status" /> : null}{detail.item.mediaKind !== "VIDEO" && imageDisplay.preparing ? <span className="media-detail__status">Preparing full-size view…</span> : null}{detail.item.mediaKind !== "VIDEO" && imageDisplay.failed ? <span className="media-detail__status" role="alert">Full-size view is temporarily unavailable.</span> : null}{detail.item.caption ? <p>{detail.item.caption}</p> : null}</section>
     <aside className="media-detail__sidebar"><p>{detail.gallery.collectionType}</p><h1>{detail.gallery.title}</h1>
       <div className="media-detail__relations"><span>{detail.gallery.characters.map((value) => value.name).join(" · ") || "\u00a0"}</span><span>{detail.gallery.credits.map((value) => value.name).join(" · ")}</span></div>
       <section className="media-detail__information" aria-labelledby="media-information-heading"><h2 id="media-information-heading">{intl.formatMessage({ id: "media.information" })}</h2>

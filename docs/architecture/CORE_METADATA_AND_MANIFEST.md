@@ -15,7 +15,7 @@
 
 - GalleryCredit 直接引用 Coser，不区分 Coser/Model。
 - GalleryCast 引用具体 Credit 与 Character；Character 的 Work 是唯一作品来源。
-- ACTIVE Cosplay 的每个 Credit 至少有一个 Cast；ACTIVE Album 至少有一个 Credit且 Cast 为空。
+- ACTIVE Cosplay 至少有一个 Cast，其他 Credit 可没有角色配对；ACTIVE Album 至少有一个 Credit且 Cast 为空。2026-09-29多实体自动关联使用首位 Coser 承接归属不明的角色，Work仍由Character所属作品派生，见[决策记录](MULTI_ENTITY_AND_ARCHIVE_VIDEO.md)。
 - Character 在同一 Work 内规范化名称唯一。
 - Tag 是允许多父但禁止环的 DAG；名称和别名在全局保持无歧义。
 - 合并或实体元数据变化会把受影响的 Gallery Manifest 标记为 `DB_DIRTY`，但不改变 Gallery 的收录时间和个人状态。

@@ -28,6 +28,7 @@ import type { BrowseGalleryCard, BrowseUISettings, GalleryDetail, GalleryMember,
 import { useImageDisplay } from "./useImageDisplay";
 import { useOnDemandAnimatedPreview } from "./useOnDemandAnimatedPreview";
 import { useOnDemandVideoPlayback } from "./useOnDemandVideoPlayback";
+import { VideoPlaybackNotice } from "./VideoPlaybackNotice";
 
 const memberBatchSize = 24;
 const animationHoverConfirmationMS = 150;
@@ -674,12 +675,11 @@ function Lightbox({ item, favorite, rating, currentCover, personalControlsVisibl
       </div>
       <button className="lightbox__previous" type="button" aria-label="Previous media" disabled={!canPrevious} onClick={(event) => { event.stopPropagation(); onPrevious(); }}><Icon name="chevron-left" /></button>
       <div className="lightbox__content" onClick={(event) => event.stopPropagation()}>
-        {item.mediaKind === "VIDEO" && resourceURL ? <video key={item.itemUUID} src={resourceURL} controls playsInline autoPlay />
+        {item.mediaKind === "VIDEO" && resourceURL ? <video key={item.itemUUID} src={resourceURL} controls playsInline autoPlay onError={videoPlayback.onPlaybackError} />
           : item.mediaKind !== "VIDEO" && resourceURL ? <img key={item.itemUUID} src={resourceURL} alt={item.caption} />
             : item.cardResource ? <img key={`${item.itemUUID}-poster`} src={itemResourceURL(item.cardResource) ?? undefined} alt={item.caption} />
               : <span>{item.processingState}</span>}
-        {item.mediaKind === "VIDEO" && videoPlayback.preparing ? <span className="lightbox__status">Preparing compatible video…</span> : null}
-        {item.mediaKind === "VIDEO" && videoPlayback.failed ? <span className="lightbox__status" role="alert">Video is temporarily unavailable{videoPlayback.errorCode ? ` (${videoPlayback.errorCode})` : ""}. <button type="button" onClick={videoPlayback.retry}>Retry</button></span> : null}
+        {item.mediaKind === "VIDEO" ? <VideoPlaybackNotice state={videoPlayback} className="lightbox__status" /> : null}
         {item.mediaKind !== "VIDEO" && imageDisplay.preparing ? <span className="lightbox__status">Preparing full-size view…</span> : null}
         {item.mediaKind !== "VIDEO" && imageDisplay.failed ? <span className="lightbox__status" role="alert">Full-size view is temporarily unavailable.</span> : null}
         {item.caption ? <p>{item.caption}</p> : null}

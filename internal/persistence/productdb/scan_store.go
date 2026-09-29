@@ -385,7 +385,7 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 			container_size=excluded.container_size,container_modified_at_utc=excluded.container_modified_at_utc,
 			archive_limits_json=excluded.archive_limits_json,scanner_version=excluded.scanner_version,
 			checked_at_utc=excluded.checked_at_utc`, sourceID, evidence.Size, evidence.ModifiedAtUTC,
-			evidence.LimitsJSON, sourceScanEvidenceVersion, timestamp); err != nil {
+			evidence.LimitsJSON, archiveScanEvidenceVersion, timestamp); err != nil {
 			return err
 		}
 	} else if _, err := tx.ExecContext(ctx, `DELETE FROM gallery_source_scan_evidence WHERE source_id=?`, sourceID); err != nil {
@@ -478,9 +478,6 @@ func enqueueScanProcessingJobs(ctx context.Context, tx *sql.Tx, galleryID int64,
 	timestamp := formatTime(normalisedTime(now))
 	for _, item := range items {
 		if item.kind == gallery.MediaKindVideo {
-			if item.source != gallery.SourceTypeDirectory {
-				continue
-			}
 			key := ItemTechnicalMetadataJobKey(item.uuid, item.revision, profileHash)
 			if _, err := tx.ExecContext(ctx, `INSERT INTO video_technical_metadata(item_uuid,content_revision,probe_profile_hash,probe_state)
 				VALUES(?,?,?,'PENDING') ON CONFLICT(item_uuid) DO UPDATE SET content_revision=excluded.content_revision,probe_profile_hash=excluded.probe_profile_hash,

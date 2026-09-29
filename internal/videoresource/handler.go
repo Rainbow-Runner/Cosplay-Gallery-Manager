@@ -1,6 +1,7 @@
 package videoresource
 
 import (
+	"io"
 	"log/slog"
 	"net/http"
 	"path"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/mediaaccess"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/portableid"
@@ -47,10 +49,25 @@ func (handler Handler) ServeHTTP(response http.ResponseWriter, request *http.Req
 		http.NotFound(response, request)
 		return
 	}
-	file, info, err := mediaaccess.OpenDirectoryFile(descriptor.Source)
-	if err != nil {
-		http.NotFound(response, request)
-		return
+	var file interface {
+		io.ReadSeeker
+		io.Closer
+	}
+	var modified time.Time
+	if descriptor.Source.Type == gallery.SourceTypeArchive {
+		member, openErr := mediaaccess.OpenArchiveMember(request.Context(), descriptor.Source, descriptor.ArchiveLimits, descriptor.ArchiveEvidence)
+		if openErr != nil {
+			http.NotFound(response, request)
+			return
+		}
+		file, modified = member, member.ModTime()
+	} else {
+		directoryFile, info, openErr := mediaaccess.OpenDirectoryFile(descriptor.Source)
+		if openErr != nil {
+			http.NotFound(response, request)
+			return
+		}
+		file, modified = directoryFile, info.ModTime()
 	}
 	defer file.Close()
 	etag := `"` + descriptor.ItemUUID + "-r" + strconv.FormatInt(descriptor.ContentRevision, 10) + `-direct"`
@@ -72,7 +89,7 @@ func (handler Handler) ServeHTTP(response http.ResponseWriter, request *http.Req
 		response.WriteHeader(http.StatusNotModified)
 		return
 	}
-	http.ServeContent(response, request, "", info.ModTime(), file)
+	http.ServeContent(response, request, "", modified, file)
 }
 
 func parse(value string) (string, int64, bool) {

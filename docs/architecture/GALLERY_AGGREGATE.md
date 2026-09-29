@@ -75,7 +75,7 @@ GalleryPersonalState和GalleryItemPersonalState都没有user_id：
 - ACTIVE业务编辑失效自动回DRAFT；旧metadata_revision写入回滚。
 - Source不可访问暂停Browse但不修改Item availability。
 - 两个Source中的同路径媒体拥有不同item_uuid，跨Source绑定被复合外键拒绝。
-- 多Credit Cosplay要求每个Credit都有Character。
+- 多Credit Cosplay允许角色归属未知的Credit无Cast；自动匹配的Character归首位Coser，Work仅通过Character派生（2026-09-29确认）。
 - 第1,001个非排除成员及排除成员超限恢复被拒绝。
 - Gallery/Item收藏评分独立，评分原子增加Gallery metadata_revision。
 - last_item_id不能跨Gallery。

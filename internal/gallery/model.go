@@ -241,9 +241,8 @@ func (g Gallery) ActivationBlockers(facts ActivationFacts) []ActivationBlocker {
 	if facts.CreditCount == 0 {
 		add("CREDIT_REQUIRED", "Gallery must have at least one Coser credit")
 	}
-	if facts.CastCount > 0 && facts.CreditsWithoutCharacterCount > 0 {
-		add("CAST_REQUIRED_FOR_EACH_CREDIT", "Every Cosplay credit must have at least one Character")
-	}
+	// A Cosplay can credit several people without knowing every role's owner.
+	// Cast still references a concrete Credit and derives Work via Character.
 	if facts.UnresolvedIdentitySuggestions > 0 {
 		add("IDENTITY_SUGGESTION_UNRESOLVED", "Coser, Work or Character suggestions must be resolved")
 	}

@@ -15,7 +15,7 @@ type VideoMetadataStore struct{ db *sql.DB }
 func (db *Database) VideoMetadata() *VideoMetadataStore { return &VideoMetadataStore{db: db.DB} }
 
 // EnqueueBackfill schedules a bounded, low-priority batch for existing
-// DIRECTORY videos whose current revision has never been probed with the
+// directory/archive videos whose current revision has never been probed with the
 // active profile. It never reads source media and never retries an already
 // recorded probe error automatically.
 func (s *VideoMetadataStore) EnqueueBackfill(ctx context.Context, profile string, limit int, now time.Time) (int, error) {
@@ -26,7 +26,8 @@ func (s *VideoMetadataStore) EnqueueBackfill(ctx context.Context, profile string
 		FROM gallery_items item JOIN gallery_sources source ON source.id=item.source_id
 		LEFT JOIN video_technical_metadata video ON video.item_uuid=item.item_uuid
 		WHERE item.media_kind='VIDEO' AND item.excluded=0 AND item.availability_state='AVAILABLE'
-		AND source.source_type='DIRECTORY' AND source.availability_state='AVAILABLE'
+		AND source.source_type IN ('DIRECTORY','ARCHIVE') AND source.availability_state='AVAILABLE' AND source.over_limit=0
+		AND NOT EXISTS(SELECT 1 FROM gallery_source_issues issue WHERE issue.source_id=source.id AND issue.severity='BLOCKING' AND issue.resolved_at_utc IS NULL)
 		AND (video.item_uuid IS NULL OR video.content_revision<>item.content_revision OR video.probe_profile_hash<>?)
 		ORDER BY item.id LIMIT ?`, profile, limit)
 	if err != nil {
@@ -140,7 +141,7 @@ func (s *VideoMetadataStore) Retry(ctx context.Context, itemUUID, requestedProfi
 		Scan(&galleryID, &revision, &mediaKind, &availability, &excluded, &sourceType); err != nil {
 		return err
 	}
-	if mediaKind != "VIDEO" || availability != "AVAILABLE" || excluded != 0 || sourceType != string(gallery.SourceTypeDirectory) {
+	if mediaKind != "VIDEO" || availability != "AVAILABLE" || excluded != 0 || (sourceType != string(gallery.SourceTypeDirectory) && sourceType != string(gallery.SourceTypeArchive)) {
 		return errors.New("video Item is not processable")
 	}
 	profile := requestedProfile

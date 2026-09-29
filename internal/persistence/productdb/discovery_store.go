@@ -501,8 +501,8 @@ func validateMarkerTitle(value string) (string, error) {
 }
 
 // archiveEntitySuggestions uses only the archive's external library path and
-// filename. It intentionally emits conservative pending suggestions: a token
-// must identify exactly one existing entity, and no relation is written here.
+// filename. Exact tokens produce pending suggestions, never relations. Identity
+// ambiguity is resolved separately against UUIDs before automatic acceptance.
 func archiveEntitySuggestions(ctx context.Context, db discoveryQueryer, libraryRoot, archivePath string) ([]discovery.Suggestion, error) {
 	relative, err := filepath.Rel(libraryRoot, archivePath)
 	if err != nil {
@@ -557,10 +557,20 @@ func archiveEntitySuggestions(ctx context.Context, db discoveryQueryer, libraryR
 	var result []discovery.Suggestion
 	for _, kind := range []string{"COSER", "WORK", "CHARACTER"} {
 		values := matched[kind]
-		if len(values) != 1 {
-			continue
-		}
+		ordered := make([]string, 0, len(values))
 		for value := range values {
+			ordered = append(ordered, value)
+		}
+		pathKey := normalizedKey(filepath.ToSlash(relative))
+		sort.Slice(ordered, func(i, j int) bool {
+			left, right := normalizedKey(ordered[i]), normalizedKey(ordered[j])
+			a, b := strings.Index(pathKey, left), strings.Index(pathKey, right)
+			if a != b {
+				return a < b
+			}
+			return ordered[i] < ordered[j]
+		})
+		for _, value := range ordered {
 			result = append(result, discovery.Suggestion{Field: strings.ToLower(kind), Value: value})
 		}
 	}

@@ -132,7 +132,7 @@
 - GalleryCast绑定具体Credit和Character；唯一键为 `(gallery_id, gallery_credit_id, character_id)`。
 - 一个Credit可配多个Character；多个Credit可配同一Character。
 - Credit按Gallery全局排序；Cast按所属Credit内部排序。
-- ACTIVE COSPLAY要求每个Credit至少有一条Cast；ACTIVE ALBUM要求至少一个Credit且Cast为空。
+- ACTIVE COSPLAY要求Gallery至少有一条Cast，不要求每个Credit都有Cast；ACTIVE ALBUM要求至少一个Credit且Cast为空。2026-09-29确认：多Coser归属不明时，自动确定的Character统一挂首位Coser，Work仍仅通过Character体现，其他Credit无Cast不阻断。见[决策记录](architecture/MULTI_ENTITY_AND_ARCHIVE_VIDEO.md)。
 - Manifest Cast必须引用已列出的Credit，并显式提供Coser、Character、Work UUID。
 - Character现有Work与Manifest Work不一致时冲突，绝不静默移动。
 
@@ -314,7 +314,8 @@ SocialAccount：
 - 上述资源阈值可在后台调整；Gallery 1,000成员仍是产品硬上限。
 - 路径穿越、绝对路径、Unicode/大小写重复、符号链接、硬链接、设备/特殊文件、加密Entry和嵌套归档等结构性校验不得关闭。
 - CRC或成员读取失败产生明确Issue；不把归档完整解压到用户媒体库，也不递归处理内嵌压缩包。
-- Archive中的Video、RAW和AVIF沿用阻断规则；必须明确排除，或解压为DIRECTORY后再激活。
+- RAW和AVIF仍沿用Archive阻断规则。2026-09-29确认扩展存档Video：允许后台探测和派生，优先安全直接成员读取、必要时临时提取；播放只允许安全直读且浏览器兼容，不提取、不Remux、不转码，能力不足不阻断整个Gallery。实现进度与门禁见[决策记录](architecture/MULTI_ENTITY_AND_ARCHIVE_VIDEO.md)。
+- 2026-09-29四阶段源码闭环完成、未部署：ZIP Store／TAR／可证明的明文Copy 7z优先直接读取；后台探测／Poster／日期必要时临时提取，用后清理，任务10分钟有界，异常退出遗留仅在worker启动前清理应用已识别临时视频文件。认证播放不提取／转码，能力和编码不支持返回双语原因及自行解压提示。旧存档需再次来源扫描更新容器证据v2与旧Video阻断Issue；目录／成员证据v1和schema v20不变。技术信息、偏移和任务私有地址不进入Manifest／迁移包，UUID及目标重建排队已回归。
 
 ## 10. 扫描、指纹与对账
 

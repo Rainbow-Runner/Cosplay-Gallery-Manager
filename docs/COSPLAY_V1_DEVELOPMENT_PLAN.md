@@ -285,7 +285,7 @@ flowchart LR
 - ZIP/CBZ、TAR、TAR.GZ/TGZ和7Z禁止路径穿越、绝对路径、危险链接和超限解压资源。
 - 默认限制为总 Entry 20,000、单成员解压后 2GiB、总解压估算 100GiB、单图 200MP、压缩比 1,000。
 - 阈值可配置，但 Unicode/大小写重复、加密 Entry、嵌套归档、路径穿越和特殊文件等结构性安全校验不可关闭。
-- 归档中的未排除视频、RAW 和 AVIF 是激活阻断错误。
+- 归档中的未排除RAW和AVIF仍是激活阻断错误；视频扩展遵循2026-09-29[决策记录](architecture/MULTI_ENTITY_AND_ARCHIVE_VIDEO.md)。四阶段源码及回归完成、尚未部署：扫描视频、技术探测／日期／Poster、直接优先的后台输入、仅安全直接且浏览器兼容的认证播放和双语拒绝提示闭环；播放不提取／Remux／转码。旧存档再次来源扫描后更新容器证据v2，不升级schema、不持久化成员偏移或改变Manifest／迁移格式。正式服务在部署前仍使用旧行为。
 - Archive不可附加外部视频或其他外部媒体来源。
 
 #### P02-09 成员排序与上限
@@ -326,7 +326,7 @@ flowchart LR
 - GalleryCredit 不区分 Coser/Model；全局排序。
 - GalleryCast 必须引用具体 Credit、Character，且 Character 与 Work 严格一致。
 - Cast 按所属 Credit 内排序，两层顺序派生 Character/Work 摘要。
-- ACTIVE Cosplay 中每个 Credit 至少有一个角色配对。
+- ACTIVE Cosplay 中至少有一个角色配对，其他 Credit 可以没有 Cast；多实体自动关联遵循2026-09-29[决策记录](architecture/MULTI_ENTITY_AND_ARCHIVE_VIDEO.md)。
 - ACTIVE Album 至少有一个 Credit 且 Cast 必须为空。
 - Cosplay/Album 转换先回到 DRAFT，不静默删除 Cast，不自动创建关系。
 

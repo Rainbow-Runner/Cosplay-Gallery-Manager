@@ -12,6 +12,7 @@ export interface OnDemandVideoPlaybackState {
   failed: boolean;
   errorCode: string;
   retry: () => void;
+  onPlaybackError: () => void;
 }
 
 function directVideoURL(itemUUID: string, revision: number): string {
@@ -26,6 +27,8 @@ export function useOnDemandVideoPlayback(item?: GalleryMember | null): OnDemandV
   const [settled, setSettled] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [requested, setRequested] = useState<VideoPlaybackStatus | null>(null);
+  const [browserErrorFor, setBrowserErrorFor] = useState("");
+  const onPlaybackError = useCallback(() => setBrowserErrorFor(itemUUID), [itemUUID]);
   const [request, requestResult] = useMutation<{ requestItemVideoPlayback: VideoPlaybackStatus }>(REQUEST_ITEM_VIDEO_PLAYBACK);
   const status = useQuery<{ itemVideoPlaybackStatus: VideoPlaybackStatus }>(ITEM_VIDEO_PLAYBACK_STATUS, {
     variables: { itemUUID },
@@ -37,6 +40,7 @@ export function useOnDemandVideoPlayback(item?: GalleryMember | null): OnDemandV
   useEffect(() => {
     setSettled(false);
     setRequested(null);
+    setBrowserErrorFor("");
     if (!eligible || !itemUUID) return;
     let active = true;
     void request({ variables: { itemUUID } }).then(({ data }) => {
@@ -60,13 +64,14 @@ export function useOnDemandVideoPlayback(item?: GalleryMember | null): OnDemandV
     setAttempt((value) => value + 1);
   }, []);
 
-  if (!eligible) return { url: null, mode: "", preparing: false, failed: false, errorCode: "", retry };
+  if (!eligible) return { url: null, mode: "", preparing: false, failed: false, errorCode: "", retry, onPlaybackError };
+  if (browserErrorFor === itemUUID && itemUUID) return { url: null, mode: current?.mode ?? "", preparing: false, failed: true, errorCode: "VIDEO_BROWSER_PLAYBACK_FAILED", retry, onPlaybackError };
   if (current?.status === "READY" && current.mode === "DIRECT") {
-    return { url: directVideoURL(itemUUID, current.contentRevision), mode: current.mode, preparing: false, failed: false, errorCode: "", retry };
+    return { url: directVideoURL(itemUUID, current.contentRevision), mode: current.mode, preparing: false, failed: false, errorCode: "", retry, onPlaybackError };
   }
   if (current?.status === "READY" && current.resource) {
-    return { url: itemResourceURL(current.resource), mode: current.mode, preparing: false, failed: false, errorCode: "", retry };
+    return { url: itemResourceURL(current.resource), mode: current.mode, preparing: false, failed: false, errorCode: "", retry, onPlaybackError };
   }
   const failed = current?.status === "ERROR" || Boolean(requestResult.error) || Boolean(status.error);
-  return { url: null, mode: current?.mode ?? "", preparing: !failed, failed, errorCode: current?.errorCode ?? "", retry };
+  return { url: null, mode: current?.mode ?? "", preparing: !failed, failed, errorCode: current?.errorCode ?? "", retry, onPlaybackError };
 }

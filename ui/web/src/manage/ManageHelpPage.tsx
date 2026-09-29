@@ -20,8 +20,10 @@ export function ManageHelpPage() {
         <a href="#libraries">{f("manage.help.libraries.title")}</a>
         <a href="#scan-rules">{f("manage.help.rules.title")}</a>
         <a href="#gallery-status">{f("manage.help.gallery.title")}</a>
+        <a href="#archive-video">{f("manage.help.archiveVideo.title")}</a>
         <a href="#cache-cleanup">{f("manage.cacheCleanup.title")}</a>
       </nav>
+      <article id="archive-video" className="manage-help-article"><header><h3>{f("manage.help.archiveVideo.title")}</h3></header><section><p>{f("manage.help.archiveVideo.body")}</p></section></article>
       <article id="cache-cleanup" className="manage-help-article"><header><h3>{f("manage.cacheCleanup.title")}</h3></header><section><p>{f("manage.cacheCleanup.help")}</p><Link to="/manage/operations">{f("manage.cacheCleanup.preview")}</Link></section></article>
       <article id="docker-paths" className="manage-help-article"><header><h3>{f("manage.help.docker.title")}</h3><span>{f("manage.help.docker.summary")}</span></header><section><ul className="manage-help-list"><li>{f("manage.help.docker.state")}</li><li>{f("manage.help.docker.cache")}</li><li>{f("manage.help.docker.media")}</li><li>{f("manage.help.docker.transfer")}</li><li>{f("manage.help.docker.recovery")}</li></ul></section></article>
       <article id="libraries" className="manage-help-article">
@@ -68,6 +70,7 @@ export function ManageHelpPage() {
 
         <section className="manage-help-safety" aria-labelledby="help-safety-title">
           <h4 id="help-safety-title">{f("manage.help.safety.title")}</h4>
+          <p>{f("manage.help.safety.entities")}</p>
           <ul><li>{f("manage.help.safety.explicit")}</li><li>{f("manage.help.safety.snapshot")}</li><li>{f("manage.help.safety.modes")}</li><li>{f("manage.help.safety.activation")}</li><li>{f("manage.help.safety.review")}</li></ul>
         </section>
       </article>

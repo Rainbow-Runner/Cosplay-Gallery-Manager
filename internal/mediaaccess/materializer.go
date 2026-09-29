@@ -23,8 +23,16 @@ type Source struct {
 }
 
 type Materialized struct {
-	Path    string
-	cleanup func() error
+	Path     string
+	cleanup  func() error
+	validate func() error
+}
+
+func (value Materialized) Validate() error {
+	if value.validate != nil {
+		return value.validate()
+	}
+	return nil
 }
 
 // OpenDirectoryFile validates the complete DIRECTORY path and returns the

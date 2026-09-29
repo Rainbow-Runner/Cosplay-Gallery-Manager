@@ -153,7 +153,7 @@ func TestScanDirectoryEvidenceSurvivesGalleryRootMove(t *testing.T) {
 	}
 }
 
-func TestScanArchiveUsesCompressedSizeAndBlocksUnsafeMedia(t *testing.T) {
+func TestScanArchiveUsesCompressedSizeAndAllowsVideos(t *testing.T) {
 	filename := filepath.Join(t.TempDir(), "set.cbz")
 	file, err := os.Create(filename)
 	if err != nil {
@@ -187,7 +187,7 @@ func TestScanArchiveUsesCompressedSizeAndBlocksUnsafeMedia(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result.Observations) != 2 || !hasIssue(result.Issues, "UNSUPPORTED_ARCHIVE_MEDIA") {
+	if len(result.Observations) != 2 || len(result.Issues) != 0 || !result.Complete || result.Observations[1].MediaKind != gallery.MediaKindVideo {
 		t.Fatalf("archive scan result = %#v", result)
 	}
 	for _, observation := range result.Observations {

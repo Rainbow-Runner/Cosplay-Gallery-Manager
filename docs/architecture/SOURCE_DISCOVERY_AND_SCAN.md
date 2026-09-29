@@ -60,7 +60,7 @@ Position在Gallery内全局唯一。首次按PHOTO、SELFIE、动画、视频优
 
 ZIP/CBZ先检查中央目录，再决定是否读取Entry。不可关闭的结构检查包括路径穿越、绝对/Windows路径、非NFC路径、大小写折叠重复、符号链接、特殊Entry、加密Entry和嵌套归档。可配置资源阈值默认是20,000 Entry、单Entry 2 GiB、总解压估算100 GiB、压缩比1,000和单图200 MP。
 
-归档内Video、RAW和AVIF形成阻断Issue；归档成员总大小使用压缩后大小。危险归档不会用空观察覆盖上一版成功快照。
+归档内RAW和AVIF仍形成阻断Issue；Video已接入后台技术信息／日期／Poster处理，播放能力不形成Gallery结构性阻断，见[存档视频决策](MULTI_ENTITY_AND_ARCHIVE_VIDEO.md)。ZIP成员记录压缩后大小；TAR／固实7z没有单成员压缩大小时记录解压大小。危险归档不会用空观察覆盖上一版成功快照。容器可复用扫描证据使用v2；目录／成员内容证据仍为v1，旧存档再次扫描重新验证，不导致目录媒体全面重新哈希。
 
 ## 8. 无用户媒体删除能力
 

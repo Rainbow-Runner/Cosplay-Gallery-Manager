@@ -266,7 +266,7 @@ func (s *AutomationStore) applyAutomationPolicy(ctx context.Context, galleryID i
 		if err := s.ensureArchiveIdentitySuggestions(ctx, galleryID, now); err != nil {
 			return err
 		}
-		if err := s.acceptUniqueIdentityPair(ctx, value, now); err != nil {
+		if err := s.acceptDeterminateIdentities(ctx, value, now); err != nil {
 			return err
 		}
 	}
@@ -290,7 +290,7 @@ func (s *AutomationStore) ensureArchiveIdentitySuggestions(ctx context.Context, 
 	var existing int
 	if err := tx.QueryRowContext(ctx, `SELECT
 		(SELECT COUNT(*) FROM gallery_credits WHERE gallery_id=?) +
-		(SELECT COUNT(*) FROM gallery_identity_suggestions WHERE gallery_id=? AND status='PENDING')`,
+		(SELECT COUNT(*) FROM gallery_identity_suggestions WHERE gallery_id=?)`,
 		galleryID, galleryID).Scan(&existing); err != nil || existing > 0 {
 		if err != nil {
 			return err
@@ -356,44 +356,151 @@ func (s *AutomationStore) acceptClassificationSuggestions(ctx context.Context, g
 	return nil
 }
 
-func (s *AutomationStore) acceptUniqueIdentityPair(ctx context.Context, value gallery.Gallery, now time.Time) error {
-	var existing int
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_credits WHERE gallery_id=?`, value.ID).Scan(&existing); err != nil || existing > 0 {
-		return err
-	}
-	suggestions, err := loadPendingIdentitySuggestions(ctx, s.db, value.ID)
+func (s *AutomationStore) acceptDeterminateIdentities(ctx context.Context, value gallery.Gallery, now time.Time) error {
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	coserValues, characterValues, workValues := suggestions["COSER"], suggestions["CHARACTER"], suggestions["WORK"]
-	if len(coserValues) != 1 || len(characterValues) != 1 || len(workValues) > 1 {
+	defer func() { _ = tx.Rollback() }()
+	current, err := findGallery(ctx, tx, value.ID)
+	if err != nil {
+		return err
+	}
+	if current.MetadataRevision != value.MetadataRevision {
+		return ErrMetadataRevisionConflict
+	}
+	if current.State != gallery.StateDraft {
 		return nil
 	}
-	coserUUIDs, err := exactEntityUUIDs(ctx, s.db, "cosers", "coser_aliases", "coser_uuid", coserValues[0], "")
-	if err != nil || len(coserUUIDs) != 1 {
+	var existing int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_credits WHERE gallery_id=?`, value.ID).Scan(&existing); err != nil || existing > 0 {
 		return err
 	}
-	workUUID := ""
-	if len(workValues) == 1 {
-		matches, err := exactEntityUUIDs(ctx, s.db, "works", "work_aliases", "work_uuid", workValues[0], "")
-		if err != nil || len(matches) != 1 {
+	type suggestion struct {
+		id          int64
+		kind, value string
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT id,suggestion_kind,value FROM gallery_identity_suggestions WHERE gallery_id=? AND status='PENDING' ORDER BY id`, value.ID)
+	if err != nil {
+		return err
+	}
+	var pending []suggestion
+	for rows.Next() {
+		var item suggestion
+		if err := rows.Scan(&item.id, &item.kind, &item.value); err != nil {
+			rows.Close()
 			return err
 		}
-		workUUID = matches[0]
+		pending = append(pending, item)
 	}
-	characterUUIDs, err := exactEntityUUIDs(ctx, s.db, "characters", "character_aliases", "character_uuid", characterValues[0], workUUID)
-	if err != nil || len(characterUUIDs) != 1 {
+	if err := rows.Err(); err != nil {
+		rows.Close()
 		return err
 	}
-	if err := (&GalleryStore{db: s.db}).ReplaceRelations(ctx, value.ID, value.MetadataRevision, ReplaceGalleryRelationsInput{Credits: []ReplaceGalleryCreditInput{{
-		CoserUUID: coserUUIDs[0], Position: 1024,
-		Cast: []ReplaceGalleryCastInput{{CharacterUUID: characterUUIDs[0], Position: 1024}},
-	}}}, now); err != nil {
+	if err := rows.Close(); err != nil {
 		return err
 	}
-	_, err = s.db.ExecContext(ctx, `UPDATE gallery_identity_suggestions SET status='ACCEPTED',resolved_at_utc=?
-		WHERE gallery_id=? AND status='PENDING' AND suggestion_kind IN ('COSER','CHARACTER','WORK')`, formatTime(normalisedTime(now)), value.ID)
-	return err
+	resolved := map[int64]bool{}
+	works := map[string]bool{}
+	var cosers, characters []string
+	seenCosers, seenCharacters := map[string]bool{}, map[string]bool{}
+	for _, item := range pending {
+		if item.kind != "COSER" && item.kind != "WORK" {
+			continue
+		}
+		table, aliases, owner := "cosers", "coser_aliases", "coser_uuid"
+		if item.kind == "WORK" {
+			table, aliases, owner = "works", "work_aliases", "work_uuid"
+		}
+		matches, err := exactEntityUUIDs(ctx, tx, table, aliases, owner, item.value, "")
+		if err != nil {
+			return err
+		}
+		if len(matches) != 1 {
+			continue
+		} // Ambiguous identity is not multiple confirmed entities.
+		resolved[item.id] = true
+		if item.kind == "WORK" {
+			works[matches[0]] = true
+			continue
+		}
+		if !seenCosers[matches[0]] {
+			cosers = append(cosers, matches[0])
+			seenCosers[matches[0]] = true
+		}
+	}
+	if len(cosers) == 0 {
+		return nil
+	}
+	for _, item := range pending {
+		if item.kind != "CHARACTER" {
+			continue
+		}
+		matches, err := exactEntityUUIDs(ctx, tx, "characters", "character_aliases", "character_uuid", item.value, "")
+		if err != nil {
+			return err
+		}
+		// Work suggestions are context only; never create standalone Work relations.
+		if len(works) > 0 {
+			var filtered []string
+			for _, uuid := range matches {
+				var work string
+				if err := tx.QueryRowContext(ctx, `SELECT work_uuid FROM characters WHERE uuid=?`, uuid).Scan(&work); err != nil {
+					return err
+				}
+				if works[work] {
+					filtered = append(filtered, uuid)
+				}
+			}
+			matches = filtered
+		}
+		if len(matches) != 1 {
+			continue
+		}
+		resolved[item.id] = true
+		if !seenCharacters[matches[0]] {
+			characters = append(characters, matches[0])
+			seenCharacters[matches[0]] = true
+		}
+	}
+	input := ReplaceGalleryRelationsInput{}
+	for i, uuid := range cosers {
+		input.Credits = append(input.Credits, ReplaceGalleryCreditInput{CoserUUID: uuid, Position: int64(i+1) * 1024})
+	}
+	for i, uuid := range characters {
+		input.Credits[0].Cast = append(input.Credits[0].Cast, ReplaceGalleryCastInput{CharacterUUID: uuid, Position: int64(i+1) * 1024})
+	}
+	rows, err = tx.QueryContext(ctx, `SELECT tag_uuid,position FROM gallery_tags WHERE gallery_id=? ORDER BY position`, value.ID)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var tag ReplaceGalleryTagInput
+		if err := rows.Scan(&tag.TagUUID, &tag.Position); err != nil {
+			rows.Close()
+			return err
+		}
+		input.Tags = append(input.Tags, tag)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if err := replaceGalleryRelationsTx(ctx, tx, value.ID, value.MetadataRevision, input, now); err != nil {
+		return err
+	}
+	for _, item := range pending {
+		if !resolved[item.id] {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE gallery_identity_suggestions SET status='ACCEPTED',resolved_at_utc=? WHERE id=? AND status='PENDING'`, formatTime(normalisedTime(now)), item.id); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func loadPendingIdentitySuggestions(ctx context.Context, db *sql.DB, galleryID int64) (map[string][]string, error) {
@@ -416,7 +523,7 @@ func loadPendingIdentitySuggestions(ctx context.Context, db *sql.DB, galleryID i
 
 // exactEntityUUIDs intentionally performs normalized exact/alias matching only.
 // No fuzzy score is allowed to cross the automatic acceptance boundary.
-func exactEntityUUIDs(ctx context.Context, db *sql.DB, table, aliasTable, ownerColumn, value, workUUID string) ([]string, error) {
+func exactEntityUUIDs(ctx context.Context, db discoveryQueryer, table, aliasTable, ownerColumn, value, workUUID string) ([]string, error) {
 	query := `SELECT uuid,name FROM ` + table
 	args := []any{}
 	if table == "characters" && workUUID != "" {

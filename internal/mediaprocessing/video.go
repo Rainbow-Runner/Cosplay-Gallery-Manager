@@ -82,3 +82,22 @@ func PlaybackPlanFromMetadata(metadata VideoTechnicalMetadata) VideoPlaybackPlan
 	return PlanVideoPlayback(VideoTechnicalInfo{Container: metadata.Container, VideoCodec: metadata.VideoCodec, AudioCodec: metadata.AudioCodec, Rotation: metadata.Rotation, HDR: metadata.HDR,
 		VideoStreamIndex: metadata.VideoStreamIndex, AudioStreamIndex: metadata.AudioStreamIndex, DisplayWidth: metadata.DisplayWidth, DisplayHeight: metadata.DisplayHeight})
 }
+
+// Archive playback has no conversion fallback, including H.264 formats outside
+// the common-browser 8-bit 4:2:0 baseline.
+func ArchiveVideoBrowserCompatible(metadata VideoTechnicalMetadata) bool {
+	if PlaybackPlanFromMetadata(metadata).Mode != PlaybackDirect {
+		return false
+	}
+	switch strings.ToLower(metadata.PixelFormat) {
+	case "", "yuv420p", "yuvj420p":
+	default:
+		return false
+	}
+	switch strings.ToLower(metadata.VideoProfile) {
+	case "", "baseline", "constrained baseline", "main", "high":
+		return true
+	default:
+		return false
+	}
+}

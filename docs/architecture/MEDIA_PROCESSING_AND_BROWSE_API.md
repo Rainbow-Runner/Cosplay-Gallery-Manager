@@ -16,6 +16,13 @@
 - RAW由LibRaw兼容适配器只读生成JPEG代理；普通图片复用Stash已有图片栈；Video/动画Poster复用Stash FFmpeg命令构建能力。
 - EXIF/XMP日期、自拍目录语义和RAW/JPEG伴生只形成建议，明确接受后才改变业务元数据。
 
+### 2.0 存档视频（2026-09-29源码完成，未部署）
+
+- 受支持存档内Video进入既有技术探测／Poster队列，FFprobe同次响应获取拍摄日期；历史日期任务同样优先安全直接成员输入。直接输入为固定原存档描述符上的成员区间，经任务私有loopback Range交给本机工具，不访问互联网或对前端返回内部地址。
+- 压缩／无法证明的布局仅允许后台临时提取单成员，成功／失败／取消清理；原视频不长期缓存、不回写或解包到媒体库。Archive视频单任务10分钟有界，异常退出的已识别临时视频文件由worker启动前清理。
+- 播放只用认证的`/resource/video/{item_uuid}/{revision}/direct`成员Range和H.264 MP4常见浏览器基线，不提取、不Remux、不转码；请求和worker双重拒绝Archive播放代理。结构安全、分级、Hidden、Excluded、revision及源证据照常复核；不足时提示原因和自行解压，浏览器实际加载失败也显式提示。
+- 技术／Poster失败及取消不留下永远Pending的Item；显式重试恢复待处理，已有当前可用Poster不被失败清除。物理偏移、来源证据、技术缓存和私有地址不进入Manifest或可移植包；目标重建重新扫描并排队。详见[完整边界与验收](MULTI_ENTITY_AND_ARCHIVE_VIDEO.md)。
+
 ### 2.1 单媒体内嵌元数据显示
 
 - 用于详情展示的文件/EXIF技术信息与Gallery、Coser、Work、Cast等业务元数据严格分离；读取作者、版权或拍摄日期不会自动写入或覆盖Gallery业务字段。

@@ -1,6 +1,6 @@
 import type { MockedResponse } from "@apollo/client/testing";
 import { MockedProvider } from "@apollo/client/testing/react";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { describe, expect, it } from "vitest";
 
@@ -23,6 +23,23 @@ function mocksFor(response: VideoPlaybackStatus): MockedResponse[] {
 }
 
 describe("useOnDemandVideoPlayback", () => {
+  it("settles archive refusals without a resource URL", async () => {
+    const response: VideoPlaybackStatus = { itemUUID: item.itemUUID, mode: "", status: "ERROR", contentRevision: 4, resource: null, errorCode: "ARCHIVE_VIDEO_COMPRESSED" };
+    const { result } = renderHook(() => useOnDemandVideoPlayback(item), { wrapper: wrapper(mocksFor(response)) });
+    await waitFor(() => expect(result.current.failed).toBe(true));
+    expect(result.current.url).toBeNull();
+    expect(result.current.preparing).toBe(false);
+    expect(result.current.errorCode).toBe("ARCHIVE_VIDEO_COMPRESSED");
+  });
+  it("shows runtime browser failures instead of leaving a broken video", async () => {
+    const response: VideoPlaybackStatus = { itemUUID: item.itemUUID, mode: "DIRECT", status: "READY", contentRevision: 4, resource: null, errorCode: "" };
+    const { result } = renderHook(() => useOnDemandVideoPlayback(item), { wrapper: wrapper(mocksFor(response)) });
+    await waitFor(() => expect(result.current.url).not.toBeNull());
+    act(() => result.current.onPlaybackError());
+    expect(result.current.failed).toBe(true);
+    expect(result.current.url).toBeNull();
+    expect(result.current.errorCode).toBe("VIDEO_BROWSER_PLAYBACK_FAILED");
+  });
   it("builds the opaque direct route without a derivative identity", async () => {
     const response: VideoPlaybackStatus = { itemUUID: item.itemUUID, mode: "DIRECT", status: "READY", contentRevision: 4, resource: null, errorCode: "" };
     const { result } = renderHook(() => useOnDemandVideoPlayback(item), { wrapper: wrapper(mocksFor(response)) });

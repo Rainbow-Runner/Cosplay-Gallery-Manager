@@ -275,6 +275,11 @@ func (s *Server) startWorkers(ctx context.Context) error {
 	if err := os.MkdirAll(temporaryRoot, 0o700); err != nil {
 		return err
 	}
+	if removed, err := mediaaccess.CleanupArchiveVideoTemporary(temporaryRoot); err != nil {
+		slog.Warn("CGM_ARCHIVE_VIDEO_TEMP_CLEANUP_FAILED", "count", removed, "error_type", fmt.Sprintf("%T", err))
+	} else if removed > 0 {
+		slog.Info("CGM_ARCHIVE_VIDEO_TEMP_CLEANED", "count", removed)
+	}
 	generators := []mediaprocessing.Generator{mediaprocessing.ImageGenerator{}}
 	if s.Config.LibRawPath != "" {
 		generators = append(generators, mediaprocessing.LibRawGenerator{Executable: s.Config.LibRawPath})

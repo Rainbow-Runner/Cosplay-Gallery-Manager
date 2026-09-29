@@ -1,6 +1,7 @@
 import { useApolloClient, useMutation, useQuery } from "@apollo/client/react";
 import { type FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useIntl } from "react-intl";
 import { ADD_GALLERY_EXTERNAL_LINK, FORGET_GALLERY_ITEM, FORGET_MISSING_GALLERY_ITEMS, MANAGE_GALLERY, MANAGE_GALLERY_MANIFEST, PULL_GALLERY_MANIFEST, PUSH_GALLERY_MANIFEST, REORDER_GALLERY_ITEMS, REPLACE_GALLERY_RELATIONS, REPLACE_MISSING_GALLERY_ITEM, RESET_GALLERY_COVER, RESOLVE_GALLERY_CAPTURE_DATE, RESOLVE_GALLERY_MANIFEST, RETRY_GALLERY_ITEM_VIDEO, SCAN_GALLERY_SOURCE, SET_GALLERY_COVER_ITEM, SET_GALLERY_ITEM_EXCLUDED, SET_GALLERY_STATE, UPDATE_GALLERY_ITEM, UPDATE_GALLERY_METADATA } from "../api/manage";
 import { buildGalleryMediaFolderTree, flattenGalleryMediaFolders, galleryMediaFileName, galleryMediaGroupKey, galleryMediaParentPath, groupGalleryMedia, moveGalleryMediaFolderTreeNode, naturalFileNameCompare, type GalleryMediaFolder, type GalleryMediaFolderNode, type GalleryMediaGroup } from "./galleryMediaFolders";
 import { ManageEntitySelector } from "./ManageEntitySelector";
@@ -18,6 +19,8 @@ function isAbsoluteHTTPURL(value: string) {
   }
 }
 export function ManageGalleryEditorPage() {
+  const intl = useIntl();
+  const matchText = (key: string) => intl.formatMessage({ id: `manage.galleryMatches.${key}` });
   const client = useApolloClient();
   const navigate = useNavigate();
   const { setID = "" } = useParams(); const [parameters, setParameters] = useSearchParams(); const tab = tabs.includes(parameters.get("tab") as typeof tabs[number]) ? parameters.get("tab") as typeof tabs[number] : "basic";
@@ -94,6 +97,15 @@ export function ManageGalleryEditorPage() {
   async function scan() { setMessage(""); try { const result = await scanSource({ variables: { setID, excludeNewRootMedia, forceContentRead } }); if (result.data) setDraft(result.data.scanGallerySource); setMessage(forceContentRead ? "Deep content scan completed" : "Source scan completed"); } catch (error) { setMessage(error instanceof Error ? error.message : "Source scan failed"); } }
 	async function retryVideoProcessing(item: ManageGalleryItem) { setMessage(""); try { await retryVideo({ variables:{ itemUUID:item.uuid } }); await query.refetch(); setMessage("Video processing queued"); } catch (error) { setMessage(error instanceof Error ? error.message : "Video retry failed"); } }
   function editCredit(index: number, patch: Partial<ManageGalleryCredit>) { setDraft({ ...current, credits: current.credits.map((credit, position) => position === index ? { ...credit, ...patch } : credit) }); }
+  function moveCast(sourceIndex: number, castIndex: number, targetIndex: number) {
+    const cast = current.credits[sourceIndex]?.cast[castIndex];
+    const target = current.credits[targetIndex];
+    if (sourceIndex === targetIndex || !cast?.characterUUID || !target?.coserUUID || target.cast.some((value) => value.characterUUID === cast.characterUUID)) return;
+    setDraft({ ...current, credits: current.credits.map((credit, index) => index === sourceIndex
+      ? { ...credit, cast: credit.cast.filter((_, position) => position !== castIndex) }
+      : index === targetIndex ? { ...credit, cast: [...credit.cast, cast] } : credit) });
+    setMessage(matchText("moved"));
+  }
   function editTag(index: number, patch: Partial<ManageGalleryTag>) { setDraft({ ...current, tags: current.tags.map((tag, position) => position === index ? { ...tag, ...patch } : tag) }); }
   const relationsValid = current.credits.every((credit) => credit.coserUUID && credit.cast.every((cast) => cast.characterUUID)) &&
     current.tags.every((tag) => tag.uuid);
@@ -106,33 +118,33 @@ export function ManageGalleryEditorPage() {
     setMessage("");
     if (match.kind === "COSER") {
       if (current.credits.some((credit) => credit.coserUUID === match.uuid)) {
-        setMessage("This Coser is already in the relation draft");
+        setMessage(matchText("already"));
         return;
       }
       setDraft({ ...current, credits: [...current.credits, { coserUUID: match.uuid, coserName: match.name, position: "", cast: [] }] });
-      setMessage("Folder match added to the relation draft; save all relations to confirm");
+      setMessage(matchText("added"));
       return;
     }
     if (match.kind === "CHARACTER") {
-      if (current.credits.length !== 1) {
-        setMessage("Add or retain exactly one Coser before applying a Character folder match");
+      if (!current.credits[0]?.coserUUID) {
+        setMessage(matchText("needsCoser"));
         return;
       }
-      if (current.credits[0].cast.some((cast) => cast.characterUUID === match.uuid)) {
-        setMessage("This Character is already in the relation draft");
+      if (folderMatchApplied(match)) {
+        setMessage(matchText("already"));
         return;
       }
       setDraft({
         ...current,
-        credits: [{
-          ...current.credits[0],
-          cast: [...current.credits[0].cast, {
+        credits: current.credits.map((credit, index) => index === 0 ? {
+          ...credit,
+          cast: [...credit.cast, {
             characterUUID: match.uuid, characterName: match.name,
             workUUID: match.workUUID, workName: match.workName, position: "",
           }],
-        }],
+        } : credit),
       });
-      setMessage("Folder match added to the relation draft; save all relations to confirm");
+      setMessage(matchText("added"));
     }
   }
   async function saveRelations() {
@@ -263,12 +275,20 @@ export function ManageGalleryEditorPage() {
         <ManageGalleryDeletePanel key={`${draft.row.state}-${draft.row.metadataRevision}`} setID={setID} title={draft.row.title} onDeleted={() => navigate("/manage", { replace: true })} />
       </> : null}
     {tab === "cast" ? <section className="manage-panel manage-relations"><header><div><h3>人物、角色与标签</h3><p>一次显式保存整个关系集合。空 Cast 自动归类为 Album；任一 Cast 存在时归类为 Cosplay。</p></div><strong>{draft.credits.some((credit) => credit.cast.length > 0) ? "COSPLAY" : "ALBUM"}</strong></header>
-      {(draft.folderMatches || []).length ? <div className="manage-folder-matches"><h4>Folder-name matches</h4><p>These are review-only hints matched against existing names and aliases. Nothing becomes a formal relation until you apply it and save all relations.</p>
-        <ul>{draft.folderMatches.map((match) => <li key={`${match.kind}-${match.uuid}`}><div><strong>{match.kind}</strong><span>{match.kind === "CHARACTER" ? `${match.workName} · ${match.name}` : match.name}</span><small>matched “{match.matchedName}”</small></div>{folderMatchApplied(match) ? <em>Already saved</em> : match.kind === "WORK" ? <em>Context only</em> : <button type="button" onClick={() => useFolderMatch(match)}>Use</button>}</li>)}</ul>
+      {(draft.folderMatches || []).length ? <div className="manage-folder-matches"><h4>{matchText("title")}</h4><p>{matchText("description")}</p>
+        <ul>{draft.folderMatches.map((match) => <li key={`${match.kind}-${match.uuid}`}><div><strong>{matchText(match.kind)}</strong><span>{match.kind === "CHARACTER" ? `${match.workName} · ${match.name}` : match.name}</span><small>{intl.formatMessage({ id: "manage.galleryMatches.matched" }, { name: match.matchedName })}</small></div>{match.kind === "WORK" ? <em>{matchText("context")}</em> : folderMatchApplied(match) ? <em>{matchText("already")}</em> : <button type="button" disabled={match.kind === "CHARACTER" && !draft.credits[0]?.coserUUID} onClick={() => useFolderMatch(match)}>{matchText("use")}</button>}</li>)}</ul>
+        {draft.folderMatches.some((match) => match.kind === "CHARACTER" && !folderMatchApplied(match)) && !draft.credits[0]?.coserUUID ? <p>{matchText("needsCoser")}</p> : null}
       </div> : null}
       <div className="manage-relation-block"><div className="manage-inline-toolbar"><h4>Coser credits</h4><button type="button" onClick={() => setDraft({ ...draft, credits: [...draft.credits, { coserUUID: "", coserName: "", position: "", cast: [] }] })}>Add Coser</button></div>
         {draft.credits.length ? draft.credits.map((credit, creditIndex) => <article className="manage-credit" key={`${credit.coserUUID}-${creditIndex}`}><div className="manage-credit__head"><ManageEntitySelector kind="COSER" label="Coser" uuid={credit.coserUUID} name={credit.coserName} onSelect={(entity) => editCredit(creditIndex, { coserUUID: entity.uuid, coserName: entity.name })} /><button type="button" onClick={() => setDraft({ ...draft, credits: draft.credits.filter((_, index) => index !== creditIndex) })}>Remove</button></div>
-          <div className="manage-cast-list"><h5>Characters played by this Coser</h5>{credit.cast.map((cast, castIndex) => <div className="manage-cast-row" key={`${cast.characterUUID}-${castIndex}`}><ManageEntitySelector kind="CHARACTER" label="Character" uuid={cast.characterUUID} name={cast.workName ? `${cast.workName} · ${cast.characterName}` : cast.characterName} onSelect={(entity) => editCredit(creditIndex, { cast: credit.cast.map((value, index) => index === castIndex ? { ...value, characterUUID: entity.uuid, characterName: entity.name, workUUID: entity.workUUID || "", workName: entity.workName || "" } : value) })} /><button type="button" onClick={() => editCredit(creditIndex, { cast: credit.cast.filter((_, index) => index !== castIndex) })}>Remove</button></div>)}<button type="button" onClick={() => editCredit(creditIndex, { cast: [...credit.cast, { characterUUID: "", characterName: "", workUUID: "", workName: "", position: "" }] })}>Add Character</button></div>
+          <div className="manage-cast-list"><h5>Characters played by this Coser</h5>{credit.cast.map((cast, castIndex) => <div className="manage-cast-row" key={`${cast.characterUUID}-${castIndex}`}><ManageEntitySelector kind="CHARACTER" label="Character" uuid={cast.characterUUID} name={cast.workName ? `${cast.workName} · ${cast.characterName}` : cast.characterName} onSelect={(entity) => editCredit(creditIndex, { cast: credit.cast.map((value, index) => index === castIndex ? { ...value, characterUUID: entity.uuid, characterName: entity.name, workUUID: entity.workUUID || "", workName: entity.workName || "" } : value) })} />
+            <div className="manage-cast-actions">
+              {draft.credits.length > 1 ? <label>{matchText("owner")}<select aria-label={intl.formatMessage({ id: "manage.galleryMatches.ownerFor" }, { name: cast.characterName || cast.characterUUID })} value={creditIndex} disabled={!cast.characterUUID || relationState.loading} onChange={(event) => moveCast(creditIndex, castIndex, Number(event.target.value))}>
+                {draft.credits.map((owner, index) => <option key={index} value={index} disabled={index !== creditIndex && (!owner.coserUUID || owner.cast.some((value) => value.characterUUID === cast.characterUUID))}>{owner.coserName || owner.coserUUID || `Coser ${index + 1}`}{index !== creditIndex && owner.cast.some((value) => value.characterUUID === cast.characterUUID) ? ` (${matchText("duplicateOwner")})` : ""}</option>)}
+              </select></label> : null}
+              <button type="button" onClick={() => editCredit(creditIndex, { cast: credit.cast.filter((_, index) => index !== castIndex) })}>Remove</button>
+            </div>
+          </div>)}<button type="button" onClick={() => editCredit(creditIndex, { cast: [...credit.cast, { characterUUID: "", characterName: "", workUUID: "", workName: "", position: "" }] })}>Add Character</button></div>
         </article>) : <p>No Coser credits. This Gallery is currently an Album.</p>}
       </div>
       <div className="manage-relation-block"><div className="manage-inline-toolbar"><h4>Direct tags</h4><button type="button" onClick={() => setDraft({ ...draft, tags: [...draft.tags, { uuid: "", name: "", position: "" }] })}>Add Tag</button></div>{draft.tags.map((tag, tagIndex) => <div className="manage-tag-row" key={`${tag.uuid}-${tagIndex}`}><ManageEntitySelector kind="TAG" label="Tag" uuid={tag.uuid} name={tag.name} assignableOnly onSelect={(entity) => editTag(tagIndex, { uuid: entity.uuid, name: entity.name })} /><button type="button" onClick={() => setDraft({ ...draft, tags: draft.tags.filter((_, index) => index !== tagIndex) })}>Remove</button></div>)}</div>

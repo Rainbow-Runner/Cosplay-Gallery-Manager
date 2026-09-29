@@ -671,6 +671,7 @@ flowchart LR
 
 #### P08-03 Gallery 五页签
 
+- 人物与角色页的只读名称候选覆盖DIRECTORY和ARCHIVE，不限MARKER导入；人物与角色独立显示、Work仅作上下文。应用只改页面草稿，需显式保存；多人物时角色默认挂首位，角色行支持快捷切换所属人物并防止目标重复角色。共享候选列表支持外部点击／焦点离开／Esc关闭。不清空其他关系，不改自动化建议生命周期、schema或迁移格式。
 - 基本信息：标题、日期精度、分级、Tag、文本、评分、ExternalLink。
 - 人物与角色：Credit、Cast、Coser、Work、Character 和顺序。
 - 媒体成员：分组、Position、分类建议、Caption、排除、封面和技术状态。

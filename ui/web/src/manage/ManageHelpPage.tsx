@@ -71,6 +71,7 @@ export function ManageHelpPage() {
         <section className="manage-help-safety" aria-labelledby="help-safety-title">
           <h4 id="help-safety-title">{f("manage.help.safety.title")}</h4>
           <p>{f("manage.help.safety.entities")}</p>
+          <p>{f("manage.galleryMatches.description")}</p>
           <ul><li>{f("manage.help.safety.explicit")}</li><li>{f("manage.help.safety.snapshot")}</li><li>{f("manage.help.safety.modes")}</li><li>{f("manage.help.safety.activation")}</li><li>{f("manage.help.safety.review")}</li></ul>
         </section>
       </article>

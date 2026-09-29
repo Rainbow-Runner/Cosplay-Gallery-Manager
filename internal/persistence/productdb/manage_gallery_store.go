@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/stashapp/stash/internal/archivefile"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/manage"
 )
@@ -241,17 +242,26 @@ func (s *ManageStore) GalleryDetail(ctx context.Context, setID string) (manage.G
 	if err := linkRows.Close(); err != nil {
 		return manage.GalleryDetail{}, err
 	}
-	var markerImport int
-	if err := s.db.QueryRowContext(ctx, `
-		SELECT EXISTS(
-			SELECT 1 FROM gallery_candidates
-			WHERE gallery_id = ? AND recognition_method = 'MARKER' AND status = 'IMPORTED'
-		)
-	`, galleryID).Scan(&markerImport); err != nil {
-		return manage.GalleryDetail{}, err
-	}
-	if markerImport == 1 && row.SourceType == gallery.SourceTypeDirectory {
-		result.FolderMatches, err = s.folderEntityMatches(ctx, filepath.Base(filepath.Clean(row.SourcePath)))
+	if row.SourcePath != "" && (row.SourceType == gallery.SourceTypeDirectory || row.SourceType == gallery.SourceTypeArchive) {
+		labels := []string{filepath.Base(filepath.Clean(row.SourcePath))}
+		if row.SourceType == gallery.SourceTypeArchive {
+			labels[0] = archivefile.BaseName(labels[0])
+			// Only external directories inside the owning library are evidence.
+			// Never inspect members, the library name, or host ancestors for hints.
+			var libraryRoot string
+			if err := s.db.QueryRowContext(ctx, `SELECT COALESCE(library.root_path,'')
+				FROM gallery_sources source LEFT JOIN media_libraries library ON library.id=source.library_id
+				WHERE source.gallery_id=?`, galleryID).Scan(&libraryRoot); err != nil {
+				return manage.GalleryDetail{}, err
+			}
+			if libraryRoot != "" {
+				relative, relErr := filepath.Rel(libraryRoot, filepath.Dir(row.SourcePath))
+				if relErr == nil && relative != "." && relative != ".." && !filepath.IsAbs(relative) && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+					labels = append(labels, strings.Split(filepath.ToSlash(relative), "/")...)
+				}
+			}
+		}
+		result.FolderMatches, err = s.sourceEntityMatches(ctx, labels)
 		if err != nil {
 			return manage.GalleryDetail{}, err
 		}
@@ -264,12 +274,17 @@ type folderEntityToken struct {
 	tokenKey                              string
 }
 
-func (s *ManageStore) folderEntityMatches(ctx context.Context, folderName string) ([]manage.GalleryFolderMatch, error) {
-	folderKey := normalizedKey(folderName)
-	if folderKey == "" {
+func (s *ManageStore) sourceEntityMatches(ctx context.Context, labels []string) ([]manage.GalleryFolderMatch, error) {
+	var keys []string
+	for _, label := range labels {
+		if key := normalizedKey(label); key != "" {
+			keys = append(keys, key)
+		}
+	}
+	if len(keys) == 0 {
 		return nil, nil
 	}
-	cosers, err := s.matchFolderEntityKind(ctx, folderKey, "COSER", `
+	cosers, err := s.matchFolderEntityKind(ctx, keys, "COSER", `
 		SELECT uuid,name,name,'','' FROM cosers
 		UNION ALL
 		SELECT coser.uuid,coser.name,alias.alias,'',''
@@ -278,7 +293,7 @@ func (s *ManageStore) folderEntityMatches(ctx context.Context, folderName string
 	if err != nil {
 		return nil, err
 	}
-	works, err := s.matchFolderEntityKind(ctx, folderKey, "WORK", `
+	works, err := s.matchFolderEntityKind(ctx, keys, "WORK", `
 		SELECT uuid,name,name,uuid,name FROM works
 		UNION ALL
 		SELECT work.uuid,work.name,alias.alias,work.uuid,work.name
@@ -291,7 +306,7 @@ func (s *ManageStore) folderEntityMatches(ctx context.Context, folderName string
 	for _, match := range works {
 		workUUIDs[match.UUID] = struct{}{}
 	}
-	characters, err := s.matchFolderEntityKind(ctx, folderKey, "CHARACTER", `
+	characters, err := s.matchFolderEntityKind(ctx, keys, "CHARACTER", `
 		SELECT character.uuid,character.name,character.name,work.uuid,work.name
 		FROM characters character JOIN works work ON work.uuid=character.work_uuid
 		UNION ALL
@@ -310,7 +325,7 @@ func (s *ManageStore) folderEntityMatches(ctx context.Context, folderName string
 
 func (s *ManageStore) matchFolderEntityKind(
 	ctx context.Context,
-	folderKey string,
+	folderKeys []string,
 	kind string,
 	query string,
 	allowedWorkUUIDs map[string]struct{},
@@ -332,10 +347,14 @@ func (s *ManageStore) matchFolderEntityKind(
 			}
 		}
 		token.tokenKey = normalizedKey(token.Token)
-		if token.tokenKey == "" || !strings.Contains(folderKey, token.tokenKey) {
-			continue
+		matched := false
+		for _, key := range folderKeys {
+			if token.tokenKey != "" && strings.Contains(key, token.tokenKey) && (len([]rune(token.tokenKey)) >= 2 || key == token.tokenKey) {
+				matched = true
+				break
+			}
 		}
-		if len([]rune(token.tokenKey)) < 2 && folderKey != token.tokenKey {
+		if !matched {
 			continue
 		}
 		if ownersByToken[token.tokenKey] == nil {

@@ -637,6 +637,8 @@ a { color: inherit; text-decoration: none; }
 .manage-credit__head > span, .manage-cast-row > span, .manage-tag-row > span { align-self: center; color: #ddd4cf; font-size: .68rem; }
 .manage-cast-list { display: grid; gap: .55rem; margin-top: .9rem; padding: .8rem 0 0 1rem; border-top: 1px solid rgb(255 255 255 / 5%); }
 .manage-cast-list > button { justify-self: start; }
+.manage-cast-actions { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem; }
+.manage-cast-actions select { min-width: 0; max-width: 12rem; padding: .48rem; border: 1px solid var(--cgm-border); background: var(--cgm-surface); color: var(--cgm-foreground); font-size: .65rem; text-transform: none; }
 .manage-tag-row { margin-top: .55rem; }
 .manage-entity-selector { position: relative; display: grid; grid-template-columns: minmax(18rem, 1.2fr) minmax(10rem, .7fr) minmax(12rem, 1fr); align-items: end; gap: .65rem; }
 .manage-entity-selector > span { align-self: center; overflow: hidden; color: #ddd4cf; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }

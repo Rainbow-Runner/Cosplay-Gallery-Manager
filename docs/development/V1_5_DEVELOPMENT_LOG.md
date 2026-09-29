@@ -5,6 +5,22 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-09-30 Cast角色归属快捷切换与实体候选关闭
+
+- 用户确认多Coser时角色默认挂首位，并要求角色可快捷切换人物。每个已选Character行在多Credit时提供“所属人物”下拉框；移动仅删除原Credit中的对应Cast并追加到目标Credit，保留角色所属Work及其他Cast、Credit、Tag，必须保存全部关系才写入。空角色禁用控件，未选Coser及目标已含同一角色的选项禁用；操作函数也复核，避免重复或丢失关系。不会迁移Character实体所属Work，不触发激活或自动保存。
+- 原因：共享`ManageEntitySelector`原先只在选中候选后关闭，没有外部关闭逻辑。现仅在打开时注册可清理的捕获阶段pointerdown监听，搜索区域外（包括UUID输入框）点击关闭；焦点离开或Esc关闭，内部候选点击／焦点切换仍可正常选择。Esc后再次点击当前输入框可重开，查询异步返回不重开已关闭列表；Coser／Character／Work／Tag共用同一修复。
+- 中英文控件、草稿提示及帮助说明同步；备忘录、开发计划和多实体决策同步。无schema／GraphQL／Manifest或迁移格式变化，不访问正式业务库，不扫描媒体。
+- 新增7项共享选择器回归，覆盖四种实体外部关闭、内部选择、Esc／焦点离开／UUID点击和延迟结果不重开；新增2项编辑页回归验证角色移动仅改草稿、显式保存及返回关系、保留目标原角色和Tag、禁止重复／空人物目标；原多Coser默认首位回归保留。初次测试失败来自测试夹具：MockedProvider须单个子节点、Tag应使用uuid／name、提示区域与已选角色的重名断言需限定范围，修正夹具后通过。
+- TypeScript检查、定向3文件22项和最终全量42文件178项测试通过；生产构建通过，保留既有主chunk大于500KiB提示；`git diff --check`通过。测试和构建输出存于本机`/tmp/cgm-cast-target-tests.log`、`/tmp/cgm-cast-full-tests.log`、`/tmp/cgm-cast-build.log`。未执行真实浏览器视觉验收，未提交／推送／部署；正式服务仍为上一部署版本。
+
+## 2026-09-30 编辑页目录／存档独立Coser与Character候选
+
+- 排查确认“麻花麻花酱－赛博修女”是ARCHIVE来源且已有待审COSER建议，但编辑页旧`folderMatches`只对MARKER目录生成，缺少提示并非因未匹配Character。所有者授权修改编辑页；保持原分支，不触碰已部署业务库、媒体、Manifest、配置或服务。
+- 管理详情只读匹配取消MARKER限制：任意DIRECTORY使用根目录名；ARCHIVE使用受支持扩展名处理后的外部文件名及所属媒体库内的外部父目录段，不匹配媒体库自身名称／宿主机祖先，不枚举存档内部或打开来源正文。复用原有规范化主名／Alias包含匹配、短名保护、长名优先、去重及歧义抑制；人工提示不放宽自动化精确匹配。匹配到Work仍只提供角色所属作品上下文，不新建Work关系。
+- Coser与Character独立显示，角色没有人物时仍可见但应用按钮禁用并明确提示；多个Credit时角色应用到首位，保留其他人物、Cast及Tag。全部应用仅更新页面草稿，仍需显式Save all relations才通过原revision事务写入。Work始终显示仅作上下文，已应用候选显示“已在当前关系中”而非“已保存”；新增控件及帮助中英双语。读取候选不创建实体、不写/接受/拒绝持久化识别建议，不触发扫描、自动化、激活或Push；原保存和激活门禁不变。
+- 新增Go回归覆盖无MARKER目录、独立Coser／Character、7z／tar.gz／TAR、外部父目录、无匹配、重复读取无写入、版本／状态不变、歧义及媒体库名称边界；定向race通过。前端回归覆盖存档Coser-only应用到草稿后显式保存、Character-only先显示后等待人物、多人物首位Cast且保留其他Credit／Tag、Work仅上下文及中文提示。TypeScript、全量41文件169项测试、帮助追加后的2文件13项定向复测及2556模块生产构建通过；只有既有主chunk超过500KiB提示。初次新增UI测试误期待不存在的保存提示，按既有实际提示修正，业务保存行为不变；补全测试日期字段，消除新增保存测试的Apollo缺字段噪声。
+- 正式三标签产品库／API／Server／Gallery／Discovery／Archive／CMD回归通过。第一次Vet与前端构建同时执行时命中build目录替换窗口，出现嵌入资源文件不存在；前端构建完成后顺序复跑Vet、产品库／API／Server／嵌入资源／CMD回归全部通过，并成功编译独立候选`/tmp/cgm-source-match-candidate`，不把环境时序失败隐藏为成功。最终`git diff --check`通过。无新schema、GraphQL或Manifest／可移植格式变化；本轮未提交、推送、备份、迁移或部署，正式程序仍为`3fe7728`。
+
 ## 2026-09-29 多实体与存档视频提交及本机增量部署完成
 
 - 累计56个文件提交为`3fe7728575a112f8c3934015f21bd897ad917f6a`（`Complete multi-entity association and safe archive video playback`）。从干净提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，Go VCS为该提交且`vcs.modified=false`；About构建时间`2026-09-29T15:48:21Z`，正式二进制SHA-256为`37bf58c63733aa4555d8c4b1438f8aa6846f96def9f94ba41a9629197202cbff`。

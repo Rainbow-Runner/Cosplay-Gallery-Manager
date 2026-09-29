@@ -5,6 +5,14 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-09-30 独立实体候选与Cast交互累计提交及本机增量部署
+
+- 用户授权提交累计改动并部署。15文件功能／测试／记录提交为`44c612c5fb732296959bd2d88d0b50471e923fa8`（`Improve gallery source matches and cast editing interactions`）。确认重复限制仅为同一Coser下重复同一Character，不禁止不同人物扮演相同角色。
+- 提交前Web42文件178项、TypeScript和生产构建通过，既有主chunk大于500KiB提示保留；本轮正式三标签产品库、API、Server、嵌入Web及CMD回归／Vet通过。前期目录／存档匹配的相关完整Go及race证据继续有效，未重新执行真实浏览器视觉验收。从干净提交以Go1.25.12、`cgm_web_embed cgm_galleryepic cgm_moegirl`构建；VCS为上述提交、`vcs.modified=false`，About构建时间`2026-09-29T16:30:08Z`，候选SHA-256为`6004cd46596f9b70fa5b2d431d78016090214197970e8509c9868b625f8d8edd`。
+- 00:31:29 CST停服确认PID为0、WAL／SHM关闭后，在0700目录`/home/rainbowrunner/cos/bk/cgm-pre-cast-44c612c-AZ48Pdbp`备份一致数据库、旧程序、配置、用户systemd单元及外部／product-state Coser元数据资源；文件cmp及资源树diff一致。备份库schema v20、完整性ok，Coser／Work／Character／Tag／Gallery／Source／Item计数`135/108/697/23/10/10/690`；数据库SHA-256为`ae9aa7a1a8cca2942270a53dede9e9e5e1d1d92960529a6fb30a4b5038a64af9`，旧程序为`37bf58c63733aa4555d8c4b1438f8aa6846f96def9f94ba41a9629197202cbff`，配置为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`。备份不含原媒体、可重建缓存、历史备份或日志。
+- 原子替换后00:31:30新版启动，00:31:31验收完成；服务active/running、NRestarts=0，Health／Ready均204，About准确对应功能提交且exactSourceAvailable=true。入口HTML／JS／CSS、`ManageGalleryEditorPage-FxJCNZIc.js`及`ManageHelpPage-Cg3GqbOy.js`与本地构建逐字节一致，管理帮助深链200。首次健康探测早于监听就绪短暂连接失败，自动重试通过；两个worker、FFmpeg／FFprobe／LibRaw正常启动，新版journal无WARN／ERROR。
+- 无数据库迁移或替换，正式库schema v20、完整性ok及上述计数不变；配置、服务单元和Coser资源与备份一致。没有执行媒体扫描、实体自动接受、自动化或Manifest Push；媒体与Manifest未修改。未推送Git远端或构建／发布Docker镜像。部署记录另行本地提交，运行程序保持精确对应上述功能提交，不因记录提交再次重启。
+
 ## 2026-09-30 Cast角色归属快捷切换与实体候选关闭
 
 - 用户确认多Coser时角色默认挂首位，并要求角色可快捷切换人物。每个已选Character行在多Credit时提供“所属人物”下拉框；移动仅删除原Credit中的对应Cast并追加到目标Credit，保留角色所属Work及其他Cast、Credit、Tag，必须保存全部关系才写入。空角色禁用控件，未选Coser及目标已含同一角色的选项禁用；操作函数也复核，避免重复或丢失关系。不会迁移Character实体所属Work，不触发激活或自动保存。

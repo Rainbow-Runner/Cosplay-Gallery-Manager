@@ -13,6 +13,8 @@
 
 ## 已完成
 
+- 2026-09-30最新部署状态：本轮独立目录／存档候选、Character所属Coser快捷切换、搜索列表自动关闭累计15文件已提交为`44c612c5fb732296959bd2d88d0b50471e923fa8`并部署。下方“未提交／部署”为阶段历史记录，本条覆盖当前状态。Web42文件178项、TypeScript、生产构建及正式三标签相关Go回归／Vet通过；Health／Ready均204，About与实际管理页资源对应提交。schema v20、完整性ok、七类业务计数不变；回滚备份为`/home/rainbowrunner/cos/bk/cgm-pre-cast-44c612c-AZ48Pdbp`，详见开发日志。未推送远端或更新Docker镜像，实际业务UI验收待所有者操作。
+
 - 1.5（Cast角色归属快捷切换及候选列表关闭，源码完成、未提交／部署）：多Coser时Character仍默认挂首位，可在角色行下拉切换到其他已选人物；仅移动该Cast并保留Work上下文、其他关系与标签，目标重复角色不可选，保存全部关系后才写入。共享Coser／Character／Work／Tag搜索列表新增搜索区域外点击、焦点离开和Esc关闭，内部选择不误关闭、异步返回不重开；中英文帮助同步。无schema、Manifest或迁移变更，测试记录见[开发日志](V1_5_DEVELOPMENT_LOG.md)。
 
 - 1.5（编辑页目录／存档独立实体候选，源码完成、未提交／部署）：Manage Gallery人物与角色页不再限MARKER目录；任意DIRECTORY按来源根目录名匹配，ARCHIVE按去扩展名的文件名及媒体库内外部父目录匹配，不读取媒体或存档正文。Coser／Character独立显示，Work仍只作角色作品上下文。应用仅修改页面草稿，保存全部关系后才写入；Character须有首位Coser，多人物时挂首位并保留其余Credit／Cast／Tag。候选文案及帮助支持中英文，已应用未保存项不再误称“已保存”；原识别建议状态和自动化精确匹配门禁不变。无需schema／GraphQL／Manifest／迁移格式变化，测试证据见[开发日志](V1_5_DEVELOPMENT_LOG.md)。本机正式服务仍运行`3fe7728`，需另行授权提交与部署。

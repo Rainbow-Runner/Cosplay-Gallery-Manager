@@ -5,6 +5,13 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-09-30 存档替换扫描与缓存回收增量部署
+
+- 用户授权提交并部署，前两段累计九文件已提交为`f5ad79ff5a15ff340a6da64e8af2b528a5195006`（`Reconcile replaced archives and reclaim invalid cache`）。从干净工作树以Go1.25.12、`cgm_web_embed cgm_galleryepic cgm_moegirl`构建Linux amd64 CGO单文件；Go VCS revision精确匹配提交且`vcs.modified=false`，候选与正式程序SHA-256均为`e78053178bf2cb1e792d68625dc52799d05c08ca9e49e02d6e131499fa4ff2db`。相关完整三标签Go测试、Go Vet和差异检查在提交前通过。
+- 14:33 CST停服确认MainPID=0、WAL／SHM关闭后，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-archive-reconcile-f5ad79f-gF5NvwQ0`复制一致数据库、旧程序、运行配置、用户systemd单元、外部及product-state Coser托管资源。文件`cmp`和资源树`diff`一致；备份库schema v20、`integrity_check=ok`，Coser／Work／Character／Tag／Gallery／Source／Item计数`135/108/697/23/10/10/690`。备份数据库SHA-256为`8e4f4a7549f082f5d4b452cf900d5b9aaf6114f0479026505a91da6eee8d483e`，旧程序为`bf15790d1b32efc8512303502185618f899fbcd363a370fe1bb13d488fcd5303`，配置为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`；备份不含原始媒体、可重建缓存、历史备份或日志。
+- 原子替换并于14:36:50 CST启动后，服务保持active/running、NRestarts=0；Health／Ready均204，首页／Session均200，两个worker与LibRaw、FFmpeg、FFprobe正常启动，启动日志未见WARN／ERROR。受限命令沙箱的首次loopback探针返回连接失败，放宽本机回环访问后全部通过，属探针环境限制。`about.json`的`exactSourceAvailable=false`符合提交尚未推送GitHub远端的事实，正式程序的Go VCS元数据已确认是上述提交。
+- 正式库没有迁移或替换，部署后仍schema v20、`integrity_check=ok`及上述七类业务计数不变；未修改启动配置、原始媒体、Manifest或Coser资源，也未主动扫描正式媒体。Gallery 10仍为旧`IN_SYNC`状态，上次来源扫描时间`2026-09-29T15:53:17Z`；所有者在新版对媒体库再执行一次扫描后，新功能才会标记该存档并后台重扫。真实7z替换与缓存回收的业务验收待用户操作；未远端推送或构建／发布Docker镜像。部署记录另行本地提交，运行程序继续精确对应功能提交。
+
 ## 2026-09-30 内容替换后旧派生资源及时回收（本地源码，未提交／部署）
 
 - 排查确认来源扫描将旧内容版本的派生资源设为`HARD_INVALID,is_current=0`，Browse不再选择、媒体URL也拒绝访问；但v20缓存回收统一等待当前基础派生资源READY。新派生失败时旧文件无法兜底显示，却无限期占用空间。浏览器已加载的图像可暂留在页面内存至刷新，这不构成服务端继续引用。

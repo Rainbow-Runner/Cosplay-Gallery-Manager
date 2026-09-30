@@ -18,16 +18,26 @@ import (
 	"github.com/stashapp/stash/internal/gallery"
 )
 
-// OpenArchiveVideo is for background probe/poster/date work ONLY. Playback
-// must use OpenArchiveMember, never this extraction-capable method.
-func (m Materializer) OpenArchiveVideo(ctx context.Context, source Source, limits archivefile.DirectLimits, expected *ArchiveEvidence) (Materialized, error) {
+// OpenDirectArchiveVideo is the only archive input permitted for on-demand
+// playback proxies: the member is proven seekable before FFmpeg can read it.
+func (m Materializer) OpenDirectArchiveVideo(ctx context.Context, source Source, limits archivefile.DirectLimits, expected *ArchiveEvidence) (Materialized, error) {
 	member, err := OpenArchiveMember(ctx, source, limits, expected)
+	if err != nil {
+		return Materialized{}, err
+	}
+	input, err := serveProcessingMember(ctx, member)
+	if err != nil {
+		_ = member.Close()
+	}
+	return input, err
+}
+
+// OpenArchiveVideo is for background probe/poster/date work ONLY; unlike
+// OpenDirectArchiveVideo it can temporarily extract a compressed member.
+func (m Materializer) OpenArchiveVideo(ctx context.Context, source Source, limits archivefile.DirectLimits, expected *ArchiveEvidence) (Materialized, error) {
+	directInput, err := m.OpenDirectArchiveVideo(ctx, source, limits, expected)
 	if err == nil {
-		input, err := serveProcessingMember(ctx, member)
-		if err != nil {
-			member.Close()
-		}
-		return input, err
+		return directInput, nil
 	}
 	if !errors.Is(err, archivefile.ErrDirectCompressed) && !errors.Is(err, archivefile.ErrDirectLayout) {
 		return Materialized{}, err

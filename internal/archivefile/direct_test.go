@@ -10,6 +10,7 @@ import (
 	"hash/crc32"
 	"io"
 	"math"
+	"os"
 	"testing"
 	"unicode/utf16"
 
@@ -271,6 +272,34 @@ func TestDirectSevenZIPFailsClosedForUnprovenHeaders(t *testing.T) {
 		if !errors.Is(err, want) {
 			t.Fatalf("%s: %v want %v", option, err, want)
 		}
+	}
+}
+
+// Opt-in business-media smoke gate: no payload extraction or mutation.
+func TestDirectSevenZIPEncodedBusinessHeader(t *testing.T) {
+	filename, memberName := os.Getenv("CGM_ARCHIVE_SMOKE_PATH"), os.Getenv("CGM_ARCHIVE_SMOKE_MEMBER")
+	if filename == "" || memberName == "" {
+		t.Skip("requires a read-only 7z path and member name")
+	}
+	file, err := os.Open(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
+	member, err := LocateDirectMember(context.Background(), FormatSevenZIP, file, info.Size(), memberName, DefaultDirectLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if member.Offset < 32 || member.Size < 16 || member.Offset+member.Size > info.Size() {
+		t.Fatalf("invalid member bounds %#v", member)
+	}
+	var prefix [12]byte
+	if _, err := file.ReadAt(prefix[:], member.Offset); err != nil || !bytes.Contains(prefix[:], []byte("ftyp")) {
+		t.Fatalf("incorrect MP4 member prefix %x: %v", prefix, err)
 	}
 }
 

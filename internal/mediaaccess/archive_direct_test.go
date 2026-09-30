@@ -234,9 +234,6 @@ func TestRealSevenZIPStoreDirectMember(t *testing.T) {
 			t.Fatalf("7z fixture generation: %v %s", err, output)
 		}
 		member, err := OpenArchiveMember(context.Background(), Source{Type: gallery.SourceTypeArchive, Path: filename, RelativePath: "clip.mp4"}, archivefile.DefaultDirectLimits(), nil)
-		if option == "-mhc=on" && errors.Is(err, archivefile.ErrDirectLayout) {
-			continue
-		} // Metadata encoding is not guessed.
 		if err != nil {
 			t.Fatalf("real Store %s: %v", option, err)
 		}

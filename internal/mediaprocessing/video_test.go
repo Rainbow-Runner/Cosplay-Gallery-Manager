@@ -34,6 +34,22 @@ func TestVideoPlaybackPlannerUsesDirectThenRemuxThenMinimalTranscode(t *testing.
 	}
 }
 
+func TestArchivePlaybackPlanTranscodesUnsafeDirectCodecProfile(t *testing.T) {
+	for _, metadata := range []VideoTechnicalMetadata{
+		{Container: "mp4", VideoCodec: "hevc", AudioCodec: "aac", PixelFormat: "yuv420p"},
+		{Container: "mp4", VideoCodec: "h264", AudioCodec: "aac", PixelFormat: "yuv420p10le"},
+	} {
+		plan := ArchivePlaybackPlanFromMetadata(metadata)
+		if plan.Mode != PlaybackTranscode || plan.CopyVideo || plan.CopyAudio {
+			t.Fatalf("unsafe archive direct plan %#v", plan)
+		}
+	}
+	compatible := VideoTechnicalMetadata{Container: "mp4", VideoCodec: "h264", AudioCodec: "aac", PixelFormat: "yuv420p", VideoProfile: "High"}
+	if plan := ArchivePlaybackPlanFromMetadata(compatible); plan.Mode != PlaybackDirect {
+		t.Fatalf("compatible archive plan %#v", plan)
+	}
+}
+
 func TestVideoPlaybackOutputDimensionsNeverUpscaleAndRespectOrientation(t *testing.T) {
 	for _, test := range []struct {
 		name                          string

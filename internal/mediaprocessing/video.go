@@ -83,8 +83,8 @@ func PlaybackPlanFromMetadata(metadata VideoTechnicalMetadata) VideoPlaybackPlan
 		VideoStreamIndex: metadata.VideoStreamIndex, AudioStreamIndex: metadata.AudioStreamIndex, DisplayWidth: metadata.DisplayWidth, DisplayHeight: metadata.DisplayHeight})
 }
 
-// Archive playback has no conversion fallback, including H.264 formats outside
-// the common-browser 8-bit 4:2:0 baseline.
+// ArchiveVideoBrowserCompatible determines whether a proven direct member may
+// be sent to the browser unchanged. Other direct members may use a proxy.
 func ArchiveVideoBrowserCompatible(metadata VideoTechnicalMetadata) bool {
 	if PlaybackPlanFromMetadata(metadata).Mode != PlaybackDirect {
 		return false
@@ -100,4 +100,19 @@ func ArchiveVideoBrowserCompatible(metadata VideoTechnicalMetadata) bool {
 	default:
 		return false
 	}
+}
+
+// ArchivePlaybackPlanFromMetadata never exposes an incompatible original as
+// DIRECT, even when the generic container/codec plan would allow it.
+func ArchivePlaybackPlanFromMetadata(metadata VideoTechnicalMetadata) VideoPlaybackPlan {
+	plan := PlaybackPlanFromMetadata(metadata)
+	if plan.Mode == PlaybackDirect && !ArchiveVideoBrowserCompatible(metadata) {
+		plan.Mode = PlaybackTranscode
+		plan.Container = "mp4"
+		plan.VideoCodec = "h264"
+		plan.AudioCodec = "aac"
+		plan.CopyVideo = false
+		plan.CopyAudio = false
+	}
+	return plan
 }

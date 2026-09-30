@@ -173,7 +173,7 @@ func (worker Worker) processCaptureDate(ctx context.Context, job mediaprocessing
 	} else if done {
 		return nil
 	}
-	materialized, err := worker.openInput(ctx, item)
+	materialized, err := worker.openInput(ctx, item, "")
 	if err != nil {
 		return err
 	}
@@ -271,7 +271,7 @@ func (worker Worker) processVideoProbe(ctx context.Context, job mediaprocessing.
 		_ = worker.Database.VideoMetadata().PublishError(ctx, item.ItemUUID, item.ContentRevision, job.ProfileHash, mediaprocessing.VideoErrorCode(err), time.Now())
 		return err
 	}
-	materialized, err := worker.openInput(ctx, item)
+	materialized, err := worker.openInput(ctx, item, "")
 	if err != nil {
 		return err
 	}
@@ -343,12 +343,16 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 	}
 	ctx, cancelInput := archiveVideoTaskContext(ctx, item)
 	defer cancelInput()
-	if item.MediaKind == gallery.MediaKindVideo && item.SourceType == gallery.SourceTypeArchive && job.Variant != mediaprocessing.VariantStaticPoster {
-		return ErrUnsupportedGeneration // Archive playback NEVER materializes or creates a proxy.
+	if item.MediaKind == gallery.MediaKindVideo && item.SourceType == gallery.SourceTypeArchive && job.Variant != mediaprocessing.VariantStaticPoster && job.Variant != mediaprocessing.VariantVideoPlayback {
+		return ErrUnsupportedGeneration
 	}
 	if item.MediaKind == gallery.MediaKindVideo && item.SourceType == gallery.SourceTypeArchive {
 		canGenerate := false
 		preflight := mediaprocessing.GenerateRequest{MediaKind: item.MediaKind, ContentFormat: item.ContentFormat, Variant: job.Variant}
+		if job.Variant == mediaprocessing.VariantVideoPlayback {
+			preflight.VideoTechnical = &mediaprocessing.VideoTechnicalMetadata{}
+			preflight.VideoPlan = &mediaprocessing.VideoPlaybackPlan{Mode: mediaprocessing.PlaybackTranscode}
+		}
 		for _, generator := range worker.Generators {
 			if generator.Supports(preflight) {
 				canGenerate = true
@@ -368,7 +372,7 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 			return err
 		}
 	}
-	materialized, err := worker.openInput(ctx, item)
+	materialized, err := worker.openInput(ctx, item, job.Variant)
 	if err != nil {
 		return err
 	}
@@ -391,6 +395,9 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 		request.VideoTechnical = &metadata
 		if job.Variant == mediaprocessing.VariantVideoPlayback {
 			plan := mediaprocessing.PlaybackPlanFromMetadata(metadata)
+			if item.SourceType == gallery.SourceTypeArchive {
+				plan = mediaprocessing.ArchivePlaybackPlanFromMetadata(metadata)
+			}
 			if plan.Mode == mediaprocessing.PlaybackDirect {
 				return ErrUnsupportedGeneration
 			}
@@ -466,7 +473,7 @@ func archiveVideoTaskContext(ctx context.Context, item productdb.ProcessingItem)
 	return ctx, func() {}
 }
 
-func (worker Worker) openInput(ctx context.Context, item productdb.ProcessingItem) (mediaaccess.Materialized, error) {
+func (worker Worker) openInput(ctx context.Context, item productdb.ProcessingItem, variant string) (mediaaccess.Materialized, error) {
 	source := mediaaccess.Source{Type: item.SourceType, Path: item.SourcePath, RelativePath: item.RelativePath}
 	if item.MediaKind != gallery.MediaKindVideo || item.SourceType != gallery.SourceTypeArchive {
 		return worker.Materializer.Open(ctx, source)
@@ -477,7 +484,11 @@ func (worker Worker) openInput(ctx context.Context, item productdb.ProcessingIte
 	limits, evidence, err := worker.Database.ArchiveAccessEvidence(ctx, item.SourceID)
 	if err == nil {
 		var result mediaaccess.Materialized
-		result, err = worker.Materializer.OpenArchiveVideo(ctx, source, limits, evidence)
+		if variant == mediaprocessing.VariantVideoPlayback {
+			result, err = worker.Materializer.OpenDirectArchiveVideo(ctx, source, limits, evidence)
+		} else {
+			result, err = worker.Materializer.OpenArchiveVideo(ctx, source, limits, evidence)
+		}
 		if err == nil {
 			return result, nil
 		}

@@ -112,6 +112,84 @@ func TestRealArchiveVideoProbePosterDateAndNoPlaybackExtraction(t *testing.T) {
 	}
 }
 
+func TestRealEncodedHeaderArchiveVideoOnDemandProxy(t *testing.T) {
+	if os.Getenv("CGM_REAL_ARCHIVE_MEDIA") != "1" {
+		t.Skip("real FFmpeg/7z gate")
+	}
+	ctx := context.Background()
+	tool, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	probeTool, err := exec.LookPath("ffprobe")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sevenTool, err := exec.LookPath("7z")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	clip := filepath.Join(root, "clip.mp4")
+	command := exec.Command(tool, "-v", "error", "-f", "lavfi", "-i", "color=c=blue:s=64x48:r=10:d=1", "-c:v", "mpeg4", "-q:v", "3", clip)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("fixture video: %v %s", err, output)
+	}
+	filename := filepath.Join(root, "copy-encoded.7z")
+	command = exec.Command(sevenTool, "a", "-t7z", "-mx=0", "-mhc=on", filename, "clip.mp4")
+	command.Dir = root
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("fixture archive: %v %s", err, output)
+	}
+	db, err := productdb.Open(ctx, filepath.Join(t.TempDir(), "product.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	now := time.Now().UTC()
+	g, err := db.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Archive proxy"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := db.Galleries().AddSource(ctx, g.ID, productdb.CreateSourceInput{Type: gallery.SourceTypeArchive, Path: filename, Availability: gallery.AvailabilityAvailable}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().RunWithOptions(ctx, source.ID, archivecheck.DefaultLimits(), productdb.ScanOptions{ExcludeNewRootMedia: false}, now); err != nil {
+		t.Fatal(err)
+	}
+	var uuid string
+	if err := db.QueryRowContext(ctx, `SELECT item_uuid FROM gallery_items WHERE gallery_id=?`, g.ID).Scan(&uuid); err != nil {
+		t.Fatal(err)
+	}
+	temporary, cache := t.TempDir(), t.TempDir()
+	worker := Worker{Database: db, Materializer: mediaaccess.Materializer{TemporaryRoot: temporary}, Cache: mediaprocessing.CacheWriter{Root: cache},
+		VideoProbe: mediaprocessing.ProbeAdapter{Executable: probeTool, Version: "6.1"}, PosterProfileHash: mediaprocessing.VideoPosterProfileHash("6.1"),
+		Generators: []mediaprocessing.Generator{mediaprocessing.FFmpegPosterGenerator{Encoder: ffmpeg.NewEncoder(tool)}, mediaprocessing.VideoPlaybackGenerator{Encoder: ffmpeg.NewEncoder(tool)}}}
+	for i := 0; i < 2; i++ {
+		if _, err := worker.RunOne(ctx, "proxy", time.Minute, time.Now()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE galleries SET state='ACTIVE',content_rating='NON_ADULT',added_at_utc=? WHERE id=?`, now.Format(time.RFC3339Nano), g.ID); err != nil {
+		t.Fatal(err)
+	}
+	status, err := db.Browse().RequestVideoPlayback(ctx, uuid, "6.1", "", now)
+	if err != nil || status.Status != gallery.ProcessingPending || status.Mode != string(mediaprocessing.PlaybackTranscode) {
+		t.Fatalf("queued proxy %#v %v", status, err)
+	}
+	if _, err := worker.RunOne(ctx, "proxy", time.Minute, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	status, err = db.Browse().VideoPlaybackStatus(ctx, uuid, "6.1", "")
+	if err != nil || status.Status != gallery.ProcessingReady || status.Resource == nil {
+		t.Fatalf("ready proxy %#v %v", status, err)
+	}
+	if entries, err := os.ReadDir(temporary); err != nil || len(entries) != 0 {
+		t.Fatalf("source extraction must not persist: %v %v", entries, err)
+	}
+}
+
 func writeVideoContainer(t *testing.T, filename, clip string, body []byte) {
 	t.Helper()
 	if strings.HasSuffix(filename, ".7z") {
@@ -180,7 +258,7 @@ func (p archiveHTTPProbe) ProbeWithCaptureDate(ctx context.Context, input, timez
 }
 
 func TestArchiveVideoFailuresSetTerminalItemStateAndExplicitRetry(t *testing.T) {
-	for _, failure := range []string{"ffprobe", "ffmpeg", "changed-source", "forbidden-proxy"} {
+	for _, failure := range []string{"ffprobe", "ffmpeg", "changed-source", "premature-proxy"} {
 		t.Run(failure, func(t *testing.T) {
 			ctx, now := context.Background(), time.Now().UTC()
 			db, err := productdb.Open(ctx, filepath.Join(t.TempDir(), "product.sqlite"))
@@ -218,7 +296,7 @@ func TestArchiveVideoFailuresSetTerminalItemStateAndExplicitRetry(t *testing.T) 
 					t.Fatal(err)
 				}
 			}
-			if failure == "forbidden-proxy" {
+			if failure == "premature-proxy" {
 				_, err = db.ProcessingJobs().Enqueue(ctx, productdb.EnqueueJobInput{Key: productdb.ItemDerivativeJobKey(uuid, mediaprocessing.VariantVideoPlayback, revision, "forbidden"), Kind: mediaprocessing.JobItemDerivative, ItemUUID: uuid, Variant: mediaprocessing.VariantVideoPlayback, ContentRevision: &revision, ProfileHash: "forbidden", Payload: map[string]any{}, Priority: 2000}, now)
 				if err != nil {
 					t.Fatal(err)
@@ -239,7 +317,7 @@ func TestArchiveVideoFailuresSetTerminalItemStateAndExplicitRetry(t *testing.T) 
 			}
 			var state string
 			db.QueryRowContext(ctx, `SELECT processing_state FROM gallery_items WHERE item_uuid=?`, uuid).Scan(&state)
-			if failure != "forbidden-proxy" && state != "ERROR" {
+			if failure != "premature-proxy" && state != "ERROR" {
 				t.Fatalf("failed primary item remained %s", state)
 			}
 			if failure == "ffprobe" || failure == "changed-source" {
@@ -256,7 +334,7 @@ func TestArchiveVideoFailuresSetTerminalItemStateAndExplicitRetry(t *testing.T) 
 				t.Fatal(err)
 			}
 			db.QueryRowContext(ctx, `SELECT processing_state FROM gallery_items WHERE item_uuid=?`, uuid).Scan(&state)
-			if failure != "forbidden-proxy" && state != "PENDING" {
+			if failure != "premature-proxy" && state != "PENDING" {
 				t.Fatalf("explicit retry state %s", state)
 			}
 		})

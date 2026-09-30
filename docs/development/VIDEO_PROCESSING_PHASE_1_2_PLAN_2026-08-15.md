@@ -6,6 +6,8 @@
 > 适用范围：1.5 本机业务迭代；Windows原生构建继续延期
 > 上游约束：[开发备忘录](../COSPLAY_DEVELOPMENT_MEMO.md)、[第一版开发计划](../COSPLAY_V1_DEVELOPMENT_PLAN.md)、[媒体处理与Browse API](../architecture/MEDIA_PROCESSING_AND_BROWSE_API.md)、[Stash复用边界](../architecture/STASH_REUSE_BOUNDARY.md)
 
+> 后续修订：本文件第2节的存档视频限制是2026-08-15第一／二阶段范围，不代表当前最终能力。2026-09-30确认编码文件头有界解码，并允许仅对证明可直读的存档成员按需Remux／转码；见[存档视频浏览器播放修订方案](ARCHIVE_VIDEO_BROWSER_PLAYBACK_PLAN_2026-09-30.md)。
+
 ## 1. 目标与现状
 
 本计划补齐既有P04-04“兼容则直接播放、其次Remux、必要时生成H.264/AAC代理”的实际业务闭环，不改变Gallery聚合、只读来源、认证资源、双层缓存和Gallery卡片Scrubber只显示静态Poster等已确认设计。

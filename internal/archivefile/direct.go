@@ -61,7 +61,7 @@ func LocateDirectMember(ctx context.Context, format Format, input io.ReaderAt, s
 	case FormatTAR:
 		return locateTAR(bounded, size, name, limits)
 	case FormatSevenZIP:
-		return locateSevenZIP(bounded, size, name, limits)
+		return locateSevenZIP(ctx, bounded, size, name, limits)
 	case FormatTARGZIP:
 		return DirectMember{}, ErrDirectCompressed
 	default:

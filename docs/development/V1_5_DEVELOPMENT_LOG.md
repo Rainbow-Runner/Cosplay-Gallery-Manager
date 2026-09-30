@@ -5,6 +5,20 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-09-30 存档编码文件头直读与按需转码（本地源码，未提交／部署）
+
+- 所有者在上一轮仅设计修订后，明确取消存档“不Remux／不转码”限制：只有经过证明可直读的成员可按需生成可回收播放代理，目录等非存档视频继续沿用现有代理；不可直读成员仍不能在播放请求中临时提取。同步修订架构决策、开发备忘录、实施状态与[专项方案](ARCHIVE_VIDEO_BROWSER_PLAYBACK_PLAN_2026-09-30.md)。
+- 7z证明器新增仅单一独立LZMA编码文件头白名单：验证原始NextHeader CRC、压缩／解压大小、字典上限、解码结果CRC和头部流物理边界，再按旧路径验证成员列表与独立Copy区间；加密、复杂图、压缩成员继续拒绝。真实“赛博修女”1.495GB 7z在只读烟测中定位到第一个MP4正确`ftyp`起点，未扫描或改写原媒体。
+- Browse仅在成员证明成功后为不兼容原件排队`VIDEO_PLAYBACK`，保守直放矩阵外的H.264高位深也转码。Worker的播放输入走严格直读的短期loopback Range桥接；Probe／Poster仍保留后台临时提取兜底，两条输入路径隔离。转码产物复用增强缓存、既有空间门禁、revision／profile身份及旧缓存回收；无schema、Manifest或迁移包修改。编码头Copy存档的合成非兼容MP4已通过实际FFmpeg探测、Poster、按需转码与缓存READY端到端回归，临时目录无提取文件。
+- 尚未提交／部署或对正式库运行迁移。剩余实际业务验收为4K HEVC首帧、CPU／磁盘峰值、浏览器拖动及增强缓存回收；详情页并未预先转码或改变Gallery激活门禁。
+- 提交前验证：archivefile／mediaaccess／mediaprocessing／productdb／processingworker／videoresource 六包完整回归及Go Vet通过；实际FFmpeg编码头存档按需代理测试、真实7z明文／编码头对照、压缩成员不提取、FFmpeg缺失和高位深代理分支均通过，`git diff --check`通过。需loopback的测试在允许本机回环的执行环境验证。
+
+## 2026-09-30 存档编码文件头与浏览器播放方案修订（阶段历史：仅设计）
+
+- 只读排查“麻花麻花酱－赛博修女”业务存档：7z完整校验通过，90个成员为独立Copy；4个MP4视频成员可后台探测／生成Poster，编码后的7z文件头使现有直接定位器返回布局不可证明。四项视频另为2160×3840 HEVC/AAC，即使修复文件头也仍不符合当前保守浏览器直放矩阵。文件头编码与成员内容压缩必须分开判断。
+- 所有者要求取消“编码文件头”对存档内视频读取的一刀切阻断。据此新增[修订方案](ARCHIVE_VIDEO_BROWSER_PLAYBACK_PLAN_2026-09-30.md)：有界解码并验证7z头部，随后继续严格证明独立Copy成员的真实字节区间；认证Range、旧格式、安全拒绝、浏览器编码判断及真实业务验收分阶段实施。参考7-Zip官方格式规范，并对照Jellyfin按客户端能力选直放／Remux／转码和Stash按需代理处理。Archive播放不提取／不转码既定边界暂不变；是否为HEVC存档增加按需兼容代理需要所有者另行确认。
+- 此轮当时只更新文档和规划；后续已获所有者授权并在本地实现，见上节。未改schema、Manifest、正式媒体／数据库、服务或Docker镜像，也未执行扫描、提交或部署。
+
 ## 2026-09-30 累计提交、schema v21迁移及本机部署
 
 - 用户授权提交、迁移和部署。累计35个文件提交为`31430a9f99befda6eb386189dd9b6347bfb2d918`（`Add similarity-based cover reselection for replaced media`）。正式三标签`cgm_web_embed cgm_galleryepic cgm_moegirl`下受影响Go包回归通过；存档视频测试依赖本机loopback，在沙箱内失败后于正常主机权限复测通过。Web 42文件182项测试、TypeScript及2556模块生产构建通过，仅既有主chunk体积提示。`git diff --check`通过。

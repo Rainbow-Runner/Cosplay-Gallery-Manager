@@ -35,14 +35,11 @@ func (s *BrowseStore) RequestVideoPlayback(ctx context.Context, itemUUID, ffmpeg
 		return browse.VideoPlaybackStatus{}, err
 	}
 	status, err := s.videoPlaybackStatus(ctx, itemUUID, identity, ffmpegVersion, ffmpegUnavailableCode)
-	if identity.source.Type == gallery.SourceTypeArchive {
-		return status, err
-	}
 	if err != nil || status.Status == gallery.ProcessingReady || status.Status == gallery.ProcessingError ||
 		identity.metadata.ProbeState != mediaprocessing.VideoProbeReady || identity.metadata.ContentRevision != identity.revision {
 		return status, err
 	}
-	plan := mediaprocessing.PlaybackPlanFromMetadata(identity.metadata)
+	plan := playbackPlan(identity)
 	if plan.Mode == mediaprocessing.PlaybackDirect {
 		return status, nil
 	}
@@ -109,7 +106,7 @@ func (s *BrowseStore) videoPlaybackStatus(ctx context.Context, itemUUID string, 
 	if identity.metadata.ProbeState != mediaprocessing.VideoProbeReady || identity.metadata.ContentRevision != identity.revision {
 		return s.archiveProbePendingStatus(ctx, result, identity)
 	}
-	plan := mediaprocessing.PlaybackPlanFromMetadata(identity.metadata)
+	plan := playbackPlan(identity)
 	result.Mode = string(plan.Mode)
 	if identity.source.Type == gallery.SourceTypeArchive {
 		limits, evidence, err := (&Database{DB: s.db}).ArchiveAccessEvidence(ctx, identity.sourceID)
@@ -124,12 +121,10 @@ func (s *BrowseStore) videoPlaybackStatus(ctx context.Context, itemUUID string, 
 			result.Status, result.Mode, result.ErrorCode = gallery.ProcessingError, "", mediaaccess.ArchiveVideoErrorCode(err)
 			return result, nil
 		}
-		if !mediaprocessing.ArchiveVideoBrowserCompatible(identity.metadata) {
-			result.Status, result.Mode, result.ErrorCode = gallery.ProcessingError, "", mediaaccess.ArchivePlaybackCodec
+		if plan.Mode == mediaprocessing.PlaybackDirect {
+			result.Status = gallery.ProcessingReady
 			return result, nil
 		}
-		result.Status = gallery.ProcessingReady
-		return result, nil // No proxy cache/job lookup or enqueue for archive videos.
 	}
 	if plan.Mode == mediaprocessing.PlaybackDirect {
 		result.Status = gallery.ProcessingReady
@@ -169,6 +164,13 @@ func (s *BrowseStore) videoPlaybackStatus(ctx context.Context, itemUUID string, 
 		result.ErrorCode = job.LastErrorCode
 	}
 	return result, nil
+}
+
+func playbackPlan(identity videoPlaybackIdentity) mediaprocessing.VideoPlaybackPlan {
+	if identity.source.Type == gallery.SourceTypeArchive {
+		return mediaprocessing.ArchivePlaybackPlanFromMetadata(identity.metadata)
+	}
+	return mediaprocessing.PlaybackPlanFromMetadata(identity.metadata)
 }
 
 func (s *BrowseStore) archiveProbePendingStatus(ctx context.Context, result browse.VideoPlaybackStatus, identity videoPlaybackIdentity) (browse.VideoPlaybackStatus, error) {

@@ -2,6 +2,7 @@ package archivefile
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"hash/crc32"
@@ -10,15 +11,16 @@ import (
 	"unicode/utf16"
 
 	"github.com/bodgit/sevenzip"
+	"github.com/ulikunitz/xz/lzma"
 )
 
 // A deliberately narrow proof reader, not another general 7z decompressor.
-// Only plain headers and one Copy coder per folder are accepted. Encoded
-// headers, crypto, filters, external properties and alternative graphs fail
-// closed. Packed and unpacked sizes, file/substream counts and both header CRCs
+// Only plain headers or a single bounded LZMA encoded header, then one Copy
+// coder per member folder, are accepted. Crypto, filters, external properties
+// and alternative graphs fail closed. Packed and unpacked sizes and CRCs
 // must agree. No private sevenzip fields or unsafe/reflection are used.
 // Format reference: https://github.com/ip7z/7zip/blob/main/DOC/7zFormat.txt
-func locateSevenZIP(input io.ReaderAt, size int64, name string, limits DirectLimits) (DirectMember, error) {
+func locateSevenZIP(ctx context.Context, input io.ReaderAt, size int64, name string, limits DirectLimits) (DirectMember, error) {
 	var signature [32]byte
 	if size < 32 {
 		return DirectMember{}, ErrDirectInvalid
@@ -46,14 +48,22 @@ func locateSevenZIP(input io.ReaderAt, size int64, name string, limits DirectLim
 	if crc32.ChecksumIEEE(header) != binary.LittleEndian.Uint32(signature[28:]) {
 		return DirectMember{}, ErrDirectInvalid
 	}
+	dataEnd := offset
+	if header[0] == 0x17 {
+		var err error
+		header, dataEnd, err = decodeSevenZIPHeader(ctx, input, header, offset, limits)
+		if err != nil {
+			return DirectMember{}, err
+		}
+	}
 	c := sevenCursor{data: header}
 	if c.byte() != 1 {
 		return DirectMember{}, ErrDirectLayout
-	} // Encoded header is not a member compression hint.
+	}
 	if c.byte() != 4 {
 		return DirectMember{}, ErrDirectLayout
 	}
-	position, folders := c.copyStreams(limits, offset)
+	position, folders := c.copyStreams(limits, dataEnd)
 	if c.err != nil {
 		return DirectMember{}, fmt.Errorf("7z streams: %w", c.err)
 	}
@@ -178,6 +188,80 @@ func locateSevenZIP(input io.ReaderAt, size int64, name string, limits DirectLim
 		return DirectMember{}, ErrDirectMemberMissing
 	}
 	return result, nil
+}
+
+// decodeSevenZIPHeader accepts only one independent LZMA header stream. The
+// compressed bytes must precede NextHeader, and both sizes and the decoded
+// CRC are checked before the ordinary Copy-member proof sees the header.
+func decodeSevenZIPHeader(ctx context.Context, input io.ReaderAt, header []byte, nextOffset uint64, limits DirectLimits) ([]byte, uint64, error) {
+	c := sevenCursor{data: header}
+	c.expect(0x17)
+	c.expect(0x06) // PackInfo
+	position := c.number()
+	if c.number() != 1 {
+		return nil, 0, ErrDirectLayout
+	}
+	c.expect(0x09)
+	packedSize := c.number()
+	if c.byte() != 0 || c.byte() != 0x07 || c.byte() != 0x0b || c.number() != 1 || c.byte() != 0 {
+		return nil, 0, ErrDirectLayout
+	}
+	if c.number() != 1 || c.byte() != 0x23 || !bytes.Equal(c.take(3), []byte{3, 1, 1}) || c.number() != 5 {
+		return nil, 0, ErrDirectLayout
+	}
+	properties := c.take(5)
+	c.expect(0x0c)
+	unpackedSize := c.number()
+	c.expect(0x0a)
+	if c.byte() != 1 {
+		return nil, 0, ErrDirectLayout
+	}
+	checksumBytes := c.take(4)
+	if c.byte() != 0 || c.byte() != 0 || c.err != nil || len(c.data) != 0 || len(properties) != 5 || len(checksumBytes) != 4 {
+		return nil, 0, ErrDirectLayout
+	}
+	if packedSize == 0 || packedSize > uint64(limits.MaxHeaderBytes) || unpackedSize == 0 || unpackedSize > uint64(limits.MaxHeaderBytes) {
+		return nil, 0, ErrDirectLimit
+	}
+	if position > nextOffset || packedSize > nextOffset-position {
+		return nil, 0, ErrDirectInvalid
+	}
+	// LZMA properties encode the dictionary in bytes 1..4. Reject expensive
+	// dictionaries even when a tiny output size is claimed.
+	dictionary := binary.LittleEndian.Uint32(properties[1:])
+	if properties[0] >= 225 || dictionary > 16<<20 {
+		return nil, 0, ErrDirectLimit
+	}
+	packed := make([]byte, packedSize)
+	if _, err := input.ReadAt(packed, 32+int64(position)); err != nil {
+		return nil, 0, err
+	}
+	stream := make([]byte, 0, len(properties)+8+len(packed))
+	stream = append(stream, properties...)
+	var sizeBytes [8]byte
+	binary.LittleEndian.PutUint64(sizeBytes[:], unpackedSize)
+	stream = append(stream, sizeBytes[:]...)
+	stream = append(stream, packed...)
+	reader, err := lzma.NewReader(bytes.NewReader(stream))
+	if err != nil {
+		return nil, 0, ErrDirectInvalid
+	}
+	decoded := make([]byte, 0, unpackedSize)
+	var chunk [4096]byte
+	for uint64(len(decoded)) < unpackedSize {
+		if err := ctx.Err(); err != nil {
+			return nil, 0, err
+		}
+		n, readErr := reader.Read(chunk[:min(uint64(len(chunk)), unpackedSize-uint64(len(decoded)))])
+		decoded = append(decoded, chunk[:n]...)
+		if readErr != nil {
+			return nil, 0, ErrDirectInvalid
+		}
+	}
+	if len(decoded) == 0 || decoded[0] != 1 || crc32.ChecksumIEEE(decoded) != binary.LittleEndian.Uint32(checksumBytes) {
+		return nil, 0, ErrDirectInvalid
+	}
+	return decoded, position, nil
 }
 
 type sevenCursor struct {

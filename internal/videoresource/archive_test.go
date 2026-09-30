@@ -20,7 +20,7 @@ import (
 	"github.com/stashapp/stash/internal/persistence/productdb"
 )
 
-func TestArchiveVideoAuthorizationRangeCapabilitiesAndNoProxy(t *testing.T) {
+func TestArchiveVideoAuthorizationRangeCapabilitiesAndSafeProxy(t *testing.T) {
 	for _, scenario := range []string{"direct", "compressed", "codec", "high-bit-depth", "source-changed", "unauthenticated", "wrong-scope", "hidden", "excluded", "draft", "blocking", "missing-evidence", "old-evidence", "cancelled-probe", "lost-probe-job"} {
 		t.Run(scenario, func(t *testing.T) {
 			ctx, now := context.Background(), time.Now().UTC()
@@ -150,6 +150,12 @@ func TestArchiveVideoAuthorizationRangeCapabilitiesAndNoProxy(t *testing.T) {
 				}
 			}
 			if authorized && scenario != "wrong-scope" {
+				if scenario == "codec" || scenario == "high-bit-depth" {
+					unavailable, err := db.Browse().VideoPlaybackStatus(ctx, uuid, "", mediaprocessing.ErrorFFmpegUnavailable)
+					if err != nil || unavailable.Status != gallery.ProcessingError || unavailable.ErrorCode != mediaprocessing.ErrorFFmpegUnavailable {
+						t.Fatalf("ffmpeg precondition %#v %v", unavailable, err)
+					}
+				}
 				status, err := db.Browse().RequestVideoPlayback(ctx, uuid, "6.1", "", now)
 				if err != nil {
 					t.Fatal(err)
@@ -157,6 +163,8 @@ func TestArchiveVideoAuthorizationRangeCapabilitiesAndNoProxy(t *testing.T) {
 				want := gallery.ProcessingError
 				if scenario == "direct" {
 					want = gallery.ProcessingReady
+				} else if scenario == "codec" || scenario == "high-bit-depth" {
+					want = gallery.ProcessingPending
 				}
 				if status.Status != want {
 					t.Fatalf("status %#v", status)
@@ -164,8 +172,8 @@ func TestArchiveVideoAuthorizationRangeCapabilitiesAndNoProxy(t *testing.T) {
 				if scenario == "compressed" && status.ErrorCode != mediaaccess.ArchivePlaybackCompressed {
 					t.Fatalf("compression reason %#v", status)
 				}
-				if (scenario == "codec" || scenario == "high-bit-depth") && status.ErrorCode != mediaaccess.ArchivePlaybackCodec {
-					t.Fatalf("codec reason %#v", status)
+				if (scenario == "codec" || scenario == "high-bit-depth") && status.Mode != string(mediaprocessing.PlaybackTranscode) {
+					t.Fatalf("archive proxy mode %#v", status)
 				}
 				if want == gallery.ProcessingError && !strings.HasPrefix(status.ErrorCode, "ARCHIVE_VIDEO_") && status.ErrorCode != "VIDEO_PROBE_UNAVAILABLE" {
 					t.Fatalf("no archive explanation %#v", status)
@@ -173,8 +181,12 @@ func TestArchiveVideoAuthorizationRangeCapabilitiesAndNoProxy(t *testing.T) {
 			}
 			var proxies int
 			db.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_jobs WHERE variant='VIDEO_PLAYBACK'`).Scan(&proxies)
-			if proxies != 0 {
-				t.Fatal("archive playback queued a proxy")
+			wantProxies := 0
+			if scenario == "codec" || scenario == "high-bit-depth" {
+				wantProxies = 1
+			}
+			if proxies != wantProxies {
+				t.Fatalf("archive proxy jobs %d, want %d", proxies, wantProxies)
 			}
 		})
 	}

@@ -81,6 +81,19 @@ func TestArchiveBackgroundInputDirectFirstAndTemporaryFallback(t *testing.T) {
 	}
 }
 
+func TestArchivePlaybackInputRejectsCompressedMemberWithoutExtraction(t *testing.T) {
+	source := writeDirectArchive(t, ".zip", zip.Deflate)
+	root := t.TempDir()
+	_, err := (Materializer{TemporaryRoot: root}).OpenDirectArchiveVideo(context.Background(), source, archivefile.DefaultDirectLimits(), nil)
+	if !errors.Is(err, archivefile.ErrDirectCompressed) {
+		t.Fatalf("compressed playback input: %v", err)
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("playback created extracted source: %v %v", entries, err)
+	}
+}
+
 func TestArchiveBackgroundInputCancellationClosesPrivateEndpoint(t *testing.T) {
 	source := writeDirectArchive(t, ".tar", zip.Store)
 	ctx, cancel := context.WithCancel(context.Background())

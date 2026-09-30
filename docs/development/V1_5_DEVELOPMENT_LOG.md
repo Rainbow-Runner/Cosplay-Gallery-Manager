@@ -5,6 +5,18 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-09-30 内容替换后旧派生资源及时回收（本地源码，未提交／部署）
+
+- 排查确认来源扫描将旧内容版本的派生资源设为`HARD_INVALID,is_current=0`，Browse不再选择、媒体URL也拒绝访问；但v20缓存回收统一等待当前基础派生资源READY。新派生失败时旧文件无法兜底显示，却无限期占用空间。浏览器已加载的图像可暂留在页面内存至刷新，这不构成服务端继续引用。
+- 回收条件拆分：`HARD_INVALID`且派生版本不同于当前Item内容版本时，在来源扫描提交后即可由现有每分钟缓存维护处理，不等新基础图；仍复核旧任务、引用和受保护文件，先持久退役引用再安全删除，失败按已有15分钟退避重试。普通STALE／Profile更换仍须新基础图READY；同版本来源暂缺的HARD_INVALID不提前删除。扫描事务本身不删文件、不接触原媒体。
+- 增加内容替换立即回收、同版本缺失保留、来源扫描到缓存文件实际删除的贯通回归。正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签下产品数据库、处理器、产品服务完整Go测试、相关Go Vet与`git diff --check`通过。处理器包既有存档视频测试依赖进程内localhost HTTP，受限沙箱内报`ARCHIVE_VIDEO_DIRECT_UNAVAILABLE`，同一用例在仅放宽本地连接且`GOPROXY=off`后通过，完整相关包测试随之通过。未修改正式业务库或运行服务，无schema与Manifest格式变化。
+
+## 2026-09-30 同路径存档替换未被媒体库扫描发现（本地源码，未提交／部署）
+
+- 真实演练：已登记7z存档同名替换，库发现／自动化run 6在13:28 CST完成，但`candidates=0,scanned=0`。旧扫描证据大小1,495,985,363字节、mtime为2026-09-28T16:14:46Z；当前文件大小1,495,883,040字节、mtime为2026-09-18T15:09:19Z。来源仍旧`IN_SYNC`，最近来源扫描仍是09-29T15:53:17Z，90个Item的`content_revision`均为1。原因是发现跳过已绑定来源，自动化运行只选DRAFT，定时全库扫描虽可扫已登记来源，却不受这次手动动作触发。
+- 修复：发现完成后对已登记ARCHIVE做大小／mtime、扫描器版本及归档限制证据比较，变化才把`IN_SYNC`原子标为`NEEDS_RESCAN`并记录`CGM_ARCHIVE_SOURCE_CHANGE_DETECTED`（只记库／来源ID）；不读归档成员、不写媒体。每分钟的有界后台任务最多处理5个待重扫存档，手动发现和自动化发现共用；任务启动时也处理遗留队列，成功／失败分别记录技术日志。正式来源扫描沿用原有存档安全门禁、同路径Item身份、内容指纹、派生图失效和失败回滚。定时扫描跳过未变化且`IN_SYNC`的存档，避免重复来源扫描；旧证据版本或限额变化仍会重扫。无需schema变更；同大小同mtime的隐藏替换仍须显式深扫。
+- 回归覆盖无变化时不入队、同名替换时标记、后台自动扫描后内容版本增加。产品数据库及产品服务Go包测试、正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签组合测试、相关Go Vet与`git diff --check`通过；本轮尚未提交、构建或部署，没有对正式业务库执行扫描。实际7z媒体替换验收待后续部署后执行。
+
 ## 2026-09-30 人工接续闭环提交及本机增量部署
 
 - 用户授权提交并部署。23个文件提交为`03d2f9300c340bb1147b9d4c93ad47f80d792299`（`Close manual review after blocked gallery automation`），工作区干净后以Go1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建。程序Go VCS与该提交一致且`vcs.modified=false`，About构建时间`2026-09-29T17:03:33Z`，新程序SHA-256为`bf15790d1b32efc8512303502185618f899fbcd363a370fe1bb13d488fcd5303`。提交前Web42文件181项、TypeScript、生产构建、相关正式标签Go完整回归、Vet与定向race均通过；只有既有主chunk大于500KiB提示。

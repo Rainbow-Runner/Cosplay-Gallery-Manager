@@ -1,6 +1,7 @@
 package productserver
 
 import (
+	"archive/zip"
 	"context"
 	"errors"
 	"os"
@@ -8,9 +9,77 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stashapp/stash/internal/archivecheck"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 )
+
+func TestManualLibraryDiscoveryReconcilesReplacedArchiveInBackground(t *testing.T) {
+	server := testServer(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 30, 6, 0, 0, 0, time.UTC)
+	root := t.TempDir()
+	library, err := server.Database.Libraries().Create(ctx, productdb.CreateLibraryInput{
+		Name: "Changed archive", RootPath: root, Enabled: true,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "gallery.cbz")
+	writeArchive := func(body string, modified time.Time) {
+		t.Helper()
+		file, err := os.Create(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		writer := zip.NewWriter(file)
+		part, err := writer.CreateHeader(&zip.FileHeader{Name: "01.jpg", Method: zip.Store})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := part.Write([]byte("\xff\xd8\xff " + body)); err != nil {
+			t.Fatal(err)
+		}
+		if err := writer.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err := file.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chtimes(path, modified, modified); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeArchive("original", now)
+	created, err := server.Database.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Changed archive"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := server.Database.Galleries().AddSource(ctx, created.ID, productdb.CreateSourceInput{
+		LibraryID: &library.ID, Type: gallery.SourceTypeArchive, Path: path, Availability: gallery.AvailabilityAvailable,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := server.Database.Scans().Run(ctx, source.ID, archivecheck.DefaultLimits(), now); err != nil {
+		t.Fatal(err)
+	}
+	writeArchive("replacement-with-new-content", now.Add(time.Minute))
+	if _, err := server.Database.CandidateDiscovery().DiscoverFilesystem(ctx, library.ID, now.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	var state string
+	if err := server.Database.QueryRowContext(ctx, `SELECT reconcile_state FROM gallery_sources WHERE id=?`, source.ID).Scan(&state); err != nil || state != "NEEDS_RESCAN" {
+		t.Fatalf("source state after library discovery = %q, err=%v", state, err)
+	}
+	// Automatic periodic scanning is disabled; the explicit discovery alone
+	// still feeds the bounded background reconciler.
+	server.runChangedArchiveSourceScans(ctx, now.Add(3*time.Minute))
+	var revision int
+	if err := server.Database.QueryRowContext(ctx, `SELECT content_revision FROM gallery_items WHERE source_id=?`, source.ID).Scan(&revision); err != nil || revision != 2 {
+		t.Fatalf("replaced item content revision = %d, err=%v", revision, err)
+	}
+}
 
 func TestDailyBackupUsesPersistentDueLeaseAndRetention(t *testing.T) {
 	server := testServer(t)

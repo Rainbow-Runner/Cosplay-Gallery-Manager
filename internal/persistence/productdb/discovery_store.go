@@ -291,9 +291,10 @@ func (db *Database) CandidateDiscovery() *CandidateDiscoveryStore {
 	return &CandidateDiscoveryStore{db: db.DB}
 }
 
-// DiscoverFilesystem performs the explicit, read-only first phase of import.
-// It never creates GalleryItems or accepts metadata suggestions. Configured
-// child library roots are hard traversal boundaries.
+// DiscoverFilesystem performs the media-read-only first phase of import. It
+// never creates GalleryItems or accepts metadata suggestions, but may mark a
+// changed registered archive NEEDS_RESCAN. Configured child library roots are
+// hard traversal boundaries.
 func (s *CandidateDiscoveryStore) DiscoverFilesystem(ctx context.Context, libraryID int64, now time.Time) (DiscoverySnapshot, error) {
 	return s.DiscoverFilesystemWithOptions(ctx, libraryID, DiscoveryOptions{}, now)
 }
@@ -441,7 +442,17 @@ func (s *CandidateDiscoveryStore) DiscoverFilesystemWithOptions(ctx context.Cont
 	}
 	observations = append(observations, archives...)
 	sort.Slice(observations, func(i, j int) bool { return observations[i].RelativePath < observations[j].RelativePath })
-	return s.commitSnapshot(ctx, libraryID, observations, coverage, options, mediaLibrary.RootPath, childRoots, now)
+	snapshot, err := s.commitSnapshot(ctx, libraryID, observations, coverage, options, mediaLibrary.RootPath, childRoots, now)
+	if err != nil {
+		return DiscoverySnapshot{}, err
+	}
+	// Discovery still does not read registered archive members. A cheap stat
+	// comparison makes same-path replacements eligible for background source
+	// reconciliation instead of silently treating them as unchanged roots.
+	if err := markChangedArchiveSources(ctx, s.db, libraryID, archiveLimits, now); err != nil {
+		return DiscoverySnapshot{}, err
+	}
+	return snapshot, nil
 }
 
 func descendantMediaCount(root string, counts map[string]int) int {

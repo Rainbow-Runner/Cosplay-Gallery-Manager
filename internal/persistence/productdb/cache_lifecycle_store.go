@@ -23,14 +23,19 @@ type CacheLifecycleSummary struct {
 	FailedFiles     int64 `json:"failed_files"`
 }
 
-// Missing/excluded/unreadable Items are deliberately not cleanup predicates.
-// Retire old artifacts only when the replacement primary resource is ready.
-const obsoleteDerivativePredicate = `(d.is_current=0 OR d.state='HARD_INVALID') AND EXISTS (
+// A hard-invalid derivative from an older content revision cannot be served
+// or reused, so it may be retired without waiting for a new base derivative.
+// Same-revision invalidation (for example, a missing source) and ordinary
+// stale/profile replacements still wait for a ready replacement base.
+const obsoleteDerivativePredicate = `((d.state='HARD_INVALID' AND EXISTS (
+	SELECT 1 FROM gallery_items item WHERE item.item_uuid=d.item_uuid
+	AND item.content_revision<>d.content_revision)) OR
+	((d.is_current=0 OR d.state='HARD_INVALID') AND EXISTS (
 	SELECT 1 FROM media_derivatives replacement JOIN gallery_items i ON i.item_uuid=replacement.item_uuid
 	WHERE replacement.item_uuid=d.item_uuid AND replacement.content_revision=i.content_revision
 	AND replacement.cache_tier='BASE' AND replacement.is_current=1 AND replacement.state='READY'
 	AND ((i.media_kind='STATIC_IMAGE' AND replacement.variant='CARD_480') OR
-	(i.media_kind IN ('ANIMATED_IMAGE','VIDEO') AND replacement.variant='STATIC_POSTER')))
+	(i.media_kind IN ('ANIMATED_IMAGE','VIDEO') AND replacement.variant='STATIC_POSTER')))))
 	AND NOT EXISTS (SELECT 1 FROM processing_jobs job WHERE job.item_uuid=d.item_uuid
 	AND job.content_revision=d.content_revision AND job.variant=d.variant
 	AND job.status IN ('PENDING','RUNNING','RETRY_WAIT','PAUSED'))`

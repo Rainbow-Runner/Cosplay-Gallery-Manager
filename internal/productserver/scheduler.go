@@ -19,6 +19,7 @@ const automaticScanTaskKey = "AUTOMATIC_SCAN"
 
 func (s *Server) runSchedulerLoop(ctx context.Context) {
 	s.runDailyBackup(ctx, time.Now())
+	s.runChangedArchiveSourceScans(ctx, time.Now())
 	s.runAutomaticStartupScan(ctx, time.Now())
 	s.runCacheMaintenance(ctx, time.Now())
 	s.runVideoProbeBackfill(ctx, time.Now())
@@ -37,6 +38,7 @@ func (s *Server) runSchedulerLoop(ctx context.Context) {
 		case now := <-hourly.C:
 			s.runDailyBackup(ctx, now)
 		case now := <-scanTicker.C:
+			s.runChangedArchiveSourceScans(ctx, now)
 			s.runAutomaticScan(ctx, now)
 		case now := <-cacheTicker.C:
 			s.runCacheMaintenance(ctx, now)
@@ -164,6 +166,37 @@ func (s *Server) runAutomaticScan(ctx context.Context, now time.Time) {
 		!errors.Is(err, productdb.ErrScheduledOperationNotDue) &&
 		ctx.Err() == nil {
 		// The audit stores only technical counts and error codes.
+	}
+}
+
+// Manual library discovery and automated discovery both mark replaced archive
+// sources NEEDS_RESCAN. Reconcile a bounded batch without requiring the owner
+// to locate each Gallery and invoke its source scan separately.
+func (s *Server) runChangedArchiveSourceScans(ctx context.Context, now time.Time) {
+	settings, err := s.Database.Settings().Find(ctx)
+	if err != nil || settings.AutomaticSchedulesSuspended {
+		return
+	}
+	maintenance, err := s.Database.Operations().Maintenance(ctx)
+	if err != nil || maintenance.Mode != productdb.MaintenanceNormal {
+		return
+	}
+	ids, err := s.Database.ChangedArchiveSourceTargets(ctx, 5)
+	if err != nil {
+		slog.Error("CGM_CHANGED_ARCHIVE_SOURCE_LIST_FAILED", "error", err)
+		return
+	}
+	limits := archivecheck.Limits{
+		MaxEntries: settings.ArchiveMaxEntries, MaxEntryUncompressed: uint64(settings.ArchiveMaxEntryBytes),
+		MaxTotalUncompressed: uint64(settings.ArchiveMaxTotalBytes), MaxCompressionRatio: settings.ArchiveMaxCompressionRatio,
+		MaxImagePixels: uint64(settings.ArchiveMaxImagePixels),
+	}
+	for _, id := range ids {
+		if err := s.Database.Scans().Run(ctx, id, limits, time.Now()); err != nil {
+			slog.Warn("CGM_CHANGED_ARCHIVE_SOURCE_SCAN_FAILED", "source_id", id, "error", err)
+		} else {
+			slog.Info("CGM_CHANGED_ARCHIVE_SOURCE_SCANNED", "source_id", id)
+		}
 	}
 }
 
@@ -305,7 +338,7 @@ func (s *Server) runAutomaticScanOnce(ctx context.Context, now time.Time, startu
 			discovered++
 		}
 	}
-	rows, err := s.Database.QueryContext(ctx, `SELECT source.id,source.library_id,gallery.state FROM gallery_sources source
+	rows, err := s.Database.QueryContext(ctx, `SELECT source.id,source.library_id,gallery.state,source.source_type,source.reconcile_state FROM gallery_sources source
 		JOIN galleries gallery ON gallery.id=source.gallery_id
 		JOIN media_libraries library ON library.id=source.library_id
 		WHERE library.enabled=1 ORDER BY source.id`)
@@ -316,13 +349,16 @@ func (s *Server) runAutomaticScanOnce(ctx context.Context, now time.Time, startu
 	var sourceIDs []int64
 	for rows.Next() {
 		var sourceID, libraryID int64
-		var galleryState string
-		if err := rows.Scan(&sourceID, &libraryID, &galleryState); err != nil {
+		var galleryState, sourceType, reconcileState string
+		if err := rows.Scan(&sourceID, &libraryID, &galleryState, &sourceType, &reconcileState); err != nil {
 			rows.Close()
 			_ = s.Database.Operations().FailScheduled(context.Background(), automaticScanTaskKey, owner, "AUTO_SCAN_SOURCE_LIST_FAILED", now)
 			return err
 		}
 		if automatedLibraries[libraryID] && galleryState == "DRAFT" {
+			continue
+		}
+		if sourceType == "ARCHIVE" && reconcileState == "IN_SYNC" {
 			continue
 		}
 		sourceIDs = append(sourceIDs, sourceID)

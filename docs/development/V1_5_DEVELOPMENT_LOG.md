@@ -5,6 +5,14 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-09-30 累计提交、schema v21迁移及本机部署
+
+- 用户授权提交、迁移和部署。累计35个文件提交为`31430a9f99befda6eb386189dd9b6347bfb2d918`（`Add similarity-based cover reselection for replaced media`）。正式三标签`cgm_web_embed cgm_galleryepic cgm_moegirl`下受影响Go包回归通过；存档视频测试依赖本机loopback，在沙箱内失败后于正常主机权限复测通过。Web 42文件182项测试、TypeScript及2556模块生产构建通过，仅既有主chunk体积提示。`git diff --check`通过。
+- 对在线正式库使用 SQLite 一致快照进行隔离v20→v21迁移预演：`integrity_check=ok`，Coser／Work／Character／Tag／Gallery／Source／Item计数`135/108/697/23/10/10/780`不变。正式候选由干净提交及Go1.25.12构建；VCS revision精确匹配提交、`vcs.modified=false`，程序SHA-256为`8a75bfa1cdb9b022ae858a07fb9d9d711b1ec7dfb7b78ef8206acb2784d3137b`，About注入完整提交与构建时间`2026-09-30T13:29:00Z`。
+- 停服确认MainPID=0且WAL／SHM关闭，在0700目录`/home/rainbowrunner/cos/bk/cgm-pre-v21-31430a9-Lve8IcwU`备份一致正式数据库、旧程序、运行配置、用户systemd单元、外部及product-state Coser托管资源；数据库、程序、配置、单元逐项`cmp`，资源树`diff`一致。备份数据库SHA-256为`f433cdb46b0454392891061e8e9a6d8d802ffddfd771de9c74d5372a9e460d47`，旧程序为`e78053178bf2cb1e792d68625dc52799d05c08ca9e49e02d6e131499fa4ff2db`，配置为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`；不含原始媒体、可重建缓存和日志。
+- 原子替换并启动后，正式库自动升至schema v21，`integrity_check=ok`，上述七类计数不变，三张新增表存在；服务active、NRestarts=0，Health／Ready均204，About报告该提交。首页、后台Gallery深链和新版Gallery编辑JS均200；两个Worker及LibRaw／FFmpeg／FFprobe正常启动，启动日志未见WARN／ERROR。未主动执行正式媒体扫描、自动化或Manifest Push，未修改原始媒体和Manifest。未推送远端或发布Docker镜像。
+- pHash绝对距离门槛6仍是未用真实图库校准的保守初值；部署完成不代表相似封面误选率、漏选率和历史签名回填吞吐已完成业务验收。需在后续许可样本及真实替换演练中核对，失败时仍保留普通自动封面托底。
+
 ## 2026-09-30 相似封面重选源码实现（未提交／未部署）
 
 - 在未部署的 schema v21 上增加静态小图的版本化 128 位 dHash、64 位 pHash 签名与逐次扫描选择意图。新 `CARD_480` 发布后从安全缓存生成签名；既有 CARD 在 Worker 空闲时每轮补算一张，失败一小时退避。为保证后来手动选中的任意封面在原缓存清理前已有 pHash，实际实现改为每张静态 CARD 同次计算 dHash／pHash；最终匹配仍只验证 dHash 前五名。该性能取舍已在[方案](COVER_SIMILARITY_PLAN_2026-09-30.md)明示，需真实图库性能验收。

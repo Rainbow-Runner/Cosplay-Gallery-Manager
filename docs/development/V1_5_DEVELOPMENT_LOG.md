@@ -5,6 +5,14 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-09-30 存档视频按需转码提交与本机增量部署
+
+- 累计19文件提交为`0b6afb7d6f60f78fb6b7be90f4cf934c7c5aac12`（`Enable on-demand playback proxies for safely readable archive videos`）。正式三标签下archivefile／mediaaccess／mediaprocessing／processingworker／videoresource／productapi／productserver／cmd回归通过，启用实际FFmpeg／7z门禁；前轮六包完整回归和Vet亦通过。本轮无前端源码变更，沿用上次已验收Web产物。
+- 从干净提交以Go1.25.12、CGO和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，VCS revision匹配且`vcs.modified=false`；构建时间`2026-09-30T14:48:37Z`，新程序SHA-256为`c20d266ce50f7248c8f4c803a104fd10043c1458809dce563a526959db5eb7dc`。
+- 22:49:11 CST停服、确认PID=0和WAL关闭，创建0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-archive-playback-kYr5sKS5`；备份一致数据库、旧程序、配置、用户服务单元及外部／product-state Coser资源，文件cmp及资源树diff均一致。备份库SHA-256为`97b18074822a68eb4681303cafd754d7b2422b54cb80f08ee3422061076c22df`，旧程序为`8a75bfa1cdb9b022ae858a07fb9d9d711b1ec7dfb7b78ef8206acb2784d3137b`；不含原媒体、可重建缓存和日志。
+- 22:49:12 CST原子替换后启动，新服务active/running、NRestarts=0，Health／Ready均204，Browse／Manage均200，About精确对应功能提交。启动日志正常，两个Worker、FFmpeg／FFprobe／LibRaw均启用。首次就绪探针早于监听启动，重试成功。本次无schema迁移，正式库仍v21且`integrity_check=ok`，Coser／Work／Character／Tag／Gallery／Source／Item计数保持`135/108/697/23/10/10/780`；配置与备份一致。
+- 未手动执行正式媒体扫描、Manifest Push或实际4K视频转码；真实HEVC首帧、拖动及资源峰值仍待用户播放验收。未推送Git远端或发布Docker镜像。部署记录另行本地提交，运行程序继续对应上述功能提交。
+
 ## 2026-09-30 存档编码文件头直读与按需转码（本地源码，未提交／部署）
 
 - 所有者在上一轮仅设计修订后，明确取消存档“不Remux／不转码”限制：只有经过证明可直读的成员可按需生成可回收播放代理，目录等非存档视频继续沿用现有代理；不可直读成员仍不能在播放请求中临时提取。同步修订架构决策、开发备忘录、实施状态与[专项方案](ARCHIVE_VIDEO_BROWSER_PLAYBACK_PLAN_2026-09-30.md)。

@@ -37,7 +37,7 @@ func TestSchemaV19MigratesCacheLifecycleWithAccurateSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer upgraded.Close()
-	if upgraded.Identity().DatabaseSchemaVersion != 20 {
+	if upgraded.Identity().DatabaseSchemaVersion != 21 {
 		t.Fatal("upgrade did not advance schema")
 	}
 	if err := validateSchemaV20(ctx, upgraded.DB); err != nil {

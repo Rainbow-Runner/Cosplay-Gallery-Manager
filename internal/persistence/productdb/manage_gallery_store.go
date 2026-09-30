@@ -154,17 +154,24 @@ func (s *ManageStore) GalleryDetail(ctx context.Context, setID string) (manage.G
 		return manage.GalleryDetail{}, err
 	}
 	scanRuns, err := s.db.QueryContext(ctx, `SELECT CAST(run.id AS TEXT),run.status,run.started_at_utc,
-		COALESCE(run.completed_at_utc,''),run.error_code FROM gallery_scan_runs run
+		COALESCE(run.completed_at_utc,''),run.error_code,run.added_count,run.missing_count,run.changed_count,
+		run.rebound_count,run.cleared_count,run.cover_reselected,
+		COALESCE(similarity.status,'NONE'),COALESCE(similarity.qualified_count,0) FROM gallery_scan_runs run
+		LEFT JOIN cover_similarity_intents similarity ON similarity.scan_run_id=run.id
 		JOIN gallery_sources source ON source.id=run.source_id WHERE source.gallery_id=? ORDER BY run.id DESC LIMIT 20`, galleryID)
 	if err != nil {
 		return manage.GalleryDetail{}, err
 	}
 	for scanRuns.Next() {
 		var run manage.GalleryScanRun
-		if err := scanRuns.Scan(&run.ID, &run.Status, &run.StartedAt, &run.CompletedAt, &run.ErrorCode); err != nil {
+		var coverReselected int
+		if err := scanRuns.Scan(&run.ID, &run.Status, &run.StartedAt, &run.CompletedAt, &run.ErrorCode,
+			&run.AddedCount, &run.MissingCount, &run.ChangedCount, &run.ReboundCount, &run.ClearedCount, &coverReselected,
+			&run.CoverSimilarityStatus, &run.CoverSimilarityQualifiedCount); err != nil {
 			scanRuns.Close()
 			return manage.GalleryDetail{}, err
 		}
+		run.CoverReselected = coverReselected != 0
 		result.ScanRuns = append(result.ScanRuns, run)
 	}
 	if err := scanRuns.Close(); err != nil {
@@ -419,6 +426,7 @@ const manageGalleryRowSelect = `SELECT gallery.set_id,gallery.slug,gallery.state
 	(SELECT COUNT(*) FROM gallery_source_issues issue WHERE issue.source_id=source.id AND issue.severity='BLOCKING' AND issue.resolved_at_utc IS NULL),
 	COALESCE((SELECT run.error_code FROM gallery_scan_runs run WHERE run.source_id=source.id ORDER BY run.id DESC LIMIT 1),''),
 	COALESCE((SELECT run.completed_at_utc FROM gallery_scan_runs run WHERE run.source_id=source.id ORDER BY run.id DESC LIMIT 1),''),
+	COALESCE((SELECT run.added_count+run.missing_count+run.changed_count+run.rebound_count+run.cover_reselected FROM gallery_scan_runs run WHERE run.source_id=source.id ORDER BY run.id DESC LIMIT 1),0),
 	CASE WHEN inspection.gallery_id IS NULL THEN 'UNCHECKED'
 		WHEN inspection.checked_metadata_revision<>gallery.metadata_revision OR inspection.source_path<>COALESCE(source.source_path,'') THEN 'STALE'
 		ELSE inspection.status END,COALESCE(inspection.checked_at_utc,''),COALESCE((SELECT date_review.status FROM gallery_capture_date_reviews date_review WHERE date_review.gallery_id=gallery.id),'')
@@ -430,7 +438,7 @@ type manageRowScanner interface{ Scan(...any) error }
 func scanManageGalleryRow(scanner manageRowScanner) (manage.GalleryRow, error) {
 	var row manage.GalleryRow
 	var browsable, overLimit int
-	err := scanner.Scan(&row.SetID, &row.Slug, &row.State, &row.Title, &row.ContentRating, &row.MetadataRevision, &row.ScanRevision, &browsable, &row.SourceType, &row.SourcePath, &row.SourceAvailability, &row.ReconcileState, &overLimit, &row.ItemCount, &row.MissingCount, &row.PendingCount, &row.ErrorCount, &row.BlockingIssues, &row.LastScanErrorCode, &row.LastScanCompleted, &row.ManifestStatus, &row.ManifestCheckedAt, &row.CaptureDateReviewStatus)
+	err := scanner.Scan(&row.SetID, &row.Slug, &row.State, &row.Title, &row.ContentRating, &row.MetadataRevision, &row.ScanRevision, &browsable, &row.SourceType, &row.SourcePath, &row.SourceAvailability, &row.ReconcileState, &overLimit, &row.ItemCount, &row.MissingCount, &row.PendingCount, &row.ErrorCount, &row.BlockingIssues, &row.LastScanErrorCode, &row.LastScanCompleted, &row.LastScanChangeCount, &row.ManifestStatus, &row.ManifestCheckedAt, &row.CaptureDateReviewStatus)
 	row.Browsable = browsable == 1
 	row.OverLimit = overLimit == 1
 	return row, err

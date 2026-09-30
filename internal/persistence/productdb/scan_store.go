@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stashapp/stash/internal/archivecheck"
+	"github.com/stashapp/stash/internal/coversimilarity"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/media"
 	"github.com/stashapp/stash/internal/mediaexclusion"
@@ -296,6 +297,10 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 	seenItemIDs := make(map[int64]struct{}, len(observations))
 	claimedPortablePaths := make(map[string]bool, len(options.PortableItemUUIDByPath))
 	manifestBusinessChanged := false
+	var addedCount, missingCount, changedCount, reboundCount, clearedCount int
+	invalidatedCoverItems := make(map[string]bool)
+	var similarityCandidates []string
+	addedByKind := make(map[gallery.MediaKind]int)
 	for _, observation := range observations {
 		if item := byPath[observation.RelativePath]; item != nil {
 			if desired := options.PortableItemUUIDByPath[observation.RelativePath]; desired != "" {
@@ -304,8 +309,18 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 				}
 				claimedPortablePaths[observation.RelativePath] = true
 			}
-			if err := updateObservedItem(ctx, tx, item, observation, scanRunID, now); err != nil {
+			changed, err := updateObservedItem(ctx, tx, item, observation, scanRunID, now)
+			if err != nil {
 				return err
+			}
+			if changed {
+				changedCount++
+				clearedCount++
+				manifestBusinessChanged = true
+				invalidatedCoverItems[item.UUID] = true
+				if observation.MediaKind == gallery.MediaKindStaticImage {
+					similarityCandidates = append(similarityCandidates, item.UUID)
+				}
 			}
 			seenItemIDs[item.ID] = struct{}{}
 			continue
@@ -319,6 +334,7 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 					return err
 				}
 				manifestBusinessChanged = true
+				reboundCount++
 				seenItemIDs[item.ID] = struct{}{}
 				continue
 			}
@@ -337,6 +353,11 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 			return err
 		}
 		manifestBusinessChanged = true
+		addedCount++
+		if observation.MediaKind == gallery.MediaKindStaticImage {
+			similarityCandidates = append(similarityCandidates, itemUUID)
+		}
+		addedByKind[observation.MediaKind]++
 		if ruleExcluded && !rootExcluded {
 			if err := recordAppliedMediaExclusion(ctx, tx, galleryID, itemUUID, ruleExclusion.rule, ruleExclusion.matchedValue, now); err != nil {
 				return err
@@ -351,9 +372,29 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 		return errors.New("portable Manifest Item path did not match exactly one scanned member")
 	}
 
+	missingByKind := make(map[gallery.MediaKind]int)
+	for index := range existing {
+		if _, seen := seenItemIDs[existing[index].ID]; !seen && existing[index].Availability == gallery.AvailabilityAvailable {
+			missingByKind[existing[index].MediaKind]++
+		}
+	}
 	for index := range existing {
 		if _, seen := seenItemIDs[existing[index].ID]; seen {
 			continue
+		}
+		if existing[index].Availability == gallery.AvailabilityAvailable {
+			missingCount++
+			invalidatedCoverItems[existing[index].UUID] = true
+			// Without a path or fingerprint match we cannot identify pairs. Only
+			// treat balanced same-kind churn as replacement; unmatched removals
+			// retain their details in case the source temporarily returns.
+			if sourceType == gallery.SourceTypeArchive && addedByKind[existing[index].MediaKind] > 0 && addedByKind[existing[index].MediaKind] == missingByKind[existing[index].MediaKind] {
+				if err := clearReplacedItemDetails(ctx, tx, &existing[index]); err != nil {
+					return err
+				}
+				clearedCount++
+				manifestBusinessChanged = true
+			}
 		}
 		if _, err := tx.ExecContext(ctx, `
 			UPDATE gallery_items SET availability_state = 'MISSING', updated_at_utc = ?
@@ -362,17 +403,54 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 			return err
 		}
 	}
+	var oldCoverSignature *coversimilarity.Signature
+	if len(similarityCandidates) > 0 {
+		cover, found, coverErr := findCover(ctx, tx, galleryID)
+		if coverErr != nil {
+			return coverErr
+		}
+		if found && (cover.PreferredKind == gallery.CoverItem || cover.PreferredKind == gallery.CoverAutoRandom) {
+			for _, item := range existing {
+				if item.UUID == cover.PreferredItemUUID {
+					sig, hasSignature, sigErr := loadCoverSignature(ctx, tx, item.UUID, item.ContentRevision)
+					if sigErr != nil {
+						return sigErr
+					}
+					if hasSignature {
+						oldCoverSignature = &sig
+					}
+					break
+				}
+			}
+		}
+	}
+	coverReselected, err := reselectScanCover(ctx, tx, galleryID, invalidatedCoverItems, now)
+	if err != nil {
+		return err
+	}
+	if coverReselected {
+		manifestBusinessChanged = true
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE cover_similarity_intents SET status='STALE',completed_at_utc=?
+		WHERE gallery_id=? AND status='PENDING'`, formatTime(normalisedTime(now)), galleryID); err != nil {
+		return err
+	}
+	if coverReselected && len(similarityCandidates) > 0 {
+		if err := stageCoverSimilarityIntent(ctx, tx, galleryID, scanRunID, oldCoverSignature, similarityCandidates, now); err != nil {
+			return err
+		}
+	}
 
 	timestamp := formatTime(normalisedTime(now))
 	if _, err := tx.ExecContext(ctx, `
 		DELETE FROM gallery_scan_observations WHERE scan_run_id = ?;
-		UPDATE gallery_scan_runs SET status = 'COMPLETED', completed_at_utc = ? WHERE id = ?;
+		UPDATE gallery_scan_runs SET status = 'COMPLETED', completed_at_utc = ?,added_count=?,missing_count=?,changed_count=?,rebound_count=?,cleared_count=?,cover_reselected=? WHERE id = ?;
 		UPDATE gallery_sources SET availability_state = 'AVAILABLE',
 			reconcile_state = 'IN_SYNC', over_limit = 0, updated_at_utc = ? WHERE id = ?;
 		UPDATE galleries SET scan_revision = scan_revision + 1, scrubber_revision = scrubber_revision + 1 WHERE id = ?;
 		UPDATE gallery_source_issues SET resolved_at_utc = ?
 			WHERE source_id = ? AND code = 'OVER_LIMIT' AND resolved_at_utc IS NULL
-	`, scanRunID, timestamp, scanRunID, timestamp, sourceID, galleryID, timestamp, sourceID); err != nil {
+	`, scanRunID, timestamp, addedCount, missingCount, changedCount, reboundCount, clearedCount, boolInt(coverReselected), scanRunID, timestamp, sourceID, galleryID, timestamp, sourceID); err != nil {
 		return err
 	}
 	// Archive issues may be suppressed while a member is excluded. Retaining a
@@ -740,10 +818,13 @@ func updateObservedItem(
 	observation ScanObservation,
 	scanRunID int64,
 	now time.Time,
-) error {
+) (bool, error) {
 	contentChanged := item.FullFingerprint != "" && observation.FullFingerprint != "" &&
 		item.FullFingerprint != observation.FullFingerprint
 	category := effectiveScannedCategory(*item, observation)
+	if contentChanged {
+		category = observation.ImageCategory
+	}
 	// A matching content fingerprint does not invalidate previously generated
 	// derivatives. Scanner observations start PENDING because new files need
 	// processing, but existing unchanged Items retain their durable state.
@@ -765,20 +846,75 @@ func updateObservedItem(
 		observation.SourceModifiedStatus, observation.SourceModifiedOrigin, formatTime(normalisedTime(now)), boolInt(contentChanged),
 		scanRunID, formatTime(normalisedTime(now)), item.ID)
 	if err != nil || !contentChanged {
-		return err
+		return false, err
+	}
+	if err := clearReplacedItemDetails(ctx, tx, item); err != nil {
+		return false, err
 	}
 	newRevision := item.ContentRevision + 1
 	if _, err := tx.ExecContext(ctx, `UPDATE media_derivatives SET state='HARD_INVALID',is_current=0
 		WHERE item_uuid=? AND content_revision<>?`, item.UUID, newRevision); err != nil {
-		return err
+		return false, err
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM video_technical_metadata WHERE item_uuid=? AND content_revision<>?`, item.UUID, newRevision); err != nil {
-		return err
+		return false, err
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE processing_jobs SET status='CANCELLED',lease_owner=NULL,lease_expires_at_utc=NULL,
 		last_heartbeat_at_utc=NULL,updated_at_utc=? WHERE item_uuid=? AND content_revision<>?
 		AND status IN ('PENDING','RUNNING','RETRY_WAIT','PAUSED')`, formatTime(normalisedTime(now)), item.UUID, newRevision)
+	return true, err
+}
+
+// Per-item preferences describe the old bytes, not the new media. Path-based
+// exclusion stays intact because it is an explicit safety/visibility decision.
+func clearReplacedItemDetails(ctx context.Context, tx *sql.Tx, item *gallery.Item) error {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM gallery_item_personal_states WHERE gallery_item_id=?`, item.ID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM gallery_item_suggestions WHERE item_uuid=?`, item.UUID); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `UPDATE gallery_items SET caption='' WHERE id=?`, item.ID)
 	return err
+}
+
+func reselectScanCover(ctx context.Context, tx *sql.Tx, galleryID int64, invalidated map[string]bool, now time.Time) (bool, error) {
+	state, found, err := findCover(ctx, tx, galleryID)
+	if err != nil || !found {
+		return false, err
+	}
+	if state.PreferredKind != gallery.CoverItem && state.PreferredKind != gallery.CoverAutoRandom {
+		return false, nil
+	}
+	if !invalidated[state.PreferredItemUUID] {
+		available, err := isStaticMemberAvailable(ctx, tx, galleryID, state.PreferredItemUUID)
+		if err != nil {
+			return false, err
+		}
+		if available {
+			return false, nil
+		}
+	}
+	selected, err := chooseStaticMember(ctx, tx, galleryID, "", rand.Reader)
+	if err != nil {
+		return false, err
+	}
+	state.PreferredKind, state.PreferredItemUUID, state.PreferredPath = gallery.CoverNone, "", ""
+	if selected != "" {
+		state.PreferredKind, state.PreferredItemUUID = gallery.CoverAutoRandom, selected
+	}
+	state.Revision++
+	state.CanUndo = false
+	if err := recomputeEffectiveCover(ctx, tx, &state, false, rand.Reader, now); err != nil {
+		return false, err
+	}
+	if err := persistCoverClearingPrevious(ctx, tx, state); err != nil {
+		return false, err
+	}
+	if err := touchGalleryCoverMetadata(ctx, tx, galleryID, nil, now); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func rebindObservedItem(

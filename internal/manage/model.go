@@ -36,6 +36,7 @@ type GalleryRow struct {
 	BlockingIssues          int
 	LastScanErrorCode       string
 	LastScanCompleted       string
+	LastScanChangeCount     int
 	ManifestStatus          string
 	ManifestCheckedAt       string
 	CaptureDateReviewStatus string
@@ -117,7 +118,10 @@ type GallerySourceIssue struct{ Code, Severity, Message string }
 type GalleryAutomationIssue struct{ RunID, Stage, ErrorCode, RunStatus, CreatedAt string }
 
 type GalleryScanRun struct {
-	ID, Status, StartedAt, CompletedAt, ErrorCode string
+	ID, Status, StartedAt, CompletedAt, ErrorCode, CoverSimilarityStatus string
+	AddedCount, MissingCount, ChangedCount, ReboundCount, ClearedCount   int64
+	CoverSimilarityQualifiedCount                                        int64
+	CoverReselected                                                      bool
 }
 
 type GalleryCast struct {

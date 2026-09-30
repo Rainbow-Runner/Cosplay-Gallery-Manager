@@ -323,7 +323,8 @@ func manageGalleryRow(value manage.GalleryRow) *ManageGalleryRow {
 		MetadataRevision: value.MetadataRevision, ScanRevision: value.ScanRevision, Browsable: value.Browsable, SourceType: string(value.SourceType), SourcePath: value.SourcePath,
 		SourceAvailability: string(value.SourceAvailability), ReconcileState: string(value.ReconcileState), OverLimit: value.OverLimit, ItemCount: value.ItemCount,
 		MissingCount: value.MissingCount, PendingCount: value.PendingCount, ErrorCount: value.ErrorCount, BlockingIssues: value.BlockingIssues,
-		LastScanErrorCode: value.LastScanErrorCode, LastScanCompleted: value.LastScanCompleted, ManifestStatus: value.ManifestStatus, ManifestCheckedAt: value.ManifestCheckedAt, CaptureDateReviewStatus: value.CaptureDateReviewStatus}
+		LastScanErrorCode: value.LastScanErrorCode, LastScanCompleted: value.LastScanCompleted, LastScanChangeCount: value.LastScanChangeCount,
+		ManifestStatus: value.ManifestStatus, ManifestCheckedAt: value.ManifestCheckedAt, CaptureDateReviewStatus: value.CaptureDateReviewStatus}
 }
 func manageGalleryDetail(value manage.GalleryDetail) *ManageGalleryDetail {
 	precision := ShootDatePrecisionUnknown
@@ -365,7 +366,10 @@ func manageGalleryDetail(value manage.GalleryDetail) *ManageGalleryDetail {
 			VideoCodec: item.VideoCodec, AudioCodec: item.AudioCodec})
 	}
 	for _, run := range value.ScanRuns {
-		result.ScanRuns = append(result.ScanRuns, &ManageGalleryScanRun{ID: run.ID, Status: run.Status, StartedAt: run.StartedAt, CompletedAt: run.CompletedAt, ErrorCode: run.ErrorCode})
+		result.ScanRuns = append(result.ScanRuns, &ManageGalleryScanRun{ID: run.ID, Status: run.Status, StartedAt: run.StartedAt, CompletedAt: run.CompletedAt, ErrorCode: run.ErrorCode,
+			AddedCount: int(run.AddedCount), MissingCount: int(run.MissingCount), ChangedCount: int(run.ChangedCount), ReboundCount: int(run.ReboundCount),
+			ClearedCount: int(run.ClearedCount), CoverReselected: run.CoverReselected,
+			CoverSimilarityStatus: run.CoverSimilarityStatus, CoverSimilarityQualifiedCount: int(run.CoverSimilarityQualifiedCount)})
 	}
 	for _, credit := range value.Credits {
 		convertedCredit := &ManageGalleryCredit{CoserUUID: credit.CoserUUID, CoserName: credit.CoserName, Position: strconv.FormatInt(credit.Position, 10)}

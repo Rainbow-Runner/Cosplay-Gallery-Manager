@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stashapp/stash/internal/coversimilarity"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/imagemetadata"
 	"github.com/stashapp/stash/internal/mediaaccess"
@@ -37,6 +38,10 @@ func (worker Worker) RunOne(ctx context.Context, owner string, lease time.Durati
 	}
 	job, err := worker.Database.ProcessingJobs().ClaimNext(ctx, owner, lease, now)
 	if err != nil {
+		if errors.Is(err, productdb.ErrJobNotClaimable) {
+			worker.backfillCoverSignature(ctx)
+			worker.resolveCoverSimilarity(ctx)
+		}
 		return mediaprocessing.Job{}, err
 	}
 	if job.Kind != mediaprocessing.JobItemDerivative && job.Kind != mediaprocessing.JobItemTechnicalMetadata {
@@ -94,12 +99,63 @@ func (worker Worker) RunOne(ctx context.Context, owner string, lease time.Durati
 		if failErr != nil {
 			return job, fmt.Errorf("processing failed (%v) and recording failure failed: %w", processErr, failErr)
 		}
+		if job.Kind == mediaprocessing.JobItemDerivative && job.Variant == mediaprocessing.VariantCard480 {
+			worker.resolveCoverSimilarity(ctx)
+		}
 		return job, processErr
 	}
 	if err := worker.Database.ProcessingJobs().Complete(ctx, job.ID, owner, time.Now()); err != nil {
 		return job, err
 	}
+	if job.Kind == mediaprocessing.JobItemDerivative && job.Variant == mediaprocessing.VariantCard480 {
+		worker.resolveCoverSimilarity(ctx)
+	}
 	return job, nil
+}
+
+func (worker Worker) resolveCoverSimilarity(ctx context.Context) {
+	if _, err := worker.Database.CoverSimilarity().ResolveOne(ctx, time.Now()); err != nil && ctx.Err() == nil {
+		slog.Warn("CGM_COVER_SIMILARITY_RESOLVE_FAILED", "error_type", fmt.Sprintf("%T", err))
+	}
+}
+
+func (worker Worker) backfillCoverSignature(ctx context.Context) {
+	artifact, err := worker.Database.CoverSimilarity().NextUnhashed(ctx)
+	if errors.Is(err, sql.ErrNoRows) {
+		return
+	}
+	if err != nil {
+		slog.Warn("CGM_COVER_SIGNATURE_BACKFILL_FAILED", "stage", "select", "error_type", fmt.Sprintf("%T", err))
+		return
+	}
+	if !worker.saveCoverSignature(ctx, artifact) {
+		if err := worker.Database.CoverSimilarity().RecordBackfillFailure(ctx, artifact, time.Now()); err != nil {
+			slog.Warn("CGM_COVER_SIGNATURE_BACKFILL_FAILED", "stage", "defer", "error_type", fmt.Sprintf("%T", err))
+		}
+	}
+}
+
+func (worker Worker) saveCoverSignature(ctx context.Context, artifact productdb.CoverSignatureArtifact) bool {
+	file, info, err := worker.Cache.OpenGenerated(artifact.CacheRelativePath)
+	if err != nil {
+		slog.Warn("CGM_COVER_SIGNATURE_FAILED", "item_uuid", artifact.ItemUUID, "stage", "open", "error_type", fmt.Sprintf("%T", err))
+		return false
+	}
+	defer file.Close()
+	if info.Size() > 16<<20 {
+		slog.Warn("CGM_COVER_SIGNATURE_FAILED", "item_uuid", artifact.ItemUUID, "stage", "size")
+		return false
+	}
+	signature, err := coversimilarity.Compute(file)
+	if err != nil {
+		slog.Warn("CGM_COVER_SIGNATURE_FAILED", "item_uuid", artifact.ItemUUID, "stage", "compute", "error_type", fmt.Sprintf("%T", err))
+		return false
+	}
+	if err := worker.Database.CoverSimilarity().SaveSignature(ctx, artifact, signature, time.Now()); err != nil {
+		slog.Warn("CGM_COVER_SIGNATURE_FAILED", "item_uuid", artifact.ItemUUID, "stage", "save", "error_type", fmt.Sprintf("%T", err))
+		return false
+	}
+	return true
 }
 
 func (worker Worker) processCaptureDate(ctx context.Context, job mediaprocessing.Job) error {
@@ -392,6 +448,10 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 	if err != nil {
 		_ = worker.Cache.RemoveUnpublished(relative)
 		return err
+	}
+	if item.MediaKind == gallery.MediaKindStaticImage && job.Variant == mediaprocessing.VariantCard480 {
+		worker.saveCoverSignature(ctx, productdb.CoverSignatureArtifact{ItemUUID: item.ItemUUID,
+			ContentRevision: item.ContentRevision, ProfileHash: job.ProfileHash, CacheRelativePath: relative})
 	}
 	if _, coverErr := worker.Database.Covers().Reconcile(ctx, item.GalleryID, false, time.Now()); errors.Is(coverErr, sql.ErrNoRows) {
 		_, _ = worker.Database.Covers().Initialize(ctx, item.GalleryID, time.Now())

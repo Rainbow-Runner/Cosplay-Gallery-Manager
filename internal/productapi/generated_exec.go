@@ -559,6 +559,7 @@ type ComplexityRoot struct {
 		ContentRating           func(childComplexity int) int
 		ErrorCount              func(childComplexity int) int
 		ItemCount               func(childComplexity int) int
+		LastScanChangeCount     func(childComplexity int) int
 		LastScanCompleted       func(childComplexity int) int
 		LastScanErrorCode       func(childComplexity int) int
 		ManifestCheckedAt       func(childComplexity int) int
@@ -579,11 +580,19 @@ type ComplexityRoot struct {
 	}
 
 	ManageGalleryScanRun struct {
-		CompletedAt func(childComplexity int) int
-		ErrorCode   func(childComplexity int) int
-		ID          func(childComplexity int) int
-		StartedAt   func(childComplexity int) int
-		Status      func(childComplexity int) int
+		AddedCount                    func(childComplexity int) int
+		ChangedCount                  func(childComplexity int) int
+		ClearedCount                  func(childComplexity int) int
+		CompletedAt                   func(childComplexity int) int
+		CoverReselected               func(childComplexity int) int
+		CoverSimilarityQualifiedCount func(childComplexity int) int
+		CoverSimilarityStatus         func(childComplexity int) int
+		ErrorCode                     func(childComplexity int) int
+		ID                            func(childComplexity int) int
+		MissingCount                  func(childComplexity int) int
+		ReboundCount                  func(childComplexity int) int
+		StartedAt                     func(childComplexity int) int
+		Status                        func(childComplexity int) int
 	}
 
 	ManageGallerySourceIssue struct {
@@ -4088,6 +4097,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageGalleryRow.ItemCount(childComplexity), true
 
+	case "ManageGalleryRow.lastScanChangeCount":
+		if e.complexity.ManageGalleryRow.LastScanChangeCount == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryRow.LastScanChangeCount(childComplexity), true
+
 	case "ManageGalleryRow.lastScanCompleted":
 		if e.complexity.ManageGalleryRow.LastScanCompleted == nil {
 			break
@@ -4207,12 +4223,54 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageGalleryRow.Title(childComplexity), true
 
+	case "ManageGalleryScanRun.addedCount":
+		if e.complexity.ManageGalleryScanRun.AddedCount == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryScanRun.AddedCount(childComplexity), true
+
+	case "ManageGalleryScanRun.changedCount":
+		if e.complexity.ManageGalleryScanRun.ChangedCount == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryScanRun.ChangedCount(childComplexity), true
+
+	case "ManageGalleryScanRun.clearedCount":
+		if e.complexity.ManageGalleryScanRun.ClearedCount == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryScanRun.ClearedCount(childComplexity), true
+
 	case "ManageGalleryScanRun.completedAt":
 		if e.complexity.ManageGalleryScanRun.CompletedAt == nil {
 			break
 		}
 
 		return e.complexity.ManageGalleryScanRun.CompletedAt(childComplexity), true
+
+	case "ManageGalleryScanRun.coverReselected":
+		if e.complexity.ManageGalleryScanRun.CoverReselected == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryScanRun.CoverReselected(childComplexity), true
+
+	case "ManageGalleryScanRun.coverSimilarityQualifiedCount":
+		if e.complexity.ManageGalleryScanRun.CoverSimilarityQualifiedCount == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryScanRun.CoverSimilarityQualifiedCount(childComplexity), true
+
+	case "ManageGalleryScanRun.coverSimilarityStatus":
+		if e.complexity.ManageGalleryScanRun.CoverSimilarityStatus == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryScanRun.CoverSimilarityStatus(childComplexity), true
 
 	case "ManageGalleryScanRun.errorCode":
 		if e.complexity.ManageGalleryScanRun.ErrorCode == nil {
@@ -4227,6 +4285,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageGalleryScanRun.ID(childComplexity), true
+
+	case "ManageGalleryScanRun.missingCount":
+		if e.complexity.ManageGalleryScanRun.MissingCount == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryScanRun.MissingCount(childComplexity), true
+
+	case "ManageGalleryScanRun.reboundCount":
+		if e.complexity.ManageGalleryScanRun.ReboundCount == nil {
+			break
+		}
+
+		return e.complexity.ManageGalleryScanRun.ReboundCount(childComplexity), true
 
 	case "ManageGalleryScanRun.startedAt":
 		if e.complexity.ManageGalleryScanRun.StartedAt == nil {
@@ -28535,6 +28607,8 @@ func (ec *executionContext) fieldContext_ManageGalleryDetail_row(_ context.Conte
 				return ec.fieldContext_ManageGalleryRow_lastScanErrorCode(ctx, field)
 			case "lastScanCompleted":
 				return ec.fieldContext_ManageGalleryRow_lastScanCompleted(ctx, field)
+			case "lastScanChangeCount":
+				return ec.fieldContext_ManageGalleryRow_lastScanChangeCount(ctx, field)
 			case "manifestStatus":
 				return ec.fieldContext_ManageGalleryRow_manifestStatus(ctx, field)
 			case "manifestCheckedAt":
@@ -29649,6 +29723,22 @@ func (ec *executionContext) fieldContext_ManageGalleryDetail_scanRuns(_ context.
 				return ec.fieldContext_ManageGalleryScanRun_completedAt(ctx, field)
 			case "errorCode":
 				return ec.fieldContext_ManageGalleryScanRun_errorCode(ctx, field)
+			case "addedCount":
+				return ec.fieldContext_ManageGalleryScanRun_addedCount(ctx, field)
+			case "missingCount":
+				return ec.fieldContext_ManageGalleryScanRun_missingCount(ctx, field)
+			case "changedCount":
+				return ec.fieldContext_ManageGalleryScanRun_changedCount(ctx, field)
+			case "reboundCount":
+				return ec.fieldContext_ManageGalleryScanRun_reboundCount(ctx, field)
+			case "clearedCount":
+				return ec.fieldContext_ManageGalleryScanRun_clearedCount(ctx, field)
+			case "coverReselected":
+				return ec.fieldContext_ManageGalleryScanRun_coverReselected(ctx, field)
+			case "coverSimilarityStatus":
+				return ec.fieldContext_ManageGalleryScanRun_coverSimilarityStatus(ctx, field)
+			case "coverSimilarityQualifiedCount":
+				return ec.fieldContext_ManageGalleryScanRun_coverSimilarityQualifiedCount(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageGalleryScanRun", field.Name)
 		},
@@ -32444,6 +32534,8 @@ func (ec *executionContext) fieldContext_ManageGalleryPage_items(_ context.Conte
 				return ec.fieldContext_ManageGalleryRow_lastScanErrorCode(ctx, field)
 			case "lastScanCompleted":
 				return ec.fieldContext_ManageGalleryRow_lastScanCompleted(ctx, field)
+			case "lastScanChangeCount":
+				return ec.fieldContext_ManageGalleryRow_lastScanChangeCount(ctx, field)
 			case "manifestStatus":
 				return ec.fieldContext_ManageGalleryRow_manifestStatus(ctx, field)
 			case "manifestCheckedAt":
@@ -33786,6 +33878,50 @@ func (ec *executionContext) fieldContext_ManageGalleryRow_lastScanCompleted(_ co
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageGalleryRow_lastScanChangeCount(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryRow) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryRow_lastScanChangeCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LastScanChangeCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryRow_lastScanChangeCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryRow",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageGalleryRow_manifestStatus(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryRow) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageGalleryRow_manifestStatus(ctx, field)
 	if err != nil {
@@ -34133,6 +34269,358 @@ func (ec *executionContext) fieldContext_ManageGalleryScanRun_errorCode(_ contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryScanRun_addedCount(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryScanRun) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryScanRun_addedCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AddedCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryScanRun_addedCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryScanRun",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryScanRun_missingCount(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryScanRun) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryScanRun_missingCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MissingCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryScanRun_missingCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryScanRun",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryScanRun_changedCount(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryScanRun) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryScanRun_changedCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ChangedCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryScanRun_changedCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryScanRun",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryScanRun_reboundCount(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryScanRun) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryScanRun_reboundCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ReboundCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryScanRun_reboundCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryScanRun",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryScanRun_clearedCount(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryScanRun) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryScanRun_clearedCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ClearedCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryScanRun_clearedCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryScanRun",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryScanRun_coverReselected(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryScanRun) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryScanRun_coverReselected(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CoverReselected, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryScanRun_coverReselected(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryScanRun",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryScanRun_coverSimilarityStatus(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryScanRun) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryScanRun_coverSimilarityStatus(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CoverSimilarityStatus, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryScanRun_coverSimilarityStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryScanRun",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageGalleryScanRun_coverSimilarityQualifiedCount(ctx context.Context, field graphql.CollectedField, obj *ManageGalleryScanRun) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageGalleryScanRun_coverSimilarityQualifiedCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CoverSimilarityQualifiedCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageGalleryScanRun_coverSimilarityQualifiedCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageGalleryScanRun",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -73788,6 +74276,11 @@ func (ec *executionContext) _ManageGalleryRow(ctx context.Context, sel ast.Selec
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "lastScanChangeCount":
+			out.Values[i] = ec._ManageGalleryRow_lastScanChangeCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "manifestStatus":
 			out.Values[i] = ec._ManageGalleryRow_manifestStatus(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -73859,6 +74352,46 @@ func (ec *executionContext) _ManageGalleryScanRun(ctx context.Context, sel ast.S
 			}
 		case "errorCode":
 			out.Values[i] = ec._ManageGalleryScanRun_errorCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "addedCount":
+			out.Values[i] = ec._ManageGalleryScanRun_addedCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "missingCount":
+			out.Values[i] = ec._ManageGalleryScanRun_missingCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "changedCount":
+			out.Values[i] = ec._ManageGalleryScanRun_changedCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "reboundCount":
+			out.Values[i] = ec._ManageGalleryScanRun_reboundCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "clearedCount":
+			out.Values[i] = ec._ManageGalleryScanRun_clearedCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "coverReselected":
+			out.Values[i] = ec._ManageGalleryScanRun_coverReselected(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "coverSimilarityStatus":
+			out.Values[i] = ec._ManageGalleryScanRun_coverSimilarityStatus(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "coverSimilarityQualifiedCount":
+			out.Values[i] = ec._ManageGalleryScanRun_coverSimilarityQualifiedCount(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

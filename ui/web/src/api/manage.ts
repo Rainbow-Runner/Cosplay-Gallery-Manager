@@ -2,7 +2,7 @@ import { gql } from "@apollo/client";
 
 const MANAGE_GALLERY_DETAIL = gql`
   fragment ManageGalleryDetailFields on ManageGalleryDetail {
-    row { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues lastScanErrorCode lastScanCompleted }
+    row { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues lastScanErrorCode lastScanCompleted lastScanChangeCount }
     aliases description shootDate shootDatePrecision publishDate publishDatePrecision photographerName studioName
     imageCaptureStart imageCaptureEnd videoCaptureStart videoCaptureEnd captureDateCandidate captureDateReviewStatus
     mediaAddedStartUTC mediaAddedEndUTC mediaAddedStatus
@@ -11,7 +11,7 @@ const MANAGE_GALLERY_DETAIL = gql`
     tags { uuid name position }
     externalLinks { uuid type label url position }
     folderMatches { kind uuid name matchedName workUUID workName }
-    scanRuns { id status startedAt completedAt errorCode }
+    scanRuns { id status startedAt completedAt errorCode addedCount missingCount changedCount reboundCount clearedCount coverReselected coverSimilarityStatus coverSimilarityQualifiedCount }
     review { blockers identitySuggestions { id kind value status resolvedAt options { uuid name workName } } sourceIssues { code severity message } automationIssues { runID stage errorCode runStatus createdAt } }
   }
 `;
@@ -19,7 +19,7 @@ const MANAGE_GALLERY_DETAIL = gql`
 export const MANAGE_GALLERIES = gql`
   query ManageGalleries($page: Int!, $issue: String!, $search: String!) { manageGalleries(page: $page, issue: $issue, search: $search) {
     page pageSize totalItems totalPages summary { all draft overLimit unavailable blocking processingError missingGallery manifestAttention captureDateAttention }
-    items { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues lastScanErrorCode lastScanCompleted manifestStatus manifestCheckedAt captureDateReviewStatus }
+    items { setID slug state title contentRating metadataRevision scanRevision browsable sourceType sourcePath sourceAvailability reconcileState overLimit itemCount missingCount pendingCount errorCount blockingIssues lastScanErrorCode lastScanCompleted lastScanChangeCount manifestStatus manifestCheckedAt captureDateReviewStatus }
   } }
 `;
 export const PREVIEW_GALLERY_MANIFEST_BATCH_PUSH = gql`query PreviewGalleryManifestPush($setIDs: [ID!]!) { previewGalleryManifestPush(setIDs: $setIDs) { setID title status metadataRevision path fileHash databaseContentChanged localFileChanged blockReason } }`;

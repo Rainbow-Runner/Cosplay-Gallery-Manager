@@ -78,6 +78,159 @@ func TestScanInitialNaturalGroupedOrderAndAtomicAbort(t *testing.T) {
 	}
 }
 
+func TestScanContentReplacementClearsOldItemDetailsAndRecordsResult(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 30, 10, 0, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	firstRun, err := db.Scans().Begin(ctx, source.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Stage(ctx, firstRun, scanPhoto("one.jpg", "old-bytes")); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Commit(ctx, firstRun, now); err != nil {
+		t.Fatal(err)
+	}
+	item := loadGalleryItemsForTest(t, db, created.ID)[0]
+	if _, err := db.Covers().Initialize(ctx, created.ID, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE gallery_items SET caption='old caption',excluded=1 WHERE id=?`, item.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO gallery_item_personal_states(gallery_item_id,favorite,favorited_at_utc,rating_half_steps,rated_at_utc) VALUES(?,1,?,8,?)`, item.ID, formatTime(now), formatTime(now)); err != nil {
+		t.Fatal(err)
+	}
+	secondRun, err := db.Scans().Begin(ctx, source.ID, now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Stage(ctx, secondRun, scanPhoto("one.jpg", "new-bytes")); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Commit(ctx, secondRun, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	var caption, preferredKind string
+	var excluded, personalCount, changed, cleared, coverReselected int
+	if err := db.QueryRowContext(ctx, `SELECT caption,excluded FROM gallery_items WHERE id=?`, item.ID).Scan(&caption, &excluded); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM gallery_item_personal_states WHERE gallery_item_id=?`, item.ID).Scan(&personalCount); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT changed_count,cleared_count,cover_reselected FROM gallery_scan_runs WHERE id=?`, secondRun).Scan(&changed, &cleared, &coverReselected); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT preferred_kind FROM gallery_covers WHERE gallery_id=?`, created.ID).Scan(&preferredKind); err != nil {
+		t.Fatal(err)
+	}
+	if caption != "" || excluded != 1 || personalCount != 0 || changed != 1 || cleared != 1 || coverReselected != 1 || preferredKind != "NONE" {
+		t.Fatalf("replacement state: caption=%q excluded=%d personal=%d changed=%d cleared=%d cover=%d kind=%s", caption, excluded, personalCount, changed, cleared, coverReselected, preferredKind)
+	}
+}
+
+func TestScanReplacedArchiveMembersDoNotInheritOldDetails(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 30, 11, 0, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	firstRun, err := db.Scans().Begin(ctx, source.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Stage(ctx, firstRun, scanPhoto("old/001.jpg", "old")); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Commit(ctx, firstRun, now); err != nil {
+		t.Fatal(err)
+	}
+	oldItem := loadGalleryItemsForTest(t, db, created.ID)[0]
+	if _, err := db.ExecContext(ctx, `UPDATE gallery_sources SET source_type='ARCHIVE' WHERE id=?`, source.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Covers().Initialize(ctx, created.ID, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE gallery_items SET caption='old caption' WHERE id=?`, oldItem.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO gallery_item_personal_states(gallery_item_id,favorite,favorited_at_utc) VALUES(?,1,?)`, oldItem.ID, formatTime(now)); err != nil {
+		t.Fatal(err)
+	}
+	secondRun, err := db.Scans().Begin(ctx, source.ID, now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Stage(ctx, secondRun, scanPhoto("new/1.jpg", "new")); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Commit(ctx, secondRun, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	var added, missing, cleared, coverReselected, personalCount int
+	var preferredUUID, caption string
+	if err := db.QueryRowContext(ctx, `SELECT added_count,missing_count,cleared_count,cover_reselected FROM gallery_scan_runs WHERE id=?`, secondRun).Scan(&added, &missing, &cleared, &coverReselected); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT preferred_item_uuid FROM gallery_covers WHERE gallery_id=?`, created.ID).Scan(&preferredUUID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT caption FROM gallery_items WHERE id=?`, oldItem.ID).Scan(&caption); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM gallery_item_personal_states WHERE gallery_item_id=?`, oldItem.ID).Scan(&personalCount); err != nil {
+		t.Fatal(err)
+	}
+	if added != 1 || missing != 1 || cleared != 1 || coverReselected != 1 || preferredUUID == oldItem.UUID || caption != "" || personalCount != 0 {
+		t.Fatalf("replacement state: added=%d missing=%d cleared=%d cover=%d preferred=%q caption=%q personal=%d", added, missing, cleared, coverReselected, preferredUUID, caption, personalCount)
+	}
+}
+
+func TestScanDirectoryUnrelatedAddDeleteDoesNotClearMissingItemDetails(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
+	created, source := createEmptySourceFixture(t, db, now)
+	firstRun, err := db.Scans().Begin(ctx, source.ID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Stage(ctx, firstRun, scanPhoto("old.jpg", "old")); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Commit(ctx, firstRun, now); err != nil {
+		t.Fatal(err)
+	}
+	oldItem := loadGalleryItemsForTest(t, db, created.ID)[0]
+	if _, err := db.ExecContext(ctx, `UPDATE gallery_items SET caption='keep this' WHERE id=?`, oldItem.ID); err != nil {
+		t.Fatal(err)
+	}
+	secondRun, err := db.Scans().Begin(ctx, source.ID, now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Stage(ctx, secondRun, scanPhoto("unrelated.jpg", "unrelated")); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Scans().Commit(ctx, secondRun, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	var caption string
+	var cleared int
+	if err := db.QueryRowContext(ctx, `SELECT caption FROM gallery_items WHERE id=?`, oldItem.ID).Scan(&caption); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT cleared_count FROM gallery_scan_runs WHERE id=?`, secondRun).Scan(&cleared); err != nil {
+		t.Fatal(err)
+	}
+	if caption != "keep this" || cleared != 0 {
+		t.Fatalf("caption=%q cleared=%d", caption, cleared)
+	}
+}
+
 func TestCompleteScanAtomicallySummarisesStaticImageModificationRange(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

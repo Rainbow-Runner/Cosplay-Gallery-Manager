@@ -599,17 +599,26 @@ type ManageGalleryRow struct {
 	BlockingIssues          int            `json:"blockingIssues"`
 	LastScanErrorCode       string         `json:"lastScanErrorCode"`
 	LastScanCompleted       string         `json:"lastScanCompleted"`
+	LastScanChangeCount     int            `json:"lastScanChangeCount"`
 	ManifestStatus          string         `json:"manifestStatus"`
 	ManifestCheckedAt       string         `json:"manifestCheckedAt"`
 	CaptureDateReviewStatus string         `json:"captureDateReviewStatus"`
 }
 
 type ManageGalleryScanRun struct {
-	ID          string `json:"id"`
-	Status      string `json:"status"`
-	StartedAt   string `json:"startedAt"`
-	CompletedAt string `json:"completedAt"`
-	ErrorCode   string `json:"errorCode"`
+	ID                            string `json:"id"`
+	Status                        string `json:"status"`
+	StartedAt                     string `json:"startedAt"`
+	CompletedAt                   string `json:"completedAt"`
+	ErrorCode                     string `json:"errorCode"`
+	AddedCount                    int    `json:"addedCount"`
+	MissingCount                  int    `json:"missingCount"`
+	ChangedCount                  int    `json:"changedCount"`
+	ReboundCount                  int    `json:"reboundCount"`
+	ClearedCount                  int    `json:"clearedCount"`
+	CoverReselected               bool   `json:"coverReselected"`
+	CoverSimilarityStatus         string `json:"coverSimilarityStatus"`
+	CoverSimilarityQualifiedCount int    `json:"coverSimilarityQualifiedCount"`
 }
 
 type ManageGallerySourceIssue struct {

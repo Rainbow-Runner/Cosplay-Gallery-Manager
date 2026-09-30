@@ -34,7 +34,7 @@ func TestSchemaV18MigratesToSourceScanEvidenceV19(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer migrated.Close()
-	if migrated.Identity().DatabaseSchemaVersion != 20 {
+	if migrated.Identity().DatabaseSchemaVersion != 21 {
 		t.Fatalf("schema version=%d", migrated.Identity().DatabaseSchemaVersion)
 	}
 	if err := validateSchemaV19(ctx, migrated.DB); err != nil {

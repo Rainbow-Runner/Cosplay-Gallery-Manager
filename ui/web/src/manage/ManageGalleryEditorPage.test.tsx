@@ -49,6 +49,14 @@ function renderPage(mocks: ReadonlyArray<MockedResponse>, tab = "cast", locale: 
 }
 
 describe("ManageGalleryEditorPage relations", () => {
+  it("shows durable similar-cover outcomes in source scan history", async () => {
+    const scanRuns = [{ id: "9", status: "COMPLETED", startedAt: "today", completedAt: "today", errorCode: "",
+      addedCount: 2, missingCount: 1, changedCount: 0, reboundCount: 0, clearedCount: 1,
+      coverReselected: true, coverSimilarityStatus: "MULTIPLE_MATCHED", coverSimilarityQualifiedCount: 2 }];
+    renderPage([{ request: { query: MANAGE_GALLERY, variables: { setID } }, result: { data: { manageGallery: { ...gallery, scanRuns } } } }], "source");
+    expect(await screen.findByText("相似匹配成功（2 张合格）")).toBeInTheDocument();
+  });
+
   it("shows current blockers separately from old automation failures and source issues", async () => {
     renderPage([{ request: { query: MANAGE_GALLERY, variables: { setID } }, result: { data: { manageGallery: { ...gallery, review: {
       blockers: ["BLOCKING_SOURCE_ISSUE", "IDENTITY_SUGGESTION_UNRESOLVED"], identitySuggestions: [{ id: "5", kind: "COSER", value: "Alice", status: "PENDING", resolvedAt: "", options: [{ uuid: "coser-1", name: "Alice", workName: "" }] }],

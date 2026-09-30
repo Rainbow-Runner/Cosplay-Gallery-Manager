@@ -1,7 +1,7 @@
 export interface ManageGalleryRow {
   setID: string; slug: string; state: "DRAFT" | "ACTIVE" | "ARCHIVED"; title: string; contentRating?: "NON_ADULT" | "ADULT" | null;
   metadataRevision: number; scanRevision: number; browsable: boolean; sourceType: string; sourcePath: string; sourceAvailability: string;
-  reconcileState: string; overLimit: boolean; itemCount: number; missingCount: number; pendingCount: number; errorCount: number; blockingIssues: number; lastScanErrorCode: string; lastScanCompleted: string; manifestStatus: string; manifestCheckedAt: string; captureDateReviewStatus: string;
+  reconcileState: string; overLimit: boolean; itemCount: number; missingCount: number; pendingCount: number; errorCount: number; blockingIssues: number; lastScanErrorCode: string; lastScanCompleted: string; lastScanChangeCount: number; manifestStatus: string; manifestCheckedAt: string; captureDateReviewStatus: string;
 }
 export interface ManageGalleryPage { items: ManageGalleryRow[]; summary: { all: number; draft: number; overLimit: number; unavailable: number; blocking: number; processingError: number; missingGallery: number; manifestAttention: number; captureDateAttention: number }; page: number; pageSize: number; totalItems: number; totalPages: number }
 export interface ManageGalleryManifestBatchPreview { setID: string; title: string; status: string; metadataRevision: number; path: string; fileHash: string; databaseContentChanged: boolean; localFileChanged: boolean; blockReason: string }
@@ -22,7 +22,7 @@ export interface ManageGalleryDetail {
   mediaAddedStartUTC?: string; mediaAddedEndUTC?: string; mediaAddedStatus?: "PENDING" | "COMPLETE" | "PARTIAL" | "NONE";
   photographerName: string; studioName: string; items: ManageGalleryItem[]; credits: ManageGalleryCredit[]; tags: ManageGalleryTag[]; externalLinks: ManageGalleryExternalLink[];
   folderMatches: ManageGalleryFolderMatch[];
-  scanRuns: { id: string; status: string; startedAt: string; completedAt: string; errorCode: string }[];
+  scanRuns: { id: string; status: string; startedAt: string; completedAt: string; errorCode: string; addedCount: number; missingCount: number; changedCount: number; reboundCount: number; clearedCount: number; coverReselected: boolean; coverSimilarityStatus: string; coverSimilarityQualifiedCount: number }[];
   review: {
     blockers: string[];
     identitySuggestions: { id: string; kind: "COSER" | "WORK" | "CHARACTER"; value: string; status: "PENDING" | "ACCEPTED" | "REJECTED"; resolvedAt: string; options: { uuid: string; name: string; workName: string }[] }[];

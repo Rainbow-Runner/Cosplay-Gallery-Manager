@@ -1,5 +1,10 @@
 # 本机实际业务应用测试部署
 
+### 2026-10-01 HA-02本机硬件设置与安全规划器部署
+
+- 从清洁提交`7beb4112b001f7fe537c7e8143d2bd7d1070251e`构建并部署，正式程序SHA-256为`534e77e62f0f61f7f28ea1dac8cc1a86ab04d2a65103f9da0685d4ea40ae1e9d`且`vcs.modified=false`。停服回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-ha02-7beb411-UaQEOCsd`保存并复验schema v21数据库、旧程序、配置、systemd单元与两处Coser资源。
+- 正式库迁移至schema v22后完整性和`135/108/697/23/10/10/780`计数不变，默认保持`SOFTWARE`、允许一次软件回退且设备为空；自动v21快照亦验证正常。服务active、NRestarts=0、Health／Ready均204，About对应提交，NVENC／VAAPI仍可用而QSV烟测失败。实际播放仍为软件路径，未修改媒体、Manifest或缓存。
+
 ### 2026-10-01 视频渐进播放与诊断增量部署
 
 - 从清洁提交`03965091a3480fc59003eccde7fab593951907e7`以Go 1.25.12和正式三标签构建，`vcs.modified=false`；正式程序SHA-256为`984742304e8ec2131ad5343db8c789320f69f24899bb3933bbfc958bb3d596c3`，About精确对应源码。

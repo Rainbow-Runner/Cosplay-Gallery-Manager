@@ -12,7 +12,7 @@
 
 ## 已规划、尚未实现
 
-- 视频硬件加速：真实存档业务日志显示首个4秒片段6.621秒、软件转码长期约0.85～0.99倍实时，存档打开与证明仅1ms且读取吞吐具有200倍以上余量；短基准证明NVDEC＋CUDA＋NVENC可显著缩短首片段，但初始输出体积过高，尚不能直接上线。已冻结[分阶段实施方案](HARDWARE_ACCELERATION_PLAN_2026-10-01.md)，HA-01有界只读探测器、稳定状态模型、GraphQL及Manage诊断已随`92fddf3`部署；正式服务诊断`NVENC=AVAILABLE`、`VAAPI=AVAILABLE`、`QSV=SMOKE_TEST_FAILED`。HA-02默认`SOFTWARE`的schema v22本机设置、可用设备白名单、HLS／MP4共用规划器及版本化Profile已完成并通过回归，待独立提交、迁移与部署，也未接入FFmpeg执行。后续NVIDIA生产链路、安全回退、HLS供给优化、VAAPI／调度尚未实现；当前正式服务仍为schema v21和软件管线。
+- 视频硬件加速：真实存档业务日志显示首个4秒片段6.621秒、软件转码长期约0.85～0.99倍实时，存档打开与证明仅1ms且读取吞吐具有200倍以上余量；短基准证明NVDEC＋CUDA＋NVENC可显著缩短首片段，但初始输出体积过高，尚不能直接上线。已冻结[分阶段实施方案](HARDWARE_ACCELERATION_PLAN_2026-10-01.md)。HA-01诊断随`92fddf3`部署；HA-02默认`SOFTWARE`的schema v22本机设置、设备白名单、HLS／MP4共用规划器及版本化Profile随`7beb411`部署。正式服务诊断`NVENC=AVAILABLE`、`VAAPI=AVAILABLE`、`QSV=SMOKE_TEST_FAILED`，运行设置仍为`SOFTWARE`且没有接入硬件执行。后续NVIDIA生产链路、安全回退、HLS供给优化、VAAPI／调度尚未实现。
 - 存档视频真实业务验收：编码文件头有界解码和可直读成员按需转码已从`0b6afb7`部署本机，仍需对赛博修女的4K HEVC/AAC实际播放、首帧延迟、CPU／磁盘峰值、增强缓存回收和浏览器拖动进行业务验收；见[浏览器播放方案](ARCHIVE_VIDEO_BROWSER_PLAYBACK_PLAN_2026-09-30.md)。
 - 封面相似选择的真实图库阈值与吞吐验收：功能已随 schema v21 部署；[实施规划](COVER_SIMILARITY_PLAN_2026-09-30.md)中的 64 位 pHash 距离门槛 6 仍只是保守初值。尚需用获许可的真实替换正例、相似不同图难负例校准误选／漏选，并测量 CARD 签名生成／历史回填耗时。上线不等于真实图库效果验收通过；匹配失败会保留自动重选托底。
 - 后续（有界轮转深度校验）：当前已提供单Gallery显式深扫，常规扫描仍以大小/mtime证据快速判断；同大小同mtime替换只会由显式深扫或后续轮转校验发现。可选低I/O预算的按库轮转深扫及进度指标尚未实现，不应把常规快扫宣称为完整内容审计。
@@ -21,6 +21,8 @@
 - 后续（视频处理第三阶段A）：按需Storyboard Sprite/WebVTT和可访问辅助时间轴仍未实施。[第三阶段B原条件草案](VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)已由真实冷启动证据及本轮ADR更新；当前渐进播放已经部署，但尚未完成真实4K浏览器验收。
 
 ## 已完成
+
+- 2026-10-01 HA-02部署：提交`7beb4112b001f7fe537c7e8143d2bd7d1070251e`已在独立停服回滚副本保护下部署，正式程序SHA-256为`534e77e62f0f61f7f28ea1dac8cc1a86ab04d2a65103f9da0685d4ea40ae1e9d`。正式库从schema v21迁移到v22，完整性`ok`、七类业务计数保持`135/108/697/23/10/10/780`，新增设置确认为`SOFTWARE`／允许回退／空设备；自动v21迁移快照及回滚库均验证正常。服务active、NRestarts=0、Health／Ready均204，硬件诊断仍为NVENC／VAAPI可用、QSV烟测失败。回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-ha02-7beb411-UaQEOCsd`；未触碰媒体、Manifest或缓存，实际播放仍为软件管线。
 
 - 2026-10-01最新部署：视频分阶段诊断与渐进播放提交`03965091a3480fc59003eccde7fab593951907e7`已部署本机，正式二进制SHA-256为`984742304e8ec2131ad5343db8c789320f69f24899bb3933bbfc958bb3d596c3`。服务`active/running`、`NRestarts=0`，Health／Ready均204，About精确对应提交；播放端点的未认证请求返回401。无schema迁移，正式库和停服回滚副本均为schema v21、`integrity_check=ok`，七类业务计数保持`135/108/697/23/10/10/780`。回滚目录为`/home/rainbowrunner/cos/bk/cgm-pre-progressive-0396509-TGEhyG`；真实4K存档首帧、拖动、CPU与磁盘峰值仍待所有者业务验收。
 

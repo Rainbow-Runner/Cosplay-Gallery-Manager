@@ -21,12 +21,15 @@
 - 候选同目录暂存校验后原子替换并启动一次。服务`active/running`、`NRestarts=0`，Health／Ready均204；About精确指向`92fddf3`，正式程序哈希与候选一致。正式库保持schema v21、完整性`ok`及原业务计数，配置哈希仍为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，未修改媒体、Manifest或缓存。
 - 启动后约1秒完成真实宿主机探测：`NVENC=AVAILABLE`、`VAAPI=AVAILABLE`、`QSV=SMOKE_TEST_FAILED`。因此下一生产路线优先NVENC、VAAPI后续补齐，QSV暂不进入生产选择。HA-01只诊断，现有播放仍使用软件路径；尚未远端推送或更新Docker镜像。
 
-### HA-02本机设置与安全规划器（源码完成，待提交／部署）
+### HA-02本机设置与安全规划器提交及部署
 
 - schema v22只为本机`runtime_settings`增加`SOFTWARE | AUTO | NVENC | VAAPI`模式、硬件技术失败时允许一次软件回退的开关及设备技术标识。新建和v21升级均默认`SOFTWARE`，所以升级不会自动改变既有转码；设备标识只接受受限字符并由服务端复核为本次启动诊断`AVAILABLE`的对应后端。QSV因正式烟测失败不进入可保存模式。
 - Manage Settings增加双语本机规划设置，仅列出真实可用后端／设备并明确HA-02不启用硬件执行。完整灾难恢复包随数据库保留设置；Gallery Manifest和可移植迁移包不包含运行设置，因此不会把宿主机GPU选择迁往另一台设备。
 - 新增HLS／完整MP4共用纯规划器。`AUTO`固定按NVENC、VAAPI排序，并核对H.264／HEVC、8-bit像素格式、无旋转、非HDR、设备与实际解码器能力；不支持时只形成软件回退或不可执行计划。Profile纳入工作负载、请求／实际后端、设备、解码／滤镜／编码及码率策略，避免不同输出误复用。当前FFmpeg命令构建器没有消费该计划，正式播放语义和缓存保持不变。
 - 定向Go回归覆盖schema v21→v22迁移与备份、设置读写／并发revision、服务端设备白名单以及规划器后端顺序、设备选择、缺失解码器、10-bit、HDR、旋转、DIRECT和软回退；`mediaprocessing`、`productdb`、`productapi`完整包通过。正式三标签下`mediaprocessing`、`productdb`、`productapi`、`productserver`、`portablecatalog`和`cmd/cgm`回归及同范围Go Vet通过；Web 43个测试文件185项、TypeScript、Manage Settings定向测试和2558模块生产构建通过，只有既有大chunk提示。`git diff --check`通过。正式业务库和运行服务仍为HA-01／schema v21，本轮未触碰数据库、媒体、Manifest或缓存。
+- 累计34文件提交为`7beb4112b001f7fe537c7e8143d2bd7d1070251e`（`Add hardware acceleration planning settings`）。清洁提交三标签候选VCS revision精确匹配且`vcs.modified=false`，构建时间`2026-10-01T14:36:08Z`，候选与正式程序SHA-256均为`534e77e62f0f61f7f28ea1dac8cc1a86ab04d2a65103f9da0685d4ea40ae1e9d`。
+- 22:38 CST停服并确认WAL／SHM关闭；0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-ha02-7beb411-UaQEOCsd`保存一致schema v21数据库、旧程序、配置、用户systemd单元及外部／product-state Coser资源并逐项比对。回滚库SHA-256为`21fa27cca9403f82fa38aafc5f3813684d20b794d15796005c3c1cb9fa52e244`，完整性`ok`，七类计数为`135/108/697/23/10/10/780`。
+- 原子替换并启动后正式库升至schema v22，`integrity_check=ok`且业务计数不变；运行设置确认为`SOFTWARE`、允许一次软件回退、设备为空。自动迁移快照`product.sqlite.pre-schema-v21-1790865561350421230.bak`仍为schema v21、完整性与计数正常，SHA-256为`755f0050a1afb84c41722691691013a312c49234ab11ae74df08fd2f72203c83`。服务active、NRestarts=0、Health／Ready均204，About精确对应提交；启动诊断仍为`NVENC=AVAILABLE`、`VAAPI=AVAILABLE`、`QSV=SMOKE_TEST_FAILED`。未修改配置、媒体、Manifest或缓存，HA-02仍未执行硬件转码。
 
 ## 2026-10-01 视频分阶段诊断与渐进播放提交及本机部署
 

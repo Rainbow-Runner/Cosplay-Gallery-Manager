@@ -5,13 +5,17 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
-## 2026-10-01 视频分阶段诊断与渐进播放（本地源码，未提交／部署）
+## 2026-10-01 视频分阶段诊断与渐进播放提交及本机部署
 
 - 业务实测的两个4K HEVC存档视频85／119.4秒，旧完整MP4代理分别耗时84.082／125.362秒；排队和HTTP请求仅毫秒至亚秒级，瓶颈在CPU FFmpeg流水线。先增加`CGM_VIDEO_STAGE_COMPLETED`与`CGM_VIDEO_FFMPEG_PROGRESS`：队列龄期、容量检查、来源直读证明、MP4/HLS编码、首片段、HLS→MP4封装与缓存登记分别计时，报告技术输出时间、速度、FPS、完成比例和估计剩余时间；失败只记退出码和短Item前缀，避免日志记录源路径／播放令牌／观看历史。
 - 按[渐进播放ADR](../architecture/PROGRESSIVE_VIDEO_PLAYBACK_2026-09-30.md)接入单清晰度4秒MPEG-TS HLS，编码`libx264 veryfast CRF20`和既有1080p／AAC策略；DIRECT及已缓存MP4优先，Remux沿用现有MP4，冷转码优先HLS。分段原子发布后即可播放；定位到尚未生成片段时取消旧编码并从目标片段开始，完整从头生成后再流复制为既有`VIDEO_PLAYBACK`增强MP4缓存，无新增schema。
 - 会话与源Item／revision／所有者Cookie关联；每个manifest／片段请求重新校验登录、Maintenance、Browse可见性和版本；归档仍仅允许严格安全直读，目录视频核对原文件inode／大小／mtime。所有视频编码共享一个CPU槽，临时会话有容量／磁盘门禁、空闲取消、前端释放与启动残留清理；浏览器按需加载本地`hls.js 1.6.16`，无需CDN，并更新第三方声明与SBOM。
-- 合成视频和会话定向测试通过：FFmpeg首片段早于全片完成、Seek时间戳对齐、完整片段重封装、缓存复用、另一已认证Cookie隔离、旧revision拒绝、孤儿临时目录清理；前端按需加载与销毁、请求失败回退及鉴权拒绝测试通过。归档回环测试首次在受限沙箱被拒绝监听，允许本机回环后通过。真实4K首帧、拖动及资源峰值仍待正式环境验收；本轮未触碰正式库、媒体、Manifest或运行服务。
+- 合成视频和会话定向测试通过：FFmpeg首片段早于全片完成、Seek时间戳对齐、完整片段重封装、缓存复用、另一已认证Cookie隔离、旧revision拒绝、孤儿临时目录清理；前端按需加载与销毁、请求失败回退及鉴权拒绝测试通过。归档回环测试首次在受限沙箱被拒绝监听，允许本机回环后通过。真实4K首帧、拖动及资源峰值仍待正式环境验收；提交前未触碰正式库、媒体、Manifest或运行服务。
 - 验证记录：Go `videoplayback`／`mediaprocessing`／`productserver`／`productdb`／`processingworker`完整包回归通过；`mediaaccess`与`processingworker`在允许本机回环的环境重跑通过；嵌入式Web三标签的`productserver`／`videoplayback`／`cmd/cgm`测试通过，完整嵌入式二进制也已本地编译。渐进视频定向`-race`、受影响六包`go vet`通过；Web 43个测试文件185项通过，TypeScript和生产构建通过，`hls.js`按需单独打包。`git diff --check`通过；无正式浏览器或真实4K渐进播放指标声明。
+- 累计28个文件提交为`03965091a3480fc59003eccde7fab593951907e7`（`Add progressive video playback and diagnostics`）。从干净提交以Go 1.25.12和`cgm_web_embed cgm_galleryepic cgm_moegirl`构建，VCS revision精确匹配且`vcs.modified=false`；构建时间`2026-10-01T01:09:11Z`，候选与正式程序SHA-256均为`984742304e8ec2131ad5343db8c789320f69f24899bb3933bbfc958bb3d596c3`。
+- 09:10:55 CST停服并确认MainPID=0、WAL／SHM关闭，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-progressive-0396509-TGEhyG`备份一致数据库、旧程序、运行配置、用户systemd单元及外部／product-state Coser资源；数据库SHA-256为`35569fed9332e2859e1e3ede96d62aeec637c030515ef0113822f02977f3947e`，旧程序为`c20d266ce50f7248c8f4c803a104fd10043c1458809dce563a526959db5eb7dc`，配置为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`。
+- 通过同目录临时文件原子替换并启动后，服务`active/running`、`NRestarts=0`，Health／Ready均204，About精确对应功能提交；实际入口资源为`/assets/index-jfr1eLZT.js`和`/assets/index-Dg1vgDox.css`，新版播放端点未认证请求返回401。启动日志显示两个Worker及FFmpeg／FFprobe／LibRaw正常启用，未见异常错误。
+- 本轮无schema迁移；正式库与停服回滚副本均为schema v21、`integrity_check=ok`，Coser／Work／Character／Tag／Gallery／Source／Item计数保持`135/108/697/23/10/10/780`。配置和两处Coser资源与备份一致，未修改原始媒体、Manifest或既有缓存。真实4K存档的首帧、拖动、CPU及磁盘峰值仍待所有者业务验收；未推送远端或更新Docker镜像。
 
 ## 2026-09-30 存档视频按需转码提交与本机增量部署
 

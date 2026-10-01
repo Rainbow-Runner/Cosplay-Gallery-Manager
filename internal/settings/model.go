@@ -1,11 +1,19 @@
 package settings
 
 type HomeScope string
+type VideoHardwareMode string
 
 const (
 	HomeList  HomeScope = "LIST"
 	HomeMagic HomeScope = "MAGIC"
 	HomeAll   HomeScope = "ALL"
+)
+
+const (
+	VideoHardwareSoftware VideoHardwareMode = "SOFTWARE"
+	VideoHardwareAuto     VideoHardwareMode = "AUTO"
+	VideoHardwareNVENC    VideoHardwareMode = "NVENC"
+	VideoHardwareVAAPI    VideoHardwareMode = "VAAPI"
 )
 
 // Runtime contains business/UI settings that can change while the process is
@@ -43,4 +51,7 @@ type Runtime struct {
 	ArchiveMaxTotalBytes            int64
 	ArchiveMaxCompressionRatio      float64
 	ArchiveMaxImagePixels           int64
+	VideoHardwareMode               VideoHardwareMode
+	VideoHardwareFallbackEnabled    bool
+	VideoHardwareDevice             string
 }

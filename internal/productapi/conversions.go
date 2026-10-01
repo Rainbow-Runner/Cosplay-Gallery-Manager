@@ -542,7 +542,8 @@ func manageRuntimeSettings(value settings.Runtime) *ManageRuntimeSettings {
 		AutomaticScanOnStartup: value.AutomaticScanOnStartup, AutomaticScanIntervalMinutes: value.AutomaticScanIntervalMinutes,
 		DailyBackupEnabled: value.DailyBackupEnabled, DailyBackupRetention: value.DailyBackupRetention,
 		ArchiveMaxEntries: value.ArchiveMaxEntries, ArchiveMaxEntryBytes: value.ArchiveMaxEntryBytes, ArchiveMaxTotalBytes: value.ArchiveMaxTotalBytes,
-		ArchiveMaxCompressionRatio: value.ArchiveMaxCompressionRatio, ArchiveMaxImagePixels: value.ArchiveMaxImagePixels}
+		ArchiveMaxCompressionRatio: value.ArchiveMaxCompressionRatio, ArchiveMaxImagePixels: value.ArchiveMaxImagePixels,
+		VideoHardwareMode: string(value.VideoHardwareMode), VideoHardwareFallbackEnabled: value.VideoHardwareFallbackEnabled, VideoHardwareDevice: value.VideoHardwareDevice}
 }
 
 func manageProcessingJobPage(value productdb.ProcessingJobPage) *ManageProcessingJobPage {

@@ -37,7 +37,7 @@ func TestSchemaV20UpgradeAddsDurableScanSummary(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer upgraded.Close()
-	if upgraded.Identity().DatabaseSchemaVersion != 21 {
+	if upgraded.Identity().DatabaseSchemaVersion != 22 {
 		t.Fatalf("schema=%d", upgraded.Identity().DatabaseSchemaVersion)
 	}
 	if err := validateSchemaV21(ctx, upgraded.DB); err != nil {

@@ -795,6 +795,9 @@ func (r *mutationResolver) ScanGallerySource(ctx context.Context, setID string, 
 
 // UpdateRuntimeSettings is the resolver for the updateRuntimeSettings field.
 func (r *mutationResolver) UpdateRuntimeSettings(ctx context.Context, expectedSettingsRevision int64, input RuntimeSettingsInput) (*ManageRuntimeSettings, error) {
+	if err := r.validateVideoHardwareSettings(ctx, input.VideoHardwareMode, input.VideoHardwareDevice); err != nil {
+		return nil, manageError(err)
+	}
 	value, err := r.Database.Settings().Update(ctx, expectedSettingsRevision, settings.Runtime{HomeScope: settings.HomeScope(input.HomeScope),
 		GalleryCardScrubberEnabled: input.GalleryCardScrubberEnabled, GalleryDetailMediaFilterEnabled: input.GalleryDetailMediaFilterEnabled,
 		GalleryCardControlsVisible: input.GalleryCardControlsVisible, MediaCardControlsVisible: input.MediaCardControlsVisible,
@@ -809,7 +812,8 @@ func (r *mutationResolver) UpdateRuntimeSettings(ctx context.Context, expectedSe
 		AutomaticSchedulesSuspended: input.AutomaticSchedulesSuspended, DailyBackupEnabled: input.DailyBackupEnabled,
 		DailyBackupRetention: input.DailyBackupRetention, ArchiveMaxEntries: input.ArchiveMaxEntries,
 		ArchiveMaxEntryBytes: input.ArchiveMaxEntryBytes, ArchiveMaxTotalBytes: input.ArchiveMaxTotalBytes,
-		ArchiveMaxCompressionRatio: input.ArchiveMaxCompressionRatio, ArchiveMaxImagePixels: input.ArchiveMaxImagePixels}, time.Now())
+		ArchiveMaxCompressionRatio: input.ArchiveMaxCompressionRatio, ArchiveMaxImagePixels: input.ArchiveMaxImagePixels,
+		VideoHardwareMode: settings.VideoHardwareMode(input.VideoHardwareMode), VideoHardwareFallbackEnabled: input.VideoHardwareFallbackEnabled, VideoHardwareDevice: input.VideoHardwareDevice}, time.Now())
 	if err != nil {
 		r.auditManage(ctx, "RUNTIME_SETTINGS_UPDATE", "SETTINGS", "runtime", "SETTINGS_UPDATE_FAILED", err, nil)
 		return nil, manageError(err)

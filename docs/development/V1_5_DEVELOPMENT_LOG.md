@@ -21,6 +21,13 @@
 - 候选同目录暂存校验后原子替换并启动一次。服务`active/running`、`NRestarts=0`，Health／Ready均204；About精确指向`92fddf3`，正式程序哈希与候选一致。正式库保持schema v21、完整性`ok`及原业务计数，配置哈希仍为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，未修改媒体、Manifest或缓存。
 - 启动后约1秒完成真实宿主机探测：`NVENC=AVAILABLE`、`VAAPI=AVAILABLE`、`QSV=SMOKE_TEST_FAILED`。因此下一生产路线优先NVENC、VAAPI后续补齐，QSV暂不进入生产选择。HA-01只诊断，现有播放仍使用软件路径；尚未远端推送或更新Docker镜像。
 
+### HA-02本机设置与安全规划器（源码完成，待提交／部署）
+
+- schema v22只为本机`runtime_settings`增加`SOFTWARE | AUTO | NVENC | VAAPI`模式、硬件技术失败时允许一次软件回退的开关及设备技术标识。新建和v21升级均默认`SOFTWARE`，所以升级不会自动改变既有转码；设备标识只接受受限字符并由服务端复核为本次启动诊断`AVAILABLE`的对应后端。QSV因正式烟测失败不进入可保存模式。
+- Manage Settings增加双语本机规划设置，仅列出真实可用后端／设备并明确HA-02不启用硬件执行。完整灾难恢复包随数据库保留设置；Gallery Manifest和可移植迁移包不包含运行设置，因此不会把宿主机GPU选择迁往另一台设备。
+- 新增HLS／完整MP4共用纯规划器。`AUTO`固定按NVENC、VAAPI排序，并核对H.264／HEVC、8-bit像素格式、无旋转、非HDR、设备与实际解码器能力；不支持时只形成软件回退或不可执行计划。Profile纳入工作负载、请求／实际后端、设备、解码／滤镜／编码及码率策略，避免不同输出误复用。当前FFmpeg命令构建器没有消费该计划，正式播放语义和缓存保持不变。
+- 定向Go回归覆盖schema v21→v22迁移与备份、设置读写／并发revision、服务端设备白名单以及规划器后端顺序、设备选择、缺失解码器、10-bit、HDR、旋转、DIRECT和软回退；`mediaprocessing`、`productdb`、`productapi`完整包通过。正式三标签下`mediaprocessing`、`productdb`、`productapi`、`productserver`、`portablecatalog`和`cmd/cgm`回归及同范围Go Vet通过；Web 43个测试文件185项、TypeScript、Manage Settings定向测试和2558模块生产构建通过，只有既有大chunk提示。`git diff --check`通过。正式业务库和运行服务仍为HA-01／schema v21，本轮未触碰数据库、媒体、Manifest或缓存。
+
 ## 2026-10-01 视频分阶段诊断与渐进播放提交及本机部署
 
 - 业务实测的两个4K HEVC存档视频85／119.4秒，旧完整MP4代理分别耗时84.082／125.362秒；排队和HTTP请求仅毫秒至亚秒级，瓶颈在CPU FFmpeg流水线。先增加`CGM_VIDEO_STAGE_COMPLETED`与`CGM_VIDEO_FFMPEG_PROGRESS`：队列龄期、容量检查、来源直读证明、MP4/HLS编码、首片段、HLS→MP4封装与缓存登记分别计时，报告技术输出时间、速度、FPS、完成比例和估计剩余时间；失败只记退出码和短Item前缀，避免日志记录源路径／播放令牌／观看历史。

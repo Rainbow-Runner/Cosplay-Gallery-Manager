@@ -64,6 +64,7 @@ export interface ManageRuntimeSettings {
   enhancedCacheMaximumBytes: number; minimumFreeBytes: number; minimumFreePercent: number; automaticScanEnabled: boolean; automaticScanOnStartup: boolean; automaticScanIntervalMinutes: number; automaticSchedulesSuspended: boolean;
   dailyBackupEnabled: boolean; dailyBackupRetention: number;
   archiveMaxEntries: number; archiveMaxEntryBytes: number; archiveMaxTotalBytes: number; archiveMaxCompressionRatio: number; archiveMaxImagePixels: number;
+  videoHardwareMode: "SOFTWARE" | "AUTO" | "NVENC" | "VAAPI"; videoHardwareFallbackEnabled: boolean; videoHardwareDevice: string;
 }
 
 export interface ManageVideoDependencyStatus {

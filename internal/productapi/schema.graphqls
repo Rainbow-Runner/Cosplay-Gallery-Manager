@@ -390,6 +390,7 @@ type ManageRuntimeSettings {
   enhancedCacheMaximumBytes: Int64! minimumFreeBytes: Int64! minimumFreePercent: Float! automaticScanEnabled: Boolean! automaticScanOnStartup: Boolean! automaticScanIntervalMinutes: Int! automaticSchedulesSuspended: Boolean!
   dailyBackupEnabled: Boolean! dailyBackupRetention: Int!
   archiveMaxEntries: Int! archiveMaxEntryBytes: Int64! archiveMaxTotalBytes: Int64! archiveMaxCompressionRatio: Float! archiveMaxImagePixels: Int64!
+  videoHardwareMode: String! videoHardwareFallbackEnabled: Boolean! videoHardwareDevice: String!
 }
 type ManageCacheStorage {
   path: String!
@@ -430,6 +431,7 @@ input RuntimeSettingsInput {
   enhancedCacheMaximumBytes: Int64! minimumFreeBytes: Int64! minimumFreePercent: Float! automaticScanEnabled: Boolean! automaticScanOnStartup: Boolean! automaticScanIntervalMinutes: Int! automaticSchedulesSuspended: Boolean!
   dailyBackupEnabled: Boolean! dailyBackupRetention: Int!
   archiveMaxEntries: Int! archiveMaxEntryBytes: Int64! archiveMaxTotalBytes: Int64! archiveMaxCompressionRatio: Float! archiveMaxImagePixels: Int64!
+  videoHardwareMode: String! videoHardwareFallbackEnabled: Boolean! videoHardwareDevice: String!
 }
 type ManageProcessingJob { id: Int64! kind: String! galleryID: Int64 itemUUID: ID variant: String! status: String! priority: Int! attemptCount: Int! maxAttempts: Int! lastErrorCode: String! structuralFailure: Boolean! createdAt: String! updatedAt: String! }
 type ManageProcessingJobPage { items: [ManageProcessingJob!]! page: Int! pageSize: Int! totalItems: Int! totalPages: Int! }

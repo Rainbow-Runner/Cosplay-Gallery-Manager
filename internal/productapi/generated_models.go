@@ -1115,6 +1115,9 @@ type ManageRuntimeSettings struct {
 	ArchiveMaxTotalBytes            int64       `json:"archiveMaxTotalBytes"`
 	ArchiveMaxCompressionRatio      float64     `json:"archiveMaxCompressionRatio"`
 	ArchiveMaxImagePixels           int64       `json:"archiveMaxImagePixels"`
+	VideoHardwareMode               string      `json:"videoHardwareMode"`
+	VideoHardwareFallbackEnabled    bool        `json:"videoHardwareFallbackEnabled"`
+	VideoHardwareDevice             string      `json:"videoHardwareDevice"`
 }
 
 type ManageSocialAccount struct {
@@ -1382,6 +1385,9 @@ type RuntimeSettingsInput struct {
 	ArchiveMaxTotalBytes            int64       `json:"archiveMaxTotalBytes"`
 	ArchiveMaxCompressionRatio      float64     `json:"archiveMaxCompressionRatio"`
 	ArchiveMaxImagePixels           int64       `json:"archiveMaxImagePixels"`
+	VideoHardwareMode               string      `json:"videoHardwareMode"`
+	VideoHardwareFallbackEnabled    bool        `json:"videoHardwareFallbackEnabled"`
+	VideoHardwareDevice             string      `json:"videoHardwareDevice"`
 }
 
 type SearchHit struct {

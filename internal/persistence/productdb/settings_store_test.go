@@ -19,7 +19,8 @@ func TestRuntimeSettingsDefaultsAndOptimisticUpdate(t *testing.T) {
 	if defaults.Revision != 1 || defaults.HomeScope != settings.HomeList || !defaults.GalleryCardScrubberEnabled ||
 		defaults.GalleryDetailMediaFilterEnabled || defaults.RelatedLimit != 6 || defaults.RandomLimit != 24 ||
 		defaults.TagParentWeight != 0.25 || defaults.TagMinimumScore != 0.05 || defaults.RandomGalleryRepeatDecay != 0.25 ||
-		defaults.GalleryAnimatedPlaybackLimit != 12 || defaults.GalleryAnimatedLockIntervalMS != 800 {
+		defaults.GalleryAnimatedPlaybackLimit != 12 || defaults.GalleryAnimatedLockIntervalMS != 800 ||
+		defaults.VideoHardwareMode != settings.VideoHardwareSoftware || !defaults.VideoHardwareFallbackEnabled || defaults.VideoHardwareDevice != "" {
 		t.Fatalf("runtime defaults = %#v", defaults)
 	}
 	defaults.HomeScope = settings.HomeAll
@@ -38,6 +39,16 @@ func TestRuntimeSettingsDefaultsAndOptimisticUpdate(t *testing.T) {
 	invalid.RandomStaticQuota = 0.8
 	if _, err := db.Settings().Update(ctx, updated.Revision, invalid, time.Now()); err == nil {
 		t.Fatal("invalid random quotas were accepted")
+	}
+	invalid = updated
+	invalid.VideoHardwareMode = "QSV"
+	if _, err := db.Settings().Update(ctx, updated.Revision, invalid, time.Now()); err == nil {
+		t.Fatal("unsupported hardware mode was accepted")
+	}
+	invalid = updated
+	invalid.VideoHardwareDevice = "/dev/dri/renderD128"
+	if _, err := db.Settings().Update(ctx, updated.Revision, invalid, time.Now()); err == nil {
+		t.Fatal("unsafe hardware device was accepted")
 	}
 	invalid = updated
 	invalid.GalleryAnimatedPlaybackLimit = 17

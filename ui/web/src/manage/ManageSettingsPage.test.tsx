@@ -20,6 +20,7 @@ const runtimeSettings = {
   automaticScanEnabled: false, automaticScanOnStartup: false, automaticScanIntervalMinutes: 1440, automaticSchedulesSuspended: false, dailyBackupEnabled: true, dailyBackupRetention: 7,
   archiveMaxEntries: 10000, archiveMaxEntryBytes: 2147483648, archiveMaxTotalBytes: 2147483648,
   archiveMaxCompressionRatio: 200, archiveMaxImagePixels: 250000000,
+  videoHardwareMode: "SOFTWARE", videoHardwareFallbackEnabled: true, videoHardwareDevice: "",
 };
 
 describe("ManageSettingsPage cache status", () => {
@@ -53,6 +54,12 @@ describe("ManageSettingsPage cache status", () => {
 		expect(screen.getByText("可用 / Available")).toBeInTheDocument();
 		expect(screen.getByText("权限不足 / Permission denied")).toBeInTheDocument();
 		expect(screen.getByText("nvidia0 · h264_nvenc · scale_cuda · h264_cuvid / hevc_cuvid")).toBeInTheDocument();
+		expect(screen.getByLabelText("转码模式 / Transcode mode")).toHaveValue("SOFTWARE");
+		expect(screen.getByRole("option", { name: "NVENC" })).toBeEnabled();
+		expect(screen.getByRole("option", { name: "VAAPI" })).toBeDisabled();
+		fireEvent.change(screen.getByLabelText("转码模式 / Transcode mode"), { target: { value: "NVENC" } });
+		expect(screen.getByLabelText("设备 / Device")).toBeEnabled();
+		expect(screen.getByRole("option", { name: "nvidia0" })).toBeEnabled();
     expect(screen.getByLabelText("作者 / Author")).toBeChecked();
     expect(screen.getByLabelText("GPS 位置元数据")).not.toBeChecked();
     expect(screen.queryByDisplayValue("/var/cache/cgm")).not.toBeInTheDocument();

@@ -1089,6 +1089,9 @@ type ComplexityRoot struct {
 		TagMaximumDepth                 func(childComplexity int) int
 		TagMinimumScore                 func(childComplexity int) int
 		TagParentWeight                 func(childComplexity int) int
+		VideoHardwareDevice             func(childComplexity int) int
+		VideoHardwareFallbackEnabled    func(childComplexity int) int
+		VideoHardwareMode               func(childComplexity int) int
 	}
 
 	ManageSocialAccount struct {
@@ -6854,6 +6857,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageRuntimeSettings.TagParentWeight(childComplexity), true
+
+	case "ManageRuntimeSettings.videoHardwareDevice":
+		if e.complexity.ManageRuntimeSettings.VideoHardwareDevice == nil {
+			break
+		}
+
+		return e.complexity.ManageRuntimeSettings.VideoHardwareDevice(childComplexity), true
+
+	case "ManageRuntimeSettings.videoHardwareFallbackEnabled":
+		if e.complexity.ManageRuntimeSettings.VideoHardwareFallbackEnabled == nil {
+			break
+		}
+
+		return e.complexity.ManageRuntimeSettings.VideoHardwareFallbackEnabled(childComplexity), true
+
+	case "ManageRuntimeSettings.videoHardwareMode":
+		if e.complexity.ManageRuntimeSettings.VideoHardwareMode == nil {
+			break
+		}
+
+		return e.complexity.ManageRuntimeSettings.VideoHardwareMode(childComplexity), true
 
 	case "ManageSocialAccount.handle":
 		if e.complexity.ManageSocialAccount.Handle == nil {
@@ -50920,6 +50944,138 @@ func (ec *executionContext) fieldContext_ManageRuntimeSettings_archiveMaxImagePi
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageRuntimeSettings_videoHardwareMode(ctx context.Context, field graphql.CollectedField, obj *ManageRuntimeSettings) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageRuntimeSettings_videoHardwareMode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoHardwareMode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageRuntimeSettings_videoHardwareMode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageRuntimeSettings",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageRuntimeSettings_videoHardwareFallbackEnabled(ctx context.Context, field graphql.CollectedField, obj *ManageRuntimeSettings) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageRuntimeSettings_videoHardwareFallbackEnabled(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoHardwareFallbackEnabled, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageRuntimeSettings_videoHardwareFallbackEnabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageRuntimeSettings",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageRuntimeSettings_videoHardwareDevice(ctx context.Context, field graphql.CollectedField, obj *ManageRuntimeSettings) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageRuntimeSettings_videoHardwareDevice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VideoHardwareDevice, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageRuntimeSettings_videoHardwareDevice(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageRuntimeSettings",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageSocialAccount_uuid(ctx context.Context, field graphql.CollectedField, obj *ManageSocialAccount) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageSocialAccount_uuid(ctx, field)
 	if err != nil {
@@ -58061,6 +58217,12 @@ func (ec *executionContext) fieldContext_Mutation_updateRuntimeSettings(ctx cont
 				return ec.fieldContext_ManageRuntimeSettings_archiveMaxCompressionRatio(ctx, field)
 			case "archiveMaxImagePixels":
 				return ec.fieldContext_ManageRuntimeSettings_archiveMaxImagePixels(ctx, field)
+			case "videoHardwareMode":
+				return ec.fieldContext_ManageRuntimeSettings_videoHardwareMode(ctx, field)
+			case "videoHardwareFallbackEnabled":
+				return ec.fieldContext_ManageRuntimeSettings_videoHardwareFallbackEnabled(ctx, field)
+			case "videoHardwareDevice":
+				return ec.fieldContext_ManageRuntimeSettings_videoHardwareDevice(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageRuntimeSettings", field.Name)
 		},
@@ -63266,6 +63428,12 @@ func (ec *executionContext) fieldContext_Query_manageRuntimeSettings(_ context.C
 				return ec.fieldContext_ManageRuntimeSettings_archiveMaxCompressionRatio(ctx, field)
 			case "archiveMaxImagePixels":
 				return ec.fieldContext_ManageRuntimeSettings_archiveMaxImagePixels(ctx, field)
+			case "videoHardwareMode":
+				return ec.fieldContext_ManageRuntimeSettings_videoHardwareMode(ctx, field)
+			case "videoHardwareFallbackEnabled":
+				return ec.fieldContext_ManageRuntimeSettings_videoHardwareFallbackEnabled(ctx, field)
+			case "videoHardwareDevice":
+				return ec.fieldContext_ManageRuntimeSettings_videoHardwareDevice(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageRuntimeSettings", field.Name)
 		},
@@ -70625,7 +70793,7 @@ func (ec *executionContext) unmarshalInputRuntimeSettingsInput(ctx context.Conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"homeScope", "galleryCardScrubberEnabled", "galleryDetailMediaFilterEnabled", "galleryCardControlsVisible", "mediaCardControlsVisible", "detailPersonalControlsVisible", "galleryAnimatedPlaybackLimit", "galleryAnimatedLockIntervalMS", "relatedLimit", "tagParentWeight", "tagMinimumScore", "tagMaximumDepth", "randomLimit", "randomStaticQuota", "randomGIFQuota", "randomVideoQuota", "randomGalleryRepeatDecay", "enhancedCacheMaximumBytes", "minimumFreeBytes", "minimumFreePercent", "automaticScanEnabled", "automaticScanOnStartup", "automaticScanIntervalMinutes", "automaticSchedulesSuspended", "dailyBackupEnabled", "dailyBackupRetention", "archiveMaxEntries", "archiveMaxEntryBytes", "archiveMaxTotalBytes", "archiveMaxCompressionRatio", "archiveMaxImagePixels"}
+	fieldsInOrder := [...]string{"homeScope", "galleryCardScrubberEnabled", "galleryDetailMediaFilterEnabled", "galleryCardControlsVisible", "mediaCardControlsVisible", "detailPersonalControlsVisible", "galleryAnimatedPlaybackLimit", "galleryAnimatedLockIntervalMS", "relatedLimit", "tagParentWeight", "tagMinimumScore", "tagMaximumDepth", "randomLimit", "randomStaticQuota", "randomGIFQuota", "randomVideoQuota", "randomGalleryRepeatDecay", "enhancedCacheMaximumBytes", "minimumFreeBytes", "minimumFreePercent", "automaticScanEnabled", "automaticScanOnStartup", "automaticScanIntervalMinutes", "automaticSchedulesSuspended", "dailyBackupEnabled", "dailyBackupRetention", "archiveMaxEntries", "archiveMaxEntryBytes", "archiveMaxTotalBytes", "archiveMaxCompressionRatio", "archiveMaxImagePixels", "videoHardwareMode", "videoHardwareFallbackEnabled", "videoHardwareDevice"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -70849,6 +71017,27 @@ func (ec *executionContext) unmarshalInputRuntimeSettingsInput(ctx context.Conte
 				return it, err
 			}
 			it.ArchiveMaxImagePixels = data
+		case "videoHardwareMode":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("videoHardwareMode"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.VideoHardwareMode = data
+		case "videoHardwareFallbackEnabled":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("videoHardwareFallbackEnabled"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.VideoHardwareFallbackEnabled = data
+		case "videoHardwareDevice":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("videoHardwareDevice"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.VideoHardwareDevice = data
 		}
 	}
 
@@ -78281,6 +78470,21 @@ func (ec *executionContext) _ManageRuntimeSettings(ctx context.Context, sel ast.
 			}
 		case "archiveMaxImagePixels":
 			out.Values[i] = ec._ManageRuntimeSettings_archiveMaxImagePixels(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoHardwareMode":
+			out.Values[i] = ec._ManageRuntimeSettings_videoHardwareMode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoHardwareFallbackEnabled":
+			out.Values[i] = ec._ManageRuntimeSettings_videoHardwareFallbackEnabled(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "videoHardwareDevice":
+			out.Values[i] = ec._ManageRuntimeSettings_videoHardwareDevice(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

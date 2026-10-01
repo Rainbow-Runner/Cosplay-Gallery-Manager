@@ -2,7 +2,7 @@
 
 > 当前里程碑：1.5 本机业务迭代与可诊断性增强
 > 状态：进行中
-> 更新日期：2026-10-01
+> 更新日期：2026-10-02
 
 ## 2026-10-01 已部署：视频耗时诊断与渐进播放
 
@@ -12,7 +12,7 @@
 
 ## 进行中或尚未完成验收
 
-- 视频硬件加速：已冻结[分阶段实施方案](HARDWARE_ACCELERATION_PLAN_2026-10-01.md)。HA-01诊断随`92fddf3`部署；HA-02默认`SOFTWARE`的schema v22本机设置、设备白名单、共用规划器及版本化Profile随`7beb411`部署，正式服务仍为该版本。HA-03本地源码已把受支持的H.264／HEVC 8-bit渐进HLS接入NVDEC＋CUDA＋NVENC，并保持VAAPI不执行；真实4K HEVC 12秒样本由软件约9.68秒降至约2.21秒，最终候选输出比软件约大22.6%，客观SSIM没有下降。端到端测试还发现并修复NVENC强制帧未成为IDR、无法严格4秒分段的问题；宿主机门禁现覆盖持久NVENC设置、Browse授权、目录完整生成及MP4提升、TAR／Copy 7z安全Range Seek、取消与临时清理。硬件运行失败已使用独立错误并禁止前端绕过设置静默创建软件代理。尚未提交／部署，真实业务存档、浏览器连续播放／拖动／取消和主观画质仍待验收。运行期一次性安全软件回退、完整MP4统一、HLS供给优化、VAAPI／调度仍分别属于HA-04～HA-06。
+- 视频硬件加速：已冻结[分阶段实施方案](HARDWARE_ACCELERATION_PLAN_2026-10-01.md)。HA-01诊断随`92fddf3`部署；HA-02默认`SOFTWARE`的schema v22本机设置、设备白名单、共用规划器及版本化Profile随`7beb411`部署；HA-03受支持H.264／HEVC 8-bit的NVDEC＋CUDA＋NVENC渐进HLS随`3805cc8`部署，正式服务仍保持`SOFTWARE`。真实4K HEVC 12秒样本由软件约9.68秒降至约2.21秒，最终候选输出比软件约大22.6%，客观SSIM没有下降。端到端门禁覆盖持久NVENC设置、Browse授权、目录完整生成及MP4提升、TAR／Copy 7z安全Range Seek、取消与临时清理，并修复NVENC强制帧未成为IDR及前端隐式软件回退。真实业务存档、浏览器连续播放／拖动／取消和主观画质仍待所有者显式启用NVENC后验收。运行期一次性安全软件回退、完整MP4统一、HLS供给优化、VAAPI／调度仍分别属于HA-04～HA-06。
 - 存档视频真实业务验收：编码文件头有界解码和可直读成员按需转码已从`0b6afb7`部署本机，仍需对赛博修女的4K HEVC/AAC实际播放、首帧延迟、CPU／磁盘峰值、增强缓存回收和浏览器拖动进行业务验收；见[浏览器播放方案](ARCHIVE_VIDEO_BROWSER_PLAYBACK_PLAN_2026-09-30.md)。
 - 封面相似选择的真实图库阈值与吞吐验收：功能已随 schema v21 部署；[实施规划](COVER_SIMILARITY_PLAN_2026-09-30.md)中的 64 位 pHash 距离门槛 6 仍只是保守初值。尚需用获许可的真实替换正例、相似不同图难负例校准误选／漏选，并测量 CARD 签名生成／历史回填耗时。上线不等于真实图库效果验收通过；匹配失败会保留自动重选托底。
 - 后续（有界轮转深度校验）：当前已提供单Gallery显式深扫，常规扫描仍以大小/mtime证据快速判断；同大小同mtime替换只会由显式深扫或后续轮转校验发现。可选低I/O预算的按库轮转深扫及进度指标尚未实现，不应把常规快扫宣称为完整内容审计。
@@ -21,6 +21,8 @@
 - 后续（视频处理第三阶段A）：按需Storyboard Sprite/WebVTT和可访问辅助时间轴仍未实施。[第三阶段B原条件草案](VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)已由真实冷启动证据及本轮ADR更新；当前渐进播放已经部署，但尚未完成真实4K浏览器验收。
 
 ## 已完成
+
+- 2026-10-02 HA-03部署：功能提交`3805cc8d105578382a861ab381860297e48cf61f`已在完整停服回滚副本保护下部署，正式程序SHA-256为`49e36111c09bdcf6b20356c7550ad1c62312791006eab3b7f8104dfc845bad1a`。本阶段无schema迁移；正式库保持v22、完整性`ok`，七类业务计数保持`135/108/697/23/10/10/780`，硬件设置仍为`SOFTWARE`／允许回退／空设备。服务`active/running`、`NRestarts=0`，Health／Ready均204，About精确对应功能提交；启动诊断为NVENC／VAAPI可用、QSV烟测失败，日志无ERROR／panic／fatal。回滚目录为`/home/rainbowrunner/cos/bk/cgm-pre-ha03-3805cc8-TRNCGkvE`；未修改媒体、Manifest、缓存、配置或systemd单元，未远端推送或更新Docker镜像。
 
 - 2026-10-01 HA-02部署：提交`7beb4112b001f7fe537c7e8143d2bd7d1070251e`已在独立停服回滚副本保护下部署，正式程序SHA-256为`534e77e62f0f61f7f28ea1dac8cc1a86ab04d2a65103f9da0685d4ea40ae1e9d`。正式库从schema v21迁移到v22，完整性`ok`、七类业务计数保持`135/108/697/23/10/10/780`，新增设置确认为`SOFTWARE`／允许回退／空设备；自动v21迁移快照及回滚库均验证正常。服务active、NRestarts=0、Health／Ready均204，硬件诊断仍为NVENC／VAAPI可用、QSV烟测失败。回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-ha02-7beb411-UaQEOCsd`；未触碰媒体、Manifest或缓存，实际播放仍为软件管线。
 

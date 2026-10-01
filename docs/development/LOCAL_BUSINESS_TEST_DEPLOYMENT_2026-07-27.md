@@ -1,5 +1,11 @@
 # 本机实际业务应用测试部署
 
+### 2026-10-02 HA-03 NVIDIA渐进HLS增量部署
+
+- 从清洁提交`3805cc8d105578382a861ab381860297e48cf61f`构建并部署，正式程序SHA-256为`49e36111c09bdcf6b20356c7550ad1c62312791006eab3b7f8104dfc845bad1a`且`vcs.modified=false`。停服回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-ha03-3805cc8-TRNCGkvE`保存并复验schema v22数据库、旧程序、配置、systemd单元及两处Coser资源。
+- 本阶段无schema迁移；正式库保持schema v22、`integrity_check=ok`和`135/108/697/23/10/10/780`计数。服务`active/running`、`NRestarts=0`，Health／Ready均204，About精确对应提交；NVENC／VAAPI可用，QSV烟测失败，启动日志无错误。
+- 正式设置仍为`SOFTWARE`、允许回退且设备为空，部署不会自行启用GPU。下一步由所有者在Manage → Settings显式选择NVENC后，以真实目录和安全可直读存档视频验收冷启动、连续播放、随机Seek、取消、画质、资源占用及缓存增长；HA-04一次性运行期软件回退尚未实现。
+
 ### 2026-10-01 HA-02本机硬件设置与安全规划器部署
 
 - 从清洁提交`7beb4112b001f7fe537c7e8143d2bd7d1070251e`构建并部署，正式程序SHA-256为`534e77e62f0f61f7f28ea1dac8cc1a86ab04d2a65103f9da0685d4ea40ae1e9d`且`vcs.modified=false`。停服回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-ha02-7beb411-UaQEOCsd`保存并复验schema v21数据库、旧程序、配置、systemd单元与两处Coser资源。

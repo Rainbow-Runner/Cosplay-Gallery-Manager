@@ -3,6 +3,7 @@ import type { OnDemandVideoPlaybackState } from "./useOnDemandVideoPlayback";
 
 const reasons: Record<string, string> = {
 	VIDEO_PLAYBACK_UNAUTHORIZED: "video.sessionExpired",
+  VIDEO_HARDWARE_HLS_FAILED: "video.hardwareFailed",
   ARCHIVE_VIDEO_COMPRESSED: "video.archiveCompressed",
   ARCHIVE_VIDEO_DIRECT_UNAVAILABLE: "video.archiveDirectUnavailable",
   ARCHIVE_VIDEO_UNSAFE: "video.archiveUnsafe",

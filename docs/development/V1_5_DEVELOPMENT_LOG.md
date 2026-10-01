@@ -31,6 +31,15 @@
 - 22:38 CST停服并确认WAL／SHM关闭；0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-ha02-7beb411-UaQEOCsd`保存一致schema v21数据库、旧程序、配置、用户systemd单元及外部／product-state Coser资源并逐项比对。回滚库SHA-256为`21fa27cca9403f82fa38aafc5f3813684d20b794d15796005c3c1cb9fa52e244`，完整性`ok`，七类计数为`135/108/697/23/10/10/780`。
 - 原子替换并启动后正式库升至schema v22，`integrity_check=ok`且业务计数不变；运行设置确认为`SOFTWARE`、允许一次软件回退、设备为空。自动迁移快照`product.sqlite.pre-schema-v21-1790865561350421230.bak`仍为schema v21、完整性与计数正常，SHA-256为`755f0050a1afb84c41722691691013a312c49234ab11ae74df08fd2f72203c83`。服务active、NRestarts=0、Health／Ready均204，About精确对应提交；启动诊断仍为`NVENC=AVAILABLE`、`VAAPI=AVAILABLE`、`QSV=SMOKE_TEST_FAILED`。未修改配置、媒体、Manifest或缓存，HA-02仍未执行硬件转码。
 
+### HA-03 NVIDIA渐进HLS（本地源码，未提交／部署）
+
+- 渐进播放会话现在读取本机设置及HA-01只读能力快照，由HA-02规划器形成并冻结执行计划。明确支持的H.264／HEVC 8-bit、无旋转、非HDR输入可走NVDEC→CUDA缩放→NVENC H.264；设备标识严格限制为`nvidiaN`并只换算成数字序号，不能把设置作为任意FFmpeg参数。VAAPI在本阶段不执行：允许回退时在命令启动前降级软件，不允许时返回稳定错误；探测未完成、不可执行计划同样显式拒绝。
+- NVENC使用`p4`／`hq`、VBR CQ25、平均3Mbps、最大5Mbps、10Mbps VBV；仍保持不放大、1080p边界、AAC／安全音频Copy、4秒独立关键帧、原子HLS片段、Seek重启及完整输出提升为MP4的既有语义。宿主机端到端门禁发现NVENC默认没有把通用强制关键帧编码为IDR，36秒输入只输出2段并被完整性门禁正确拒绝；增加已由本机FFmpeg确认支持的`forced-idr=1`并纳入Profile后，9个4秒片段、完整校验和MP4提升通过。HLS Profile升为v2并嵌入完整转码计划、片段规则和内容revision，软硬件结果不会互用。会话日志增加实际解码／滤镜／编码后端、执行前规划降级以及首片段耗时／字节，不记录媒体路径或命令。
+- 真实校准样本来自赛博修女存档中147MiB、2160×3840、30fps、HEVC Main 8-bit、约13.70Mbps的视频，临时只读提取后比较同一12秒区间：软件`libx264 veryfast CRF20`为9.68秒、约700MiB峰值RSS、5,795,100字节；最终NVENC候选为2.21秒、约373MiB峰值RSS、7,106,964字节。输出约增22.6%，缩放参考SSIM由软件0.991787到NVENC 0.993006。合成H.264宿主机实际GPU测试覆盖从0和Seek片段1启动并通过；`mediaprocessing`、`videoplayback`、`productserver`完整回归、前两包Race和三包Vet均通过，正式三标签回归通过；最终Web 43文件189项、TypeScript和2558模块生产构建通过。受限沙箱因不可见`/dev/nvidia*`会稳定拒绝真实GPU测试，宿主机门禁通过后才计为有效结果。校准产生的约174MiB临时文件已删除，未改媒体、缓存或正式库。
+- 当前正式服务仍运行HA-02提交`7beb411`且设置为`SOFTWARE`，因此上述源码不会影响业务播放。HA-03提交／部署后仍先保持软件模式，再由所有者显式选择NVENC做真实目录及存档Range、浏览器首帧／连续播放／Seek／取消和主观画质验收。运行中硬件技术失败后清理并仅重试一次软件的闭环仍由HA-04实现。
+- 新增宿主机可选端到端门禁，不只直接运行FFmpeg参数：从schema v22持久设置选择`NVENC/nvidia0`，经过Browse授权和播放会话，验证目录HEVC完整硬件生成、严格分段、MP4缓存提升；未压缩TAR及Copy模式且编码文件头的7z均通过安全Range输入，从第7段Seek后得到大于20秒的媒体时间戳，释放会话后编码取消且HLS临时目录清空。三种场景同轮通过，未读取正式媒体或修改正式数据库。
+- 复核前端旧兼容路径时发现：任意渐进HLS运行失败都会自动切换到旧完整MP4代理，硬件失败因此可能无视“禁止软件回退”而隐式启动软件任务；且hls.js片段错误可能早于状态轮询形成竞态。HA-03现由会话返回非敏感实际后端，并把NVENC运行失败标记为独立`VIDEO_HARDWARE_HLS_FAILED`；无论轮询还是播放器错误先到，前端都释放会话、停止自动回退并给出中英文提示。用户可显式重试或到设置切换`SOFTWARE`，软件HLS失败仍保留既有代理兼容路径。对应Hook和提示回归证明没有发起GraphQL软件代理；后台帮助也已更新为当前“仅安全可直读存档成员可按需转码且不提取”的真实语义。
+
 ## 2026-10-01 视频分阶段诊断与渐进播放提交及本机部署
 
 - 业务实测的两个4K HEVC存档视频85／119.4秒，旧完整MP4代理分别耗时84.082／125.362秒；排队和HTTP请求仅毫秒至亚秒级，瓶颈在CPU FFmpeg流水线。先增加`CGM_VIDEO_STAGE_COMPLETED`与`CGM_VIDEO_FFMPEG_PROGRESS`：队列龄期、容量检查、来源直读证明、MP4/HLS编码、首片段、HLS→MP4封装与缓存登记分别计时，报告技术输出时间、速度、FPS、完成比例和估计剩余时间；失败只记退出码和短Item前缀，避免日志记录源路径／播放令牌／观看历史。

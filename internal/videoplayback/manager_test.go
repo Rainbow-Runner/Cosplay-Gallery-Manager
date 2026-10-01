@@ -1,20 +1,25 @@
 package videoplayback
 
 import (
+	"archive/tar"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stashapp/stash/internal/archivecheck"
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/persistence/productdb"
+	"github.com/stashapp/stash/internal/settings"
 )
 
 func TestProgressiveSessionAuthorizationAndPromotion(t *testing.T) {
@@ -173,4 +178,298 @@ func TestStartupRemovesOnlyOwnedPlaybackTemporaryDirectories(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(unknown, "keep")); err != nil {
 		t.Fatalf("unknown directory changed: %v", err)
 	}
+}
+
+func TestHLSExecutionPlanLimitsHA03ToNVENC(t *testing.T) {
+	metadata := mediaprocessing.VideoTechnicalMetadata{VideoCodec: "hevc", PixelFormat: "yuv420p", DisplayWidth: 2160, DisplayHeight: 3840}
+	plan := mediaprocessing.PlaybackPlanFromMetadata(metadata)
+	hardware := mediaprocessing.HardwareAccelerationStatus{ProbeState: mediaprocessing.HardwareProbeCompleted, Backends: []mediaprocessing.HardwareBackendStatus{
+		{Backend: "NVENC", State: mediaprocessing.HardwareProbeAvailable, Device: "nvidia0", DecodeCodecs: []string{"h264_cuvid", "hevc_cuvid"}},
+		{Backend: "VAAPI", State: mediaprocessing.HardwareProbeAvailable, Device: "renderD128", DecodeCodecs: []string{"h264", "hevc"}},
+	}}
+	nvenc, code := hlsExecutionPlan(plan, metadata, mediaprocessing.VideoHardwarePreference{Mode: "AUTO", AllowSoftwareFallback: true}, hardware)
+	if code != "" || nvenc.EffectiveBackend != "NVENC" {
+		t.Fatalf("NVENC plan=%#v code=%q", nvenc, code)
+	}
+	vaapiOnly := hardware
+	vaapiOnly.Backends = vaapiOnly.Backends[1:]
+	fallback, code := hlsExecutionPlan(plan, metadata, mediaprocessing.VideoHardwarePreference{Mode: "AUTO", AllowSoftwareFallback: true}, vaapiOnly)
+	if code != "" || fallback.EffectiveBackend != "SOFTWARE" || fallback.ReasonCode != "HARDWARE_EXECUTOR_NOT_IMPLEMENTED" {
+		t.Fatalf("VAAPI fallback=%#v code=%q", fallback, code)
+	}
+	blocked, code := hlsExecutionPlan(plan, metadata, mediaprocessing.VideoHardwarePreference{Mode: "VAAPI"}, vaapiOnly)
+	if code != "VIDEO_HARDWARE_BACKEND_NOT_IMPLEMENTED" || blocked.EffectiveBackend != "VAAPI" {
+		t.Fatalf("VAAPI blocked=%#v code=%q", blocked, code)
+	}
+	metadata.PixelFormat = "yuv420p10le"
+	unsupported, code := hlsExecutionPlan(plan, metadata, mediaprocessing.VideoHardwarePreference{Mode: "NVENC"}, hardware)
+	if code != "VIDEO_HARDWARE_UNAVAILABLE" || unsupported.Executable {
+		t.Fatalf("10-bit plan=%#v code=%q", unsupported, code)
+	}
+}
+
+func TestHLSFailureCodePreventsImplicitHardwareFallback(t *testing.T) {
+	if got := hlsFailureCode(mediaprocessing.VideoTranscodeExecutionPlan{EffectiveBackend: "NVENC"}); got != "VIDEO_HARDWARE_HLS_FAILED" {
+		t.Fatalf("NVENC failure code = %q", got)
+	}
+	if got := hlsFailureCode(mediaprocessing.VideoTranscodeExecutionPlan{EffectiveBackend: "SOFTWARE"}); got != "VIDEO_HLS_FAILED" {
+		t.Fatalf("software failure code = %q", got)
+	}
+}
+
+// Opt-in host gate: this exercises the complete HA-03 path through persisted
+// runtime settings, Browse authorization, directory/archive source proof,
+// progressive session handling, NVDEC/CUDA/NVENC, seek and cleanup.
+func TestNVENCProgressiveSessionEndToEnd(t *testing.T) {
+	if os.Getenv("CGM_TEST_NVENC") != "1" {
+		t.Skip("set CGM_TEST_NVENC=1 on an NVIDIA test host")
+	}
+	ffmpeg, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ffprobe, err := exec.LookPath("ffprobe")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixtureRoot := t.TempDir()
+	clip := filepath.Join(fixtureRoot, "clip.mp4")
+	command := exec.Command(ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=12", "-t", "36", "-an", "-c:v", "libx265", "-preset", "ultrafast", "-x265-params", "log-level=error:pools=1:frame-threads=1", "-pix_fmt", "yuv420p", clip)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("HEVC fixture: %v: %s", err, output)
+	}
+	for _, scenario := range []struct {
+		name, sourceKind string
+		seek             bool
+	}{{"directory-complete", "directory", false}, {"tar-range-seek", "tar", true}, {"sevenzip-range-seek", "7z", true}} {
+		t.Run(scenario.name, func(t *testing.T) {
+			testNVENCProgressiveSource(t, ffmpeg, ffprobe, clip, scenario.sourceKind, scenario.seek)
+		})
+	}
+}
+
+func testNVENCProgressiveSource(t *testing.T, ffmpeg, ffprobe, clip, sourceKind string, seek bool) {
+	t.Helper()
+	ctx := context.Background()
+	root := t.TempDir()
+	db, err := productdb.Open(ctx, filepath.Join(root, "product.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	now := time.Now().UTC()
+	created, err := db.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "NVENC progressive", ContentRating: gallery.ContentRatingNonAdult}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var itemUUID string
+	var revision int64
+	if sourceKind != "directory" {
+		archivePath := filepath.Join(root, "source."+sourceKind)
+		memberPath := "video/clip.mp4"
+		if sourceKind == "7z" {
+			memberPath = writeStoredSevenZIPVideo(t, archivePath, clip)
+		} else {
+			writeStoredTarVideo(t, archivePath, clip)
+		}
+		source, err := db.Galleries().AddSource(ctx, created.ID, productdb.CreateSourceInput{Type: gallery.SourceTypeArchive, Path: archivePath, Availability: gallery.AvailabilityAvailable}, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := db.Scans().RunWithOptions(ctx, source.ID, archivecheck.DefaultLimits(), productdb.ScanOptions{ExcludeNewRootMedia: false}, now); err != nil {
+			t.Fatal(err)
+		}
+		if err := db.QueryRowContext(ctx, `SELECT item_uuid,content_revision FROM gallery_items WHERE gallery_id=? AND relative_path=?`, created.ID, memberPath).Scan(&itemUUID, &revision); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		sourceRoot := filepath.Join(root, "source")
+		if err := os.Mkdir(sourceRoot, 0700); err != nil {
+			t.Fatal(err)
+		}
+		target := filepath.Join(sourceRoot, "clip.mp4")
+		if err := copyTestFile(clip, target); err != nil {
+			t.Fatal(err)
+		}
+		source, err := db.Galleries().AddSource(ctx, created.ID, productdb.CreateSourceInput{Type: gallery.SourceTypeDirectory, Path: sourceRoot, Availability: gallery.AvailabilityAvailable}, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		item, err := db.Galleries().AddItem(ctx, created.ID, source.ID, productdb.CreateItemInput{RelativePath: "clip.mp4", MediaKind: gallery.MediaKindVideo, ContentFormat: gallery.ContentFormatVideo, Position: 1024, Availability: gallery.AvailabilityAvailable, ProcessingState: gallery.ProcessingReady}, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		itemUUID, revision = item.UUID, item.ContentRevision
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE galleries SET state='ACTIVE',added_at_utc=? WHERE id=?`, now.Format(time.RFC3339Nano), created.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.VideoMetadata().MarkPending(ctx, itemUUID, revision, "nvenc-e2e"); err != nil {
+		t.Fatal(err)
+	}
+	metadata := mediaprocessing.VideoTechnicalMetadata{ItemUUID: itemUUID, ContentRevision: revision, ProbeProfileHash: "nvenc-e2e", Container: "mp4", VideoCodec: "hevc", PixelFormat: "yuv420p", VideoProfile: "Main", VideoStreamIndex: 0, DisplayWidth: 320, DisplayHeight: 180, DurationSeconds: 36}
+	if err := db.VideoMetadata().PublishReady(ctx, metadata, now); err != nil {
+		t.Fatal(err)
+	}
+	runtime, err := db.Settings().Find(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime.VideoHardwareMode = settings.VideoHardwareNVENC
+	runtime.VideoHardwareFallbackEnabled = false
+	runtime.VideoHardwareDevice = "nvidia0"
+	if _, err := db.Settings().Update(ctx, runtime.Revision, runtime, now); err != nil {
+		t.Fatal(err)
+	}
+	m, err := New(db, filepath.Join(root, "cache"), ffmpeg, "nvenc-e2e", func(r *http.Request) bool {
+		cookie, err := r.Cookie("cgm_session")
+		return err == nil && cookie.Value == "owner"
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.HardwareStatus = func() mediaprocessing.HardwareAccelerationStatus {
+		return mediaprocessing.HardwareAccelerationStatus{ProbeState: mediaprocessing.HardwareProbeCompleted, Backends: []mediaprocessing.HardwareBackendStatus{{Backend: "NVENC", State: mediaprocessing.HardwareProbeAvailable, Device: "nvidia0", DecodeCodecs: []string{"h264_cuvid", "hevc_cuvid"}}}}
+	}
+	closed := false
+	defer func() {
+		if !closed {
+			m.Close()
+		}
+	}()
+	request := func(method, path string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(method, path, nil)
+		r.AddCookie(&http.Cookie{Name: "cgm_session", Value: "owner"})
+		w := httptest.NewRecorder()
+		m.ServeHTTP(w, r)
+		return w
+	}
+	response := request(http.MethodPost, Prefix+"video/"+itemUUID)
+	if response.Code != http.StatusOK {
+		t.Fatalf("start = %d: %s", response.Code, response.Body.String())
+	}
+	var state State
+	if err := json.Unmarshal(response.Body.Bytes(), &state); err != nil {
+		t.Fatal(err)
+	}
+	if state.Mode != "HLS_SESSION" || state.Backend != "NVENC" || state.Lease == "" {
+		t.Fatalf("session = %#v", state)
+	}
+	m.mu.Lock()
+	var backend string
+	var sessionDirectory string
+	for _, active := range m.sessions {
+		backend = active.execution.EffectiveBackend
+		sessionDirectory = active.dir
+	}
+	m.mu.Unlock()
+	if backend != "NVENC" {
+		t.Fatalf("effective backend = %q", backend)
+	}
+	if seek {
+		segment := request(http.MethodGet, Prefix+"session/"+state.Lease+"/segment-000007.ts")
+		if segment.Code != http.StatusOK || segment.Body.Len() == 0 {
+			t.Fatalf("seek segment = %d, %d bytes: %s", segment.Code, segment.Body.Len(), segment.Body.String())
+		}
+		part := filepath.Join(root, "seek.ts")
+		if err := os.WriteFile(part, segment.Body.Bytes(), 0600); err != nil {
+			t.Fatal(err)
+		}
+		output, err := exec.Command(ffprobe, "-v", "error", "-show_entries", "format=start_time", "-of", "default=noprint_wrappers=1:nokey=1", part).Output()
+		startTime, parseErr := strconv.ParseFloat(strings.TrimSpace(string(output)), 64)
+		if err != nil || parseErr != nil || startTime < 20 {
+			t.Fatalf("seek timestamp = %q, %v", output, err)
+		}
+	} else {
+		deadline := time.Now().Add(15 * time.Second)
+		for time.Now().Before(deadline) {
+			response = request(http.MethodGet, Prefix+"session/"+state.Lease+"/status")
+			if err := json.Unmarshal(response.Body.Bytes(), &state); err != nil {
+				t.Fatal(err)
+			}
+			if state.Status == "ERROR" || state.Status == "READY" {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		if state.Status != "READY" {
+			entries, _ := os.ReadDir(sessionDirectory)
+			names := make([]string, 0, len(entries))
+			for _, entry := range entries {
+				names = append(names, entry.Name())
+			}
+			t.Fatalf("NVENC session did not complete: %#v files=%v", state, names)
+		}
+	}
+	if released := request(http.MethodPost, Prefix+"session/"+state.Lease+"/release"); released.Code != http.StatusNoContent {
+		t.Fatalf("release = %d", released.Code)
+	}
+	m.Close()
+	closed = true
+	entries, err := os.ReadDir(filepath.Join(root, "cache", "tmp", "hls"))
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("playback temporary directories retained: %v %v", entries, err)
+	}
+}
+
+func writeStoredTarVideo(t *testing.T, destination, clip string) {
+	t.Helper()
+	input, err := os.Open(clip)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer input.Close()
+	info, err := input.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
+	output, err := os.OpenFile(destination, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := tar.NewWriter(output)
+	if err := writer.WriteHeader(&tar.Header{Name: "video/clip.mp4", Mode: 0600, Size: info.Size(), ModTime: info.ModTime()}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := io.Copy(writer, input); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := output.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func writeStoredSevenZIPVideo(t *testing.T, destination, clip string) string {
+	t.Helper()
+	tool, err := exec.LookPath("7z")
+	if err != nil {
+		t.Fatal("HA-03 7z host gate requires 7z")
+	}
+	member := filepath.Base(clip)
+	command := exec.Command(tool, "a", "-t7z", "-mx=0", "-mhc=on", destination, member)
+	command.Dir = filepath.Dir(clip)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("7z fixture: %v: %s", err, output)
+	}
+	return member
+}
+
+func copyTestFile(source, destination string) error {
+	input, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer input.Close()
+	output, err := os.OpenFile(destination, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(output, input); err != nil {
+		_ = output.Close()
+		return err
+	}
+	return output.Close()
 }

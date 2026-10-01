@@ -28,7 +28,7 @@ describe("ManageHelpPage", () => {
     expect(screen.getByText(/Coser and Character match independently/)).toBeInTheDocument();
     expect(screen.getByText(/shows current blockers separately from historical run issues/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Videos inside archives" })).toBeInTheDocument();
-    expect(screen.getByText(/Playback never extracts or starts a remux\/transcode job/)).toBeInTheDocument();
+    expect(screen.getByText(/supported incompatible codecs can be converted on demand into reclaimable cache without extracting the member/)).toBeInTheDocument();
   });
 
   it("explains Gallery Source and Manifest list statuses without changing the list", () => {

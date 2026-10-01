@@ -80,6 +80,7 @@ export function useLegacyVideoPlayback(item?: GalleryMember | null): OnDemandVid
 
 interface ProgressiveResponse {
   mode: OnDemandVideoPlaybackState["mode"];
+  backend?: string;
   status: "PENDING" | "PROCESSING" | "STREAMING" | "READY" | "ERROR";
   url?: string;
   lease?: string;
@@ -99,7 +100,7 @@ export function useOnDemandVideoPlayback(item?: GalleryMember | null): OnDemandV
   const legacy = useLegacyVideoPlayback(fallback ? item : null);
 
   useEffect(() => {
-    if (!eligible || !itemUUID || fallback) return;
+    if (!eligible || !itemUUID || fallback || fatal) return;
     let active = true;
     let lease = "";
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -113,7 +114,11 @@ export function useOnDemandVideoPlayback(item?: GalleryMember | null): OnDemandV
         const next = await response.json() as ProgressiveResponse;
         if (!active) return;
         setProgressive((previous) => ({ ...next, url: previous?.url, lease }));
-        if (next.status === "ERROR") { release(); setFallback(true); return; }
+        if (next.status === "ERROR") {
+          if (next.errorCode?.startsWith("VIDEO_HARDWARE_")) setFatal(next.errorCode);
+          else setFallback(true);
+          return;
+        }
         timer = setTimeout(() => { void poll(); }, next.status === "READY" ? 10_000 : 1_000);
       } catch { if (active) { release(); setFallback(true); } }
     };
@@ -128,13 +133,14 @@ export function useOnDemandVideoPlayback(item?: GalleryMember | null): OnDemandV
       if (lease) timer = setTimeout(() => { void poll(); }, 1_000);
     }).catch(() => { if (active) setFallback(true); });
     return () => { active = false; if (timer) clearTimeout(timer); release(); };
-  }, [attempt, eligible, fallback, itemUUID]);
+  }, [attempt, eligible, fallback, fatal, itemUUID]);
 
   const retry = useCallback(() => { setFallback(false); setFatal(""); setProgressive(null); setAttempt((value) => value + 1); }, []);
   const onPlaybackError = useCallback(() => {
-    if (progressive?.mode === "HLS_SESSION") setFallback(true);
+    if (progressive?.mode === "HLS_SESSION" && progressive.backend === "NVENC") setFatal("VIDEO_HARDWARE_HLS_FAILED");
+    else if (progressive?.mode === "HLS_SESSION") setFallback(true);
     else setFatal("VIDEO_BROWSER_PLAYBACK_FAILED");
-  }, [progressive?.mode]);
+  }, [progressive?.backend, progressive?.mode]);
   if (!eligible) return { url: null, mode: "", preparing: false, failed: false, errorCode: "", retry, onPlaybackError };
   if (fallback) return { ...legacy, retry };
   if (fatal) return { url: null, mode: progressive?.mode ?? "", preparing: false, failed: true, errorCode: fatal, retry, onPlaybackError };

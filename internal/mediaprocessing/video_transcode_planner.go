@@ -35,11 +35,12 @@ type VideoTranscodeExecutionPlan struct {
 	ReasonCode            string
 }
 
-const videoTranscodePlannerVersion = "1"
+const videoTranscodePlannerVersion = "2"
+const nvencHLSRateControl = "vbr-cq25-b3m-max5m-buf10m-p4-hq-forced-idr"
 
-// PlanVideoTranscode is a side-effect-free HA-02 planner. Execution remains
-// on the existing software command builders until a later phase explicitly
-// consumes this plan.
+// PlanVideoTranscode is a side-effect-free planner shared by every video
+// workload. Callers decide which planned backends they can execute; HA-03
+// consumes only SOFTWARE and NVENC for progressive HLS.
 func PlanVideoTranscode(playback VideoPlaybackPlan, metadata VideoTechnicalMetadata, preference VideoHardwarePreference, hardware HardwareAccelerationStatus, workload VideoTranscodeWorkload) VideoTranscodeExecutionPlan {
 	requested := strings.ToUpper(strings.TrimSpace(preference.Mode))
 	if requested == "" {
@@ -83,6 +84,9 @@ func PlanVideoTranscode(playback VideoPlaybackPlan, metadata VideoTechnicalMetad
 				result.Decoder = "h264_cuvid"
 			}
 			result.FilterStrategy, result.Encoder, result.RateControl = "CUDA", "h264_nvenc", "vbr-cq-vbv-pending-calibration"
+			if workload == VideoTranscodeHLS {
+				result.RateControl = nvencHLSRateControl
+			}
 		case "VAAPI":
 			result.Decoder, result.FilterStrategy, result.Encoder, result.RateControl = metadata.VideoCodec+"-vaapi", "VAAPI", "h264_vaapi", "vbr-vbv-pending-calibration"
 		}

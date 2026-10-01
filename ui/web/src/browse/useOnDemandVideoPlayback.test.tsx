@@ -40,6 +40,33 @@ describe("useOnDemandVideoPlayback", () => {
     await waitFor(() => expect(result.current.failed).toBe(true));
     expect(result.current.errorCode).toBe("VIDEO_PLAYBACK_UNAUTHORIZED");
   });
+  it("does not start an implicit software proxy after a hardware HLS failure", async () => {
+    const lease = "b".repeat(32);
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/status")) return Promise.resolve({ ok: true, status: 200, json: async () => ({ mode: "HLS_SESSION", status: "ERROR", lease, errorCode: "VIDEO_HARDWARE_HLS_FAILED" }) });
+      if (url.endsWith("/release")) return Promise.resolve({ ok: true, status: 204, json: async () => ({}) });
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ mode: "HLS_SESSION", status: "PROCESSING", lease, url: `/playback/session/${lease}/index.m3u8` }) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useOnDemandVideoPlayback(item), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.errorCode).toBe("VIDEO_HARDWARE_HLS_FAILED"), { timeout: 2500 });
+    expect(result.current.failed).toBe(true);
+    expect(result.current.url).toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith(`/playback/session/${lease}/release`, expect.objectContaining({ method: "POST" }));
+  });
+  it("does not race into a software proxy when hls.js reports the NVENC session failure first", async () => {
+    const lease = "c".repeat(32);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ mode: "HLS_SESSION", backend: "NVENC", status: "PROCESSING", lease, url: `/playback/session/${lease}/index.m3u8` }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useOnDemandVideoPlayback(item), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.hls).toBe(true));
+    act(() => result.current.onPlaybackError());
+    expect(result.current.failed).toBe(true);
+    expect(result.current.errorCode).toBe("VIDEO_HARDWARE_HLS_FAILED");
+    expect(result.current.url).toBeNull();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(`/playback/session/${lease}/release`, expect.objectContaining({ method: "POST" })));
+  });
   it("settles archive refusals without a resource URL", async () => {
     const response: VideoPlaybackStatus = { itemUUID: item.itemUUID, mode: "", status: "ERROR", contentRevision: 4, resource: null, errorCode: "ARCHIVE_VIDEO_COMPRESSED" };
     const { result } = renderHook(() => useOnDemandVideoPlayback(item), { wrapper: wrapper(mocksFor(response)) });

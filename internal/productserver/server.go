@@ -375,6 +375,7 @@ func (s *Server) ensurePlayback() error {
 	if err != nil {
 		return err
 	}
+	manager.HardwareStatus = s.VideoHardware.Snapshot
 	s.playback = manager
 	return nil
 }

@@ -16,4 +16,11 @@ describe("archive playback explanations", () => {
       });
     }
   }
+  for (const locale of ["en-GB", "zh-CN"] as const) {
+    it(`${locale} explains a hardware failure without silently changing backend`, () => {
+      render(<IntlProvider locale={locale} messages={messages[locale]}><VideoPlaybackNotice className="status" state={{ url: null, mode: "HLS_SESSION", preparing: false, failed: true, errorCode: "VIDEO_HARDWARE_HLS_FAILED", retry: vi.fn(), onPlaybackError: vi.fn() }} /></IntlProvider>);
+      expect(screen.getByRole("alert").textContent).toContain(messages[locale]["video.hardwareFailed"]);
+      expect(screen.getByRole("button")).not.toBeNull();
+    });
+  }
 });

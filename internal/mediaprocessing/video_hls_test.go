@@ -146,3 +146,76 @@ func TestProgressiveVideoFirstSegmentPrecedesCompletion(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestProgressiveVideoNVENCArgumentsArePlanBounded(t *testing.T) {
+	plan := VideoPlaybackPlan{Mode: PlaybackTranscode, SelectVideoTrack: 0, SelectAudioTrack: -1, MaximumWidth: 1920, MaximumHeight: 1080}
+	execution := VideoTranscodeExecutionPlan{Workload: VideoTranscodeHLS, EffectiveBackend: "NVENC", Device: "nvidia0", Decoder: "hevc_cuvid", FilterStrategy: "CUDA", Encoder: "h264_nvenc", RateControl: nvencHLSRateControl, Executable: true}
+	args, err := ProgressiveVideoArgsForExecution("source.mp4", "segments", plan, execution, 0, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(args, " ")
+	for _, required := range []string{"-hwaccel cuda", "-hwaccel_device 0", "-hwaccel_output_format cuda", "-c:v hevc_cuvid", "scale_cuda=", "-c:v h264_nvenc", "-cq 25", "-b:v 3M", "-maxrate 5M", "-bufsize 10M", "-forced-idr 1"} {
+		if !strings.Contains(joined, required) {
+			t.Fatalf("arguments lack %q: %s", required, joined)
+		}
+	}
+	if strings.Contains(joined, "libx264") {
+		t.Fatalf("hardware arguments contain software encoder: %s", joined)
+	}
+	execution.Device = "../../dev/nvidia0"
+	if _, err := ProgressiveVideoArgsForExecution("source.mp4", "segments", plan, execution, 0, 4); err == nil {
+		t.Fatal("unsafe NVIDIA device was accepted")
+	}
+	execution.Device, execution.RateControl = "nvidia0", "unreviewed"
+	if _, err := ProgressiveVideoArgsForExecution("source.mp4", "segments", plan, execution, 0, 4); err == nil {
+		t.Fatal("unreviewed NVENC rate control was accepted")
+	}
+	execution = VideoTranscodeExecutionPlan{EffectiveBackend: "VAAPI", Encoder: "h264_vaapi", Executable: true}
+	if _, err := ProgressiveVideoArgsForExecution("source.mp4", "segments", plan, execution, 0, 4); err == nil {
+		t.Fatal("HA-03 accepted an unimplemented backend")
+	}
+}
+
+func TestProgressiveVideoProfileSeparatesSoftwareAndNVENC(t *testing.T) {
+	metadata := VideoTechnicalMetadata{VideoCodec: "hevc", AudioCodec: "aac", PixelFormat: "yuv420p", VideoStreamIndex: 0, DisplayWidth: 2160, DisplayHeight: 3840}
+	plan := PlaybackPlanFromMetadata(metadata)
+	software := PlanVideoTranscode(plan, metadata, VideoHardwarePreference{Mode: "SOFTWARE", AllowSoftwareFallback: true}, HardwareAccelerationStatus{}, VideoTranscodeHLS)
+	nvenc := PlanVideoTranscode(plan, metadata, VideoHardwarePreference{Mode: "NVENC", AllowSoftwareFallback: true}, availableHardware(), VideoTranscodeHLS)
+	if ProgressiveVideoProfileHash(metadata, plan, "7.1", software, 4, 2) == ProgressiveVideoProfileHash(metadata, plan, "7.1", nvenc, 4, 2) {
+		t.Fatal("software and NVENC HLS profiles must differ")
+	}
+}
+
+func TestProgressiveVideoNVENCExternal(t *testing.T) {
+	if os.Getenv("CGM_TEST_NVENC") != "1" {
+		t.Skip("set CGM_TEST_NVENC=1 on an NVIDIA test host")
+	}
+	path, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	source := filepath.Join(root, "source.mp4")
+	if output, err := exec.Command(path, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=12", "-t", "7", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", source).CombinedOutput(); err != nil {
+		t.Fatalf("fixture: %v: %s", err, output)
+	}
+	plan := VideoPlaybackPlan{Mode: PlaybackTranscode, SelectVideoTrack: 0, SelectAudioTrack: -1, MaximumWidth: 1920, MaximumHeight: 1080}
+	execution := VideoTranscodeExecutionPlan{Workload: VideoTranscodeHLS, EffectiveBackend: "NVENC", Device: "nvidia0", Decoder: "h264_cuvid", FilterStrategy: "CUDA", Encoder: "h264_nvenc", RateControl: nvencHLSRateControl, Executable: true}
+	for _, start := range []int{0, 1} {
+		directory := filepath.Join(root, "segments-"+strconv.Itoa(start))
+		if err := os.Mkdir(directory, 0700); err != nil {
+			t.Fatal(err)
+		}
+		args, err := ProgressiveVideoArgsForExecution(source, directory, plan, execution, start, 2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := RunVideoCommand(context.Background(), ffmpeg.NewEncoder(path), args, "nvenc-test", "HLS_ENCODE", 7, nil); err != nil {
+			t.Fatal(err)
+		}
+		if info, err := os.Stat(filepath.Join(directory, "segment-"+formatSegment(start)+".ts")); err != nil || info.Size() == 0 {
+			t.Fatalf("NVENC segment %d unavailable: %v", start, err)
+		}
+	}
+}

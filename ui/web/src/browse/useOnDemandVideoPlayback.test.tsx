@@ -2,7 +2,7 @@ import type { MockedResponse } from "@apollo/client/testing";
 import { MockedProvider } from "@apollo/client/testing/react";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ITEM_VIDEO_PLAYBACK_STATUS, REQUEST_ITEM_VIDEO_PLAYBACK } from "../api/browse";
 import type { GalleryMember, ResourceIdentity, VideoPlaybackStatus } from "./types";
@@ -23,6 +23,23 @@ function mocksFor(response: VideoPlaybackStatus): MockedResponse[] {
 }
 
 describe("useOnDemandVideoPlayback", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("starts one authenticated HLS session and releases it on unmount", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ mode: "HLS_SESSION", status: "PROCESSING", lease: "a".repeat(32), url: `/playback/session/${"a".repeat(32)}/index.m3u8` }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const { result, unmount } = renderHook(() => useOnDemandVideoPlayback(item), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.hls).toBe(true));
+    expect(result.current.url).toContain("index.m3u8");
+    expect(result.current.preparing).toBe(true);
+    unmount();
+    expect(fetchMock).toHaveBeenCalledWith(`/playback/session/${"a".repeat(32)}/release`, expect.objectContaining({ method: "POST" }));
+  });
+  it("does not fall back to GraphQL when authorization fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401 }));
+    const { result } = renderHook(() => useOnDemandVideoPlayback(item), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.failed).toBe(true));
+    expect(result.current.errorCode).toBe("VIDEO_PLAYBACK_UNAUTHORIZED");
+  });
   it("settles archive refusals without a resource URL", async () => {
     const response: VideoPlaybackStatus = { itemUUID: item.itemUUID, mode: "", status: "ERROR", contentRevision: 4, resource: null, errorCode: "ARCHIVE_VIDEO_COMPRESSED" };
     const { result } = renderHook(() => useOnDemandVideoPlayback(item), { wrapper: wrapper(mocksFor(response)) });

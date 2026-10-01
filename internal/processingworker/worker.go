@@ -331,6 +331,13 @@ var (
 )
 
 func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.Job) error {
+	if job.Variant == mediaprocessing.VariantVideoPlayback {
+		eligibleAt := job.CreatedAtUTC
+		if job.NotBeforeUTC.After(eligibleAt) {
+			eligibleAt = job.NotBeforeUTC
+		}
+		mediaprocessing.VideoStage(job.ItemUUID, "QUEUE_WAIT", eligibleAt)
+	}
 	item, err := worker.Database.FindProcessingItem(ctx, job.ItemUUID)
 	if err != nil {
 		return err
@@ -368,15 +375,21 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 		}
 	}
 	if job.Variant == mediaprocessing.VariantVideoPlayback {
+		capacityStarted := time.Now()
 		if err := worker.requireVideoProxyCapacity(ctx); err != nil {
 			return err
 		}
+		mediaprocessing.VideoStage(item.ItemUUID, "CAPACITY_CHECK", capacityStarted)
 	}
+	inputStarted := time.Now()
 	materialized, err := worker.openInput(ctx, item, job.Variant)
 	if err != nil {
 		return err
 	}
 	defer materialized.Close()
+	if job.Variant == mediaprocessing.VariantVideoPlayback {
+		mediaprocessing.VideoStage(item.ItemUUID, "SOURCE_OPEN_AND_PROOF", inputStarted)
+	}
 	if item.MediaKind == gallery.MediaKindStaticImage && job.Variant == mediaprocessing.VariantCard480 {
 		worker.captureImageDuringDerivative(ctx, item, materialized.Path)
 	}
@@ -422,10 +435,12 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 		return ErrUnsupportedGeneration
 	}
 	var generated mediaprocessing.GenerateResult
+	var generationFinished time.Time
 	_, size, err := worker.Cache.WriteAtomicPath(relative, func(destination string) error {
 		request.DestinationPath = destination
 		var generateErr error
 		generated, generateErr = generator.Generate(ctx, request)
+		generationFinished = time.Now()
 		if generateErr == nil {
 			generateErr = materialized.Validate()
 		}
@@ -433,6 +448,9 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 	})
 	if err != nil {
 		return err
+	}
+	if job.Variant == mediaprocessing.VariantVideoPlayback {
+		mediaprocessing.VideoStage(item.ItemUUID, "CACHE_SYNC_AND_RENAME", generationFinished)
 	}
 	if generated.ByteSize == 0 {
 		generated.ByteSize = size
@@ -449,12 +467,16 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 		_ = worker.Cache.RemoveUnpublished(relative)
 		return errors.New("processing job cache tier conflicts with variant retention policy")
 	}
+	publishStarted := time.Now()
 	_, err = worker.Database.Derivatives().Publish(ctx, productdb.PublishDerivativeInput{ItemUUID: item.ItemUUID, Variant: job.Variant,
 		CacheTier: tier, ContentRevision: item.ContentRevision, ProfileHash: job.ProfileHash, CacheRelativePath: relative,
 		MIMEType: generated.MIMEType, ByteSize: generated.ByteSize, Width: generated.Width, Height: generated.Height}, time.Now())
 	if err != nil {
 		_ = worker.Cache.RemoveUnpublished(relative)
 		return err
+	}
+	if job.Variant == mediaprocessing.VariantVideoPlayback {
+		mediaprocessing.VideoStage(item.ItemUUID, "CACHE_REGISTER", publishStarted)
 	}
 	if item.MediaKind == gallery.MediaKindStaticImage && job.Variant == mediaprocessing.VariantCard480 {
 		worker.saveCoverSignature(ctx, productdb.CoverSignatureArtifact{ItemUUID: item.ItemUUID,

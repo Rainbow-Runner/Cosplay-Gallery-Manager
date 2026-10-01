@@ -1,5 +1,7 @@
 # 存档视频浏览器播放方案修订（2026-09-30）
 
+> 2026-10-01 后续：真实4K HEVC样本的完整MP4代理耗时84.082/125.362秒，已触发[按需渐进播放决策](../architecture/PROGRESSIVE_VIDEO_PLAYBACK_2026-09-30.md)。本文件中的“先完整MP4验收再决定HLS”是原决策历史；新实现优先渐进HLS，保持安全直读证明和已缓存MP4优先。
+
 > 状态：所有者已确认编码文件头有界解码，以及仅对已安全证明可直读的存档视频按需 Remux／转码并使用可回收缓存；已于2026-09-30从`0b6afb7`部署本机，真实4K业务视频待用户播放验收。播放请求仍不允许临时提取无法直读的存档成员。
 > 上游边界：[存档视频决策记录](../architecture/MULTI_ENTITY_AND_ARCHIVE_VIDEO.md)、[视频第一／二阶段](VIDEO_PROCESSING_PHASE_1_2_PLAN_2026-08-15.md)、[第三阶段条件规划](VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)。
 

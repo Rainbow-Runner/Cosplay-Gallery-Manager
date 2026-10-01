@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/pkg/ffmpeg"
@@ -22,6 +23,13 @@ func (generator VideoPlaybackGenerator) Generate(ctx context.Context, request Ge
 	if !generator.Supports(request) {
 		return GenerateResult{}, errors.New("video playback generator does not support request")
 	}
+	queued := time.Now()
+	release, err := AcquirePlaybackSlot(ctx)
+	if err != nil {
+		return GenerateResult{}, err
+	}
+	defer release()
+	VideoStage(request.ItemUUID, "TRANSCODE_SLOT_WAIT", queued)
 	plan := *request.VideoPlan
 	args := ffmpeg.Args{"-hide_banner", "-loglevel", "error", "-y"}
 	if plan.ApplyRotation {
@@ -51,7 +59,7 @@ func (generator VideoPlaybackGenerator) Generate(ctx context.Context, request Ge
 		}
 	}
 	args = append(args, "-metadata:s:v:0", "rotate=0", "-movflags", "+faststart", "-f", "mp4", request.DestinationPath)
-	if _, err := generator.Encoder.Command(ctx, args).CombinedOutput(); err != nil {
+	if err := RunVideoCommand(ctx, generator.Encoder, args, request.ItemUUID, "MP4_ENCODE", request.VideoTechnical.DurationSeconds, nil); err != nil {
 		if plan.ToneMapHDRToSDR {
 			return GenerateResult{}, &VideoProcessingError{Code: ErrorVideoToneMapUnavailable, Err: errors.New("FFmpeg HDR-to-SDR playback filter failed")}
 		}

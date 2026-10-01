@@ -2,6 +2,7 @@ import { useIntl } from "react-intl";
 import type { OnDemandVideoPlaybackState } from "./useOnDemandVideoPlayback";
 
 const reasons: Record<string, string> = {
+	VIDEO_PLAYBACK_UNAUTHORIZED: "video.sessionExpired",
   ARCHIVE_VIDEO_COMPRESSED: "video.archiveCompressed",
   ARCHIVE_VIDEO_DIRECT_UNAVAILABLE: "video.archiveDirectUnavailable",
   ARCHIVE_VIDEO_UNSAFE: "video.archiveUnsafe",
@@ -12,7 +13,7 @@ const reasons: Record<string, string> = {
 
 export function VideoPlaybackNotice({ state, className }: { state: OnDemandVideoPlaybackState; className: string }) {
   const intl = useIntl();
-  if (state.preparing) return <span className={className}>{intl.formatMessage({ id: "video.preparing" })}</span>;
+  if (state.preparing) return <span className={className}>{intl.formatMessage({ id: "video.preparing" })}{state.progress && state.progress.percent > 0 ? ` ${Math.floor(state.progress.percent)}% · ${state.progress.speed.toFixed(2)}×` : ""}</span>;
   if (!state.failed) return null;
   const archiveFailure = state.errorCode.startsWith("ARCHIVE_VIDEO_");
   return <span className={className} role="alert">

@@ -69,6 +69,7 @@ The machine-readable companion is `docs/legal/cgm.spdx.json`.
 | npm | `decimal.js` | `10.6.0` | MIT |
 | npm | `graphql` | `16.14.2` | MIT |
 | npm | `graphql-tag` | `2.12.7` | MIT |
+| npm | `hls.js` | `1.6.16` | Apache-2.0 |
 | npm | `hoist-non-react-statics` | `3.3.2` | BSD-3-Clause |
 | npm | `intl-messageformat` | `10.7.18` | BSD-3-Clause |
 | npm | `lucide-react` | `1.48.0` | ISC |

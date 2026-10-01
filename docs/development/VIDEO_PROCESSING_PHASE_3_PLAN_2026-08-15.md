@@ -1,5 +1,7 @@
 # CGM 视频处理第三阶段功能规划
 
+> 2026-10-01 决策更新：真实4K HEVC冷播放已实测完整MP4代理约84/125秒，第三阶段B启用条件成立。第三阶段B的fMP4／bundle表／schema草案由[渐进播放ADR](../architecture/PROGRESSIVE_VIDEO_PLAYBACK_2026-09-30.md)替代：本轮使用临时MPEG-TS片段、完成后流复制到现有MP4增强缓存，不增加schema。下文保留原条件式规划作为决策历史；第三阶段A storyboard仍未实施。
+
 > 状态：条件式后续规划，尚未实现
 > 记录日期：2026-08-15
 > 当前分支：`agent/cgm-migration-handoff-20260726`

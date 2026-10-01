@@ -29,6 +29,7 @@ import { useImageDisplay } from "./useImageDisplay";
 import { useOnDemandAnimatedPreview } from "./useOnDemandAnimatedPreview";
 import { useOnDemandVideoPlayback } from "./useOnDemandVideoPlayback";
 import { VideoPlaybackNotice } from "./VideoPlaybackNotice";
+import { PlaybackVideo } from "./PlaybackVideo";
 
 const memberBatchSize = 24;
 const animationHoverConfirmationMS = 150;
@@ -675,7 +676,7 @@ function Lightbox({ item, favorite, rating, currentCover, personalControlsVisibl
       </div>
       <button className="lightbox__previous" type="button" aria-label="Previous media" disabled={!canPrevious} onClick={(event) => { event.stopPropagation(); onPrevious(); }}><Icon name="chevron-left" /></button>
       <div className="lightbox__content" onClick={(event) => event.stopPropagation()}>
-        {item.mediaKind === "VIDEO" && resourceURL ? <video key={item.itemUUID} src={resourceURL} controls playsInline autoPlay onError={videoPlayback.onPlaybackError} />
+        {item.mediaKind === "VIDEO" && resourceURL ? <PlaybackVideo key={item.itemUUID} url={resourceURL} hls={videoPlayback.hls} autoPlay onError={videoPlayback.onPlaybackError} />
           : item.mediaKind !== "VIDEO" && resourceURL ? <img key={item.itemUUID} src={resourceURL} alt={item.caption} />
             : item.cardResource ? <img key={`${item.itemUUID}-poster`} src={itemResourceURL(item.cardResource) ?? undefined} alt={item.caption} />
               : <span>{item.processingState}</span>}

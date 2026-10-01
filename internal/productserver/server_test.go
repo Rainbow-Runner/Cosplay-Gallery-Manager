@@ -35,6 +35,24 @@ func TestHealthIsPublicButGraphQLRequiresSession(t *testing.T) {
 	}
 }
 
+func TestProgressivePlaybackRouteRequiresSessionAndSameOrigin(t *testing.T) {
+	server := testServer(t)
+	path := "/playback/video/01900000-0000-7000-8000-000000000002"
+	request := httptest.NewRequest(http.MethodPost, path, nil)
+	response := httptest.NewRecorder()
+	server.Handler.ServeHTTP(response, request)
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthed playback = %d", response.Code)
+	}
+	request = httptest.NewRequest(http.MethodPost, path, nil)
+	request.Header.Set("Origin", "https://unrelated.example")
+	response = httptest.NewRecorder()
+	server.Handler.ServeHTTP(response, request)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("cross-origin playback = %d", response.Code)
+	}
+}
+
 func TestLoadConfigDefaultsAndValidatesLogLevel(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "cgm.json")
 	if err := os.WriteFile(path, []byte(`{

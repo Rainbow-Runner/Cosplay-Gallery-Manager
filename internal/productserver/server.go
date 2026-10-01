@@ -28,6 +28,7 @@ import (
 	"github.com/stashapp/stash/internal/productapi"
 	"github.com/stashapp/stash/internal/productauth"
 	"github.com/stashapp/stash/internal/productlog"
+	"github.com/stashapp/stash/internal/videoplayback"
 	"github.com/stashapp/stash/internal/videoresource"
 	"github.com/stashapp/stash/pkg/ffmpeg"
 	productweb "github.com/stashapp/stash/ui/web"
@@ -111,6 +112,7 @@ type Server struct {
 	CoserMetadata  *cosermetadata.Service
 	EntityMetadata *entitymetadata.Service
 	VideoTools     mediaprocessing.VideoToolchain
+	playback       *videoplayback.Manager
 
 	handlerSwitch      *switchHandler
 	operationMu        sync.Mutex
@@ -177,11 +179,17 @@ func NewWithProviders(config Config, database *productdb.Database, auth *product
 		CoserMetadata: &cosermetadata.Service{Registry: registry}, EntityMetadata: &entitymetadata.Service{Registry: entityRegistry},
 		VideoTools: tools, handlerSwitch: &switchHandler{}}
 	server.Handler = server.handlerSwitch
+	if err := server.ensurePlayback(); err != nil {
+		return nil, err
+	}
 	server.rebuildHandler()
 	return server, nil
 }
 
 func (s *Server) rebuildHandler() {
+	if err := s.ensurePlayback(); err != nil {
+		slog.Error("CGM_VIDEO_PLAYBACK_START_FAILED", "error_type", fmt.Sprintf("%T", err))
+	}
 	database, auth := s.Database, s.Auth
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(response http.ResponseWriter, _ *http.Request) { response.WriteHeader(http.StatusNoContent) })
@@ -228,6 +236,9 @@ func (s *Server) rebuildHandler() {
 		return productdb.ResourceAccess{Authenticated: auth.AuthorizeRequest(request), Mode: productdb.ResourceBrowse, Scope: productdb.ResourceScopeAll}, nil
 	}}
 	mux.Handle(videoresource.RoutePrefix, directVideoHandler)
+	if s.playback != nil {
+		mux.Handle(videoplayback.Prefix, sameOrigin(s.playback))
+	}
 	if s.Config.WebRoot != "" {
 		mux.Handle("/", spaHandler(s.Config.WebRoot))
 	} else if embeddedWeb, ok := productweb.FileSystem(); ok {
@@ -268,6 +279,9 @@ func (s *Server) RunWorkers(ctx context.Context) error {
 func (s *Server) startWorkers(ctx context.Context) error {
 	s.workerMu.Lock()
 	defer s.workerMu.Unlock()
+	if err := s.ensurePlayback(); err != nil {
+		return err
+	}
 	if s.workerCancel != nil {
 		return nil
 	}
@@ -328,11 +342,32 @@ func (s *Server) stopWorkers() {
 	s.workerMu.Lock()
 	cancel := s.workerCancel
 	s.workerCancel = nil
+	playback := s.playback
+	s.playback = nil
 	s.workerMu.Unlock()
+	if playback != nil {
+		playback.Close()
+	}
 	if cancel != nil {
 		cancel()
 		s.workerDone.Wait()
 	}
+}
+
+func (s *Server) ensurePlayback() error {
+	if s.playback != nil && s.playback.DB == s.Database {
+		return nil
+	}
+	if s.playback != nil {
+		s.playback.Close()
+		s.playback = nil
+	}
+	manager, err := videoplayback.New(s.Database, s.Config.CachePath, s.VideoTools.FFmpeg.Path, s.VideoTools.FFmpeg.Version, s.Auth.AuthorizeRequest)
+	if err != nil {
+		return err
+	}
+	s.playback = manager
+	return nil
 }
 
 type switchHandler struct {

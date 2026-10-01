@@ -14,6 +14,13 @@
 - 随后完成HA-01工作区实现：启动后异步、有界地枚举FFmpeg硬件能力，检查Linux设备是否存在且可写，并分别对NVENC、VAAPI和候选QSV执行不读取媒体的合成帧上传／缩放／H.264编码烟测；稳定区分`PROBING`、`NOT_COMPILED`、`DEVICE_MISSING`、`PERMISSION_DENIED`、`SMOKE_TEST_FAILED`和`AVAILABLE`。Manage Settings只读展示探测时间、技术设备名、编解码组件与错误码；日志只记录后端状态，不记录路径或驱动输出。
 - HA-01不增加schema、不更改运行设置、不改变现有FFmpeg播放命令，也不会因探测到GPU而自动启用硬件路径。后端测试`go test ./internal/mediaprocessing ./internal/productapi ./internal/productserver`通过；前端类型检查、Manage Settings定向测试和生产构建通过。当前改动尚未提交、迁移或部署。
 
+### HA-01提交、备份与真实服务诊断
+
+- HA-01源码与规划提交为`92fddf3753a0735b0077b7b9b3a9378690a5743e`（`Add hardware acceleration diagnostics`）。提交后正式三标签`mediaprocessing`、`productapi`、`productserver`和`cmd/cgm`测试及同范围Go Vet通过；TypeScript、Manage Settings定向测试和生产构建此前已通过。清洁提交候选内嵌新版Web，About注入完整提交及`2026-10-01T08:21:57Z`构建时间，SHA-256为`bb2ee09b346352fad113493a155b7d84304e351297f7e9b250f6f7388fb433f8`。
+- 16:24 CST停服并确认WAL／SHM关闭；0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-ha01-92fddf3-fKKG35L3`保存一致数据库、旧程序、配置、用户systemd单元及外部／product-state Coser资源，文件与资源树逐项一致。备份数据库schema v21、完整性`ok`，七类Coser／Work／Character／Tag／Gallery／Source／Item计数为`135/108/697/23/10/10/780`；旧程序SHA-256为`984742304e8ec2131ad5343db8c789320f69f24899bb3933bbfc958bb3d596c3`。
+- 候选同目录暂存校验后原子替换并启动一次。服务`active/running`、`NRestarts=0`，Health／Ready均204；About精确指向`92fddf3`，正式程序哈希与候选一致。正式库保持schema v21、完整性`ok`及原业务计数，配置哈希仍为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，未修改媒体、Manifest或缓存。
+- 启动后约1秒完成真实宿主机探测：`NVENC=AVAILABLE`、`VAAPI=AVAILABLE`、`QSV=SMOKE_TEST_FAILED`。因此下一生产路线优先NVENC、VAAPI后续补齐，QSV暂不进入生产选择。HA-01只诊断，现有播放仍使用软件路径；尚未远端推送或更新Docker镜像。
+
 ## 2026-10-01 视频分阶段诊断与渐进播放提交及本机部署
 
 - 业务实测的两个4K HEVC存档视频85／119.4秒，旧完整MP4代理分别耗时84.082／125.362秒；排队和HTTP请求仅毫秒至亚秒级，瓶颈在CPU FFmpeg流水线。先增加`CGM_VIDEO_STAGE_COMPLETED`与`CGM_VIDEO_FFMPEG_PROGRESS`：队列龄期、容量检查、来源直读证明、MP4/HLS编码、首片段、HLS→MP4封装与缓存登记分别计时，报告技术输出时间、速度、FPS、完成比例和估计剩余时间；失败只记退出码和短Item前缀，避免日志记录源路径／播放令牌／观看历史。

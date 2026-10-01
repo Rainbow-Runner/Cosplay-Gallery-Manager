@@ -403,6 +403,7 @@ SocialAccount：
 - 1.5按两个实现阶段补齐该闭环：第一阶段完成FFmpeg/FFprobe诊断、产品自有技术元数据与约20%位置可靠Poster；第二阶段完成认证DIRECT Range路由、按需Remux/H.264-AAC代理及Lightbox/媒体详情播放。完整任务、数据、缓存、安全和测试规格见[视频处理第一、第二阶段功能规划](development/VIDEO_PROCESSING_PHASE_1_2_PLAN_2026-08-15.md)。
 - Gallery列表、卡片曝光和Gallery卡片Scrubber不得触发原视频读取、Remux或转码；只有当前Lightbox视频或媒体详情实际打开才请求播放资源。
 - Storyboard辅助时间轴和条件式单清晰度渐进HLS已形成[第三阶段后续规划](development/VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)，但不加入当前第一版/1.5完成门禁；HLS必须先由第二阶段真实大视频指标证明必要并另行ADR确认。
+- 2026-10-01真实渐进播放验收确认4K HEVC软件转码长期低于实时速度，存档打开／证明及底层吞吐不是主要瓶颈；所有者据此授权分阶段完善Linux硬件加速。CPU仍是正确性基线，先做只读能力烟测，再依次实现本机设置／规划器、NVDEC＋CUDA＋NVENC、一次性软件回退、HLS供给优化、VAAPI／Intel及设备级调度；默认不得因升级自动启用GPU。完整边界、基准和门禁见[硬件加速实施方案](development/HARDWARE_ACCELERATION_PLAN_2026-10-01.md)。本项覆盖第三阶段旧规划中“硬件编码不纳入”的历史范围，但不恢复字幕、多码率或观看状态等其他延期功能。
 
 ### 11.7 复用Stash底层
 

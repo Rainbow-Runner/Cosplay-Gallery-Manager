@@ -1945,8 +1945,14 @@ func (r *queryResolver) ManageVideoDependencyStatus(ctx context.Context) (*Manag
 	if err != nil {
 		return nil, manageError(err)
 	}
-	return &ManageVideoDependencyStatus{FfmpegAvailable: status.FFmpegAvailable, FfmpegSource: status.FFmpegSource, FfmpegVersion: status.FFmpegVersion, FfmpegErrorCode: status.FFmpegErrorCode,
-		FfprobeAvailable: status.FFprobeAvailable, FfprobeSource: status.FFprobeSource, FfprobeVersion: status.FFprobeVersion, FfprobeErrorCode: status.FFprobeErrorCode}, nil
+	result := &ManageVideoDependencyStatus{FfmpegAvailable: status.FFmpegAvailable, FfmpegSource: status.FFmpegSource, FfmpegVersion: status.FFmpegVersion, FfmpegErrorCode: status.FFmpegErrorCode,
+		FfprobeAvailable: status.FFprobeAvailable, FfprobeSource: status.FFprobeSource, FfprobeVersion: status.FFprobeVersion, FfprobeErrorCode: status.FFprobeErrorCode,
+		HardwareProbeState: status.HardwareProbeState, HardwareProbedAt: status.HardwareProbedAt}
+	for _, backend := range status.HardwareBackends {
+		result.HardwareBackends = append(result.HardwareBackends, &ManageVideoHardwareBackendStatus{Backend: backend.Backend, State: backend.State, Device: backend.Device,
+			DecodeCodecs: backend.DecodeCodecs, Encoder: backend.Encoder, ScaleFilter: backend.ScaleFilter, RuntimeTested: backend.RuntimeTested, ErrorCode: backend.ErrorCode})
+	}
+	return result, nil
 }
 
 // ManageProcessingJobs is the resolver for the manageProcessingJobs field.

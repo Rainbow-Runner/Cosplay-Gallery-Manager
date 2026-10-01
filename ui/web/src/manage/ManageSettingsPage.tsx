@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client/react";
-import { type FormEvent, useEffect, useState } from "react";
+import { Fragment, type FormEvent, useEffect, useState } from "react";
 import { MANAGE_RUNTIME_SETTINGS, UPDATE_RUNTIME_SETTINGS } from "../api/manage";
 import { mediaMetadataVisibilityKeys, readMediaMetadataVisibleFields, writeMediaMetadataVisibleFields } from "../browse/mediaMetadataPreferences";
 import type { ManageCacheStorage, ManageRuntimeSettings, ManageVideoDependencyStatus } from "./types";
@@ -70,7 +70,13 @@ function VideoDependencyPanel({ value }: { value?: ManageVideoDependencyStatus }
   return <fieldset className="settings-cache-status"><legend>Video processing</legend><dl>
     <dt>FFmpeg</dt><dd>{value ? tool(value.ffmpegAvailable,value.ffmpegSource,value.ffmpegVersion,value.ffmpegErrorCode) : "Checking…"}</dd>
     <dt>FFprobe</dt><dd>{value ? tool(value.ffprobeAvailable,value.ffprobeSource,value.ffprobeVersion,value.ffprobeErrorCode) : "Checking…"}</dd>
-  </dl><p>Paths come from startup configuration or the local executable search. This page does not download or modify media tools.</p></fieldset>;
+    <dt>Hardware probe</dt><dd><strong>{hardwareStateLabel(value?.hardwareProbeState ?? "PROBING")}</strong><small>{value?.hardwareProbedAt ? new Date(value.hardwareProbedAt).toLocaleString() : "Bounded background diagnostic"}</small></dd>
+    {(value?.hardwareBackends ?? []).map((backend) => <Fragment key={backend.backend}><dt>{backend.backend}</dt><dd><strong>{hardwareStateLabel(backend.state)}</strong><small>{[backend.device, backend.encoder, backend.scaleFilter, backend.decodeCodecs.join(" / ")].filter(Boolean).join(" · ") || backend.errorCode || "No runtime result"}</small>{backend.errorCode ? <small>{backend.errorCode}</small> : null}</dd></Fragment>)}
+  </dl><p>Paths come from startup configuration or the local executable search. Hardware results combine compiled capabilities, device access and a bounded synthetic-frame smoke test. AVAILABLE does not enable GPU transcoding; software remains the active baseline. This page does not download or modify media tools.</p></fieldset>;
+}
+
+function hardwareStateLabel(state: string) {
+  return ({ PROBING: "检测中 / Probing", COMPLETED: "检测完成 / Completed", AVAILABLE: "可用 / Available", NOT_COMPILED: "未编译 / Not compiled", DEVICE_MISSING: "设备缺失 / Device missing", PERMISSION_DENIED: "权限不足 / Permission denied", SMOKE_TEST_FAILED: "烟测失败 / Smoke test failed", FFMPEG_UNAVAILABLE: "FFmpeg 不可用 / FFmpeg unavailable" } as Record<string,string>)[state] ?? state;
 }
 
 function Check({ label, checked, change }: { label: string; checked: boolean; change: (value: boolean) => void }) { return <label className="settings-check"><input type="checkbox" checked={checked} onChange={(event) => change(event.target.checked)} />{label}</label>; }

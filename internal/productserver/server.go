@@ -112,6 +112,7 @@ type Server struct {
 	CoserMetadata  *cosermetadata.Service
 	EntityMetadata *entitymetadata.Service
 	VideoTools     mediaprocessing.VideoToolchain
+	VideoHardware  *mediaprocessing.HardwareAccelerationMonitor
 	playback       *videoplayback.Manager
 
 	handlerSwitch      *switchHandler
@@ -175,13 +176,21 @@ func NewWithProviders(config Config, database *productdb.Database, auth *product
 		return nil, err
 	}
 	tools := mediaprocessing.ResolveVideoToolchain(context.Background(), config.FFmpegPath, config.FFprobePath)
+	hardware := mediaprocessing.NewHardwareAccelerationMonitor()
 	server := &Server{Config: config, Database: database, Auth: auth,
 		CoserMetadata: &cosermetadata.Service{Registry: registry}, EntityMetadata: &entitymetadata.Service{Registry: entityRegistry},
-		VideoTools: tools, handlerSwitch: &switchHandler{}}
+		VideoTools: tools, VideoHardware: hardware, handlerSwitch: &switchHandler{}}
 	server.Handler = server.handlerSwitch
 	if err := server.ensurePlayback(); err != nil {
 		return nil, err
 	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+		defer cancel()
+		status := mediaprocessing.ProbeHardwareAcceleration(ctx, tools.FFmpeg.Path)
+		hardware.Set(status)
+		slog.Info("CGM_VIDEO_HARDWARE_PROBE_COMPLETED", mediaprocessing.HardwareProbeLogFields(status)...)
+	}()
 	server.rebuildHandler()
 	return server, nil
 }

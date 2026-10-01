@@ -5,6 +5,15 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-10-01 真实渐进播放复核与硬件加速规划
+
+- 正式服务本次存档4K HEVC播放请求8ms、HLS槽等待0ms、容量检查1ms、来源打开与证明1ms，首个4秒片段6.621秒；FFmpeg由约0.99倍逐步降至0.85倍实时，后续片段请求最长等待约25.9秒。会话释放时出现的504是等待请求随客户端取消结束，不是存档识别失败。
+- 测试Item为2160×3840／30fps／HEVC Main 8-bit／AAC／124.2秒，输入约14.6Mbps。存档成员完整只读流出约655MiB/s、媒体盘抽样约396～410MiB/s，远高于约1.8MiB/s输入需求；存档可见准备成本约占首片段0.015%，主要瓶颈为软件解码、缩放及`libx264`编码。持续Range桥接的精确占比仍需HA-01补充读取指标。
+- 正式CGM用户可访问Intel及NVIDIA设备，VAAPI／NVENC最小烟测成功。相同成员12秒指示基准由软件约1.20倍提升到NVDEC＋CUDA＋NVENC约1.61倍；首个4秒HLS片段约4.25秒降至约1.60秒。但未调校NVENC片段约为软件5倍，初步限码后仍约2.8倍，必须先校准质量、码率和VBV。
+- 新增[硬件加速实施方案](HARDWARE_ACCELERATION_PLAN_2026-10-01.md)，按HA-01只读诊断、HA-02本机设置与规划器、HA-03 NVIDIA渐进链路、HA-04回退与完整MP4统一、HA-05 HLS供给、HA-06 VAAPI／调度实施。方案冻结时仅完成调查与文档持久化，未修改业务代码、schema、正式配置、数据库、媒体、缓存或运行服务。
+- 随后完成HA-01工作区实现：启动后异步、有界地枚举FFmpeg硬件能力，检查Linux设备是否存在且可写，并分别对NVENC、VAAPI和候选QSV执行不读取媒体的合成帧上传／缩放／H.264编码烟测；稳定区分`PROBING`、`NOT_COMPILED`、`DEVICE_MISSING`、`PERMISSION_DENIED`、`SMOKE_TEST_FAILED`和`AVAILABLE`。Manage Settings只读展示探测时间、技术设备名、编解码组件与错误码；日志只记录后端状态，不记录路径或驱动输出。
+- HA-01不增加schema、不更改运行设置、不改变现有FFmpeg播放命令，也不会因探测到GPU而自动启用硬件路径。后端测试`go test ./internal/mediaprocessing ./internal/productapi ./internal/productserver`通过；前端类型检查、Manage Settings定向测试和生产构建通过。当前改动尚未提交、迁移或部署。
+
 ## 2026-10-01 视频分阶段诊断与渐进播放提交及本机部署
 
 - 业务实测的两个4K HEVC存档视频85／119.4秒，旧完整MP4代理分别耗时84.082／125.362秒；排队和HTTP请求仅毫秒至亚秒级，瓶颈在CPU FFmpeg流水线。先增加`CGM_VIDEO_STAGE_COMPLETED`与`CGM_VIDEO_FFMPEG_PROGRESS`：队列龄期、容量检查、来源直读证明、MP4/HLS编码、首片段、HLS→MP4封装与缓存登记分别计时，报告技术输出时间、速度、FPS、完成比例和估计剩余时间；失败只记退出码和短Item前缀，避免日志记录源路径／播放令牌／观看历史。

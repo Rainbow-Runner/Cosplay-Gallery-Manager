@@ -407,6 +407,19 @@ type ManageVideoDependencyStatus {
   ffprobeSource: String!
   ffprobeVersion: String!
   ffprobeErrorCode: String!
+  hardwareProbeState: String!
+  hardwareProbedAt: String!
+  hardwareBackends: [ManageVideoHardwareBackendStatus!]!
+}
+type ManageVideoHardwareBackendStatus {
+  backend: String!
+  state: String!
+  device: String!
+  decodeCodecs: [String!]!
+  encoder: String!
+  scaleFilter: String!
+  runtimeTested: Boolean!
+  errorCode: String!
 }
 input RuntimeSettingsInput {
   homeScope: BrowseScope! galleryCardScrubberEnabled: Boolean! galleryDetailMediaFilterEnabled: Boolean!

@@ -1150,14 +1150,28 @@ type ManageUnassignedDiagnostic struct {
 }
 
 type ManageVideoDependencyStatus struct {
-	FfmpegAvailable  bool   `json:"ffmpegAvailable"`
-	FfmpegSource     string `json:"ffmpegSource"`
-	FfmpegVersion    string `json:"ffmpegVersion"`
-	FfmpegErrorCode  string `json:"ffmpegErrorCode"`
-	FfprobeAvailable bool   `json:"ffprobeAvailable"`
-	FfprobeSource    string `json:"ffprobeSource"`
-	FfprobeVersion   string `json:"ffprobeVersion"`
-	FfprobeErrorCode string `json:"ffprobeErrorCode"`
+	FfmpegAvailable    bool                                `json:"ffmpegAvailable"`
+	FfmpegSource       string                              `json:"ffmpegSource"`
+	FfmpegVersion      string                              `json:"ffmpegVersion"`
+	FfmpegErrorCode    string                              `json:"ffmpegErrorCode"`
+	FfprobeAvailable   bool                                `json:"ffprobeAvailable"`
+	FfprobeSource      string                              `json:"ffprobeSource"`
+	FfprobeVersion     string                              `json:"ffprobeVersion"`
+	FfprobeErrorCode   string                              `json:"ffprobeErrorCode"`
+	HardwareProbeState string                              `json:"hardwareProbeState"`
+	HardwareProbedAt   string                              `json:"hardwareProbedAt"`
+	HardwareBackends   []*ManageVideoHardwareBackendStatus `json:"hardwareBackends"`
+}
+
+type ManageVideoHardwareBackendStatus struct {
+	Backend       string   `json:"backend"`
+	State         string   `json:"state"`
+	Device        string   `json:"device"`
+	DecodeCodecs  []string `json:"decodeCodecs"`
+	Encoder       string   `json:"encoder"`
+	ScaleFilter   string   `json:"scaleFilter"`
+	RuntimeTested bool     `json:"runtimeTested"`
+	ErrorCode     string   `json:"errorCode"`
 }
 
 type ManifestConflictChoiceInput struct {

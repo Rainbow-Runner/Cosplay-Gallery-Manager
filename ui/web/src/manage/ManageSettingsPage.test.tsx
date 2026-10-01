@@ -27,8 +27,17 @@ describe("ManageSettingsPage cache status", () => {
     const mocks: MockedResponse[] = [{
       request: { query: MANAGE_RUNTIME_SETTINGS },
       result: { data: {
-        manageRuntimeSettings: runtimeSettings,
+        manageRuntimeSettings: { __typename: "ManageRuntimeSettings", ...runtimeSettings },
         manageCacheStorage: { path: "/var/cache/cgm", byteSize: 156263337, fileCount: 216, baseByteSize: 3733456, enhancedByteSize: 152529881 },
+		manageVideoDependencyStatus: {
+			ffmpegAvailable: true, ffmpegSource: "PATH", ffmpegVersion: "7.1", ffmpegErrorCode: "",
+			ffprobeAvailable: true, ffprobeSource: "FFMPEG_SIBLING", ffprobeVersion: "7.1", ffprobeErrorCode: "",
+			hardwareProbeState: "COMPLETED", hardwareProbedAt: "2026-10-01T02:03:04Z",
+			hardwareBackends: [
+				{ backend: "NVENC", state: "AVAILABLE", device: "nvidia0", decodeCodecs: ["h264_cuvid", "hevc_cuvid"], encoder: "h264_nvenc", scaleFilter: "scale_cuda", runtimeTested: true, errorCode: "" },
+				{ backend: "VAAPI", state: "PERMISSION_DENIED", device: "", decodeCodecs: ["h264", "hevc"], encoder: "h264_vaapi", scaleFilter: "scale_vaapi", runtimeTested: false, errorCode: "VAAPI_PERMISSION_DENIED" },
+			],
+		},
       } },
     }];
     render(<MockedProvider mocks={mocks}><ManageSettingsPage /></MockedProvider>);
@@ -41,6 +50,9 @@ describe("ManageSettingsPage cache status", () => {
 		expect(screen.getByLabelText("可回收缓存上限（GiB）/ Reclaimable cache limit")).toHaveValue(50);
 		expect(screen.getByLabelText("Animated playback limit")).toHaveValue(12);
 		expect(screen.getByLabelText("Animation lock interval (ms)")).toHaveValue(800);
+		expect(screen.getByText("可用 / Available")).toBeInTheDocument();
+		expect(screen.getByText("权限不足 / Permission denied")).toBeInTheDocument();
+		expect(screen.getByText("nvidia0 · h264_nvenc · scale_cuda · h264_cuvid / hevc_cuvid")).toBeInTheDocument();
     expect(screen.getByLabelText("作者 / Author")).toBeChecked();
     expect(screen.getByLabelText("GPS 位置元数据")).not.toBeChecked();
     expect(screen.queryByDisplayValue("/var/cache/cgm")).not.toBeInTheDocument();

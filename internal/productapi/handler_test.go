@@ -1079,7 +1079,8 @@ func (s fakeOperationsService) CacheStorageStatus(context.Context) (CacheStorage
 }
 
 func (s fakeOperationsService) VideoDependencyStatus(context.Context) (VideoDependencyStatus, error) {
-	return VideoDependencyStatus{FFmpegAvailable: true, FFmpegSource: "PATH", FFmpegVersion: "6.1", FFprobeAvailable: true, FFprobeSource: "FFMPEG_SIBLING", FFprobeVersion: "6.1"}, nil
+	return VideoDependencyStatus{FFmpegAvailable: true, FFmpegSource: "PATH", FFmpegVersion: "6.1", FFprobeAvailable: true, FFprobeSource: "FFMPEG_SIBLING", FFprobeVersion: "6.1",
+		HardwareProbeState: "COMPLETED", HardwareProbedAt: "2026-10-01T02:03:04Z", HardwareBackends: []VideoHardwareBackendStatus{{Backend: "NVENC", State: "AVAILABLE", Device: "nvidia0", DecodeCodecs: []string{"h264_cuvid", "hevc_cuvid"}, Encoder: "h264_nvenc", ScaleFilter: "scale_cuda", RuntimeTested: true}}}, nil
 }
 
 func openTestDatabase(t *testing.T) *productdb.Database {

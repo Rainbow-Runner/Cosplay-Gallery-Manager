@@ -75,7 +75,11 @@ export interface ManageVideoDependencyStatus {
   ffprobeSource: string;
   ffprobeVersion: string;
   ffprobeErrorCode: string;
+  hardwareProbeState: string;
+  hardwareProbedAt: string;
+  hardwareBackends: ManageVideoHardwareBackendStatus[];
 }
+export interface ManageVideoHardwareBackendStatus { backend: string; state: string; device: string; decodeCodecs: string[]; encoder: string; scaleFilter: string; runtimeTested: boolean; errorCode: string }
 export interface ManageCacheStorage { path: string; byteSize: number; fileCount: number; baseByteSize: number; enhancedByteSize: number }
 export interface ManageProcessingJob { id: number; kind: string; galleryID?: number | null; itemUUID?: string | null; variant: string; status: string; priority: number; attemptCount: number; maxAttempts: number; lastErrorCode: string; structuralFailure: boolean; createdAt: string; updatedAt: string }
 export interface ManageProcessingJobPage { items: ManageProcessingJob[]; page: number; pageSize: number; totalItems: number; totalPages: number }

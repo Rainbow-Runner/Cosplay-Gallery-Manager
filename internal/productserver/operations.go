@@ -103,10 +103,22 @@ func (s *Server) CacheStorageStatus(ctx context.Context) (productapi.CacheStorag
 }
 
 func (s *Server) VideoDependencyStatus(context.Context) (productapi.VideoDependencyStatus, error) {
-	return productapi.VideoDependencyStatus{
+	result := productapi.VideoDependencyStatus{
 		FFmpegAvailable: s.VideoTools.FFmpeg.Available, FFmpegSource: s.VideoTools.FFmpeg.Source, FFmpegVersion: s.VideoTools.FFmpeg.Version, FFmpegErrorCode: s.VideoTools.FFmpeg.ErrorCode,
 		FFprobeAvailable: s.VideoTools.FFprobe.Available, FFprobeSource: s.VideoTools.FFprobe.Source, FFprobeVersion: s.VideoTools.FFprobe.Version, FFprobeErrorCode: s.VideoTools.FFprobe.ErrorCode,
-	}, nil
+	}
+	hardware := s.VideoHardware.Snapshot()
+	result.HardwareProbeState = hardware.ProbeState
+	if !hardware.ProbedAt.IsZero() {
+		result.HardwareProbedAt = hardware.ProbedAt.Format(time.RFC3339)
+	}
+	for _, backend := range hardware.Backends {
+		result.HardwareBackends = append(result.HardwareBackends, productapi.VideoHardwareBackendStatus{
+			Backend: backend.Backend, State: backend.State, Device: backend.Device, DecodeCodecs: backend.DecodeCodecs,
+			Encoder: backend.Encoder, ScaleFilter: backend.ScaleFilter, RuntimeTested: backend.RuntimeTested, ErrorCode: backend.ErrorCode,
+		})
+	}
+	return result, nil
 }
 
 func (s *Server) CreateFullBackup(ctx context.Context) (productdb.BackupRecord, error) {

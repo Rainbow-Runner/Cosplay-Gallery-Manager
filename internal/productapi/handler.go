@@ -84,6 +84,14 @@ type VideoDependencyStatus struct {
 	FFmpegSource, FFmpegVersion, FFmpegErrorCode    string
 	FFprobeAvailable                                bool
 	FFprobeSource, FFprobeVersion, FFprobeErrorCode string
+	HardwareProbeState, HardwareProbedAt            string
+	HardwareBackends                                []VideoHardwareBackendStatus
+}
+
+type VideoHardwareBackendStatus struct {
+	Backend, State, Device, Encoder, ScaleFilter, ErrorCode string
+	DecodeCodecs                                            []string
+	RuntimeTested                                           bool
 }
 
 type CacheStorageStatus struct {

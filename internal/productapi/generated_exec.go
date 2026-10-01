@@ -1124,14 +1124,28 @@ type ComplexityRoot struct {
 	}
 
 	ManageVideoDependencyStatus struct {
-		FfmpegAvailable  func(childComplexity int) int
-		FfmpegErrorCode  func(childComplexity int) int
-		FfmpegSource     func(childComplexity int) int
-		FfmpegVersion    func(childComplexity int) int
-		FfprobeAvailable func(childComplexity int) int
-		FfprobeErrorCode func(childComplexity int) int
-		FfprobeSource    func(childComplexity int) int
-		FfprobeVersion   func(childComplexity int) int
+		FfmpegAvailable    func(childComplexity int) int
+		FfmpegErrorCode    func(childComplexity int) int
+		FfmpegSource       func(childComplexity int) int
+		FfmpegVersion      func(childComplexity int) int
+		FfprobeAvailable   func(childComplexity int) int
+		FfprobeErrorCode   func(childComplexity int) int
+		FfprobeSource      func(childComplexity int) int
+		FfprobeVersion     func(childComplexity int) int
+		HardwareBackends   func(childComplexity int) int
+		HardwareProbeState func(childComplexity int) int
+		HardwareProbedAt   func(childComplexity int) int
+	}
+
+	ManageVideoHardwareBackendStatus struct {
+		Backend       func(childComplexity int) int
+		DecodeCodecs  func(childComplexity int) int
+		Device        func(childComplexity int) int
+		Encoder       func(childComplexity int) int
+		ErrorCode     func(childComplexity int) int
+		RuntimeTested func(childComplexity int) int
+		ScaleFilter   func(childComplexity int) int
+		State         func(childComplexity int) int
 	}
 
 	MediaCounts struct {
@@ -7036,6 +7050,83 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageVideoDependencyStatus.FfprobeVersion(childComplexity), true
+
+	case "ManageVideoDependencyStatus.hardwareBackends":
+		if e.complexity.ManageVideoDependencyStatus.HardwareBackends == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoDependencyStatus.HardwareBackends(childComplexity), true
+
+	case "ManageVideoDependencyStatus.hardwareProbeState":
+		if e.complexity.ManageVideoDependencyStatus.HardwareProbeState == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoDependencyStatus.HardwareProbeState(childComplexity), true
+
+	case "ManageVideoDependencyStatus.hardwareProbedAt":
+		if e.complexity.ManageVideoDependencyStatus.HardwareProbedAt == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoDependencyStatus.HardwareProbedAt(childComplexity), true
+
+	case "ManageVideoHardwareBackendStatus.backend":
+		if e.complexity.ManageVideoHardwareBackendStatus.Backend == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoHardwareBackendStatus.Backend(childComplexity), true
+
+	case "ManageVideoHardwareBackendStatus.decodeCodecs":
+		if e.complexity.ManageVideoHardwareBackendStatus.DecodeCodecs == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoHardwareBackendStatus.DecodeCodecs(childComplexity), true
+
+	case "ManageVideoHardwareBackendStatus.device":
+		if e.complexity.ManageVideoHardwareBackendStatus.Device == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoHardwareBackendStatus.Device(childComplexity), true
+
+	case "ManageVideoHardwareBackendStatus.encoder":
+		if e.complexity.ManageVideoHardwareBackendStatus.Encoder == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoHardwareBackendStatus.Encoder(childComplexity), true
+
+	case "ManageVideoHardwareBackendStatus.errorCode":
+		if e.complexity.ManageVideoHardwareBackendStatus.ErrorCode == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoHardwareBackendStatus.ErrorCode(childComplexity), true
+
+	case "ManageVideoHardwareBackendStatus.runtimeTested":
+		if e.complexity.ManageVideoHardwareBackendStatus.RuntimeTested == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoHardwareBackendStatus.RuntimeTested(childComplexity), true
+
+	case "ManageVideoHardwareBackendStatus.scaleFilter":
+		if e.complexity.ManageVideoHardwareBackendStatus.ScaleFilter == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoHardwareBackendStatus.ScaleFilter(childComplexity), true
+
+	case "ManageVideoHardwareBackendStatus.state":
+		if e.complexity.ManageVideoHardwareBackendStatus.State == nil {
+			break
+		}
+
+		return e.complexity.ManageVideoHardwareBackendStatus.State(childComplexity), true
 
 	case "MediaCounts.gif":
 		if e.complexity.MediaCounts.Gif == nil {
@@ -52061,6 +52152,508 @@ func (ec *executionContext) fieldContext_ManageVideoDependencyStatus_ffprobeErro
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageVideoDependencyStatus_hardwareProbeState(ctx context.Context, field graphql.CollectedField, obj *ManageVideoDependencyStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoDependencyStatus_hardwareProbeState(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HardwareProbeState, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoDependencyStatus_hardwareProbeState(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoDependencyStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoDependencyStatus_hardwareProbedAt(ctx context.Context, field graphql.CollectedField, obj *ManageVideoDependencyStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoDependencyStatus_hardwareProbedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HardwareProbedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoDependencyStatus_hardwareProbedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoDependencyStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoDependencyStatus_hardwareBackends(ctx context.Context, field graphql.CollectedField, obj *ManageVideoDependencyStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoDependencyStatus_hardwareBackends(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HardwareBackends, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ManageVideoHardwareBackendStatus)
+	fc.Result = res
+	return ec.marshalNManageVideoHardwareBackendStatus2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageVideoHardwareBackendStatusᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoDependencyStatus_hardwareBackends(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoDependencyStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "backend":
+				return ec.fieldContext_ManageVideoHardwareBackendStatus_backend(ctx, field)
+			case "state":
+				return ec.fieldContext_ManageVideoHardwareBackendStatus_state(ctx, field)
+			case "device":
+				return ec.fieldContext_ManageVideoHardwareBackendStatus_device(ctx, field)
+			case "decodeCodecs":
+				return ec.fieldContext_ManageVideoHardwareBackendStatus_decodeCodecs(ctx, field)
+			case "encoder":
+				return ec.fieldContext_ManageVideoHardwareBackendStatus_encoder(ctx, field)
+			case "scaleFilter":
+				return ec.fieldContext_ManageVideoHardwareBackendStatus_scaleFilter(ctx, field)
+			case "runtimeTested":
+				return ec.fieldContext_ManageVideoHardwareBackendStatus_runtimeTested(ctx, field)
+			case "errorCode":
+				return ec.fieldContext_ManageVideoHardwareBackendStatus_errorCode(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManageVideoHardwareBackendStatus", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoHardwareBackendStatus_backend(ctx context.Context, field graphql.CollectedField, obj *ManageVideoHardwareBackendStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoHardwareBackendStatus_backend(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Backend, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoHardwareBackendStatus_backend(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoHardwareBackendStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoHardwareBackendStatus_state(ctx context.Context, field graphql.CollectedField, obj *ManageVideoHardwareBackendStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoHardwareBackendStatus_state(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.State, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoHardwareBackendStatus_state(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoHardwareBackendStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoHardwareBackendStatus_device(ctx context.Context, field graphql.CollectedField, obj *ManageVideoHardwareBackendStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoHardwareBackendStatus_device(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Device, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoHardwareBackendStatus_device(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoHardwareBackendStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoHardwareBackendStatus_decodeCodecs(ctx context.Context, field graphql.CollectedField, obj *ManageVideoHardwareBackendStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoHardwareBackendStatus_decodeCodecs(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DecodeCodecs, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoHardwareBackendStatus_decodeCodecs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoHardwareBackendStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoHardwareBackendStatus_encoder(ctx context.Context, field graphql.CollectedField, obj *ManageVideoHardwareBackendStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoHardwareBackendStatus_encoder(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Encoder, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoHardwareBackendStatus_encoder(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoHardwareBackendStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoHardwareBackendStatus_scaleFilter(ctx context.Context, field graphql.CollectedField, obj *ManageVideoHardwareBackendStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoHardwareBackendStatus_scaleFilter(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ScaleFilter, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoHardwareBackendStatus_scaleFilter(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoHardwareBackendStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoHardwareBackendStatus_runtimeTested(ctx context.Context, field graphql.CollectedField, obj *ManageVideoHardwareBackendStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoHardwareBackendStatus_runtimeTested(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RuntimeTested, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoHardwareBackendStatus_runtimeTested(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoHardwareBackendStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageVideoHardwareBackendStatus_errorCode(ctx context.Context, field graphql.CollectedField, obj *ManageVideoHardwareBackendStatus) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageVideoHardwareBackendStatus_errorCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ErrorCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageVideoHardwareBackendStatus_errorCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageVideoHardwareBackendStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _MediaCounts_photo(ctx context.Context, field graphql.CollectedField, obj *MediaCounts) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_MediaCounts_photo(ctx, field)
 	if err != nil {
@@ -62791,6 +63384,12 @@ func (ec *executionContext) fieldContext_Query_manageVideoDependencyStatus(_ con
 				return ec.fieldContext_ManageVideoDependencyStatus_ffprobeVersion(ctx, field)
 			case "ffprobeErrorCode":
 				return ec.fieldContext_ManageVideoDependencyStatus_ffprobeErrorCode(ctx, field)
+			case "hardwareProbeState":
+				return ec.fieldContext_ManageVideoDependencyStatus_hardwareProbeState(ctx, field)
+			case "hardwareProbedAt":
+				return ec.fieldContext_ManageVideoDependencyStatus_hardwareProbedAt(ctx, field)
+			case "hardwareBackends":
+				return ec.fieldContext_ManageVideoDependencyStatus_hardwareBackends(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManageVideoDependencyStatus", field.Name)
 		},
@@ -77995,6 +78594,95 @@ func (ec *executionContext) _ManageVideoDependencyStatus(ctx context.Context, se
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "hardwareProbeState":
+			out.Values[i] = ec._ManageVideoDependencyStatus_hardwareProbeState(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "hardwareProbedAt":
+			out.Values[i] = ec._ManageVideoDependencyStatus_hardwareProbedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "hardwareBackends":
+			out.Values[i] = ec._ManageVideoDependencyStatus_hardwareBackends(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var manageVideoHardwareBackendStatusImplementors = []string{"ManageVideoHardwareBackendStatus"}
+
+func (ec *executionContext) _ManageVideoHardwareBackendStatus(ctx context.Context, sel ast.SelectionSet, obj *ManageVideoHardwareBackendStatus) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, manageVideoHardwareBackendStatusImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManageVideoHardwareBackendStatus")
+		case "backend":
+			out.Values[i] = ec._ManageVideoHardwareBackendStatus_backend(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "state":
+			out.Values[i] = ec._ManageVideoHardwareBackendStatus_state(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "device":
+			out.Values[i] = ec._ManageVideoHardwareBackendStatus_device(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "decodeCodecs":
+			out.Values[i] = ec._ManageVideoHardwareBackendStatus_decodeCodecs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "encoder":
+			out.Values[i] = ec._ManageVideoHardwareBackendStatus_encoder(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "scaleFilter":
+			out.Values[i] = ec._ManageVideoHardwareBackendStatus_scaleFilter(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "runtimeTested":
+			out.Values[i] = ec._ManageVideoHardwareBackendStatus_runtimeTested(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "errorCode":
+			out.Values[i] = ec._ManageVideoHardwareBackendStatus_errorCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -85203,6 +85891,60 @@ func (ec *executionContext) marshalNManageVideoDependencyStatus2ᚖgithubᚗcom�
 		return graphql.Null
 	}
 	return ec._ManageVideoDependencyStatus(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNManageVideoHardwareBackendStatus2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageVideoHardwareBackendStatusᚄ(ctx context.Context, sel ast.SelectionSet, v []*ManageVideoHardwareBackendStatus) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManageVideoHardwareBackendStatus2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageVideoHardwareBackendStatus(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManageVideoHardwareBackendStatus2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManageVideoHardwareBackendStatus(ctx context.Context, sel ast.SelectionSet, v *ManageVideoHardwareBackendStatus) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManageVideoHardwareBackendStatus(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNManifestConflictChoiceInput2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐManifestConflictChoiceInputᚄ(ctx context.Context, v any) ([]*ManifestConflictChoiceInput, error) {

@@ -10,6 +10,7 @@ import (
 )
 
 var nvidiaDevicePattern = regexp.MustCompile(`^nvidia([0-9]+)$`)
+var vaapiDevicePattern = regexp.MustCompile(`^renderD([0-9]+)$`)
 
 type ProgressiveSegmentSchedule struct {
 	FirstSeconds     int
@@ -67,8 +68,7 @@ func ProgressiveVideoArgs(input, directory string, plan VideoPlaybackPlan, start
 	return args
 }
 
-// ProgressiveVideoArgsForExecution consumes a frozen planner result. HA-03
-// deliberately implements only SOFTWARE and the proven NVENC HLS pipeline.
+// ProgressiveVideoArgsForExecution consumes a frozen planner result.
 func ProgressiveVideoArgsForExecution(input, directory string, plan VideoPlaybackPlan, execution VideoTranscodeExecutionPlan, start, seconds int) ([]string, error) {
 	return ProgressiveVideoArgsForSchedule(input, directory, plan, execution, start, ProgressiveSegmentSchedule{FirstSeconds: seconds, FollowingSeconds: seconds})
 }
@@ -84,13 +84,18 @@ func ProgressiveVideoArgsForSchedule(input, directory string, plan VideoPlayback
 	if start > 0 {
 		args = append(args, "-ss", strconv.Itoa(schedule.Start(start)))
 	}
-	hardware := execution.EffectiveBackend == "NVENC"
-	if hardware {
+	if execution.EffectiveBackend == "NVENC" {
 		match := nvidiaDevicePattern.FindStringSubmatch(execution.Device)
 		if !execution.Executable || execution.Workload != VideoTranscodeHLS || len(match) != 2 || (execution.Decoder != "h264_cuvid" && execution.Decoder != "hevc_cuvid") || execution.FilterStrategy != "CUDA" || execution.Encoder != "h264_nvenc" || execution.RateControl != nvencHLSRateControl {
 			return nil, errors.New("invalid NVENC execution plan")
 		}
 		args = append(args, "-hwaccel", "cuda", "-hwaccel_device", match[1], "-hwaccel_output_format", "cuda", "-c:v", execution.Decoder, "-extra_hw_frames", "8")
+	} else if execution.EffectiveBackend == "VAAPI" {
+		if !validVAAPIExecution(execution, VideoTranscodeHLS) {
+			return nil, errors.New("invalid VAAPI HLS execution plan")
+		}
+		device := filepath.Join("/dev/dri", execution.Device)
+		args = append(args, "-init_hw_device", "vaapi=va:"+device, "-filter_hw_device", "va", "-hwaccel", "vaapi", "-hwaccel_device", "va", "-hwaccel_output_format", "vaapi")
 	} else if !execution.Executable || execution.Workload != VideoTranscodeHLS || execution.EffectiveBackend != "SOFTWARE" || execution.FilterStrategy != "CPU" || execution.Encoder != "libx264" || execution.RateControl != "veryfast-crf20" {
 		return nil, errors.New("unsupported HLS execution backend")
 	}
@@ -101,16 +106,24 @@ func ProgressiveVideoArgsForSchedule(input, directory string, plan VideoPlayback
 		args = append(args, "-an")
 	}
 	args = append(args, "-map_metadata", "-1", "-map_chapters", "-1", "-sn", "-dn")
-	if hardware {
+	if execution.EffectiveBackend == "NVENC" {
 		args = append(args, "-vf", fmt.Sprintf("scale_cuda=w='min(%d,iw)':h='min(%d,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:format=nv12", plan.MaximumWidth, plan.MaximumHeight))
+	} else if execution.EffectiveBackend == "VAAPI" {
+		args = append(args, "-vf", fmt.Sprintf("scale_vaapi=w='min(%d,iw)':h='min(%d,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:format=nv12", plan.MaximumWidth, plan.MaximumHeight))
 	} else if filters := videoFilters(plan); filters != "" {
 		args = append(args, "-vf", filters)
 	}
-	if hardware {
+	if execution.EffectiveBackend == "NVENC" {
 		// scale_cuda keeps frames in CUDA memory with NV12 as the underlying
 		// software format. Supplying -pix_fmt nv12 here would make FFmpeg insert
 		// an unsupported CUDA-to-CPU auto-scale between the filter and NVENC.
 		args = append(args, "-c:v", "h264_nvenc", "-preset", "p4", "-tune", "hq", "-rc", "vbr", "-cq", "25", "-b:v", "3M", "-maxrate", "5M", "-bufsize", "10M", "-profile:v", "high", "-forced-idr", "1")
+	} else if execution.EffectiveBackend == "VAAPI" {
+		// The production iHD device reports CQP as its only supported H.264
+		// rate-control mode. Keep this reviewed profile isolated from NVENC
+		// and software cache identities; broader driver-specific modes need
+		// their own capability probe and calibration.
+		args = append(args, "-c:v", "h264_vaapi", "-rc_mode", "CQP", "-qp", "25", "-quality", "4", "-profile:v", "high")
 	} else {
 		args = append(args, "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-profile:v", "high", "-pix_fmt", "yuv420p", "-sc_threshold", "0")
 	}
@@ -133,6 +146,12 @@ func ProgressiveVideoArgsForSchedule(input, directory string, plan VideoPlayback
 	}
 	args = append(args, "-metadata:s:v:0", "rotate=0", "-f", "hls", "-hls_time", strconv.Itoa(segmentTime), "-hls_list_size", "0", "-start_number", strconv.Itoa(start), "-hls_segment_type", "mpegts", "-hls_flags", "temp_file+independent_segments", "-hls_segment_filename", filepath.Join(directory, "segment-%06d.ts"), filepath.Join(directory, "internal.m3u8"))
 	return args, nil
+}
+
+func validVAAPIExecution(execution VideoTranscodeExecutionPlan, workload VideoTranscodeWorkload) bool {
+	return execution.Executable && execution.Workload == workload && vaapiDevicePattern.MatchString(execution.Device) &&
+		(execution.Decoder == "h264" || execution.Decoder == "hevc") && execution.FilterStrategy == "VAAPI" &&
+		execution.Encoder == "h264_vaapi" && execution.RateControl == vaapiRateControl
 }
 
 func ProgressiveVideoProfileHash(metadata VideoTechnicalMetadata, plan VideoPlaybackPlan, version string, execution VideoTranscodeExecutionPlan, seconds int, revision int64) string {

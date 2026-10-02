@@ -181,7 +181,7 @@ func TestStartupRemovesOnlyOwnedPlaybackTemporaryDirectories(t *testing.T) {
 	}
 }
 
-func TestHLSExecutionPlanLimitsHA03ToNVENC(t *testing.T) {
+func TestHLSExecutionPlanSupportsReviewedHardwareBackends(t *testing.T) {
 	metadata := mediaprocessing.VideoTechnicalMetadata{VideoCodec: "hevc", PixelFormat: "yuv420p", DisplayWidth: 2160, DisplayHeight: 3840}
 	plan := mediaprocessing.PlaybackPlanFromMetadata(metadata)
 	hardware := mediaprocessing.HardwareAccelerationStatus{ProbeState: mediaprocessing.HardwareProbeCompleted, Backends: []mediaprocessing.HardwareBackendStatus{
@@ -194,13 +194,13 @@ func TestHLSExecutionPlanLimitsHA03ToNVENC(t *testing.T) {
 	}
 	vaapiOnly := hardware
 	vaapiOnly.Backends = vaapiOnly.Backends[1:]
-	fallback, code := hlsExecutionPlan(plan, metadata, mediaprocessing.VideoHardwarePreference{Mode: "AUTO", AllowSoftwareFallback: true}, vaapiOnly)
-	if code != "" || fallback.EffectiveBackend != "SOFTWARE" || fallback.ReasonCode != "HARDWARE_EXECUTOR_NOT_IMPLEMENTED" {
-		t.Fatalf("VAAPI fallback=%#v code=%q", fallback, code)
+	vaapi, code := hlsExecutionPlan(plan, metadata, mediaprocessing.VideoHardwarePreference{Mode: "AUTO", AllowSoftwareFallback: true}, vaapiOnly)
+	if code != "" || vaapi.EffectiveBackend != "VAAPI" || vaapi.Device != "renderD128" || vaapi.Decoder != "hevc" {
+		t.Fatalf("VAAPI plan=%#v code=%q", vaapi, code)
 	}
-	blocked, code := hlsExecutionPlan(plan, metadata, mediaprocessing.VideoHardwarePreference{Mode: "VAAPI"}, vaapiOnly)
-	if code != "VIDEO_HARDWARE_BACKEND_NOT_IMPLEMENTED" || blocked.EffectiveBackend != "VAAPI" {
-		t.Fatalf("VAAPI blocked=%#v code=%q", blocked, code)
+	explicit, code := hlsExecutionPlan(plan, metadata, mediaprocessing.VideoHardwarePreference{Mode: "VAAPI"}, vaapiOnly)
+	if code != "" || explicit.EffectiveBackend != "VAAPI" {
+		t.Fatalf("VAAPI explicit=%#v code=%q", explicit, code)
 	}
 	metadata.PixelFormat = "yuv420p10le"
 	unsupported, code := hlsExecutionPlan(plan, metadata, mediaprocessing.VideoHardwarePreference{Mode: "NVENC"}, hardware)
@@ -215,6 +215,9 @@ func TestHLSFailureCodePreventsImplicitHardwareFallback(t *testing.T) {
 	}
 	if got := hlsFailureCode(mediaprocessing.VideoTranscodeExecutionPlan{EffectiveBackend: "SOFTWARE"}); got != "VIDEO_HLS_FAILED" {
 		t.Fatalf("software failure code = %q", got)
+	}
+	if got := hlsFailureCode(mediaprocessing.VideoTranscodeExecutionPlan{EffectiveBackend: "VAAPI"}); got != "VIDEO_HARDWARE_HLS_FAILED" {
+		t.Fatalf("VAAPI failure code = %q", got)
 	}
 }
 
@@ -287,12 +290,41 @@ func TestNVENCProgressiveSessionEndToEnd(t *testing.T) {
 		seek             bool
 	}{{"directory-complete", "directory", false}, {"tar-range-seek", "tar", true}, {"sevenzip-range-seek", "7z", true}} {
 		t.Run(scenario.name, func(t *testing.T) {
-			testNVENCProgressiveSource(t, ffmpeg, ffprobe, clip, scenario.sourceKind, scenario.seek)
+			testHardwareProgressiveSource(t, ffmpeg, ffprobe, clip, scenario.sourceKind, scenario.seek, "NVENC", "nvidia0")
 		})
 	}
 }
 
-func testNVENCProgressiveSource(t *testing.T, ffmpeg, ffprobe, clip, sourceKind string, seek bool) {
+func TestVAAPIProgressiveSessionEndToEnd(t *testing.T) {
+	device := os.Getenv("CGM_TEST_VAAPI_DEVICE")
+	if device == "" {
+		t.Skip("set CGM_TEST_VAAPI_DEVICE to a render node such as renderD128")
+	}
+	ffmpeg, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ffprobe, err := exec.LookPath("ffprobe")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixtureRoot := t.TempDir()
+	clip := filepath.Join(fixtureRoot, "clip.mp4")
+	command := exec.Command(ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=12", "-t", "36", "-an", "-c:v", "libx265", "-preset", "ultrafast", "-x265-params", "log-level=error:pools=1:frame-threads=1", "-pix_fmt", "yuv420p", clip)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("HEVC fixture: %v: %s", err, output)
+	}
+	for _, scenario := range []struct {
+		name, sourceKind string
+		seek             bool
+	}{{"directory-complete", "directory", false}, {"tar-range-seek", "tar", true}, {"sevenzip-range-seek", "7z", true}} {
+		t.Run(scenario.name, func(t *testing.T) {
+			testHardwareProgressiveSource(t, ffmpeg, ffprobe, clip, scenario.sourceKind, scenario.seek, "VAAPI", device)
+		})
+	}
+}
+
+func testHardwareProgressiveSource(t *testing.T, ffmpeg, ffprobe, clip, sourceKind string, seek bool, backend, device string) {
 	t.Helper()
 	ctx := context.Background()
 	root := t.TempDir()
@@ -302,7 +334,7 @@ func testNVENCProgressiveSource(t *testing.T, ffmpeg, ffprobe, clip, sourceKind 
 	}
 	defer db.Close()
 	now := time.Now().UTC()
-	created, err := db.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "NVENC progressive", ContentRating: gallery.ContentRatingNonAdult}, now)
+	created, err := db.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: backend + " progressive", ContentRating: gallery.ContentRatingNonAdult}, now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -348,10 +380,11 @@ func testNVENCProgressiveSource(t *testing.T, ffmpeg, ffprobe, clip, sourceKind 
 	if _, err := db.ExecContext(ctx, `UPDATE galleries SET state='ACTIVE',added_at_utc=? WHERE id=?`, now.Format(time.RFC3339Nano), created.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.VideoMetadata().MarkPending(ctx, itemUUID, revision, "nvenc-e2e"); err != nil {
+	profile := strings.ToLower(backend) + "-e2e"
+	if err := db.VideoMetadata().MarkPending(ctx, itemUUID, revision, profile); err != nil {
 		t.Fatal(err)
 	}
-	metadata := mediaprocessing.VideoTechnicalMetadata{ItemUUID: itemUUID, ContentRevision: revision, ProbeProfileHash: "nvenc-e2e", Container: "mp4", VideoCodec: "hevc", PixelFormat: "yuv420p", VideoProfile: "Main", VideoStreamIndex: 0, DisplayWidth: 320, DisplayHeight: 180, DurationSeconds: 36}
+	metadata := mediaprocessing.VideoTechnicalMetadata{ItemUUID: itemUUID, ContentRevision: revision, ProbeProfileHash: profile, Container: "mp4", VideoCodec: "hevc", PixelFormat: "yuv420p", VideoProfile: "Main", VideoStreamIndex: 0, DisplayWidth: 320, DisplayHeight: 180, DurationSeconds: 36}
 	if err := db.VideoMetadata().PublishReady(ctx, metadata, now); err != nil {
 		t.Fatal(err)
 	}
@@ -359,13 +392,17 @@ func testNVENCProgressiveSource(t *testing.T, ffmpeg, ffprobe, clip, sourceKind 
 	if err != nil {
 		t.Fatal(err)
 	}
-	runtime.VideoHardwareMode = settings.VideoHardwareNVENC
+	if backend == "VAAPI" {
+		runtime.VideoHardwareMode = settings.VideoHardwareVAAPI
+	} else {
+		runtime.VideoHardwareMode = settings.VideoHardwareNVENC
+	}
 	runtime.VideoHardwareFallbackEnabled = false
-	runtime.VideoHardwareDevice = "nvidia0"
+	runtime.VideoHardwareDevice = device
 	if _, err := db.Settings().Update(ctx, runtime.Revision, runtime, now); err != nil {
 		t.Fatal(err)
 	}
-	m, err := New(db, filepath.Join(root, "cache"), ffmpeg, "nvenc-e2e", func(r *http.Request) bool {
+	m, err := New(db, filepath.Join(root, "cache"), ffmpeg, profile, func(r *http.Request) bool {
 		cookie, err := r.Cookie("cgm_session")
 		return err == nil && cookie.Value == "owner"
 	})
@@ -373,7 +410,11 @@ func testNVENCProgressiveSource(t *testing.T, ffmpeg, ffprobe, clip, sourceKind 
 		t.Fatal(err)
 	}
 	m.HardwareStatus = func() mediaprocessing.HardwareAccelerationStatus {
-		return mediaprocessing.HardwareAccelerationStatus{ProbeState: mediaprocessing.HardwareProbeCompleted, Backends: []mediaprocessing.HardwareBackendStatus{{Backend: "NVENC", State: mediaprocessing.HardwareProbeAvailable, Device: "nvidia0", DecodeCodecs: []string{"h264_cuvid", "hevc_cuvid"}}}}
+		decodeCodecs := []string{"h264_cuvid", "hevc_cuvid"}
+		if backend == "VAAPI" {
+			decodeCodecs = []string{"h264", "hevc"}
+		}
+		return mediaprocessing.HardwareAccelerationStatus{ProbeState: mediaprocessing.HardwareProbeCompleted, Backends: []mediaprocessing.HardwareBackendStatus{{Backend: backend, State: mediaprocessing.HardwareProbeAvailable, Device: device, DecodeCodecs: decodeCodecs}}}
 	}
 	closed := false
 	defer func() {
@@ -396,19 +437,19 @@ func testNVENCProgressiveSource(t *testing.T, ffmpeg, ffprobe, clip, sourceKind 
 	if err := json.Unmarshal(response.Body.Bytes(), &state); err != nil {
 		t.Fatal(err)
 	}
-	if state.Mode != "HLS_SESSION" || state.Backend != "NVENC" || state.Lease == "" {
+	if state.Mode != "HLS_SESSION" || state.Backend != backend || state.Lease == "" {
 		t.Fatalf("session = %#v", state)
 	}
 	m.mu.Lock()
-	var backend string
+	var activeBackend string
 	var sessionDirectory string
 	for _, active := range m.sessions {
-		backend = active.execution.EffectiveBackend
+		activeBackend = active.execution.EffectiveBackend
 		sessionDirectory = active.dir
 	}
 	m.mu.Unlock()
-	if backend != "NVENC" {
-		t.Fatalf("effective backend = %q", backend)
+	if activeBackend != backend {
+		t.Fatalf("effective backend = %q", activeBackend)
 	}
 	if seek {
 		segment := request(http.MethodGet, Prefix+"session/"+state.Lease+"/segment-000007.ts")
@@ -442,11 +483,11 @@ func testNVENCProgressiveSource(t *testing.T, ffmpeg, ffprobe, clip, sourceKind 
 			for _, entry := range entries {
 				names = append(names, entry.Name())
 			}
-			t.Fatalf("NVENC session did not complete: %#v files=%v", state, names)
+			t.Fatalf("%s session did not complete: %#v files=%v", backend, state, names)
 		}
 		manifest, err := os.ReadFile(filepath.Join(sessionDirectory, "internal.m3u8"))
 		if err != nil || !strings.Contains(string(manifest), "#EXTINF:2.000000") || !strings.Contains(string(manifest), "#EXTINF:4.000000") {
-			t.Fatalf("HA-05 NVENC schedule manifest = %q, %v", manifest, err)
+			t.Fatalf("HA-05 %s schedule manifest = %q, %v", backend, manifest, err)
 		}
 	}
 	if released := request(http.MethodPost, Prefix+"session/"+state.Lease+"/release"); released.Code != http.StatusNoContent {

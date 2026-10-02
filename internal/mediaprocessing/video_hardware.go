@@ -232,8 +232,39 @@ func probeVAAPI(ctx context.Context, executable string, runner hardwareProbeRunn
 	if _, err := runner.Output(ctx, executable, arguments...); err != nil {
 		return smokeFailure(status, err, "VAAPI_SMOKE_TEST_FAILED")
 	}
+	if err := probeVAAPIDecodePipeline(ctx, executable, runner, device); err != nil {
+		return smokeFailure(status, err, "VAAPI_DECODE_SMOKE_TEST_FAILED")
+	}
 	status.State, status.RuntimeTested = HardwareProbeAvailable, true
 	return status
+}
+
+func probeVAAPIDecodePipeline(ctx context.Context, executable string, runner hardwareProbeRunner, device hardwareDevice) error {
+	root, err := os.MkdirTemp("", "cgm-vaapi-probe-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(root)
+	for _, fixture := range []struct {
+		name    string
+		encoder string
+	}{{"h264", "libx264"}, {"hevc", "libx265"}} {
+		path := filepath.Join(root, fixture.name+".mp4")
+		arguments := []string{"-hide_banner", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=64x64:r=2", "-frames:v", "2", "-an", "-c:v", fixture.encoder, "-pix_fmt", "yuv420p"}
+		if fixture.encoder == "libx264" {
+			arguments = append(arguments, "-preset", "ultrafast")
+		} else {
+			arguments = append(arguments, "-preset", "ultrafast", "-x265-params", "log-level=error:pools=1:frame-threads=1")
+		}
+		if _, err := runner.Output(ctx, executable, append(arguments, path)...); err != nil {
+			return err
+		}
+		arguments = []string{"-hide_banner", "-v", "error", "-init_hw_device", "vaapi=va:" + device.Path, "-filter_hw_device", "va", "-hwaccel", "vaapi", "-hwaccel_device", "va", "-hwaccel_output_format", "vaapi", "-i", path, "-frames:v", "1", "-an", "-vf", "scale_vaapi=64:64:format=nv12", "-c:v", "h264_vaapi", "-f", "null", "-"}
+		if _, err := runner.Output(ctx, executable, arguments...); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func probeQSV(ctx context.Context, executable string, runner hardwareProbeRunner, devices []hardwareDevice, capabilities map[string]map[string]bool) HardwareBackendStatus {

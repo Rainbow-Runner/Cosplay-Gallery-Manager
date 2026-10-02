@@ -3,6 +3,7 @@ package mediaprocessing
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strconv"
 
 	"github.com/stashapp/stash/internal/product"
@@ -29,6 +30,10 @@ func HardwareExecutionFailure(err error) (string, bool) {
 		return failure.Backend, true
 	}
 	return "", false
+}
+
+func IsHardwareExecutionBackend(backend string) bool {
+	return backend == "NVENC" || backend == "VAAPI"
 }
 
 func SoftwareVideoTranscodePlan(playback VideoPlaybackPlan, metadata VideoTechnicalMetadata, workload VideoTranscodeWorkload) VideoTranscodeExecutionPlan {
@@ -67,8 +72,8 @@ func CompleteVideoProfileHash(metadata VideoTechnicalMetadata, plan VideoPlaybac
 }
 
 // CompleteVideoArgsForExecution is the shared full-MP4 executor. Remux remains
-// copy-only; transcoding accepts only the established CPU path or the same
-// bounded NVDEC/CUDA/NVENC chain used by progressive playback.
+// copy-only; transcoding accepts only the established CPU path or a bounded
+// hardware chain shared with progressive playback.
 func CompleteVideoArgsForExecution(input, output string, plan VideoPlaybackPlan, execution VideoTranscodeExecutionPlan) (ffmpeg.Args, error) {
 	args := ffmpeg.Args{"-hide_banner", "-loglevel", "error", "-y"}
 	if plan.ApplyRotation {
@@ -86,6 +91,12 @@ func CompleteVideoArgsForExecution(input, output string, plan VideoPlaybackPlan,
 			return nil, errors.New("invalid NVENC MP4 execution plan")
 		}
 		args = append(args, "-hwaccel", "cuda", "-hwaccel_device", match[1], "-hwaccel_output_format", "cuda", "-c:v", execution.Decoder, "-extra_hw_frames", "8")
+	} else if execution.EffectiveBackend == "VAAPI" {
+		if !validVAAPIExecution(execution, VideoTranscodeMP4) {
+			return nil, errors.New("invalid VAAPI MP4 execution plan")
+		}
+		device := filepath.Join("/dev/dri", execution.Device)
+		args = append(args, "-init_hw_device", "vaapi=va:"+device, "-filter_hw_device", "va", "-hwaccel", "vaapi", "-hwaccel_device", "va", "-hwaccel_output_format", "vaapi")
 	} else if !execution.Executable || execution.Workload != VideoTranscodeMP4 || execution.EffectiveBackend != "SOFTWARE" || execution.FilterStrategy != "CPU" || execution.Encoder != "libx264" || execution.RateControl != "medium-crf20" {
 		return nil, errors.New("unsupported MP4 execution backend")
 	}
@@ -101,6 +112,9 @@ func CompleteVideoArgsForExecution(input, output string, plan VideoPlaybackPlan,
 	} else if execution.EffectiveBackend == "NVENC" {
 		args = append(args, "-vf", fmt.Sprintf("scale_cuda=w='min(%d,iw)':h='min(%d,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:format=nv12", plan.MaximumWidth, plan.MaximumHeight),
 			"-c:v", "h264_nvenc", "-preset", "p4", "-tune", "hq", "-rc", "vbr", "-cq", "25", "-b:v", "3M", "-maxrate", "5M", "-bufsize", "10M", "-profile:v", "high")
+	} else if execution.EffectiveBackend == "VAAPI" {
+		args = append(args, "-vf", fmt.Sprintf("scale_vaapi=w='min(%d,iw)':h='min(%d,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:format=nv12", plan.MaximumWidth, plan.MaximumHeight),
+			"-c:v", "h264_vaapi", "-rc_mode", "CQP", "-qp", "25", "-quality", "4", "-profile:v", "high")
 	} else {
 		if filters := videoFilters(plan); filters != "" {
 			args = append(args, "-vf", filters)

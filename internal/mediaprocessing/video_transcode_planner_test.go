@@ -38,7 +38,7 @@ func TestVideoTranscodePlannerPrefersNVENCAndKeepsWorkloadInProfile(t *testing.T
 func TestVideoTranscodePlannerUsesDeviceAndSafeFallback(t *testing.T) {
 	playback, metadata := transcodeFixture()
 	vaapi := PlanVideoTranscode(playback, metadata, VideoHardwarePreference{Mode: "VAAPI", Device: "renderD128", AllowSoftwareFallback: true}, availableHardware(), VideoTranscodeMP4)
-	if vaapi.EffectiveBackend != "VAAPI" || vaapi.Device != "renderD128" || vaapi.Encoder != "h264_vaapi" {
+	if vaapi.EffectiveBackend != "VAAPI" || vaapi.Device != "renderD128" || vaapi.Decoder != "hevc" || vaapi.Encoder != "h264_vaapi" || vaapi.RateControl != vaapiRateControl {
 		t.Fatalf("VAAPI plan = %#v", vaapi)
 	}
 	wrong := PlanVideoTranscode(playback, metadata, VideoHardwarePreference{Mode: "NVENC", Device: "nvidia9", AllowSoftwareFallback: true}, availableHardware(), VideoTranscodeMP4)

@@ -44,7 +44,10 @@ func (w *boundedDiagnosticWriter) Write(p []byte) (int, error) {
 
 func videoCommandDiagnostic(value string) string {
 	lower := strings.ToLower(value)
-	for _, marker := range []string{"cannot load libcuda", "cuda_error", "no capable devices found", "failed setup for format cuda", "cannot init cuda", "cuvid decode picture error", "nvenc unloaded", "failed to open nvenc", "openencode session ex failed"} {
+	for _, marker := range []string{
+		"cannot load libcuda", "cuda_error", "no capable devices found", "failed setup for format cuda", "cannot init cuda", "cuvid decode picture error", "nvenc unloaded", "failed to open nvenc", "openencode session ex failed",
+		"failed to initialise vaapi connection", "failed to initialize vaapi connection", "no va display found", "no vaapi device available", "failed setup for format vaapi", "failed to create vaapi device", "failed to create encode pipeline", "no usable encoding entrypoint", "driver does not support vbr rc mode",
+	} {
 		if strings.Contains(lower, marker) {
 			return "HARDWARE_DEVICE_OR_DRIVER_FAILED"
 		}

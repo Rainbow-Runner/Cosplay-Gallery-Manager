@@ -230,13 +230,6 @@ func (s *BrowseStore) archiveProbePendingStatus(ctx context.Context, result brow
 
 func completeVideoExecution(plan mediaprocessing.VideoPlaybackPlan, metadata mediaprocessing.VideoTechnicalMetadata, runtime VideoPlaybackRuntime) (mediaprocessing.VideoTranscodeExecutionPlan, string) {
 	execution := mediaprocessing.PlanVideoTranscode(plan, metadata, runtime.Preference, runtime.Hardware, mediaprocessing.VideoTranscodeMP4)
-	if execution.EffectiveBackend == "VAAPI" {
-		if !runtime.Preference.AllowSoftwareFallback {
-			return execution, "VIDEO_HARDWARE_BACKEND_NOT_IMPLEMENTED"
-		}
-		execution = mediaprocessing.SoftwareVideoTranscodePlan(plan, metadata, mediaprocessing.VideoTranscodeMP4)
-		execution.ReasonCode = "HARDWARE_EXECUTOR_NOT_IMPLEMENTED"
-	}
 	if !execution.Executable {
 		return execution, "VIDEO_HARDWARE_UNAVAILABLE"
 	}

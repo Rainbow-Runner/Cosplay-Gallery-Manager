@@ -35,7 +35,7 @@ func (generator VideoPlaybackGenerator) Generate(ctx context.Context, request Ge
 		return GenerateResult{}, err
 	}
 	if err := RunVideoCommand(ctx, generator.Encoder, args, request.ItemUUID, "MP4_ENCODE", request.VideoTechnical.DurationSeconds, nil); err != nil {
-		if execution.EffectiveBackend == "NVENC" && ctx.Err() == nil && HardwareVideoCommandFailure(err) {
+		if IsHardwareExecutionBackend(execution.EffectiveBackend) && ctx.Err() == nil && HardwareVideoCommandFailure(err) {
 			return GenerateResult{}, &VideoHardwareExecutionError{Backend: execution.EffectiveBackend, Err: err}
 		}
 		if plan.ToneMapHDRToSDR {

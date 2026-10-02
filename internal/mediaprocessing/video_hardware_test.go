@@ -3,6 +3,8 @@ package mediaprocessing
 import (
 	"context"
 	"errors"
+	"os"
+	"os/exec"
 	"reflect"
 	"strings"
 	"testing"
@@ -18,9 +20,12 @@ type fakeHardwareProbeRunner struct {
 func (runner *fakeHardwareProbeRunner) Output(_ context.Context, executable string, arguments ...string) ([]byte, error) {
 	runner.calls = append(runner.calls, append([]string{executable}, arguments...))
 	key := arguments[len(arguments)-1]
-	if strings.Contains(strings.Join(arguments, " "), "color=c=black") {
+	joined := strings.Join(arguments, " ")
+	if strings.Contains(joined, "-hwaccel vaapi") && strings.Contains(joined, "cgm-vaapi-probe-") {
+		key = "vaapi_decode"
+	} else if strings.Contains(joined, "color=c=black") {
 		for _, backend := range []string{"h264_nvenc", "h264_vaapi", "h264_qsv"} {
-			if strings.Contains(strings.Join(arguments, " "), backend) {
+			if strings.Contains(joined, backend) {
 				key = backend
 			}
 		}
@@ -84,6 +89,12 @@ func TestProbeHardwareAccelerationDistinguishesCompilationDevicePermissionAndSmo
 		{name: "smoke failed", outputs: completeHardwareCapabilities(), errors: map[string]error{"h264_nvenc": errors.New("exit status 1")}, devices: func(string) []hardwareDevice {
 			return []hardwareDevice{{ID: "device0", Path: "/dev/device", Writable: true}}
 		}, backend: 0, wantState: HardwareProbeSmokeFailed, wantCode: "NVENC_SMOKE_TEST_FAILED"},
+		{name: "VAAPI decode smoke failed", outputs: completeHardwareCapabilities(), errors: map[string]error{"vaapi_decode": errors.New("exit status 1")}, devices: func(backend string) []hardwareDevice {
+			if backend == "NVIDIA" {
+				return []hardwareDevice{{ID: "nvidia0", Path: "/dev/nvidia0", Writable: true}}
+			}
+			return []hardwareDevice{{ID: "renderD128", Path: "/dev/dri/renderD128", Writable: true}}
+		}, backend: 1, wantState: HardwareProbeSmokeFailed, wantCode: "VAAPI_DECODE_SMOKE_TEST_FAILED"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -132,4 +143,24 @@ func TestHardwareAccelerationMonitorOpensAndProbeClearsRuntimeCircuit(t *testing
 	if got := monitor.Snapshot().Backends[0]; got.State != HardwareProbeAvailable || got.ErrorCode != "" {
 		t.Fatalf("probe did not clear circuit = %#v", got)
 	}
+}
+
+func TestVAAPIProbeExternal(t *testing.T) {
+	if os.Getenv("CGM_TEST_VAAPI_DEVICE") == "" {
+		t.Skip("set CGM_TEST_VAAPI_DEVICE on a VAAPI test host")
+	}
+	ffmpeg, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	status := ProbeHardwareAcceleration(context.Background(), ffmpeg)
+	for _, backend := range status.Backends {
+		if backend.Backend == "VAAPI" {
+			if backend.State != HardwareProbeAvailable || !backend.RuntimeTested || backend.ErrorCode != "" || len(backend.DecodeCodecs) != 2 {
+				t.Fatalf("VAAPI probe = %#v", backend)
+			}
+			return
+		}
+	}
+	t.Fatal("VAAPI backend missing from probe")
 }

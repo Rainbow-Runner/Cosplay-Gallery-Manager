@@ -173,7 +173,26 @@ func TestProgressiveVideoNVENCArgumentsArePlanBounded(t *testing.T) {
 	}
 	execution = VideoTranscodeExecutionPlan{EffectiveBackend: "VAAPI", Encoder: "h264_vaapi", Executable: true}
 	if _, err := ProgressiveVideoArgsForExecution("source.mp4", "segments", plan, execution, 0, 4); err == nil {
-		t.Fatal("HA-03 accepted an unimplemented backend")
+		t.Fatal("incomplete VAAPI plan was accepted")
+	}
+}
+
+func TestProgressiveVideoVAAPIArgumentsArePlanBounded(t *testing.T) {
+	plan := VideoPlaybackPlan{Mode: PlaybackTranscode, SelectVideoTrack: 0, SelectAudioTrack: -1, MaximumWidth: 1920, MaximumHeight: 1080}
+	execution := VideoTranscodeExecutionPlan{Workload: VideoTranscodeHLS, EffectiveBackend: "VAAPI", Device: "renderD128", Decoder: "hevc", FilterStrategy: "VAAPI", Encoder: "h264_vaapi", RateControl: vaapiRateControl, Executable: true}
+	args, err := ProgressiveVideoArgsForSchedule("source.mp4", "segments", plan, execution, 0, ProgressiveSegmentSchedule{FirstSeconds: 2, FollowingSeconds: 4})
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(args, " ")
+	for _, required := range []string{"-init_hw_device vaapi=va:/dev/dri/renderD128", "-filter_hw_device va", "-hwaccel vaapi", "-hwaccel_device va", "-hwaccel_output_format vaapi", "scale_vaapi=", "-c:v h264_vaapi", "-rc_mode CQP", "-qp 25", "-quality 4", "-force_key_frames expr:gte(t,2+n_forced*4)"} {
+		if !strings.Contains(joined, required) {
+			t.Fatalf("VAAPI arguments lack %q: %s", required, joined)
+		}
+	}
+	execution.Device = "/dev/dri/renderD128"
+	if _, err := ProgressiveVideoArgsForExecution("source.mp4", "segments", plan, execution, 0, 4); err == nil {
+		t.Fatal("absolute VAAPI device was accepted")
 	}
 }
 
@@ -228,6 +247,51 @@ func TestProgressiveVideoProfileSeparatesSoftwareAndNVENC(t *testing.T) {
 	}
 	if ProgressiveVideoProfileHash(metadata, plan, "7.1", software, 4, 2) == ProgressiveVideoProfileHashForSchedule(metadata, plan, "7.1", software, ProgressiveSegmentSchedule{FirstSeconds: 2, FollowingSeconds: 4}, 2) {
 		t.Fatal("HA-05 segment schedule must receive a new profile")
+	}
+	vaapi := PlanVideoTranscode(plan, metadata, VideoHardwarePreference{Mode: "VAAPI", AllowSoftwareFallback: true}, availableHardware(), VideoTranscodeHLS)
+	if ProgressiveVideoProfileHashForSchedule(metadata, plan, "7.1", vaapi, ProgressiveSegmentSchedule{FirstSeconds: 2, FollowingSeconds: 4}, 2) == ProgressiveVideoProfileHashForSchedule(metadata, plan, "7.1", nvenc, ProgressiveSegmentSchedule{FirstSeconds: 2, FollowingSeconds: 4}, 2) {
+		t.Fatal("VAAPI and NVENC HLS profiles must differ")
+	}
+}
+
+func TestProgressiveVideoVAAPIExternal(t *testing.T) {
+	device := os.Getenv("CGM_TEST_VAAPI_DEVICE")
+	if device == "" {
+		t.Skip("set CGM_TEST_VAAPI_DEVICE to a render node such as renderD128")
+	}
+	path, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	source := filepath.Join(root, "source.mp4")
+	if output, err := exec.Command(path, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=12", "-t", "7", "-an", "-c:v", "libx265", "-preset", "ultrafast", "-x265-params", "log-level=error:pools=1:frame-threads=1", "-pix_fmt", "yuv420p", source).CombinedOutput(); err != nil {
+		t.Fatalf("fixture: %v: %s", err, output)
+	}
+	plan := VideoPlaybackPlan{Mode: PlaybackTranscode, SelectVideoTrack: 0, SelectAudioTrack: -1, MaximumWidth: 1920, MaximumHeight: 1080}
+	execution := VideoTranscodeExecutionPlan{Workload: VideoTranscodeHLS, EffectiveBackend: "VAAPI", Device: device, Decoder: "hevc", FilterStrategy: "VAAPI", Encoder: "h264_vaapi", RateControl: vaapiRateControl, Executable: true}
+	schedule := ProgressiveSegmentSchedule{FirstSeconds: 2, FollowingSeconds: 4}
+	for _, start := range []int{0, 1} {
+		directory := filepath.Join(root, "segments-"+strconv.Itoa(start))
+		if err := os.Mkdir(directory, 0700); err != nil {
+			t.Fatal(err)
+		}
+		args, err := ProgressiveVideoArgsForSchedule(source, directory, plan, execution, start, schedule)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := RunVideoCommand(context.Background(), ffmpeg.NewEncoder(path), args, "vaapi-test", "HLS_ENCODE", 7, nil); err != nil {
+			t.Fatal(err)
+		}
+		if info, err := os.Stat(filepath.Join(directory, "segment-"+formatSegment(start)+".ts")); err != nil || info.Size() == 0 {
+			t.Fatalf("VAAPI segment %d unavailable: %v", start, err)
+		}
+		if start == 0 {
+			manifest, err := os.ReadFile(filepath.Join(directory, "internal.m3u8"))
+			if err != nil || !strings.Contains(string(manifest), "#EXTINF:2.000000") || !strings.Contains(string(manifest), "#EXTINF:4.000000") {
+				t.Fatalf("VAAPI schedule manifest = %q, %v", manifest, err)
+			}
+		}
 	}
 }
 

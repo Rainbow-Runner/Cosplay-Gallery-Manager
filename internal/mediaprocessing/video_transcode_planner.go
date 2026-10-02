@@ -35,13 +35,13 @@ type VideoTranscodeExecutionPlan struct {
 	ReasonCode            string
 }
 
-const videoTranscodePlannerVersion = "2"
+const videoTranscodePlannerVersion = "3"
 const nvencHLSRateControl = "vbr-cq25-b3m-max5m-buf10m-p4-hq-forced-idr"
 const nvencMP4RateControl = "vbr-cq25-b3m-max5m-buf10m-p4-hq"
+const vaapiRateControl = "cqp-qp25-quality4"
 
 // PlanVideoTranscode is a side-effect-free planner shared by every video
-// workload. Callers decide which planned backends they can execute; HA-03
-// consumes only SOFTWARE and NVENC for progressive HLS.
+// workload. Callers execute only the bounded backends represented here.
 func PlanVideoTranscode(playback VideoPlaybackPlan, metadata VideoTechnicalMetadata, preference VideoHardwarePreference, hardware HardwareAccelerationStatus, workload VideoTranscodeWorkload) VideoTranscodeExecutionPlan {
 	requested := strings.ToUpper(strings.TrimSpace(preference.Mode))
 	if requested == "" {
@@ -89,7 +89,11 @@ func PlanVideoTranscode(playback VideoPlaybackPlan, metadata VideoTechnicalMetad
 				result.RateControl = nvencHLSRateControl
 			}
 		case "VAAPI":
-			result.Decoder, result.FilterStrategy, result.Encoder, result.RateControl = metadata.VideoCodec+"-vaapi", "VAAPI", "h264_vaapi", "vbr-vbv-pending-calibration"
+			// FFmpeg selects the native H.264/HEVC decoder and supplies VAAPI
+			// surfaces through -hwaccel_output_format. The technical decoder
+			// name remains explicit in the frozen plan without accepting an
+			// arbitrary command-line codec string.
+			result.Decoder, result.FilterStrategy, result.Encoder, result.RateControl = metadata.VideoCodec, "VAAPI", "h264_vaapi", vaapiRateControl
 		}
 		return result
 	}

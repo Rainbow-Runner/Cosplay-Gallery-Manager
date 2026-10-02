@@ -419,15 +419,6 @@ func (m *Manager) start(r *http.Request, item string) (State, error) {
 
 func hlsExecutionPlan(plan mediaprocessing.VideoPlaybackPlan, metadata mediaprocessing.VideoTechnicalMetadata, preference mediaprocessing.VideoHardwarePreference, hardware mediaprocessing.HardwareAccelerationStatus) (mediaprocessing.VideoTranscodeExecutionPlan, string) {
 	execution := mediaprocessing.PlanVideoTranscode(plan, metadata, preference, hardware, mediaprocessing.VideoTranscodeHLS)
-	// VAAPI remains a diagnosed/plannable HA-02 backend. HA-03 executes only
-	// NVENC; an explicit no-fallback VAAPI selection must not run silently.
-	if execution.EffectiveBackend == "VAAPI" {
-		if !preference.AllowSoftwareFallback {
-			return execution, "VIDEO_HARDWARE_BACKEND_NOT_IMPLEMENTED"
-		}
-		execution = mediaprocessing.PlanVideoTranscode(plan, metadata, mediaprocessing.VideoHardwarePreference{Mode: "SOFTWARE", AllowSoftwareFallback: true}, hardware, mediaprocessing.VideoTranscodeHLS)
-		execution.ReasonCode = "HARDWARE_EXECUTOR_NOT_IMPLEMENTED"
-	}
 	if !execution.Executable {
 		return execution, "VIDEO_HARDWARE_UNAVAILABLE"
 	}
@@ -560,7 +551,7 @@ func clearHLSOutput(directory string) error {
 }
 
 func hlsFailureCode(execution mediaprocessing.VideoTranscodeExecutionPlan) string {
-	if execution.EffectiveBackend == "NVENC" {
+	if mediaprocessing.IsHardwareExecutionBackend(execution.EffectiveBackend) {
 		return "VIDEO_HARDWARE_HLS_FAILED"
 	}
 	return "VIDEO_HLS_FAILED"
@@ -627,7 +618,7 @@ func (m *Manager) generate(ctx context.Context, s *session, start int) error {
 		m.mu.Unlock()
 	})
 	if err != nil {
-		if execution.EffectiveBackend == "NVENC" && ctx.Err() == nil && mediaprocessing.HardwareVideoCommandFailure(err) {
+		if mediaprocessing.IsHardwareExecutionBackend(execution.EffectiveBackend) && ctx.Err() == nil && mediaprocessing.HardwareVideoCommandFailure(err) {
 			return &mediaprocessing.VideoHardwareExecutionError{Backend: execution.EffectiveBackend, Err: err}
 		}
 		return err

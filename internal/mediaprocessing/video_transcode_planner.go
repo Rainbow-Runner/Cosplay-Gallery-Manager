@@ -37,6 +37,7 @@ type VideoTranscodeExecutionPlan struct {
 
 const videoTranscodePlannerVersion = "2"
 const nvencHLSRateControl = "vbr-cq25-b3m-max5m-buf10m-p4-hq-forced-idr"
+const nvencMP4RateControl = "vbr-cq25-b3m-max5m-buf10m-p4-hq"
 
 // PlanVideoTranscode is a side-effect-free planner shared by every video
 // workload. Callers decide which planned backends they can execute; HA-03
@@ -83,7 +84,7 @@ func PlanVideoTranscode(playback VideoPlaybackPlan, metadata VideoTechnicalMetad
 			} else {
 				result.Decoder = "h264_cuvid"
 			}
-			result.FilterStrategy, result.Encoder, result.RateControl = "CUDA", "h264_nvenc", "vbr-cq-vbv-pending-calibration"
+			result.FilterStrategy, result.Encoder, result.RateControl = "CUDA", "h264_nvenc", nvencMP4RateControl
 			if workload == VideoTranscodeHLS {
 				result.RateControl = nvencHLSRateControl
 			}

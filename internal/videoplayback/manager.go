@@ -38,6 +38,7 @@ const idleTimeout = 45 * time.Second
 
 var tokenPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
 var segmentPattern = regexp.MustCompile(`^segment-[0-9]{6}\.ts$`)
+var segmentTemporaryPattern = regexp.MustCompile(`^segment-[0-9]{6}\.ts\.tmp$`)
 
 type State struct {
 	Mode      string                        `json:"mode"`
@@ -61,22 +62,24 @@ type session struct {
 	start, produced   int
 	started           time.Time
 	firstSegment      bool
+	fallbackAttempted bool
 	leases            map[string]time.Time
 }
 type Manager struct {
-	DB             *productdb.Database
-	Cache          mediaprocessing.CacheWriter
-	Encoder        *ffmpeg.FFMpeg
-	Version        string
-	Authorize      func(*http.Request) bool
-	HardwareStatus func() mediaprocessing.HardwareAccelerationStatus
-	mu             sync.Mutex
-	sessions       map[string]*session
-	leases         map[string]*session
-	ctx            context.Context
-	cancel         context.CancelFunc
-	wg             sync.WaitGroup
-	root           string
+	DB                    *productdb.Database
+	Cache                 mediaprocessing.CacheWriter
+	Encoder               *ffmpeg.FFMpeg
+	Version               string
+	Authorize             func(*http.Request) bool
+	HardwareStatus        func() mediaprocessing.HardwareAccelerationStatus
+	RecordHardwareFailure func(string)
+	mu                    sync.Mutex
+	sessions              map[string]*session
+	leases                map[string]*session
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	wg                    sync.WaitGroup
+	root                  string
 }
 
 func New(db *productdb.Database, root, executable, version string, authorize func(*http.Request) bool) (*Manager, error) {
@@ -290,7 +293,20 @@ func playlist(duration float64) string {
 func (m *Manager) start(r *http.Request, item string) (State, error) {
 	began := time.Now()
 	defer mediaprocessing.VideoStage(item, "PLAYBACK_REQUEST", began)
-	status, err := m.DB.Browse().VideoPlaybackStatus(r.Context(), item, m.Version, mediaprocessing.ErrorFFmpegUnavailable)
+	runtimeSettings, err := m.DB.Settings().Find(r.Context())
+	if err != nil {
+		return State{}, err
+	}
+	hardware := mediaprocessing.HardwareAccelerationStatus{}
+	if m.HardwareStatus != nil {
+		hardware = m.HardwareStatus()
+	}
+	if runtimeSettings.VideoHardwareMode != "SOFTWARE" && hardware.ProbeState != mediaprocessing.HardwareProbeCompleted {
+		return State{Status: "ERROR", ErrorCode: "VIDEO_HARDWARE_PROBE_PENDING"}, nil
+	}
+	preference := mediaprocessing.VideoHardwarePreference{Mode: string(runtimeSettings.VideoHardwareMode), Device: runtimeSettings.VideoHardwareDevice, AllowSoftwareFallback: runtimeSettings.VideoHardwareFallbackEnabled}
+	playbackRuntime := productdb.VideoPlaybackRuntime{FFmpegVersion: m.Version, FFmpegUnavailableCode: mediaprocessing.ErrorFFmpegUnavailable, Preference: preference, Hardware: hardware}
+	status, err := m.DB.Browse().VideoPlaybackStatusWithRuntime(r.Context(), item, playbackRuntime)
 	if err != nil {
 		return State{}, err
 	}
@@ -322,18 +338,6 @@ func (m *Manager) start(r *http.Request, item string) (State, error) {
 	if plan.Mode == mediaprocessing.PlaybackRemux {
 		return State{}, errors.New("remux uses complete MP4 proxy")
 	}
-	runtime, err := m.DB.Settings().Find(r.Context())
-	if err != nil {
-		return State{}, err
-	}
-	hardware := mediaprocessing.HardwareAccelerationStatus{}
-	if m.HardwareStatus != nil {
-		hardware = m.HardwareStatus()
-	}
-	if runtime.VideoHardwareMode != "SOFTWARE" && hardware.ProbeState != mediaprocessing.HardwareProbeCompleted {
-		return State{Status: "ERROR", ErrorCode: "VIDEO_HARDWARE_PROBE_PENDING"}, nil
-	}
-	preference := mediaprocessing.VideoHardwarePreference{Mode: string(runtime.VideoHardwareMode), Device: runtime.VideoHardwareDevice, AllowSoftwareFallback: runtime.VideoHardwareFallbackEnabled}
 	execution, executionError := hlsExecutionPlan(plan, d.Metadata, preference, hardware)
 	if executionError != "" {
 		return State{Status: "ERROR", ErrorCode: executionError}, nil
@@ -453,6 +457,8 @@ func (m *Manager) run(s *session) {
 		}
 	}()
 	start := 0
+
+encodeLoop:
 	for {
 		ctx, cancel := context.WithCancel(s.ctx)
 		finished := make(chan error, 1)
@@ -474,6 +480,14 @@ func (m *Manager) run(s *session) {
 			continue
 		case err := <-finished:
 			cancel()
+			if backend, hardwareFailure := mediaprocessing.HardwareExecutionFailure(err); hardwareFailure {
+				fallback, fallbackErr := m.applyHLSFallback(s, backend)
+				if fallbackErr != nil {
+					err = fallbackErr
+				} else if fallback {
+					continue encodeLoop
+				}
+			}
 			m.mu.Lock()
 			if err != nil {
 				s.state.Status = "ERROR"
@@ -495,6 +509,47 @@ func (m *Manager) run(s *session) {
 		case start = <-s.seek:
 		}
 	}
+}
+
+func (m *Manager) applyHLSFallback(s *session, backend string) (bool, error) {
+	if !s.execution.AllowSoftwareFallback || s.fallbackAttempted {
+		return false, nil
+	}
+	s.fallbackAttempted = true
+	if m.RecordHardwareFailure != nil {
+		m.RecordHardwareFailure(backend)
+	}
+	if err := clearHLSOutput(s.dir); err != nil {
+		return false, err
+	}
+	plan := mediaprocessing.PlaybackPlanFromMetadata(s.descriptor.Metadata)
+	if s.descriptor.Source.Type == gallery.SourceTypeArchive {
+		plan = mediaprocessing.ArchivePlaybackPlanFromMetadata(s.descriptor.Metadata)
+	}
+	s.execution = mediaprocessing.SoftwareVideoTranscodePlan(plan, s.descriptor.Metadata, mediaprocessing.VideoTranscodeHLS)
+	s.execution.ReasonCode = "HARDWARE_RUNTIME_FALLBACK"
+	s.profile = mediaprocessing.ProgressiveVideoProfileHash(s.descriptor.Metadata, plan, m.Version, s.execution, segmentSeconds, s.descriptor.ContentRevision)
+	m.mu.Lock()
+	s.state.Backend, s.state.Status, s.state.ErrorCode, s.state.Progress = "SOFTWARE", "PENDING", "", mediaprocessing.VideoProgress{}
+	m.mu.Unlock()
+	slog.Warn("CGM_VIDEO_HARDWARE_RUNTIME_FALLBACK", "item", shortItem(s.descriptor.ItemUUID), "failed_backend", backend, "fallback_backend", "SOFTWARE")
+	return true, nil
+}
+
+func clearHLSOutput(directory string) error {
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || (!segmentPattern.MatchString(entry.Name()) && !segmentTemporaryPattern.MatchString(entry.Name()) && entry.Name() != "internal.m3u8" && entry.Name() != "internal.m3u8.tmp") {
+			return errors.New("unexpected HLS temporary entry")
+		}
+		if err := os.Remove(filepath.Join(directory, entry.Name())); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+	return nil
 }
 
 func hlsFailureCode(execution mediaprocessing.VideoTranscodeExecutionPlan) string {
@@ -549,11 +604,12 @@ func (m *Manager) generate(ctx context.Context, s *session, start int) error {
 		plan = mediaprocessing.ArchivePlaybackPlanFromMetadata(d.Metadata)
 	}
 	// Fixed keyframe boundaries require encoding even when MP4 could remux.
-	args, err := mediaprocessing.ProgressiveVideoArgsForExecution(input.Path, s.dir, plan, s.execution, start, segmentSeconds)
+	execution := s.execution
+	args, err := mediaprocessing.ProgressiveVideoArgsForExecution(input.Path, s.dir, plan, execution, start, segmentSeconds)
 	if err != nil {
 		return err
 	}
-	slog.Info("CGM_VIDEO_HLS_EXECUTION_STARTED", "item", shortItem(d.ItemUUID), "backend", s.execution.EffectiveBackend, "decoder", s.execution.Decoder, "filter", s.execution.FilterStrategy, "encoder", s.execution.Encoder, "reason", s.execution.ReasonCode)
+	slog.Info("CGM_VIDEO_HLS_EXECUTION_STARTED", "item", shortItem(d.ItemUUID), "backend", execution.EffectiveBackend, "decoder", execution.Decoder, "filter", execution.FilterStrategy, "encoder", execution.Encoder, "reason", execution.ReasonCode)
 	err = mediaprocessing.RunVideoCommand(ctx, m.Encoder, args, d.ItemUUID, "HLS_ENCODE", d.Metadata.DurationSeconds, func(p mediaprocessing.VideoProgress) {
 		m.mu.Lock()
 		if start > 0 {
@@ -564,6 +620,9 @@ func (m *Manager) generate(ctx context.Context, s *session, start int) error {
 		m.mu.Unlock()
 	})
 	if err != nil {
+		if execution.EffectiveBackend == "NVENC" && ctx.Err() == nil && mediaprocessing.HardwareVideoCommandFailure(err) {
+			return &mediaprocessing.VideoHardwareExecutionError{Backend: execution.EffectiveBackend, Err: err}
+		}
 		return err
 	}
 	if err := input.Validate(); err != nil {

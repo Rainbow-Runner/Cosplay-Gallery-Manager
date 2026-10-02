@@ -319,7 +319,8 @@ func (s *Server) startWorkers(ctx context.Context) error {
 	)
 	worker := processingworker.Worker{Database: s.Database, Materializer: mediaaccess.Materializer{TemporaryRoot: temporaryRoot}, Cache: mediaprocessing.CacheWriter{Root: s.Config.CachePath}, Generators: generators,
 		ProbeProfileHash: mediaprocessing.VideoProbeProfileHash(s.VideoTools.FFprobe.Version), PosterProfileHash: mediaprocessing.VideoPosterProfileHash(s.VideoTools.FFmpeg.Version),
-		ProbeUnavailableCode: s.VideoTools.FFprobe.ErrorCode, FFmpegUnavailableCode: s.VideoTools.FFmpeg.ErrorCode}
+		ProbeUnavailableCode: s.VideoTools.FFprobe.ErrorCode, FFmpegUnavailableCode: s.VideoTools.FFmpeg.ErrorCode,
+		HardwareStatus: s.VideoHardware.Snapshot, RecordHardwareFailure: s.VideoHardware.RecordRuntimeFailure, FFmpegVersion: s.VideoTools.FFmpeg.Version}
 	if s.VideoTools.FFprobe.Available {
 		worker.VideoProbe = mediaprocessing.ProbeAdapter{Executable: s.VideoTools.FFprobe.Path, Version: s.VideoTools.FFprobe.Version}
 		worker.CaptureProbe = mediaprocessing.ProbeAdapter{Executable: s.VideoTools.FFprobe.Path, Version: s.VideoTools.FFprobe.Version}
@@ -376,6 +377,7 @@ func (s *Server) ensurePlayback() error {
 		return err
 	}
 	manager.HardwareStatus = s.VideoHardware.Snapshot
+	manager.RecordHardwareFailure = s.VideoHardware.RecordRuntimeFailure
 	s.playback = manager
 	return nil
 }

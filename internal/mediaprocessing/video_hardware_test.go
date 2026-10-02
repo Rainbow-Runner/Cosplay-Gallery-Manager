@@ -119,3 +119,17 @@ func TestHardwareAccelerationMonitorReturnsIndependentSnapshot(t *testing.T) {
 		t.Fatal("snapshot mutates monitor state")
 	}
 }
+
+func TestHardwareAccelerationMonitorOpensAndProbeClearsRuntimeCircuit(t *testing.T) {
+	monitor := NewHardwareAccelerationMonitor()
+	value := HardwareAccelerationStatus{ProbeState: HardwareProbeCompleted, Backends: []HardwareBackendStatus{{Backend: "NVENC", State: HardwareProbeAvailable, Device: "nvidia0"}}}
+	monitor.Set(value)
+	monitor.RecordRuntimeFailure("NVENC")
+	if got := monitor.Snapshot().Backends[0]; got.State != "RUNTIME_CIRCUIT_OPEN" || got.ErrorCode != "VIDEO_HARDWARE_RUNTIME_CIRCUIT_OPEN" {
+		t.Fatalf("circuit snapshot = %#v", got)
+	}
+	monitor.Set(value)
+	if got := monitor.Snapshot().Backends[0]; got.State != HardwareProbeAvailable || got.ErrorCode != "" {
+		t.Fatalf("probe did not clear circuit = %#v", got)
+	}
+}

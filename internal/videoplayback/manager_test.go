@@ -17,6 +17,7 @@ import (
 
 	"github.com/stashapp/stash/internal/archivecheck"
 	"github.com/stashapp/stash/internal/gallery"
+	"github.com/stashapp/stash/internal/mediaaccess"
 	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/settings"
@@ -214,6 +215,37 @@ func TestHLSFailureCodePreventsImplicitHardwareFallback(t *testing.T) {
 	}
 	if got := hlsFailureCode(mediaprocessing.VideoTranscodeExecutionPlan{EffectiveBackend: "SOFTWARE"}); got != "VIDEO_HLS_FAILED" {
 		t.Fatalf("software failure code = %q", got)
+	}
+}
+
+func TestHLSHardwareFallbackCleansPartialOutputSwitchesProfileAndRunsOnce(t *testing.T) {
+	directory := t.TempDir()
+	for name, data := range map[string]string{"segment-000000.ts": "partial", "segment-000001.ts.tmp": "pending", "internal.m3u8": "playlist"} {
+		if err := os.WriteFile(filepath.Join(directory, name), []byte(data), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	metadata := mediaprocessing.VideoTechnicalMetadata{VideoCodec: "hevc", PixelFormat: "yuv420p", VideoStreamIndex: 0, DisplayWidth: 2160, DisplayHeight: 3840}
+	plan := mediaprocessing.PlaybackPlanFromMetadata(metadata)
+	hardware := mediaprocessing.HardwareAccelerationStatus{ProbeState: mediaprocessing.HardwareProbeCompleted, Backends: []mediaprocessing.HardwareBackendStatus{{Backend: "NVENC", State: mediaprocessing.HardwareProbeAvailable, Device: "nvidia0", DecodeCodecs: []string{"hevc_cuvid"}}}}
+	execution := mediaprocessing.PlanVideoTranscode(plan, metadata, mediaprocessing.VideoHardwarePreference{Mode: "NVENC", AllowSoftwareFallback: true}, hardware, mediaprocessing.VideoTranscodeHLS)
+	s := &session{dir: directory, descriptor: productdb.DirectVideoDescriptor{ItemUUID: "12345678-1234-1234-1234-123456789012", ContentRevision: 3, Metadata: metadata, Source: mediaaccess.Source{Type: gallery.SourceTypeDirectory}}, execution: execution,
+		profile: "hardware-profile", state: State{Backend: "NVENC", Status: "PROCESSING", ErrorCode: "old"}}
+	failures := []string{}
+	m := &Manager{Version: "7.1", RecordHardwareFailure: func(backend string) { failures = append(failures, backend) }}
+	applied, err := m.applyHLSFallback(s, "NVENC")
+	if err != nil || !applied {
+		t.Fatalf("fallback = %v, %v", applied, err)
+	}
+	if len(failures) != 1 || failures[0] != "NVENC" || s.execution.EffectiveBackend != "SOFTWARE" || s.state.Backend != "SOFTWARE" || s.state.Status != "PENDING" || s.state.ErrorCode != "" || s.profile == "hardware-profile" {
+		t.Fatalf("session=%#v failures=%v", s, failures)
+	}
+	entries, err := os.ReadDir(directory)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("partial output remains: %v %v", entries, err)
+	}
+	if applied, err := m.applyHLSFallback(s, "NVENC"); err != nil || applied || len(failures) != 1 {
+		t.Fatalf("second fallback = %v, %v failures=%v", applied, err, failures)
 	}
 }
 

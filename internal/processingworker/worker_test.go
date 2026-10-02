@@ -2,6 +2,7 @@ package processingworker
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,6 +13,23 @@ import (
 	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 )
+
+type fallbackVideoGenerator struct{ backends *[]string }
+
+func (generator fallbackVideoGenerator) Supports(request mediaprocessing.GenerateRequest) bool {
+	return request.Variant == mediaprocessing.VariantVideoPlayback && request.VideoExecution != nil
+}
+
+func (generator fallbackVideoGenerator) Generate(_ context.Context, request mediaprocessing.GenerateRequest) (mediaprocessing.GenerateResult, error) {
+	*generator.backends = append(*generator.backends, request.VideoExecution.EffectiveBackend)
+	if request.VideoExecution.EffectiveBackend == "NVENC" {
+		return mediaprocessing.GenerateResult{}, &mediaprocessing.VideoHardwareExecutionError{Backend: "NVENC", Err: errors.New("injected runtime failure")}
+	}
+	if err := os.WriteFile(request.DestinationPath, []byte("software fallback mp4"), 0o600); err != nil {
+		return mediaprocessing.GenerateResult{}, err
+	}
+	return mediaprocessing.GenerateResult{MIMEType: "video/mp4", Width: 1080, Height: 1920}, nil
+}
 
 type fakeGenerator struct{}
 
@@ -185,6 +203,73 @@ func TestWorkerBuildsPersistedVideoPlanAndPublishesEnhancedProxyWithoutChangingS
 	afterBytes, err := os.ReadFile(sourcePath)
 	if err != nil || string(afterBytes) != string(sourceBytes) || !before.ModTime().Equal(after.ModTime()) || before.Size() != after.Size() {
 		t.Fatalf("source changed: before=%#v after=%#v err=%v", before, after, err)
+	}
+}
+
+func TestWorkerRetriesHardwareMP4OnceAndPublishesOnlySoftwareProfile(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 10, 2, 2, 0, 0, 0, time.UTC)
+	db, err := productdb.Open(ctx, filepath.Join(t.TempDir(), "product.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	record, err := db.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "MP4 fallback"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "clip.mkv"), []byte("unchanged source"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	source, err := db.Galleries().AddSource(ctx, record.ID, productdb.CreateSourceInput{Type: gallery.SourceTypeDirectory, Path: root, Availability: gallery.AvailabilityAvailable}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item, err := db.Galleries().AddItem(ctx, record.ID, source.ID, productdb.CreateItemInput{RelativePath: "clip.mkv", MediaKind: gallery.MediaKindVideo, ContentFormat: gallery.ContentFormatVideo, Position: 1024, Availability: gallery.AvailabilityAvailable, ProcessingState: gallery.ProcessingReady}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	probe := mediaprocessing.VideoProbeProfileHash("7.1")
+	if err := db.VideoMetadata().MarkPending(ctx, item.UUID, item.ContentRevision, probe); err != nil {
+		t.Fatal(err)
+	}
+	metadata := mediaprocessing.VideoTechnicalMetadata{ItemUUID: item.UUID, ContentRevision: item.ContentRevision, ProbeProfileHash: probe, Container: "matroska", VideoStreamIndex: 0, VideoCodec: "hevc", PixelFormat: "yuv420p", DisplayWidth: 2160, DisplayHeight: 3840, ProbeState: mediaprocessing.VideoProbeReady}
+	if err := db.VideoMetadata().PublishReady(ctx, metadata, now); err != nil {
+		t.Fatal(err)
+	}
+	plan := mediaprocessing.PlaybackPlanFromMetadata(metadata)
+	hardware := mediaprocessing.HardwareAccelerationStatus{ProbeState: mediaprocessing.HardwareProbeCompleted, Backends: []mediaprocessing.HardwareBackendStatus{{Backend: "NVENC", State: mediaprocessing.HardwareProbeAvailable, Device: "nvidia0", DecodeCodecs: []string{"hevc_cuvid"}}}}
+	execution := mediaprocessing.PlanVideoTranscode(plan, metadata, mediaprocessing.VideoHardwarePreference{Mode: "NVENC", AllowSoftwareFallback: true}, hardware, mediaprocessing.VideoTranscodeMP4)
+	hardwareProfile := mediaprocessing.CompleteVideoProfileHash(metadata, plan, "7.1", execution)
+	revision := item.ContentRevision
+	if _, err := db.ProcessingJobs().Enqueue(ctx, productdb.EnqueueJobInput{Key: productdb.ItemDerivativeJobKey(item.UUID, mediaprocessing.VariantVideoPlayback, revision, hardwareProfile), Kind: mediaprocessing.JobItemDerivative, GalleryID: &record.ID, ItemUUID: item.UUID, Variant: mediaprocessing.VariantVideoPlayback, ContentRevision: &revision, ProfileHash: hardwareProfile, Payload: map[string]any{"cache_tier": mediaprocessing.CacheEnhanced, "execution": execution}, Priority: 600}, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE runtime_settings SET enhanced_cache_maximum_bytes=?,minimum_free_bytes=1,minimum_free_percent=0.000001 WHERE id=1`, int64(1<<40)); err != nil {
+		t.Fatal(err)
+	}
+	backends := []string{}
+	failures := []string{}
+	worker := Worker{Database: db, Materializer: mediaaccess.Materializer{TemporaryRoot: t.TempDir()}, Cache: mediaprocessing.CacheWriter{Root: t.TempDir()}, Generators: []mediaprocessing.Generator{fallbackVideoGenerator{backends: &backends}}, FFmpegVersion: "7.1", RecordHardwareFailure: func(backend string) { failures = append(failures, backend) }}
+	if _, err := worker.RunOne(ctx, "fallback-worker", time.Minute, now); err != nil {
+		t.Fatal(err)
+	}
+	if len(backends) != 2 || backends[0] != "NVENC" || backends[1] != "SOFTWARE" || len(failures) != 1 || failures[0] != "NVENC" {
+		t.Fatalf("attempts=%v failures=%v", backends, failures)
+	}
+	derivative, err := db.Derivatives().Current(ctx, item.UUID, mediaprocessing.VariantVideoPlayback, now.Add(time.Minute))
+	software := mediaprocessing.SoftwareVideoTranscodePlan(plan, metadata, mediaprocessing.VideoTranscodeMP4)
+	wantProfile := mediaprocessing.CompleteVideoProfileHash(metadata, plan, "7.1", software)
+	if err != nil || derivative.ProfileHash != wantProfile || derivative.ProfileHash == hardwareProfile {
+		t.Fatalf("fallback derivative=%#v err=%v", derivative, err)
+	}
+}
+
+func TestHardwareMP4FailureHasStableWorkerCode(t *testing.T) {
+	err := &mediaprocessing.VideoHardwareExecutionError{Backend: "NVENC", Err: errors.New("driver unavailable")}
+	if got := ErrorCode(err); got != "VIDEO_HARDWARE_MP4_FAILED" {
+		t.Fatalf("error code = %q", got)
 	}
 }
 

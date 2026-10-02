@@ -266,7 +266,9 @@ func TestArchiveVideoFailuresSetTerminalItemStateAndExplicitRetry(t *testing.T) 
 				t.Fatal(err)
 			}
 			defer db.Close()
-			filename := filepath.Join(t.TempDir(), "store.zip")
+			// Use an explicitly compressed fixture: the test exercises background
+			// extraction and terminal worker failures, not direct-layout proof.
+			filename := filepath.Join(t.TempDir(), "compressed.zip")
 			writeVideoContainer(t, filename, "", append([]byte("\x00\x00\x00\x18ftypisom"), make([]byte, 20)...))
 			g, err := db.Galleries().Create(ctx, productdb.CreateGalleryInput{Title: "Failure"}, now)
 			if err != nil {

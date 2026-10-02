@@ -30,6 +30,9 @@ type Worker struct {
 	PosterProfileHash     string
 	ProbeUnavailableCode  string
 	FFmpegUnavailableCode string
+	FFmpegVersion         string
+	HardwareStatus        func() mediaprocessing.HardwareAccelerationStatus
+	RecordHardwareFailure func(string)
 }
 
 func (worker Worker) RunOne(ctx context.Context, owner string, lease time.Duration, now time.Time) (mediaprocessing.Job, error) {
@@ -359,6 +362,8 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 		if job.Variant == mediaprocessing.VariantVideoPlayback {
 			preflight.VideoTechnical = &mediaprocessing.VideoTechnicalMetadata{}
 			preflight.VideoPlan = &mediaprocessing.VideoPlaybackPlan{Mode: mediaprocessing.PlaybackTranscode}
+			execution := mediaprocessing.VideoTranscodeExecutionPlan{Workload: mediaprocessing.VideoTranscodeMP4, EffectiveBackend: "SOFTWARE", FilterStrategy: "CPU", Encoder: "libx264", RateControl: "medium-crf20", Executable: true}
+			preflight.VideoExecution = &execution
 		}
 		for _, generator := range worker.Generators {
 			if generator.Supports(preflight) {
@@ -393,11 +398,11 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 	if item.MediaKind == gallery.MediaKindStaticImage && job.Variant == mediaprocessing.VariantCard480 {
 		worker.captureImageDuringDerivative(ctx, item, materialized.Path)
 	}
-	extension := outputExtension(job.Variant)
-	relative, err := worker.Cache.RelativePath(item.ItemUUID, item.ContentRevision, job.Variant, job.ProfileHash, extension)
-	if err != nil {
-		return err
+	var payload struct {
+		CacheTier mediaprocessing.CacheTier                   `json:"cache_tier"`
+		Execution mediaprocessing.VideoTranscodeExecutionPlan `json:"execution"`
 	}
+	_ = json.Unmarshal(job.PayloadJSON, &payload)
 	request := mediaprocessing.GenerateRequest{ItemUUID: item.ItemUUID, MediaKind: item.MediaKind, ContentFormat: item.ContentFormat,
 		ContentRevision: item.ContentRevision, Variant: job.Variant, ProfileHash: job.ProfileHash, SourcePath: materialized.Path}
 	if item.MediaKind == gallery.MediaKindVideo {
@@ -415,6 +420,11 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 				return ErrUnsupportedGeneration
 			}
 			request.VideoPlan = &plan
+			execution := payload.Execution
+			if execution.EffectiveBackend == "" {
+				execution = mediaprocessing.SoftwareVideoTranscodePlan(plan, metadata, mediaprocessing.VideoTranscodeMP4)
+			}
+			request.VideoExecution = &execution
 		}
 	}
 	var generator mediaprocessing.Generator
@@ -434,18 +444,51 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 		}
 		return ErrUnsupportedGeneration
 	}
-	var generated mediaprocessing.GenerateResult
-	var generationFinished time.Time
-	_, size, err := worker.Cache.WriteAtomicPath(relative, func(destination string) error {
-		request.DestinationPath = destination
-		var generateErr error
-		generated, generateErr = generator.Generate(ctx, request)
-		generationFinished = time.Now()
-		if generateErr == nil {
-			generateErr = materialized.Validate()
+	extension := outputExtension(job.Variant)
+	profile := job.ProfileHash
+	if request.VideoExecution != nil && request.VideoPlan != nil && request.VideoTechnical != nil && request.VideoExecution.EffectiveBackend != "SOFTWARE" && request.VideoExecution.EffectiveBackend != "NONE" && worker.HardwareStatus != nil && !mediaprocessing.HardwareExecutionAvailable(worker.HardwareStatus(), *request.VideoExecution) {
+		if !request.VideoExecution.AllowSoftwareFallback {
+			return &mediaprocessing.VideoProcessingError{Code: "VIDEO_HARDWARE_UNAVAILABLE", Err: errors.New("planned video hardware is temporarily unavailable")}
 		}
-		return generateErr
-	})
+		software := mediaprocessing.SoftwareVideoTranscodePlan(*request.VideoPlan, *request.VideoTechnical, mediaprocessing.VideoTranscodeMP4)
+		software.ReasonCode = "HARDWARE_RUNTIME_CIRCUIT_FALLBACK"
+		request.VideoExecution = &software
+		profile = mediaprocessing.CompleteVideoProfileHash(*request.VideoTechnical, *request.VideoPlan, worker.FFmpegVersion, software)
+		request.ProfileHash = profile
+		slog.Info("CGM_VIDEO_HARDWARE_PLANNING_FALLBACK", "item", shortWorkerItem(item.ItemUUID), "requested_backend", payload.Execution.EffectiveBackend, "reason", "RUNTIME_CIRCUIT_OPEN", "workload", "MP4")
+	}
+	generate := func() (mediaprocessing.GenerateResult, string, int64, time.Time, error) {
+		relative, pathErr := worker.Cache.RelativePath(item.ItemUUID, item.ContentRevision, job.Variant, profile, extension)
+		if pathErr != nil {
+			return mediaprocessing.GenerateResult{}, "", 0, time.Time{}, pathErr
+		}
+		var generated mediaprocessing.GenerateResult
+		var generationFinished time.Time
+		var generateErr error
+		_, size, generateErr := worker.Cache.WriteAtomicPath(relative, func(destination string) error {
+			request.DestinationPath = destination
+			generated, generateErr = generator.Generate(ctx, request)
+			generationFinished = time.Now()
+			if generateErr == nil {
+				generateErr = materialized.Validate()
+			}
+			return generateErr
+		})
+		return generated, relative, size, generationFinished, generateErr
+	}
+	generated, relative, size, generationFinished, err := generate()
+	if backend, hardwareFailure := mediaprocessing.HardwareExecutionFailure(err); hardwareFailure && request.VideoExecution != nil && request.VideoExecution.AllowSoftwareFallback && request.VideoPlan != nil && request.VideoTechnical != nil {
+		if worker.RecordHardwareFailure != nil {
+			worker.RecordHardwareFailure(backend)
+		}
+		software := mediaprocessing.SoftwareVideoTranscodePlan(*request.VideoPlan, *request.VideoTechnical, mediaprocessing.VideoTranscodeMP4)
+		software.ReasonCode = "HARDWARE_RUNTIME_FALLBACK"
+		request.VideoExecution = &software
+		profile = mediaprocessing.CompleteVideoProfileHash(*request.VideoTechnical, *request.VideoPlan, worker.FFmpegVersion, software)
+		request.ProfileHash = profile
+		slog.Warn("CGM_VIDEO_HARDWARE_RUNTIME_FALLBACK", "item", shortWorkerItem(item.ItemUUID), "failed_backend", backend, "fallback_backend", "SOFTWARE", "workload", "MP4")
+		generated, relative, size, generationFinished, err = generate()
+	}
 	if err != nil {
 		return err
 	}
@@ -460,16 +503,13 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 		_ = worker.Cache.RemoveUnpublished(relative)
 		return ErrUnsupportedGeneration
 	}
-	var payload struct {
-		CacheTier mediaprocessing.CacheTier `json:"cache_tier"`
-	}
-	if json.Unmarshal(job.PayloadJSON, &payload) == nil && payload.CacheTier != "" && payload.CacheTier != tier {
+	if payload.CacheTier != "" && payload.CacheTier != tier {
 		_ = worker.Cache.RemoveUnpublished(relative)
 		return errors.New("processing job cache tier conflicts with variant retention policy")
 	}
 	publishStarted := time.Now()
 	_, err = worker.Database.Derivatives().Publish(ctx, productdb.PublishDerivativeInput{ItemUUID: item.ItemUUID, Variant: job.Variant,
-		CacheTier: tier, ContentRevision: item.ContentRevision, ProfileHash: job.ProfileHash, CacheRelativePath: relative,
+		CacheTier: tier, ContentRevision: item.ContentRevision, ProfileHash: profile, CacheRelativePath: relative,
 		MIMEType: generated.MIMEType, ByteSize: generated.ByteSize, Width: generated.Width, Height: generated.Height}, time.Now())
 	if err != nil {
 		_ = worker.Cache.RemoveUnpublished(relative)
@@ -493,6 +533,13 @@ func archiveVideoTaskContext(ctx context.Context, item productdb.ProcessingItem)
 		return context.WithTimeout(ctx, 10*time.Minute)
 	}
 	return ctx, func() {}
+}
+
+func shortWorkerItem(value string) string {
+	if len(value) > 8 {
+		return value[:8]
+	}
+	return value
 }
 
 func (worker Worker) openInput(ctx context.Context, item productdb.ProcessingItem, variant string) (mediaaccess.Materialized, error) {
@@ -556,6 +603,9 @@ func ErrorCode(err error) string {
 	case errors.Is(err, ErrStaleContent):
 		return "STALE_CONTENT"
 	default:
+		if _, ok := mediaprocessing.HardwareExecutionFailure(err); ok {
+			return "VIDEO_HARDWARE_MP4_FAILED"
+		}
 		if code := mediaprocessing.VideoErrorCode(err); code != "" {
 			return code
 		}

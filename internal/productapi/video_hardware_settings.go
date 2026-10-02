@@ -25,7 +25,7 @@ func (r *mutationResolver) validateVideoHardwareSettings(ctx context.Context, mo
 		return err
 	}
 	for _, backend := range status.HardwareBackends {
-		if backend.State == "AVAILABLE" && (mode == string(settings.VideoHardwareAuto) || backend.Backend == mode) && (device == "" || backend.Device == device) {
+		if (backend.State == "AVAILABLE" || backend.State == "RUNTIME_CIRCUIT_OPEN") && (mode == string(settings.VideoHardwareAuto) || backend.Backend == mode) && (device == "" || backend.Device == device) {
 			return nil
 		}
 	}

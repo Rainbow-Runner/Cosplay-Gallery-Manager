@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,7 +15,7 @@ import (
 type VideoPlaybackGenerator struct{ Encoder *ffmpeg.FFMpeg }
 
 func (generator VideoPlaybackGenerator) Supports(request GenerateRequest) bool {
-	return generator.Encoder != nil && request.MediaKind == gallery.MediaKindVideo && request.ContentFormat == gallery.ContentFormatVideo && request.Variant == VariantVideoPlayback && request.VideoTechnical != nil && request.VideoPlan != nil && request.VideoPlan.Mode != PlaybackDirect
+	return generator.Encoder != nil && request.MediaKind == gallery.MediaKindVideo && request.ContentFormat == gallery.ContentFormatVideo && request.Variant == VariantVideoPlayback && request.VideoTechnical != nil && request.VideoPlan != nil && request.VideoExecution != nil && request.VideoPlan.Mode != PlaybackDirect
 }
 
 func (generator VideoPlaybackGenerator) Generate(ctx context.Context, request GenerateRequest) (GenerateResult, error) {
@@ -30,36 +29,15 @@ func (generator VideoPlaybackGenerator) Generate(ctx context.Context, request Ge
 	}
 	defer release()
 	VideoStage(request.ItemUUID, "TRANSCODE_SLOT_WAIT", queued)
-	plan := *request.VideoPlan
-	args := ffmpeg.Args{"-hide_banner", "-loglevel", "error", "-y"}
-	if plan.ApplyRotation {
-		args = append(args, "-noautorotate")
+	plan, execution := *request.VideoPlan, *request.VideoExecution
+	args, err := CompleteVideoArgsForExecution(request.SourcePath, request.DestinationPath, plan, execution)
+	if err != nil {
+		return GenerateResult{}, err
 	}
-	args = append(args, "-i", request.SourcePath, "-map", "0:"+strconv.Itoa(plan.SelectVideoTrack))
-	if plan.SelectAudioTrack >= 0 {
-		args = append(args, "-map", "0:"+strconv.Itoa(plan.SelectAudioTrack))
-	} else {
-		args = append(args, "-an")
-	}
-	args = append(args, "-map_metadata", "-1", "-map_chapters", "-1", "-sn", "-dn")
-	if plan.Mode == PlaybackRemux {
-		args = append(args, "-c:v", "copy")
-	} else {
-		filters := videoFilters(plan)
-		if filters != "" {
-			args = append(args, "-vf", filters)
-		}
-		args = append(args, "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-profile:v", "high", "-pix_fmt", "yuv420p")
-	}
-	if plan.SelectAudioTrack >= 0 {
-		if plan.CopyAudio {
-			args = append(args, "-c:a", "copy")
-		} else {
-			args = append(args, "-c:a", "aac", "-b:a", "192k")
-		}
-	}
-	args = append(args, "-metadata:s:v:0", "rotate=0", "-movflags", "+faststart", "-f", "mp4", request.DestinationPath)
 	if err := RunVideoCommand(ctx, generator.Encoder, args, request.ItemUUID, "MP4_ENCODE", request.VideoTechnical.DurationSeconds, nil); err != nil {
+		if execution.EffectiveBackend == "NVENC" && ctx.Err() == nil && HardwareVideoCommandFailure(err) {
+			return GenerateResult{}, &VideoHardwareExecutionError{Backend: execution.EffectiveBackend, Err: err}
+		}
 		if plan.ToneMapHDRToSDR {
 			return GenerateResult{}, &VideoProcessingError{Code: ErrorVideoToneMapUnavailable, Err: errors.New("FFmpeg HDR-to-SDR playback filter failed")}
 		}

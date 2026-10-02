@@ -27,6 +27,7 @@ type GenerateRequest struct {
 	DestinationPath string
 	VideoTechnical  *VideoTechnicalMetadata
 	VideoPlan       *VideoPlaybackPlan
+	VideoExecution  *VideoTranscodeExecutionPlan
 }
 
 type GenerateResult struct {

@@ -43,12 +43,13 @@ type HardwareAccelerationStatus struct {
 }
 
 type HardwareAccelerationMonitor struct {
-	mu     sync.RWMutex
-	status HardwareAccelerationStatus
+	mu           sync.RWMutex
+	status       HardwareAccelerationStatus
+	circuitUntil map[string]time.Time
 }
 
 func NewHardwareAccelerationMonitor() *HardwareAccelerationMonitor {
-	return &HardwareAccelerationMonitor{status: HardwareAccelerationStatus{ProbeState: HardwareProbePending, Backends: pendingHardwareBackends()}}
+	return &HardwareAccelerationMonitor{status: HardwareAccelerationStatus{ProbeState: HardwareProbePending, Backends: pendingHardwareBackends()}, circuitUntil: map[string]time.Time{}}
 }
 
 func (monitor *HardwareAccelerationMonitor) Snapshot() HardwareAccelerationStatus {
@@ -57,7 +58,29 @@ func (monitor *HardwareAccelerationMonitor) Snapshot() HardwareAccelerationStatu
 	}
 	monitor.mu.RLock()
 	defer monitor.mu.RUnlock()
-	return cloneHardwareStatus(monitor.status)
+	result := cloneHardwareStatus(monitor.status)
+	now := time.Now()
+	for index := range result.Backends {
+		if until := monitor.circuitUntil[result.Backends[index].Backend]; until.After(now) {
+			result.Backends[index].State = "RUNTIME_CIRCUIT_OPEN"
+			result.Backends[index].ErrorCode = "VIDEO_HARDWARE_RUNTIME_CIRCUIT_OPEN"
+		}
+	}
+	return result
+}
+
+// RecordRuntimeFailure temporarily removes a failing backend from planning.
+// A later probe clears the circuit; otherwise it expires automatically.
+func (monitor *HardwareAccelerationMonitor) RecordRuntimeFailure(backend string) {
+	if monitor == nil || backend == "" {
+		return
+	}
+	monitor.mu.Lock()
+	if monitor.circuitUntil == nil {
+		monitor.circuitUntil = map[string]time.Time{}
+	}
+	monitor.circuitUntil[backend] = time.Now().Add(2 * time.Minute)
+	monitor.mu.Unlock()
 }
 
 func (monitor *HardwareAccelerationMonitor) Set(status HardwareAccelerationStatus) {
@@ -66,6 +89,7 @@ func (monitor *HardwareAccelerationMonitor) Set(status HardwareAccelerationStatu
 	}
 	monitor.mu.Lock()
 	monitor.status = cloneHardwareStatus(status)
+	monitor.circuitUntil = map[string]time.Time{}
 	monitor.mu.Unlock()
 }
 

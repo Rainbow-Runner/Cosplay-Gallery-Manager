@@ -2,6 +2,7 @@ package productdb
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"testing"
 	"time"
@@ -64,6 +65,49 @@ func TestVideoPlaybackRequestDirectDoesNotQueueAndProxyRequestsAreIdempotent(t *
 	var proxyJobs int
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_jobs WHERE item_uuid=? AND variant=?`, proxy.UUID, mediaprocessing.VariantVideoPlayback).Scan(&proxyJobs); err != nil || proxyJobs != 1 {
 		t.Fatalf("proxy jobs = %d, %v", proxyJobs, err)
+	}
+}
+
+func TestVideoPlaybackRuntimeFreezesNVENCPlanAndSeparatesSoftwareFallbackProfile(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 10, 2, 1, 0, 0, 0, time.UTC)
+	created, source := createBrowseGallery(t, db, "Hardware playback", gallery.ContentRatingNonAdult, now)
+	activateBrowseFixture(t, db, created.ID, now)
+	item := addBrowseItem(t, db, created.ID, source.ID, "hevc.mkv", gallery.MediaKindVideo, "", gallery.AvailabilityAvailable, gallery.ProcessingReady, 1024, now)
+	probeProfile := mediaprocessing.VideoProbeProfileHash("7.1")
+	publishVideoMetadata(t, db, item, probeProfile, "matroska", "hevc", "aac", 0, false, now)
+	hardware := mediaprocessing.HardwareAccelerationStatus{ProbeState: mediaprocessing.HardwareProbeCompleted, Backends: []mediaprocessing.HardwareBackendStatus{{Backend: "NVENC", State: mediaprocessing.HardwareProbeAvailable, Device: "nvidia0", DecodeCodecs: []string{"hevc_cuvid"}}}}
+	runtime := VideoPlaybackRuntime{FFmpegVersion: "7.1", Preference: mediaprocessing.VideoHardwarePreference{Mode: "NVENC", AllowSoftwareFallback: true}, Hardware: hardware}
+	status, err := db.Browse().RequestVideoPlaybackWithRuntime(ctx, item.UUID, runtime, now.Add(time.Minute))
+	if err != nil || status.Status != gallery.ProcessingPending {
+		t.Fatalf("NVENC request = %#v, %v", status, err)
+	}
+	var profile string
+	var payloadJSON []byte
+	if err := db.QueryRowContext(ctx, `SELECT profile_hash,payload_json FROM processing_jobs WHERE item_uuid=? AND variant='VIDEO_PLAYBACK'`, item.UUID).Scan(&profile, &payloadJSON); err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		Execution mediaprocessing.VideoTranscodeExecutionPlan `json:"execution"`
+	}
+	if err := json.Unmarshal(payloadJSON, &payload); err != nil || payload.Execution.EffectiveBackend != "NVENC" || payload.Execution.Workload != mediaprocessing.VideoTranscodeMP4 {
+		t.Fatalf("frozen payload = %#v, %v", payload, err)
+	}
+	metadata, _ := db.VideoMetadata().Find(ctx, item.UUID)
+	plan := mediaprocessing.PlaybackPlanFromMetadata(metadata)
+	if profile != mediaprocessing.CompleteVideoProfileHash(metadata, plan, "7.1", payload.Execution) {
+		t.Fatal("job profile does not match frozen execution")
+	}
+
+	runtime.Hardware.Backends[0].State = "RUNTIME_CIRCUIT_OPEN"
+	softwareStatus, err := db.Browse().RequestVideoPlaybackWithRuntime(ctx, item.UUID, runtime, now.Add(2*time.Minute))
+	if err != nil || softwareStatus.Status != gallery.ProcessingPending {
+		t.Fatalf("software fallback request = %#v, %v", softwareStatus, err)
+	}
+	var jobs int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_jobs WHERE item_uuid=? AND variant='VIDEO_PLAYBACK'`, item.UUID).Scan(&jobs); err != nil || jobs != 2 {
+		t.Fatalf("isolated hardware/software jobs = %d, %v", jobs, err)
 	}
 }
 

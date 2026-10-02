@@ -10,6 +10,7 @@ import (
 
 	"github.com/stashapp/stash/internal/mediaclassification"
 	"github.com/stashapp/stash/internal/mediaexclusion"
+	"github.com/stashapp/stash/internal/mediaprocessing"
 	"github.com/stashapp/stash/internal/persistence/productdb"
 	"github.com/stashapp/stash/internal/portableid"
 	"github.com/stashapp/stash/internal/productlog"
@@ -21,6 +22,32 @@ type Resolver struct {
 	Database      *productdb.Database
 	Operations    OperationsService
 	OwnerPassword OwnerPasswordVerifier
+}
+
+func (r *Resolver) videoPlaybackRuntime(ctx context.Context) (productdb.VideoPlaybackRuntime, error) {
+	if r.Operations == nil {
+		return productdb.VideoPlaybackRuntime{FFmpegUnavailableCode: mediaprocessing.ErrorFFmpegUnavailable,
+			Preference: mediaprocessing.VideoHardwarePreference{Mode: "SOFTWARE", AllowSoftwareFallback: true}}, nil
+	}
+	dependency, err := r.Operations.VideoDependencyStatus(ctx)
+	if err != nil {
+		return productdb.VideoPlaybackRuntime{}, err
+	}
+	runtimeSettings, err := r.Database.Settings().Find(ctx)
+	if err != nil {
+		return productdb.VideoPlaybackRuntime{}, err
+	}
+	result := productdb.VideoPlaybackRuntime{FFmpegUnavailableCode: dependency.FFmpegErrorCode,
+		Preference: mediaprocessing.VideoHardwarePreference{Mode: string(runtimeSettings.VideoHardwareMode), Device: runtimeSettings.VideoHardwareDevice, AllowSoftwareFallback: runtimeSettings.VideoHardwareFallbackEnabled},
+		Hardware:   mediaprocessing.HardwareAccelerationStatus{ProbeState: dependency.HardwareProbeState}}
+	if dependency.FFmpegAvailable {
+		result.FFmpegVersion, result.FFmpegUnavailableCode = dependency.FFmpegVersion, ""
+	}
+	for _, backend := range dependency.HardwareBackends {
+		result.Hardware.Backends = append(result.Hardware.Backends, mediaprocessing.HardwareBackendStatus{Backend: backend.Backend, State: backend.State, Device: backend.Device,
+			DecodeCodecs: append([]string(nil), backend.DecodeCodecs...), Encoder: backend.Encoder, ScaleFilter: backend.ScaleFilter, RuntimeTested: backend.RuntimeTested, ErrorCode: backend.ErrorCode})
+	}
+	return result, nil
 }
 
 func (r *Resolver) ffmpegStatus(ctx context.Context) (string, string, error) {

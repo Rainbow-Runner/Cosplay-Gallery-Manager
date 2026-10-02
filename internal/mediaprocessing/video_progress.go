@@ -2,9 +2,9 @@ package mediaprocessing
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
-	"io"
 	"log/slog"
 	"math"
 	"strconv"
@@ -13,6 +13,44 @@ import (
 
 	"github.com/stashapp/stash/pkg/ffmpeg"
 )
+
+type VideoCommandError struct {
+	ExitCode       int
+	DiagnosticCode string
+}
+
+func (e *VideoCommandError) Error() string { return "video processor failed" }
+
+func HardwareVideoCommandFailure(err error) bool {
+	var failure *VideoCommandError
+	return errors.As(err, &failure) && strings.HasPrefix(failure.DiagnosticCode, "HARDWARE_")
+}
+
+type boundedDiagnosticWriter struct {
+	buffer bytes.Buffer
+	limit  int
+}
+
+func (w *boundedDiagnosticWriter) Write(p []byte) (int, error) {
+	if remaining := w.limit - w.buffer.Len(); remaining > 0 {
+		if len(p) > remaining {
+			_, _ = w.buffer.Write(p[:remaining])
+		} else {
+			_, _ = w.buffer.Write(p)
+		}
+	}
+	return len(p), nil
+}
+
+func videoCommandDiagnostic(value string) string {
+	lower := strings.ToLower(value)
+	for _, marker := range []string{"cannot load libcuda", "cuda_error", "no capable devices found", "failed setup for format cuda", "cannot init cuda", "cuvid decode picture error", "nvenc unloaded", "failed to open nvenc", "openencode session ex failed"} {
+		if strings.Contains(lower, marker) {
+			return "HARDWARE_DEVICE_OR_DRIVER_FAILED"
+		}
+	}
+	return "VIDEO_COMMAND_FAILED"
+}
 
 // These values describe generated output, never the owner's watching position.
 type VideoProgress struct {
@@ -51,8 +89,10 @@ func RunVideoCommand(ctx context.Context, encoder *ffmpeg.FFMpeg, args []string,
 	if err != nil {
 		return err
 	}
-	// No paths, private input URLs or arbitrary media tags enter application logs.
-	cmd.Stderr = io.Discard
+	// Diagnostics stay bounded and in-memory solely for stable technical error
+	// classification. Raw stderr, paths, URLs and tags never enter logs/errors.
+	diagnostic := &boundedDiagnosticWriter{limit: 64 * 1024}
+	cmd.Stderr = diagnostic
 	if err := cmd.Start(); err != nil {
 		slog.Warn("CGM_VIDEO_FFMPEG_START_FAILED", "item", shortVideoItem(item), "error_type", "START")
 		return errors.New("could not start video processor")
@@ -111,7 +151,7 @@ func RunVideoCommand(ctx context.Context, encoder *ffmpeg.FFMpeg, args []string,
 			exitCode = cmd.ProcessState.ExitCode()
 		}
 		slog.Warn("CGM_VIDEO_FFMPEG_FAILED", "item", shortVideoItem(item), "stage", stage, "exit_code", exitCode, "progress_seconds", progress.Seconds, "elapsed_ms", time.Since(started).Milliseconds())
-		return errors.New("video processor failed")
+		return &VideoCommandError{ExitCode: exitCode, DiagnosticCode: videoCommandDiagnostic(diagnostic.buffer.String())}
 	}
 	return nil
 }

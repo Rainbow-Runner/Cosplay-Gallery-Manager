@@ -161,25 +161,11 @@ func (r *mutationResolver) RequestItemAnimatedPreview(ctx context.Context, itemU
 
 // RequestItemVideoPlayback is the resolver for the requestItemVideoPlayback field.
 func (r *mutationResolver) RequestItemVideoPlayback(ctx context.Context, itemUUID string) (*VideoPlaybackStatus, error) {
-	if r.Operations == nil {
-		value, err := r.Database.Browse().RequestVideoPlayback(ctx, itemUUID, "", mediaprocessing.ErrorFFmpegUnavailable, time.Now())
-		if err != nil {
-			return nil, publicError(err)
-		}
-		logVideoPlaybackRequested(value)
-		return videoPlaybackStatusModel(value), nil
-	}
-	dependency, err := r.Operations.VideoDependencyStatus(ctx)
+	runtime, err := r.videoPlaybackRuntime(ctx)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	ffmpegVersion := ""
-	ffmpegErrorCode := dependency.FFmpegErrorCode
-	if dependency.FFmpegAvailable {
-		ffmpegVersion = dependency.FFmpegVersion
-		ffmpegErrorCode = ""
-	}
-	value, err := r.Database.Browse().RequestVideoPlayback(ctx, itemUUID, ffmpegVersion, ffmpegErrorCode, time.Now())
+	value, err := r.Database.Browse().RequestVideoPlaybackWithRuntime(ctx, itemUUID, runtime, time.Now())
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -1665,24 +1651,11 @@ func (r *queryResolver) ItemAnimatedPreviewStatus(ctx context.Context, itemUUID 
 
 // ItemVideoPlaybackStatus is the resolver for the itemVideoPlaybackStatus field.
 func (r *queryResolver) ItemVideoPlaybackStatus(ctx context.Context, itemUUID string) (*VideoPlaybackStatus, error) {
-	if r.Operations == nil {
-		value, err := r.Database.Browse().VideoPlaybackStatus(ctx, itemUUID, "", mediaprocessing.ErrorFFmpegUnavailable)
-		if err != nil {
-			return nil, publicError(err)
-		}
-		return videoPlaybackStatusModel(value), nil
-	}
-	dependency, err := r.Operations.VideoDependencyStatus(ctx)
+	runtime, err := r.videoPlaybackRuntime(ctx)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	ffmpegVersion := ""
-	ffmpegErrorCode := dependency.FFmpegErrorCode
-	if dependency.FFmpegAvailable {
-		ffmpegVersion = dependency.FFmpegVersion
-		ffmpegErrorCode = ""
-	}
-	value, err := r.Database.Browse().VideoPlaybackStatus(ctx, itemUUID, ffmpegVersion, ffmpegErrorCode)
+	value, err := r.Database.Browse().VideoPlaybackStatusWithRuntime(ctx, itemUUID, runtime)
 	if err != nil {
 		return nil, publicError(err)
 	}

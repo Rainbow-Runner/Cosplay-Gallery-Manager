@@ -10,8 +10,19 @@ import (
 	"github.com/stashapp/stash/internal/gallery"
 	"github.com/stashapp/stash/internal/mediaaccess"
 	"github.com/stashapp/stash/internal/mediaprocessing"
-	"github.com/stashapp/stash/internal/product"
 )
+
+type VideoPlaybackRuntime struct {
+	FFmpegVersion         string
+	FFmpegUnavailableCode string
+	Preference            mediaprocessing.VideoHardwarePreference
+	Hardware              mediaprocessing.HardwareAccelerationStatus
+}
+
+func softwareVideoPlaybackRuntime(version, unavailable string) VideoPlaybackRuntime {
+	return VideoPlaybackRuntime{FFmpegVersion: version, FFmpegUnavailableCode: unavailable,
+		Preference: mediaprocessing.VideoHardwarePreference{Mode: "SOFTWARE", AllowSoftwareFallback: true}}
+}
 
 type videoPlaybackIdentity struct {
 	galleryID int64
@@ -22,19 +33,27 @@ type videoPlaybackIdentity struct {
 }
 
 func (s *BrowseStore) VideoPlaybackStatus(ctx context.Context, itemUUID, ffmpegVersion, ffmpegUnavailableCode string) (browse.VideoPlaybackStatus, error) {
+	return s.VideoPlaybackStatusWithRuntime(ctx, itemUUID, softwareVideoPlaybackRuntime(ffmpegVersion, ffmpegUnavailableCode))
+}
+
+func (s *BrowseStore) VideoPlaybackStatusWithRuntime(ctx context.Context, itemUUID string, runtime VideoPlaybackRuntime) (browse.VideoPlaybackStatus, error) {
 	identity, err := s.authorizeVideoPlayback(ctx, itemUUID)
 	if err != nil {
 		return browse.VideoPlaybackStatus{}, err
 	}
-	return s.videoPlaybackStatus(ctx, itemUUID, identity, ffmpegVersion, ffmpegUnavailableCode)
+	return s.videoPlaybackStatus(ctx, itemUUID, identity, runtime)
 }
 
 func (s *BrowseStore) RequestVideoPlayback(ctx context.Context, itemUUID, ffmpegVersion, ffmpegUnavailableCode string, now time.Time) (browse.VideoPlaybackStatus, error) {
+	return s.RequestVideoPlaybackWithRuntime(ctx, itemUUID, softwareVideoPlaybackRuntime(ffmpegVersion, ffmpegUnavailableCode), now)
+}
+
+func (s *BrowseStore) RequestVideoPlaybackWithRuntime(ctx context.Context, itemUUID string, runtime VideoPlaybackRuntime, now time.Time) (browse.VideoPlaybackStatus, error) {
 	identity, err := s.authorizeVideoPlayback(ctx, itemUUID)
 	if err != nil {
 		return browse.VideoPlaybackStatus{}, err
 	}
-	status, err := s.videoPlaybackStatus(ctx, itemUUID, identity, ffmpegVersion, ffmpegUnavailableCode)
+	status, err := s.videoPlaybackStatus(ctx, itemUUID, identity, runtime)
 	if err != nil || status.Status == gallery.ProcessingReady || status.Status == gallery.ProcessingError ||
 		identity.metadata.ProbeState != mediaprocessing.VideoProbeReady || identity.metadata.ContentRevision != identity.revision {
 		return status, err
@@ -43,16 +62,21 @@ func (s *BrowseStore) RequestVideoPlayback(ctx context.Context, itemUUID, ffmpeg
 	if plan.Mode == mediaprocessing.PlaybackDirect {
 		return status, nil
 	}
-	if ffmpegVersion == "" {
+	if runtime.FFmpegVersion == "" {
 		return status, nil
 	}
-	profile := videoPlaybackProfile(identity.metadata, plan, ffmpegVersion)
+	execution, code := completeVideoExecution(plan, identity.metadata, runtime)
+	if code != "" {
+		status.Status, status.ErrorCode = gallery.ProcessingError, code
+		return status, nil
+	}
+	profile := mediaprocessing.CompleteVideoProfileHash(identity.metadata, plan, runtime.FFmpegVersion, execution)
 	key := ItemDerivativeJobKey(itemUUID, mediaprocessing.VariantVideoPlayback, identity.revision, profile)
 	jobs := &ProcessingJobStore{db: s.db}
 	job, err := jobs.FindByKey(ctx, key)
 	if errors.Is(err, sql.ErrNoRows) {
 		revision := identity.revision
-		_, err = jobs.Enqueue(ctx, EnqueueJobInput{Key: key, Kind: mediaprocessing.JobItemDerivative, GalleryID: &identity.galleryID, ItemUUID: itemUUID, Variant: mediaprocessing.VariantVideoPlayback, ContentRevision: &revision, ProfileHash: profile, Payload: map[string]any{"cache_tier": mediaprocessing.CacheEnhanced, "playback_mode": plan.Mode}, Priority: 600}, now)
+		_, err = jobs.Enqueue(ctx, EnqueueJobInput{Key: key, Kind: mediaprocessing.JobItemDerivative, GalleryID: &identity.galleryID, ItemUUID: itemUUID, Variant: mediaprocessing.VariantVideoPlayback, ContentRevision: &revision, ProfileHash: profile, Payload: map[string]any{"cache_tier": mediaprocessing.CacheEnhanced, "playback_mode": plan.Mode, "execution": execution}, Priority: 600}, now)
 	} else if err == nil && (job.Status == mediaprocessing.JobCompleted || job.Status == mediaprocessing.JobFailed || job.Status == mediaprocessing.JobCancelled) {
 		_, err = jobs.Requeue(ctx, key, 600, now)
 		if err != nil {
@@ -64,7 +88,7 @@ func (s *BrowseStore) RequestVideoPlayback(ctx context.Context, itemUUID, ffmpeg
 	if err != nil {
 		return browse.VideoPlaybackStatus{}, err
 	}
-	return s.videoPlaybackStatus(ctx, itemUUID, identity, ffmpegVersion, ffmpegUnavailableCode)
+	return s.videoPlaybackStatus(ctx, itemUUID, identity, runtime)
 }
 
 func (s *BrowseStore) authorizeVideoPlayback(ctx context.Context, itemUUID string) (videoPlaybackIdentity, error) {
@@ -93,7 +117,7 @@ func (s *BrowseStore) authorizeVideoPlayback(ctx context.Context, itemUUID strin
 	return result, nil
 }
 
-func (s *BrowseStore) videoPlaybackStatus(ctx context.Context, itemUUID string, identity videoPlaybackIdentity, ffmpegVersion, ffmpegUnavailableCode string) (browse.VideoPlaybackStatus, error) {
+func (s *BrowseStore) videoPlaybackStatus(ctx context.Context, itemUUID string, identity videoPlaybackIdentity, runtime VideoPlaybackRuntime) (browse.VideoPlaybackStatus, error) {
 	result := browse.VideoPlaybackStatus{ItemUUID: itemUUID, ContentRevision: identity.revision, Status: gallery.ProcessingPending}
 	if identity.metadata.ContentRevision != identity.revision {
 		return s.archiveProbePendingStatus(ctx, result, identity)
@@ -130,15 +154,20 @@ func (s *BrowseStore) videoPlaybackStatus(ctx context.Context, itemUUID string, 
 		result.Status = gallery.ProcessingReady
 		return result, nil
 	}
-	if ffmpegVersion == "" {
+	if runtime.FFmpegVersion == "" {
 		result.Status = gallery.ProcessingError
-		result.ErrorCode = ffmpegUnavailableCode
+		result.ErrorCode = runtime.FFmpegUnavailableCode
 		if result.ErrorCode == "" {
 			result.ErrorCode = mediaprocessing.ErrorFFmpegUnavailable
 		}
 		return result, nil
 	}
-	profile := videoPlaybackProfile(identity.metadata, plan, ffmpegVersion)
+	execution, code := completeVideoExecution(plan, identity.metadata, runtime)
+	if code != "" {
+		result.Status, result.ErrorCode = gallery.ProcessingError, code
+		return result, nil
+	}
+	profile := mediaprocessing.CompleteVideoProfileHash(identity.metadata, plan, runtime.FFmpegVersion, execution)
 	var resource browse.ResourceIdentity
 	err := s.db.QueryRowContext(ctx, `SELECT item_uuid,content_revision,profile_hash,variant,mime_type FROM media_derivatives WHERE item_uuid=? AND variant=? AND content_revision=? AND profile_hash=? AND is_current=1 AND state IN ('READY','STALE')`, itemUUID, mediaprocessing.VariantVideoPlayback, identity.revision, profile).Scan(&resource.ItemUUID, &resource.ContentRevision, &resource.ProfileHash, &resource.Variant, &resource.MIMEType)
 	if err == nil {
@@ -199,11 +228,17 @@ func (s *BrowseStore) archiveProbePendingStatus(ctx context.Context, result brow
 	return result, nil
 }
 
-func videoPlaybackProfile(metadata mediaprocessing.VideoTechnicalMetadata, plan mediaprocessing.VideoPlaybackPlan, ffmpegVersion string) string {
-	value, _ := (mediaprocessing.Profile{ContractVersion: product.MediaProcessingProfileVersion, Generator: "cgm-video-playback", GeneratorVersion: "1", DependencyVersion: ffmpegVersion,
-		Configuration: map[string]any{"matrix": "common-browser-v1", "mode": plan.Mode, "video_track": plan.SelectVideoTrack, "audio_track": plan.SelectAudioTrack,
-			"source_video_codec": metadata.VideoCodec, "source_audio_codec": metadata.AudioCodec, "copy_video": plan.CopyVideo, "copy_audio": plan.CopyAudio,
-			"target_container": "mp4", "target_video": "h264", "target_audio": "aac-or-none", "maximum_width": plan.MaximumWidth, "maximum_height": plan.MaximumHeight,
-			"rotation": metadata.Rotation, "hdr_to_sdr": metadata.HDR, "video_encoding": "libx264-medium-crf20-high-yuv420p", "audio_encoding": "aac-192k", "faststart": true}}).Hash()
-	return value
+func completeVideoExecution(plan mediaprocessing.VideoPlaybackPlan, metadata mediaprocessing.VideoTechnicalMetadata, runtime VideoPlaybackRuntime) (mediaprocessing.VideoTranscodeExecutionPlan, string) {
+	execution := mediaprocessing.PlanVideoTranscode(plan, metadata, runtime.Preference, runtime.Hardware, mediaprocessing.VideoTranscodeMP4)
+	if execution.EffectiveBackend == "VAAPI" {
+		if !runtime.Preference.AllowSoftwareFallback {
+			return execution, "VIDEO_HARDWARE_BACKEND_NOT_IMPLEMENTED"
+		}
+		execution = mediaprocessing.SoftwareVideoTranscodePlan(plan, metadata, mediaprocessing.VideoTranscodeMP4)
+		execution.ReasonCode = "HARDWARE_EXECUTOR_NOT_IMPLEMENTED"
+	}
+	if !execution.Executable {
+		return execution, "VIDEO_HARDWARE_UNAVAILABLE"
+	}
+	return execution, ""
 }

@@ -98,9 +98,10 @@ func TestExternalMediaMatrix(t *testing.T) {
 			t.Fatalf("HDR probe = %#v, %v", hdr, err)
 		}
 		hdrPlan := PlaybackPlanFromMetadata(hdr)
+		hdrExecution := SoftwareVideoTranscodePlan(hdrPlan, hdr, VideoTranscodeMP4)
 		hdrOutput := filepath.Join(outputRoot, "hdr-sdr-proxy.mp4")
 		if _, err := (VideoPlaybackGenerator{Encoder: stashffmpeg.NewEncoder(ffmpegPath)}).Generate(context.Background(), GenerateRequest{MediaKind: gallery.MediaKindVideo,
-			ContentFormat: gallery.ContentFormatVideo, Variant: VariantVideoPlayback, SourcePath: hdrPath, DestinationPath: hdrOutput, VideoTechnical: &hdr, VideoPlan: &hdrPlan}); err != nil {
+			ContentFormat: gallery.ContentFormatVideo, Variant: VariantVideoPlayback, SourcePath: hdrPath, DestinationPath: hdrOutput, VideoTechnical: &hdr, VideoPlan: &hdrPlan, VideoExecution: &hdrExecution}); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -177,8 +178,9 @@ func TestExternalMediaMatrix(t *testing.T) {
 		t.Fatalf("real remux plan = %#v from %#v", remuxPlan, remuxMetadata)
 	}
 	remuxOutput := filepath.Join(outputRoot, "video-remux.mp4")
+	remuxExecution := SoftwareVideoTranscodePlan(remuxPlan, remuxMetadata, VideoTranscodeMP4)
 	remuxRequest := GenerateRequest{MediaKind: gallery.MediaKindVideo, ContentFormat: gallery.ContentFormatVideo, Variant: VariantVideoPlayback,
-		SourcePath: remuxSource, DestinationPath: remuxOutput, VideoTechnical: &remuxMetadata, VideoPlan: &remuxPlan}
+		SourcePath: remuxSource, DestinationPath: remuxOutput, VideoTechnical: &remuxMetadata, VideoPlan: &remuxPlan, VideoExecution: &remuxExecution}
 	if _, err := (VideoPlaybackGenerator{Encoder: stashffmpeg.NewEncoder(ffmpegPath)}).Generate(context.Background(), remuxRequest); err != nil {
 		t.Fatal(err)
 	}
@@ -192,8 +194,9 @@ func TestExternalMediaMatrix(t *testing.T) {
 		t.Fatalf("real transcode plan = %#v", transcodePlan)
 	}
 	transcodeOutput := filepath.Join(outputRoot, "video-transcode.mp4")
+	transcodeExecution := SoftwareVideoTranscodePlan(transcodePlan, videoMetadata, VideoTranscodeMP4)
 	transcodeRequest := GenerateRequest{MediaKind: gallery.MediaKindVideo, ContentFormat: gallery.ContentFormatVideo, Variant: VariantVideoPlayback,
-		SourcePath: filepath.Join(sourceRoot, "clip.mp4"), DestinationPath: transcodeOutput, VideoTechnical: &videoMetadata, VideoPlan: &transcodePlan}
+		SourcePath: filepath.Join(sourceRoot, "clip.mp4"), DestinationPath: transcodeOutput, VideoTechnical: &videoMetadata, VideoPlan: &transcodePlan, VideoExecution: &transcodeExecution}
 	if _, err := (VideoPlaybackGenerator{Encoder: stashffmpeg.NewEncoder(ffmpegPath)}).Generate(context.Background(), transcodeRequest); err != nil {
 		t.Fatal(err)
 	}

@@ -218,6 +218,18 @@ func TestHLSFailureCodePreventsImplicitHardwareFallback(t *testing.T) {
 	}
 }
 
+func TestHA05PlaylistKeepsFullTimelineWithShortLeadSegment(t *testing.T) {
+	value := playlist(9)
+	for _, expected := range []string{"#EXT-X-TARGETDURATION:4", "#EXT-X-PLAYLIST-TYPE:VOD", "#EXTINF:2.000000,\nsegment-000000.ts", "#EXTINF:4.000000,\nsegment-000001.ts", "#EXTINF:3.000000,\nsegment-000002.ts", "#EXT-X-ENDLIST"} {
+		if !strings.Contains(value, expected) {
+			t.Fatalf("playlist lacks %q:\n%s", expected, value)
+		}
+	}
+	if strings.Count(value, "segment-") != 3 {
+		t.Fatalf("unexpected playlist segment count:\n%s", value)
+	}
+}
+
 func TestHLSHardwareFallbackCleansPartialOutputSwitchesProfileAndRunsOnce(t *testing.T) {
 	directory := t.TempDir()
 	for name, data := range map[string]string{"segment-000000.ts": "partial", "segment-000001.ts.tmp": "pending", "internal.m3u8": "playlist"} {
@@ -431,6 +443,10 @@ func testNVENCProgressiveSource(t *testing.T, ffmpeg, ffprobe, clip, sourceKind 
 				names = append(names, entry.Name())
 			}
 			t.Fatalf("NVENC session did not complete: %#v files=%v", state, names)
+		}
+		manifest, err := os.ReadFile(filepath.Join(sessionDirectory, "internal.m3u8"))
+		if err != nil || !strings.Contains(string(manifest), "#EXTINF:2.000000") || !strings.Contains(string(manifest), "#EXTINF:4.000000") {
+			t.Fatalf("HA-05 NVENC schedule manifest = %q, %v", manifest, err)
 		}
 	}
 	if released := request(http.MethodPost, Prefix+"session/"+state.Lease+"/release"); released.Code != http.StatusNoContent {

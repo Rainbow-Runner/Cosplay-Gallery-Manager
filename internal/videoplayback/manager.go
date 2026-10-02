@@ -33,8 +33,12 @@ import (
 )
 
 const Prefix = "/playback/"
+const firstSegmentSeconds = 2
 const segmentSeconds = 4
 const idleTimeout = 45 * time.Second
+const segmentWaitTimeout = 30 * time.Second
+
+var hlsSchedule = mediaprocessing.ProgressiveSegmentSchedule{FirstSeconds: firstSegmentSeconds, FollowingSeconds: segmentSeconds}
 
 var tokenPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
 var segmentPattern = regexp.MustCompile(`^segment-[0-9]{6}\.ts$`)
@@ -229,12 +233,12 @@ func (m *Manager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	index, _ := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(parts[2], "segment-"), ".ts"))
-	if index >= int(math.Ceil(s.descriptor.Metadata.DurationSeconds/segmentSeconds)) {
+	if index >= hlsSchedule.Count(s.descriptor.Metadata.DurationSeconds) {
 		http.NotFound(w, r)
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 90*time.Second)
-	defer cancel()
+	timeout := time.NewTimer(segmentWaitTimeout)
+	defer timeout.Stop()
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 	for {
@@ -269,7 +273,10 @@ func (m *Manager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		select {
-		case <-ctx.Done():
+		case <-r.Context().Done():
+			return
+		case <-timeout.C:
+			slog.Warn("CGM_VIDEO_HLS_SEGMENT_WAIT_TIMEOUT", "item", shortItem(s.descriptor.ItemUUID), "segment", index, "wait_ms", segmentWaitTimeout.Milliseconds())
 			http.Error(w, "VIDEO_HLS_WAIT_TIMEOUT", http.StatusGatewayTimeout)
 			return
 		case <-s.ctx.Done():
@@ -283,8 +290,8 @@ func (m *Manager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func playlist(duration float64) string {
 	var b strings.Builder
 	b.WriteString("#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-INDEPENDENT-SEGMENTS\n")
-	for i := 0; i < int(math.Ceil(duration/segmentSeconds)); i++ {
-		fmt.Fprintf(&b, "#EXTINF:%.6f,\nsegment-%06d.ts\n", math.Min(segmentSeconds, duration-float64(i*segmentSeconds)), i)
+	for i := 0; i < hlsSchedule.Count(duration); i++ {
+		fmt.Fprintf(&b, "#EXTINF:%.6f,\nsegment-%06d.ts\n", hlsSchedule.Duration(duration, i), i)
 	}
 	b.WriteString("#EXT-X-ENDLIST\n")
 	return b.String()
@@ -345,7 +352,7 @@ func (m *Manager) start(r *http.Request, item string) (State, error) {
 	if preference.Mode != "SOFTWARE" && execution.EffectiveBackend == "SOFTWARE" {
 		slog.Info("CGM_VIDEO_HARDWARE_PLANNING_FALLBACK", "item", shortItem(d.ItemUUID), "requested_backend", preference.Mode, "reason", execution.ReasonCode)
 	}
-	profile := mediaprocessing.ProgressiveVideoProfileHash(d.Metadata, plan, m.Version, execution, segmentSeconds, d.ContentRevision)
+	profile := mediaprocessing.ProgressiveVideoProfileHashForSchedule(d.Metadata, plan, m.Version, execution, hlsSchedule, d.ContentRevision)
 	if cached, err := m.DB.Derivatives().Current(r.Context(), item, mediaprocessing.VariantVideoPlayback, time.Now()); err == nil && cached.ContentRevision == d.ContentRevision && cached.ProfileHash == profile {
 		file, _, err := m.Cache.OpenGenerated(cached.CacheRelativePath)
 		if err == nil {
@@ -528,7 +535,7 @@ func (m *Manager) applyHLSFallback(s *session, backend string) (bool, error) {
 	}
 	s.execution = mediaprocessing.SoftwareVideoTranscodePlan(plan, s.descriptor.Metadata, mediaprocessing.VideoTranscodeHLS)
 	s.execution.ReasonCode = "HARDWARE_RUNTIME_FALLBACK"
-	s.profile = mediaprocessing.ProgressiveVideoProfileHash(s.descriptor.Metadata, plan, m.Version, s.execution, segmentSeconds, s.descriptor.ContentRevision)
+	s.profile = mediaprocessing.ProgressiveVideoProfileHashForSchedule(s.descriptor.Metadata, plan, m.Version, s.execution, hlsSchedule, s.descriptor.ContentRevision)
 	m.mu.Lock()
 	s.state.Backend, s.state.Status, s.state.ErrorCode, s.state.Progress = "SOFTWARE", "PENDING", "", mediaprocessing.VideoProgress{}
 	m.mu.Unlock()
@@ -560,7 +567,7 @@ func hlsFailureCode(execution mediaprocessing.VideoTranscodeExecutionPlan) strin
 }
 
 func completeSegments(directory string, duration float64) bool {
-	for i := 0; i < int(math.Ceil(duration/segmentSeconds)); i++ {
+	for i := 0; i < hlsSchedule.Count(duration); i++ {
 		info, err := os.Stat(filepath.Join(directory, fmt.Sprintf("segment-%06d.ts", i)))
 		if err != nil || !info.Mode().IsRegular() || info.Size() == 0 {
 			return false
@@ -605,7 +612,7 @@ func (m *Manager) generate(ctx context.Context, s *session, start int) error {
 	}
 	// Fixed keyframe boundaries require encoding even when MP4 could remux.
 	execution := s.execution
-	args, err := mediaprocessing.ProgressiveVideoArgsForExecution(input.Path, s.dir, plan, execution, start, segmentSeconds)
+	args, err := mediaprocessing.ProgressiveVideoArgsForSchedule(input.Path, s.dir, plan, execution, start, hlsSchedule)
 	if err != nil {
 		return err
 	}
@@ -613,10 +620,10 @@ func (m *Manager) generate(ctx context.Context, s *session, start int) error {
 	err = mediaprocessing.RunVideoCommand(ctx, m.Encoder, args, d.ItemUUID, "HLS_ENCODE", d.Metadata.DurationSeconds, func(p mediaprocessing.VideoProgress) {
 		m.mu.Lock()
 		if start > 0 {
-			p.Seconds = math.Max(float64(start*segmentSeconds), p.Seconds)
+			p.Seconds = math.Max(float64(hlsSchedule.Start(start)), p.Seconds)
 		}
 		s.state.Progress = p
-		s.produced = int(p.Seconds / segmentSeconds)
+		s.produced = hlsSchedule.IndexAt(p.Seconds)
 		m.mu.Unlock()
 	})
 	if err != nil {
@@ -634,7 +641,7 @@ func (m *Manager) generate(ctx context.Context, s *session, start int) error {
 	segmentCheckStarted := time.Now()
 	// Promote only a complete uninterrupted output. A seeked session remains
 	// temporary until all required segments can be produced by a later run.
-	for i := 0; i < int(math.Ceil(d.Metadata.DurationSeconds/segmentSeconds)); i++ {
+	for i := 0; i < hlsSchedule.Count(d.Metadata.DurationSeconds); i++ {
 		if _, err := os.Stat(filepath.Join(s.dir, fmt.Sprintf("segment-%06d.ts", i))); err != nil {
 			return err
 		}

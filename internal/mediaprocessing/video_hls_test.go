@@ -177,6 +177,47 @@ func TestProgressiveVideoNVENCArgumentsArePlanBounded(t *testing.T) {
 	}
 }
 
+func TestProgressiveSegmentScheduleAndArguments(t *testing.T) {
+	schedule := ProgressiveSegmentSchedule{FirstSeconds: 2, FollowingSeconds: 4}
+	if err := schedule.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if got := []int{schedule.Start(0), schedule.Start(1), schedule.Start(2), schedule.Start(7)}; got[0] != 0 || got[1] != 2 || got[2] != 6 || got[3] != 26 {
+		t.Fatalf("segment starts = %v", got)
+	}
+	if got := schedule.Count(9); got != 3 {
+		t.Fatalf("segment count = %d", got)
+	}
+	if got := []float64{schedule.Duration(9, 0), schedule.Duration(9, 1), schedule.Duration(9, 2)}; got[0] != 2 || got[1] != 4 || got[2] != 3 {
+		t.Fatalf("segment durations = %v", got)
+	}
+	if got := []int{schedule.IndexAt(0), schedule.IndexAt(1.99), schedule.IndexAt(2), schedule.IndexAt(5.99), schedule.IndexAt(6)}; got[0] != 0 || got[1] != 0 || got[2] != 1 || got[3] != 1 || got[4] != 2 {
+		t.Fatalf("segment indexes = %v", got)
+	}
+	plan := VideoPlaybackPlan{Mode: PlaybackTranscode, SelectVideoTrack: 0, SelectAudioTrack: -1, MaximumWidth: 1920, MaximumHeight: 1080}
+	execution := VideoTranscodeExecutionPlan{Workload: VideoTranscodeHLS, EffectiveBackend: "SOFTWARE", FilterStrategy: "CPU", Encoder: "libx264", RateControl: "veryfast-crf20", Executable: true}
+	initial, err := ProgressiveVideoArgsForSchedule("source.mp4", "segments", plan, execution, 0, schedule)
+	if err != nil {
+		t.Fatal(err)
+	}
+	initialArgs := strings.Join(initial, " ")
+	for _, expected := range []string{"-force_key_frames expr:gte(t,2+n_forced*4)", "-hls_time 2", "-start_number 0"} {
+		if !strings.Contains(initialArgs, expected) {
+			t.Fatalf("initial arguments lack %q: %s", expected, initialArgs)
+		}
+	}
+	seek, err := ProgressiveVideoArgsForSchedule("source.mp4", "segments", plan, execution, 3, schedule)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seekArgs := strings.Join(seek, " ")
+	for _, expected := range []string{"-ss 10", "-force_key_frames expr:gte(t,n_forced*4)", "-output_ts_offset 10", "-hls_time 4", "-start_number 3"} {
+		if !strings.Contains(seekArgs, expected) {
+			t.Fatalf("seek arguments lack %q: %s", expected, seekArgs)
+		}
+	}
+}
+
 func TestProgressiveVideoProfileSeparatesSoftwareAndNVENC(t *testing.T) {
 	metadata := VideoTechnicalMetadata{VideoCodec: "hevc", AudioCodec: "aac", PixelFormat: "yuv420p", VideoStreamIndex: 0, DisplayWidth: 2160, DisplayHeight: 3840}
 	plan := PlaybackPlanFromMetadata(metadata)
@@ -184,6 +225,9 @@ func TestProgressiveVideoProfileSeparatesSoftwareAndNVENC(t *testing.T) {
 	nvenc := PlanVideoTranscode(plan, metadata, VideoHardwarePreference{Mode: "NVENC", AllowSoftwareFallback: true}, availableHardware(), VideoTranscodeHLS)
 	if ProgressiveVideoProfileHash(metadata, plan, "7.1", software, 4, 2) == ProgressiveVideoProfileHash(metadata, plan, "7.1", nvenc, 4, 2) {
 		t.Fatal("software and NVENC HLS profiles must differ")
+	}
+	if ProgressiveVideoProfileHash(metadata, plan, "7.1", software, 4, 2) == ProgressiveVideoProfileHashForSchedule(metadata, plan, "7.1", software, ProgressiveSegmentSchedule{FirstSeconds: 2, FollowingSeconds: 4}, 2) {
+		t.Fatal("HA-05 segment schedule must receive a new profile")
 	}
 }
 
@@ -202,12 +246,13 @@ func TestProgressiveVideoNVENCExternal(t *testing.T) {
 	}
 	plan := VideoPlaybackPlan{Mode: PlaybackTranscode, SelectVideoTrack: 0, SelectAudioTrack: -1, MaximumWidth: 1920, MaximumHeight: 1080}
 	execution := VideoTranscodeExecutionPlan{Workload: VideoTranscodeHLS, EffectiveBackend: "NVENC", Device: "nvidia0", Decoder: "h264_cuvid", FilterStrategy: "CUDA", Encoder: "h264_nvenc", RateControl: nvencHLSRateControl, Executable: true}
+	schedule := ProgressiveSegmentSchedule{FirstSeconds: 2, FollowingSeconds: 4}
 	for _, start := range []int{0, 1} {
 		directory := filepath.Join(root, "segments-"+strconv.Itoa(start))
 		if err := os.Mkdir(directory, 0700); err != nil {
 			t.Fatal(err)
 		}
-		args, err := ProgressiveVideoArgsForExecution(source, directory, plan, execution, start, 2)
+		args, err := ProgressiveVideoArgsForSchedule(source, directory, plan, execution, start, schedule)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -216,6 +261,12 @@ func TestProgressiveVideoNVENCExternal(t *testing.T) {
 		}
 		if info, err := os.Stat(filepath.Join(directory, "segment-"+formatSegment(start)+".ts")); err != nil || info.Size() == 0 {
 			t.Fatalf("NVENC segment %d unavailable: %v", start, err)
+		}
+		if start == 0 {
+			manifest, err := os.ReadFile(filepath.Join(directory, "internal.m3u8"))
+			if err != nil || !strings.Contains(string(manifest), "#EXTINF:2.000000") || !strings.Contains(string(manifest), "#EXTINF:4.000000") {
+				t.Fatalf("NVENC schedule manifest = %q, %v", manifest, err)
+			}
 		}
 	}
 }

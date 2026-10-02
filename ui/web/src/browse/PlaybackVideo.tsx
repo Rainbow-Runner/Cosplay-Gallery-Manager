@@ -17,8 +17,9 @@ export function PlaybackVideo({ url, hls, autoPlay = false, onError }: {
       void import("hls.js").then(({ default: Hls }) => {
         if (cancelled) return;
         if (!Hls.isSupported()) { errorRef.current(); return; }
-        const player = new Hls({ enableWorker: false, maxBufferLength: 24, backBufferLength: 12,
-          maxBufferSize: 64 * 1024 * 1024 });
+        const player = new Hls({ enableWorker: false, maxBufferLength: 12, maxMaxBufferLength: 16,
+          backBufferLength: 8, maxBufferSize: 48 * 1024 * 1024, fragLoadingTimeOut: 30_000,
+          fragLoadingMaxRetry: 2, fragLoadingRetryDelay: 500 });
         player.on(Hls.Events.ERROR, (_, data) => { if (data.fatal) errorRef.current(); });
         player.loadSource(url);
         player.attachMedia(video);

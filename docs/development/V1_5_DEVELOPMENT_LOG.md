@@ -20,12 +20,18 @@
 - 部署前服务`active/running`且`NRestarts=0`。停服后确认`MainPID=0`和WAL关闭；回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-ha05-9a5581b-LtKRERpt`保存正式数据库、旧程序、配置、用户systemd单元及产品状态Coser资源。备份数据库SHA-256为`f3763b24cc21be5d944ba4a0aa82fbbe5eab32a23441ccf5b13d62068a41c854`，旧程序为`ea7e8002f081f3f1d627e887cdb86ce8a469085c9081adedf219c0fbe8bd1230`；本阶段无schema迁移，未复制原媒体或可重建缓存。
 - 原子替换并启动后，服务`active/running`、`NRestarts=0`，Health／Ready均204；About精确报告上述完整提交、构建时间和`exactSourceAvailable=true`，正式程序哈希与候选一致。未修改运行设置，故所有者此前保留的VAAPI选择不被部署过程擅自改写；在VAAPI执行器完成前该选择仍按既有规则软件降级。真实业务NVENC首片段、连续播放和随机Seek效果仍需所有者在设置为NVENC后验收；未推送远端或更新Docker镜像。
 
-### HA-06 VAAPI实际执行第一闭环（本地源码，未提交／部署）
+### HA-06 VAAPI实际执行第一闭环
 
 - 移除HLS和完整MP4入口对VAAPI的“尚未实现”强制降级，规划器升级为v3并冻结受限`renderD<number>`设备、原始H.264／HEVC 8-bit解码、VAAPI surface、`scale_vaapi`和`h264_vaapi`。命令只从技术标识生成`/dev/dri/renderD<number>`，绝不接受设置中的绝对路径或任意FFmpeg参数；旋转、HDR、10-bit和未知编码仍由规划器回退或拒绝。HLS与后台完整代理共用冻结计划、Profile隔离、来源证明、容量边界和缓存发布语义。
 - 实机检查确认`renderD128`为Intel i915、`renderD129`为NVIDIA；后者不能初始化VAAPI。Intel iHD可完成VAAPI执行，但H.264编码器只报告CQP，不支持原计划的VBR。为避免宣称可用却运行失败，首版固定`CQP/QP25/quality4`，并以独立Profile隔离软件和NVENC产物；合成HEVC输入生成2／4／4秒独立片段成功。该参数是当前设备的安全起点，不冒充真实4K主观画质和缓存体积已经验收。
 - VAAPI启动诊断不再只做CPU帧上传／编码：在临时目录生成极小H.264与HEVC合成样本，二者都须实际通过VAAPI解码、`scale_vaapi`及H.264编码，才报告`AVAILABLE`；每条命令保持5秒上限并在结束后清理临时文件，不读取业务媒体。新增VAAPI设备／驱动技术错误白名单后，只有这类命令失败可触发现有一次性软件回退与两分钟熔断，鉴权、来源、revision、容量、磁盘、损坏输入或取消仍不回退。
-- 命令白名单、非法设备／码控拒绝、软硬件Profile隔离、诊断失败状态及HLS错误码均有回归。本机`renderD128`真实合成门禁通过H.264／HEVC诊断、完整MP4、2秒首片段／后续4秒HLS与随机Seek；完整端到端门禁进一步通过目录完整生成／无重编码MP4提升、TAR Range Seek和Copy 7z Range Seek，日志明确`backend=VAAPI decoder=hevc filter=VAAPI encoder=h264_vaapi`。相关六个Go包全量回归、`mediaprocessing/videoplayback` Race及Go Vet通过；无schema、前端、Manifest或迁移包改动，正式服务仍运行HA-05提交，真实业务媒体验收和HA-06提交／部署待后续执行。
+- 命令白名单、非法设备／码控拒绝、软硬件Profile隔离、诊断失败状态及HLS错误码均有回归。本机`renderD128`真实合成门禁通过H.264／HEVC诊断、完整MP4、2秒首片段／后续4秒HLS与随机Seek；完整端到端门禁进一步通过目录完整生成／无重编码MP4提升、TAR Range Seek和Copy 7z Range Seek，日志明确`backend=VAAPI decoder=hevc filter=VAAPI encoder=h264_vaapi`。相关六个Go包全量回归、`mediaprocessing/videoplayback` Race、Go Vet及正式三标签门禁通过；无schema、前端、Manifest或迁移包改动。
+
+### HA-06第一闭环提交、备份与部署
+
+- VAAPI执行器与记录提交为`9246dcde0e3eebfb2f8147c404e8627cd0208f6d`（`Enable VAAPI video execution`）。清洁提交以正式三标签和嵌入Web构建，About注入完整提交与`2026-10-02T07:47:21Z`构建时间；候选SHA-256为`4000f045717a4563d1a918bc4c9300bacfe403a879c0b9db6e9245220de47819`。
+- 部署前HA-05服务`active/running`、`NRestarts=0`且Health／Ready均204。停服确认`MainPID=0`和WAL关闭；独立回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-ha06-9246dcd-6q1dvaZC`保存数据库、旧程序、配置、用户systemd单元及Coser资源。备份数据库SHA-256为`e5290e42b9ab3c885d85a44b57f49afb60932fbe403a8e2a53c40545110d080e`，旧程序为`3acc9b1929325f3465ce3067fd73b2e944dad4595deceedefb6987cf795d9b44`；不含原媒体、可重建缓存或日志。
+- 原子替换后服务一次启动成功，`active/running`、`NRestarts=0`，Health／Ready均204；About精确报告功能提交、构建时间和`exactSourceAvailable=true`，正式程序哈希与候选一致。增强硬件诊断约1.35秒完成，正式日志为`NVENC=AVAILABLE`、`VAAPI=AVAILABLE`、`QSV=SMOKE_TEST_FAILED`，无ERROR／panic／fatal。本阶段无schema迁移，配置、媒体、Manifest和Coser资源未修改；所有者此前的VAAPI设置保持不变，后续符合边界的新播放会实际使用VAAPI，真实4K业务效果仍待所有者验收。未推送远端或更新Docker镜像。
 
 - 正式服务本次存档4K HEVC播放请求8ms、HLS槽等待0ms、容量检查1ms、来源打开与证明1ms，首个4秒片段6.621秒；FFmpeg由约0.99倍逐步降至0.85倍实时，后续片段请求最长等待约25.9秒。会话释放时出现的504是等待请求随客户端取消结束，不是存档识别失败。
 - 测试Item为2160×3840／30fps／HEVC Main 8-bit／AAC／124.2秒，输入约14.6Mbps。存档成员完整只读流出约655MiB/s、媒体盘抽样约396～410MiB/s，远高于约1.8MiB/s输入需求；存档可见准备成本约占首片段0.015%，主要瓶颈为软件解码、缩放及`libx264`编码。持续Range桥接的精确占比仍需HA-01补充读取指标。

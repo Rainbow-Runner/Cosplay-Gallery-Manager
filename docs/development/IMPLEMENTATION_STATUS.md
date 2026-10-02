@@ -12,7 +12,7 @@
 
 ## 进行中或尚未完成验收
 
-- 视频硬件加速：已冻结[分阶段实施方案](HARDWARE_ACCELERATION_PLAN_2026-10-01.md)。HA-01诊断随`92fddf3`部署；HA-02 schema v22设置与规划器随`7beb411`部署；HA-03 NVDEC＋CUDA＋NVENC渐进HLS随`3805cc8`部署。2026-10-02正式设置改为`NVENC`后的真实浏览器请求明确新建硬件HLS而非命中缓存：首片段2.09秒，后续6.79倍／约201fps，片段实际返回浏览器，关闭后正常取消清理，无错误或软件回退，HA-03硬件执行链路验收通过。HA-04的HLS单次安全软件回退、两分钟运行期熔断、完整MP4共用计划／NVENC执行及软硬件Profile隔离随`a7b725c`部署；仅白名单硬件技术错误可回退，其他安全／来源／容量／磁盘／损坏输入错误禁止。HA-05的2秒首片段／后续4秒Profile v3时间表、12～16秒前向缓冲边界及客户端取消不误记504已随`9a5581b`提交并独立部署，真实NVENC目录／TAR／7z门禁、正式服务版本及健康状态通过；本阶段无schema迁移，动态playlist暂缓。HA-06第一闭环工作区已实现VAAPI H.264／HEVC 8-bit实际解码、缩放、HLS与完整MP4编码，以本机iHD实际支持的CQP Profile隔离缓存，并把双解码实际烟测、一次回退和熔断接入原边界；合成实机完整MP4、目录／TAR／7z渐进链路通过，尚未提交／部署或用真实4K业务媒体验收。设备分槽调度、QSV、10-bit/HDR、多设备和Docker映射仍属后续。
+- 视频硬件加速：已冻结[分阶段实施方案](HARDWARE_ACCELERATION_PLAN_2026-10-01.md)。HA-01诊断随`92fddf3`部署；HA-02 schema v22设置与规划器随`7beb411`部署；HA-03 NVDEC＋CUDA＋NVENC渐进HLS随`3805cc8`部署。2026-10-02正式设置改为`NVENC`后的真实浏览器请求明确新建硬件HLS而非命中缓存：首片段2.09秒，后续6.79倍／约201fps，片段实际返回浏览器，关闭后正常取消清理，无错误或软件回退，HA-03硬件执行链路验收通过。HA-04的HLS单次安全软件回退、两分钟运行期熔断、完整MP4共用计划／NVENC执行及软硬件Profile隔离随`a7b725c`部署；仅白名单硬件技术错误可回退，其他安全／来源／容量／磁盘／损坏输入错误禁止。HA-05的2秒首片段／后续4秒Profile v3时间表、12～16秒前向缓冲边界及客户端取消不误记504已随`9a5581b`提交并独立部署，真实NVENC目录／TAR／7z门禁、正式服务版本及健康状态通过；本阶段无schema迁移，动态playlist暂缓。HA-06第一闭环的VAAPI H.264／HEVC 8-bit实际解码、缩放、HLS与完整MP4编码已随`9246dcd`提交并部署，以本机iHD实际支持的CQP Profile隔离缓存，并把双解码实际烟测、一次回退和熔断接入原边界；合成实机完整MP4、目录／TAR／7z渐进链路及部署后增强诊断通过，真实4K业务播放仍待所有者验收。设备分槽调度、QSV、10-bit/HDR、多设备和Docker映射仍属后续。
 - 存档视频真实业务验收：编码文件头有界解码和可直读成员按需转码已从`0b6afb7`部署本机，仍需对赛博修女的4K HEVC/AAC实际播放、首帧延迟、CPU／磁盘峰值、增强缓存回收和浏览器拖动进行业务验收；见[浏览器播放方案](ARCHIVE_VIDEO_BROWSER_PLAYBACK_PLAN_2026-09-30.md)。
 - 封面相似选择的真实图库阈值与吞吐验收：功能已随 schema v21 部署；[实施规划](COVER_SIMILARITY_PLAN_2026-09-30.md)中的 64 位 pHash 距离门槛 6 仍只是保守初值。尚需用获许可的真实替换正例、相似不同图难负例校准误选／漏选，并测量 CARD 签名生成／历史回填耗时。上线不等于真实图库效果验收通过；匹配失败会保留自动重选托底。
 - 后续（有界轮转深度校验）：当前已提供单Gallery显式深扫，常规扫描仍以大小/mtime证据快速判断；同大小同mtime替换只会由显式深扫或后续轮转校验发现。可选低I/O预算的按库轮转深扫及进度指标尚未实现，不应把常规快扫宣称为完整内容审计。
@@ -21,6 +21,8 @@
 - 后续（视频处理第三阶段A）：按需Storyboard Sprite/WebVTT和可访问辅助时间轴仍未实施。[第三阶段B原条件草案](VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)已由真实冷启动证据及本轮ADR更新；当前渐进播放已经部署，但尚未完成真实4K浏览器验收。
 
 ## 已完成
+
+- 2026-10-02 HA-06第一闭环部署：VAAPI功能提交`9246dcde0e3eebfb2f8147c404e8627cd0208f6d`已从清洁源码构建并部署，正式程序SHA-256为`4000f045717a4563d1a918bc4c9300bacfe403a879c0b9db6e9245220de47819`。回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-ha06-9246dcd-6q1dvaZC`保存正式数据库、旧程序、配置、用户服务单元和Coser资源；服务`active/running`、`NRestarts=0`，Health／Ready均204，About精确对应完整提交。启动后增强诊断约1.35秒完成，仍为NVENC／VAAPI可用、QSV烟测失败；无schema迁移、媒体或Manifest写入，运行设置保持所有者此前选择的VAAPI。
 
 - 2026-10-02 HA-05部署：功能提交`9a5581bab64cf8941acf0c9f1642f7c15f432cec`已从清洁源码构建并部署，正式程序SHA-256为`3acc9b1929325f3465ce3067fd73b2e944dad4595deceedefb6987cf795d9b44`。独立回滚目录为`/home/rainbowrunner/cos/bk/cgm-pre-ha05-9a5581b-LtKRERpt`；服务`active/running`、`NRestarts=0`，Health／Ready均204，About精确对应完整提交且`exactSourceAvailable=true`。无schema迁移、运行设置变更、媒体或Manifest写入；正式设置仍暂留VAAPI并按既有逻辑软件降级，需待HA-06后重新验收硬件执行。
 

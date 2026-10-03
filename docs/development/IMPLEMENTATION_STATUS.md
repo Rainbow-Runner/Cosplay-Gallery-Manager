@@ -23,6 +23,8 @@
 
 ## 已完成
 
+- 2026-10-03 Gallery外部命名推测规则及真实数据审计部署：实体匹配会先剔除作品序号与媒体数量／容量噪声；Character英文词界、中文强弱优先级和纯数字完整词元门禁生效，扫描层支持`&`／`x`／`×`／`+`多Coser署名。逻辑提交`10fde7bd5749cb5c4940a325aef2287ac53ccc79`、审计报告提交`5b43ca51b07fe39ee182422b02391ed31744b605`已部署；1170条业务名称更新为确认471、存疑688、冲突11，Character `02`的旧误候选201条和`Rem`单词内部误候选均降为0。正式程序SHA-256为`24f4a27b84ca14e3f4cefc7dfe8e9cbc64f416972040c6d3762d1aa40eedbb1f`，回滚目录为`/home/rainbowrunner/cos/bk/cgm-pre-inference-5b43ca5-CzwlCqD8`；服务active、`NRestarts=0`、Health／Ready均204，正式库保持schema v22、完整性`ok`及七类计数`136/108/697/23/10/10/780`。报告中的“确认”仍只表示两层规则一致，剩余存疑／冲突需人工复核。
+
 - 2026-10-03 Coser头像／Banner裁剪器交互升级部署：Manage Coser已移除页内参数控件，选图后弹出1:1头像或3:1 Banner裁剪器；支持1×～3×夹紧缩放、50%框外遮罩、桌面拖拽／滚轮、移动单指／双指、双击复位、Esc取消及Enter确认。浏览器确认后生成固定比例托管图片并复用既有multipart端点，无schema或路径暴露变更。功能提交`1db3a95e4fa0c9c3addfa412e06628c0325c5209`已从清洁独立克隆构建并部署，正式程序SHA-256为`b7f959079836641d5d3cf3b402d1c2fc1349c534eb4a79ba887369caec9a79d0`，最终回滚目录为`/home/rainbowrunner/cos/bk/cgm-pre-cropper-final-1db3a95-5BHjfM`。服务active、`NRestarts=0`、Health／Ready均204，About精确对应提交；正式库保持schema v22、完整性`ok`和七类计数`136/108/697/23/10/10/780`。真实鼠标／触控裁剪与图片上传仍待所有者业务验收。
 
 - 2026-10-03 Coser头像／Banner浏览器上传与可视化取景部署：Manage Coser现可直接从浏览器选择JPEG、PNG或静态WebP，不依赖浏览器访问宿主机或容器内真实路径；选择后按服务端同算法预览1:1头像和3:1 Banner派生结果，头像可缩放并调整水平／垂直保留区域，Banner可移动焦点，确认后才上传。功能提交`aa9b23feeddefb6c0e13649a21bfa0c5c29afea5`已从清洁受跟踪源码构建并部署，正式程序SHA-256为`cf433fd1b20ed0d1a7a7d3a74a003a78c2a8cdc13513f2ee6726fb02c183b6f5`，About精确对应提交；服务active、`NRestarts=0`、Health／Ready均204。无schema迁移或业务数据写入，正式库保持schema v22、完整性`ok`及七类计数`136/108/697/23/10/10/780`。真实认证浏览器上传与Docker卷环境仍待所有者业务验收。

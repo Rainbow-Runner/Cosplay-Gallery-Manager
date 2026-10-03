@@ -5,6 +5,18 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-10-03 Gallery外部命名推测规则与真实数据审计
+
+- 扫描建议和Manage候选现在共享窄范围名称预处理：在实体匹配前剔除`NO.xxx`／`Vol.xxx`及`120P10G3V-2.13GB`、`133P-1.0G`、`123P-258MB`、`55P10G-789M`、`88P 3V 940MB`等媒体数量／容量标记。纯数字Character只接受完整身份词元，不把日期尾段当作角色；Character英文名要求Unicode词界，中文连续词组仅作为最低优先级回退，存在强匹配时不再附加弱候选。扫描层另为Coser补齐`&`、`x`、`×`、`+`分隔，拉丁`x`只在带空格或两侧为汉字时拆分，避免破坏普通英文名称。
+- 逻辑提交为`10fde7bd5749cb5c4940a325aef2287ac53ccc79`（`Harden gallery entity name inference`）。新增回归覆盖全部噪声格式、`Bremerton`不命中`Rem`、词组中的独立`Rem`、`安比·德玛拉`／`安比 德玛拉`强匹配、`安比德玛拉`弱回退及更长精确名称抑制、独立数字角色、日期数字拒绝和四种多Coser分隔；`internal/persistence/productdb`完整测试通过。仓库全量`internal/...`仅旧Stash UI入口因缺少`ui/v2.5/build`不能进入编译，其余包通过无测试编译检查。
+- 使用正式schema v22数据库的在线一致只读副本，直接调用生产`archiveEntitySuggestions`与`sourceEntityMatches`重跑1170条真实外部命名；没有创建Gallery、写正式库或读取存档内容。更新后的[GalleryData审计](../../GalleryData.md)随`5b43ca51b07fe39ee182422b02391ed31744b605`提交：确认471、存疑688、冲突11；扫描有建议738条、管理页有候选917条、两层均无匹配253条。Character `02`旧误候选201条降为0，`Rem`单词内部误候选降为0；冲突收敛为7条重复输入、2条多Work和2条无Work约束的跨作品Character候选。命名规范仍为1040条规范、130条需整理；“确认”只表示规则层一致，不替代人工业务真值。
+
+### 提交、回滚备份与本机部署
+
+- 从报告提交`5b43ca51b07fe39ee182422b02391ed31744b605`创建独立干净克隆，以Go 1.25.12和正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签构建；Web TypeScript与2559模块生产构建通过，只有既有大chunk提示。候选Go VCS revision准确且`vcs.modified=false`，About构建时间为`2026-10-03T10:37:37Z`，正式程序SHA-256为`24f4a27b84ca14e3f4cefc7dfe8e9cbc64f416972040c6d3762d1aa40eedbb1f`。未跟踪的`Check_VAAPI.md`未修改、未提交或进入构建来源。
+- 部署前服务`active/running`、`NRestarts=0`，正式库schema v22、完整性`ok`、七类业务计数`136/108/697/23/10/10/780`且无运行中的处理／扫描任务。停服确认`MainPID=0`和WAL关闭后，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-inference-5b43ca5-CzwlCqD8`保存并逐项复验一致数据库、旧程序、配置、用户systemd单元及两处Coser资源；备份库SHA-256为`2f6a01d832f237f7d868fad020f9aef4325de0c1041689f9037f4c04ffaa3b0a`，旧程序为`b7f959079836641d5d3cf3b402d1c2fc1349c534eb4a79ba887369caec9a79d0`，完整性和业务计数与基线一致。
+- 候选经同目录暂存逐字节核对后原子替换，服务一次启动成功并保持`active/running`、`NRestarts=0`；Health／Ready均204，首页、Legal和Manage Gallery深链均200，About精确报告`5b43ca5`且`exactSourceAvailable=true`，启动后无warning以上日志。正式库仍为schema v22、完整性`ok`且业务计数不变；配置和systemd单元SHA-256仍为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`／`720259e71db6d1235aa529f83467594d7e0777ae4924ef44a6b0aa72937efc0f`。未修改媒体、Manifest、缓存、配置或Docker镜像，未推送远端。
+
 ## 2026-10-03 Coser头像／Banner可视化裁剪器交互升级
 
 - 继续保持Manage Coser原有双列头像／Banner布局、浏览器文件选择和同源multipart上传边界，移除新增的缩放、水平位置和垂直位置参数控件。用户选图后改为弹出独立裁剪对话框，取消不改变原页面已确认的待上传状态，确认后关闭对话框并回传新文件。

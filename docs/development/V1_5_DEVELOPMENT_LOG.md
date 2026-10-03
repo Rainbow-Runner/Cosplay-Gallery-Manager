@@ -5,6 +5,13 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-10-03 Coser头像／Banner浏览器上传与可视化取景
+
+- 复核发现现有Manage Coser已具备multipart浏览器上传、托管原图、头像480及Banner 960／1600派生能力，但页面只显示旧资源并要求手工填写归一化X／Y／Size数字，选择的新文件在提交前不可见，也没有面向用户的缩放和保留区域交互。Docker的服务端存储根本身已经由配置映射，缺口集中在浏览器选图与取景，不需要向浏览器暴露宿主机或容器绝对路径。
+- Coser资料图片面板现于浏览器选择JPEG、PNG或静态WebP后立即创建仅本页使用的Object URL，并以Canvas按服务端相同规则绘制1:1头像或3:1 Banner最终派生预览。头像提供1～8倍缩放、水平和垂直位置；Banner提供水平和垂直焦点；二者均可重置。选择新文件会清空旧图裁切／焦点，上传成功或切换Coser会释放预览URL并清空文件输入，避免旧资源取景误用于新原图或同文件无法再次选择。
+- 客户端先拦截明确超过20 MiB或声明为其他MIME的文件，服务端既有内容类型、真实解码、50 MP、静态WebP、revision并发及安全托管门禁继续作为权威校验；文件MIME为空时交给服务端按内容判断。上传仍使用认证同源`/manage/coser-assets/{uuid}/{avatar|banner}`，GalleryEpic Provider、GraphQL、数据库schema、Manifest格式、资源URL和未引用替换资源处理均不变。
+- 新增头像缩放／选区multipart参数、Banner焦点、非法文件和前后端同构裁切矩形回归。Web全量43文件192项、TypeScript检查及2558模块生产构建通过；生产构建仅保留既有大chunk提示。当前源码未提交、未部署，未改正式数据库、Coser资源、媒体、Manifest或Docker镜像；真实浏览器鼠标／触屏及Docker卷映射环境仍待所有者验收。
+
 ## 2026-10-03 VAAPI EOF兼容修复
 
 - 在完整功能版Intel iHD驱动安装后，真实2160×3840 HEVC仍于2550帧中的第2542帧失败。逐层拆分确认解码、仅缩放、仅编码均能完整排空，只有`VAAPI decode → scale_vaapi → h264_vaapi`组合在EOF重排帧集中输出时返回`Cannot allocate memory`；libva trace中实际驱动调用均成功，排除真实显存耗尽。FFmpeg 6.1.1的`libavfilter/vaapi_vpp.c`把VPP输出池固定为4并以10帧初始化，尾部surface被下游同时占用后无法取得第11个输出；FFmpeg上游于2024-03-26改为VAAPI 1动态帧池，7.1及更新正式版本包含该修复。完整证据见仓库根目录`VAAPI_DIAGNOSTIC_REPORT.md`。

@@ -12,6 +12,7 @@
 
 ## 进行中或尚未完成验收
 
+- Coser头像／Banner浏览器上传与可视化取景（源码完成、未部署）：Manage Coser现可直接从浏览器选择JPEG、PNG或静态WebP，不依赖浏览器访问宿主机或容器内真实路径；选择后按服务端同算法预览1:1头像和3:1 Banner派生结果，头像可缩放并调整水平／垂直保留区域，Banner可移动焦点，确认后才上传。继续复用既有20 MiB／50 MP、内容解码、静态图、revision、认证资源及未引用替换资源边界；无schema、GraphQL、Manifest或GalleryEpic Provider变化。Web 43文件192项、TypeScript及2558模块生产构建通过，真实浏览器鼠标／触屏交互与Docker部署仍待所有者验收。
 - VAAPI EOF兼容收敛：2026-10-03已把烟测从短帧同尺寸提升为带B帧HEVC全量排空，实机正确识别FFmpeg 6.1.1固定VPP surface pool问题并选择`VAAPI_CPU_SCALE`兼容链；规划器v4、HLS／完整MP4独立Profile、surface pool／VPP稳定错误码及完整VAAPI→兼容VAAPI→软件有界降级均随`34c5625`部署。后端回归、Race、Vet、正式三标签构建及目录／TAR／Copy 7z实机门禁通过；Web检查／构建通过，既有Libraries并行测试稳定性缺口已单独记录。正式服务、数据库和回滚副本验收通过，真实4K浏览器连续播放与Seek仍由所有者继续验收。
 - 视频硬件加速：已冻结[分阶段实施方案](HARDWARE_ACCELERATION_PLAN_2026-10-01.md)。HA-01诊断随`92fddf3`部署；HA-02 schema v22设置与规划器随`7beb411`部署；HA-03 NVDEC＋CUDA＋NVENC渐进HLS随`3805cc8`部署。2026-10-02正式设置改为`NVENC`后的真实浏览器请求明确新建硬件HLS而非命中缓存：首片段2.09秒，后续6.79倍／约201fps，片段实际返回浏览器，关闭后正常取消清理，无错误或软件回退，HA-03硬件执行链路验收通过。HA-04的HLS单次安全软件回退、两分钟运行期熔断、完整MP4共用计划／NVENC执行及软硬件Profile隔离随`a7b725c`部署；仅白名单硬件技术错误可回退，其他安全／来源／容量／磁盘／损坏输入错误禁止。HA-05的2秒首片段／后续4秒Profile v3时间表、12～16秒前向缓冲边界及客户端取消不误记504已随`9a5581b`提交并独立部署，真实NVENC目录／TAR／7z门禁、正式服务版本及健康状态通过；本阶段无schema迁移，动态playlist暂缓。HA-06第一闭环的VAAPI H.264／HEVC 8-bit实际解码、缩放、HLS与完整MP4编码已随`9246dcd`提交并部署，以本机iHD实际支持的CQP Profile隔离缓存，并把双解码实际烟测、一次回退和熔断接入原边界；合成实机完整MP4、目录／TAR／7z渐进链路及部署后增强诊断通过，真实4K业务播放仍待所有者验收。设备分槽调度、QSV、10-bit/HDR、多设备和Docker映射仍属后续。
 - 存档视频真实业务验收：编码文件头有界解码和可直读成员按需转码已从`0b6afb7`部署本机，仍需对赛博修女的4K HEVC/AAC实际播放、首帧延迟、CPU／磁盘峰值、增强缓存回收和浏览器拖动进行业务验收；见[浏览器播放方案](ARCHIVE_VIDEO_BROWSER_PLAYBACK_PLAN_2026-09-30.md)。

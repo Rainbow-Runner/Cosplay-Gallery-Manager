@@ -1069,13 +1069,21 @@ a { color: inherit; text-decoration: none; }
 .coser-assets__grid button { justify-self: start; padding: .55rem .7rem; border: 1px solid var(--accent); background: transparent; color: #fff; }
 .coser-assets__grid button:disabled { opacity: .35; }
 .coser-assets__avatar { display: grid; width: min(12rem, 100%); aspect-ratio: 1; place-items: center; overflow: hidden; border-radius: 50%; background: #211b20; font: 3rem Georgia, serif; }
-.coser-assets__avatar img, .coser-assets__avatar canvas, .coser-assets__banner img, .coser-assets__banner canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
-.coser-assets__editor { display: grid; gap: .65rem; min-width: 0; margin: 0; padding: .75rem; border: 1px solid var(--line); }
-.coser-assets__editor legend { padding: 0 .35rem; color: inherit; font-size: .7rem; }
-.coser-assets__editor p, .coser-assets__hint { margin: 0; color: var(--ink-muted); font-size: .65rem; line-height: 1.5; }
-.coser-assets__editor label { grid-template-columns: 7rem minmax(0, 1fr) auto; align-items: center; }
-.coser-assets__editor input[type="range"] { width: 100%; padding: 0; accent-color: var(--accent); }
-.coser-assets__editor output { min-width: 3rem; text-align: right; }
+.coser-assets__avatar img, .coser-assets__banner img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.coser-assets__hint { margin: 0; color: var(--ink-muted); font-size: .65rem; line-height: 1.5; }
+.image-cropper-dialog { width: min(72rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); padding: 1rem; overflow: auto; }
+.image-cropper > header { display: grid; gap: .25rem; margin-bottom: .75rem; }
+.image-cropper > header h3, .image-cropper > header p { margin: 0; }
+.image-cropper > header p { color: var(--cgm-muted-foreground); font-size: .75rem; line-height: 1.5; }
+.image-cropper__stage { position: relative; width: 100%; height: min(65dvh, 42rem); min-height: 20rem; overflow: hidden; outline: none; background: #171717; cursor: grab; touch-action: none; user-select: none; }
+.image-cropper__stage:active { cursor: grabbing; }
+.image-cropper__stage:focus-visible { box-shadow: inset 0 0 0 3px var(--accent); }
+.image-cropper__stage > img { position: absolute; z-index: 1; top: 50%; left: 50%; display: block; max-width: none; pointer-events: none; user-select: none; }
+.image-cropper__frame { position: absolute; z-index: 2; top: 50%; left: 50%; border: 2px solid #fff; box-shadow: 0 0 0 100vmax rgb(0 0 0 / 50%); transform: translate(-50%, -50%); pointer-events: none; }
+.image-cropper__frame--avatar { height: min(76%, 30rem); }
+.image-cropper__frame--banner { width: min(86%, 60rem); }
+.image-cropper__zoom { position: absolute; z-index: 3; right: .75rem; bottom: .75rem; padding: .3rem .5rem; border-radius: 999px; background: rgb(0 0 0 / 65%); color: #fff; font: 600 .75rem var(--cgm-font-sans); pointer-events: none; }
+.image-cropper footer { display: flex; justify-content: flex-end; gap: .6rem; margin-top: .9rem; }
 .coser-metadata-import .manage-inline-toolbar { align-items: end; flex-wrap: wrap; }
 .coser-metadata-import .manage-inline-toolbar label { min-width: 180px; flex: 1; }
 .coser-metadata-import[role="alert"] > button { justify-self: start; padding: .55rem .7rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface); color: var(--cgm-foreground); cursor: pointer; }
@@ -1114,8 +1122,10 @@ a { color: inherit; text-decoration: none; }
 .coser-assets__framing { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
 @media (max-width: 720px) {
   .coser-assets__grid { grid-template-columns: minmax(0, 1fr); }
-  .coser-assets__editor label { grid-template-columns: 1fr; }
-  .coser-assets__editor output { text-align: left; }
+  .image-cropper-dialog { width: calc(100vw - 1rem); max-height: calc(100dvh - 1rem); padding: .75rem; }
+  .image-cropper__stage { height: 58dvh; min-height: 16rem; }
+  .image-cropper__frame--avatar { height: min(68%, calc(100vw - 4rem)); }
+  .image-cropper__frame--banner { width: 90%; }
 }
 .entity-index--coser > a { grid-template-columns: 2.25rem minmax(0, 1fr); grid-template-rows: 2.25rem; align-items: center; gap: .5rem; min-height: 2.25rem; }
 .entity-index--coser > a > strong { grid-column: 2; align-self: center; }

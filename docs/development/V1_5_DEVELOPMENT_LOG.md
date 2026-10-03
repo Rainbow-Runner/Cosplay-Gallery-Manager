@@ -10,7 +10,13 @@
 - 复核发现现有Manage Coser已具备multipart浏览器上传、托管原图、头像480及Banner 960／1600派生能力，但页面只显示旧资源并要求手工填写归一化X／Y／Size数字，选择的新文件在提交前不可见，也没有面向用户的缩放和保留区域交互。Docker的服务端存储根本身已经由配置映射，缺口集中在浏览器选图与取景，不需要向浏览器暴露宿主机或容器绝对路径。
 - Coser资料图片面板现于浏览器选择JPEG、PNG或静态WebP后立即创建仅本页使用的Object URL，并以Canvas按服务端相同规则绘制1:1头像或3:1 Banner最终派生预览。头像提供1～8倍缩放、水平和垂直位置；Banner提供水平和垂直焦点；二者均可重置。选择新文件会清空旧图裁切／焦点，上传成功或切换Coser会释放预览URL并清空文件输入，避免旧资源取景误用于新原图或同文件无法再次选择。
 - 客户端先拦截明确超过20 MiB或声明为其他MIME的文件，服务端既有内容类型、真实解码、50 MP、静态WebP、revision并发及安全托管门禁继续作为权威校验；文件MIME为空时交给服务端按内容判断。上传仍使用认证同源`/manage/coser-assets/{uuid}/{avatar|banner}`，GalleryEpic Provider、GraphQL、数据库schema、Manifest格式、资源URL和未引用替换资源处理均不变。
-- 新增头像缩放／选区multipart参数、Banner焦点、非法文件和前后端同构裁切矩形回归。Web全量43文件192项、TypeScript检查及2558模块生产构建通过；生产构建仅保留既有大chunk提示。当前源码未提交、未部署，未改正式数据库、Coser资源、媒体、Manifest或Docker镜像；真实浏览器鼠标／触屏及Docker卷映射环境仍待所有者验收。
+- 新增头像缩放／选区multipart参数、Banner焦点、非法文件和前后端同构裁切矩形回归。Web全量43文件192项、TypeScript检查及2558模块生产构建通过；生产构建仅保留既有大chunk提示。Coser资源与产品Server整包Go回归通过。未改schema、正式数据库、Coser资源、媒体或Manifest；真实认证浏览器鼠标／触屏操作及Docker卷映射环境仍待所有者验收。
+
+### 提交、回滚备份与本机部署
+
+- 功能与开发记录提交为`aa9b23feeddefb6c0e13649a21bfa0c5c29afea5`（`Add browser framing for Coser profile images`），只包含本功能7个文件；未跟踪的`Check_VAAPI.md`与本次开发无关，未进入提交。正式三标签`cgm_web_embed cgm_galleryepic cgm_moegirl`候选嵌入2558模块新版Web，Go VCS revision与功能提交一致且`vcs.modified=false`，About构建时间为`2026-10-03T03:06:36Z`；候选及正式程序SHA-256均为`cf433fd1b20ed0d1a7a7d3a74a003a78c2a8cdc13513f2ee6726fb02c183b6f5`。
+- 部署前服务active、`NRestarts=0`、Health／Ready均204。停服确认MainPID为0且WAL／SHM关闭后，0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-coser-upload-aa9b23f-ovXeWPQO`保存一致数据库、旧程序、配置、用户systemd单元、675个外部Coser资源及空的product-state Coser目录；文件逐项`cmp`、资源树递归`diff`一致。备份库schema v22、完整性`ok`、七类计数`136/108/697/23/10/10/780`，SHA-256为`22214ffe092a3ad2caee11b5f9b44e5347efe48d90cd4a2c15b55da930a757d8`；旧程序为`0edbbbb24774f3d72539cfd9067ad5db15ac2f3954fe0e42bfe287c0624a863b`。
+- 候选经同目录暂存逐字节核对后原子替换，服务一次启动成功并保持active/running、`NRestarts=0`，Health／Ready均204；About精确报告功能提交、构建时间和`exactSourceAvailable=true`，首页加载新入口`index-D6mY81GI.js`及样式`index-4lBCDF9k.css`，启动后无warning以上日志。正式库仍为schema v22、完整性`ok`且上述业务计数与数据库SHA-256不变；配置及systemd单元SHA-256仍为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`／`720259e71db6d1235aa529f83467594d7e0777ae4924ef44a6b0aa72937efc0f`。未执行真实Coser图片上传，未改媒体、Manifest、缓存、配置或Docker镜像，未推送远端。
 
 ## 2026-10-03 VAAPI EOF兼容修复
 

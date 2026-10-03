@@ -12,7 +12,6 @@
 
 ## 进行中或尚未完成验收
 
-- Coser头像／Banner浏览器上传与可视化取景（源码完成、未部署）：Manage Coser现可直接从浏览器选择JPEG、PNG或静态WebP，不依赖浏览器访问宿主机或容器内真实路径；选择后按服务端同算法预览1:1头像和3:1 Banner派生结果，头像可缩放并调整水平／垂直保留区域，Banner可移动焦点，确认后才上传。继续复用既有20 MiB／50 MP、内容解码、静态图、revision、认证资源及未引用替换资源边界；无schema、GraphQL、Manifest或GalleryEpic Provider变化。Web 43文件192项、TypeScript及2558模块生产构建通过，真实浏览器鼠标／触屏交互与Docker部署仍待所有者验收。
 - VAAPI EOF兼容收敛：2026-10-03已把烟测从短帧同尺寸提升为带B帧HEVC全量排空，实机正确识别FFmpeg 6.1.1固定VPP surface pool问题并选择`VAAPI_CPU_SCALE`兼容链；规划器v4、HLS／完整MP4独立Profile、surface pool／VPP稳定错误码及完整VAAPI→兼容VAAPI→软件有界降级均随`34c5625`部署。后端回归、Race、Vet、正式三标签构建及目录／TAR／Copy 7z实机门禁通过；Web检查／构建通过，既有Libraries并行测试稳定性缺口已单独记录。正式服务、数据库和回滚副本验收通过，真实4K浏览器连续播放与Seek仍由所有者继续验收。
 - 视频硬件加速：已冻结[分阶段实施方案](HARDWARE_ACCELERATION_PLAN_2026-10-01.md)。HA-01诊断随`92fddf3`部署；HA-02 schema v22设置与规划器随`7beb411`部署；HA-03 NVDEC＋CUDA＋NVENC渐进HLS随`3805cc8`部署。2026-10-02正式设置改为`NVENC`后的真实浏览器请求明确新建硬件HLS而非命中缓存：首片段2.09秒，后续6.79倍／约201fps，片段实际返回浏览器，关闭后正常取消清理，无错误或软件回退，HA-03硬件执行链路验收通过。HA-04的HLS单次安全软件回退、两分钟运行期熔断、完整MP4共用计划／NVENC执行及软硬件Profile隔离随`a7b725c`部署；仅白名单硬件技术错误可回退，其他安全／来源／容量／磁盘／损坏输入错误禁止。HA-05的2秒首片段／后续4秒Profile v3时间表、12～16秒前向缓冲边界及客户端取消不误记504已随`9a5581b`提交并独立部署，真实NVENC目录／TAR／7z门禁、正式服务版本及健康状态通过；本阶段无schema迁移，动态playlist暂缓。HA-06第一闭环的VAAPI H.264／HEVC 8-bit实际解码、缩放、HLS与完整MP4编码已随`9246dcd`提交并部署，以本机iHD实际支持的CQP Profile隔离缓存，并把双解码实际烟测、一次回退和熔断接入原边界；合成实机完整MP4、目录／TAR／7z渐进链路及部署后增强诊断通过，真实4K业务播放仍待所有者验收。设备分槽调度、QSV、10-bit/HDR、多设备和Docker映射仍属后续。
 - 存档视频真实业务验收：编码文件头有界解码和可直读成员按需转码已从`0b6afb7`部署本机，仍需对赛博修女的4K HEVC/AAC实际播放、首帧延迟、CPU／磁盘峰值、增强缓存回收和浏览器拖动进行业务验收；见[浏览器播放方案](ARCHIVE_VIDEO_BROWSER_PLAYBACK_PLAN_2026-09-30.md)。
@@ -23,6 +22,8 @@
 - 后续（视频处理第三阶段A）：按需Storyboard Sprite/WebVTT和可访问辅助时间轴仍未实施。[第三阶段B原条件草案](VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)已由真实冷启动证据及本轮ADR更新；当前渐进播放已经部署，但尚未完成真实4K浏览器验收。
 
 ## 已完成
+
+- 2026-10-03 Coser头像／Banner浏览器上传与可视化取景部署：Manage Coser现可直接从浏览器选择JPEG、PNG或静态WebP，不依赖浏览器访问宿主机或容器内真实路径；选择后按服务端同算法预览1:1头像和3:1 Banner派生结果，头像可缩放并调整水平／垂直保留区域，Banner可移动焦点，确认后才上传。功能提交`aa9b23feeddefb6c0e13649a21bfa0c5c29afea5`已从清洁受跟踪源码构建并部署，正式程序SHA-256为`cf433fd1b20ed0d1a7a7d3a74a003a78c2a8cdc13513f2ee6726fb02c183b6f5`，About精确对应提交；服务active、`NRestarts=0`、Health／Ready均204。无schema迁移或业务数据写入，正式库保持schema v22、完整性`ok`及七类计数`136/108/697/23/10/10/780`。真实认证浏览器上传与Docker卷环境仍待所有者业务验收。
 
 - 2026-10-03 VAAPI EOF兼容修复部署：功能提交`34c5625a43e4cabebadac6b124a1000597c93c9a`已从清洁源码构建，正式程序SHA-256为`0edbbbb24774f3d72539cfd9067ad5db15ac2f3954fe0e42bfe287c0624a863b`且`vcs.modified=false`。最终回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-vaapi-eof-final-34c5625-TuoSfyrB`保存一致schema v22数据库、旧程序、配置、用户服务单元和两处Coser资源；数据库完整性`ok`、七类业务计数保持`135/108/697/23/10/10/780`。服务`active/running`、`NRestarts=0`，Health／Ready均204，About精确对应功能提交，最终启动后无warning以上日志。本阶段无schema迁移、媒体、Manifest、配置或缓存替换；未推送远端或更新Docker镜像。
 

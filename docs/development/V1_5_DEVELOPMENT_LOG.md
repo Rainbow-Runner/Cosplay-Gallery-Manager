@@ -10,7 +10,13 @@
 - 继续保持Manage Coser原有双列头像／Banner布局、浏览器文件选择和同源multipart上传边界，移除新增的缩放、水平位置和垂直位置参数控件。用户选图后改为弹出独立裁剪对话框，取消不改变原页面已确认的待上传状态，确认后关闭对话框并回传新文件。
 - 头像裁剪框固定1:1，Banner固定3:1；图像先按cover规则填满裁剪框，再在1×～3×内缩放，拖拽边界会夹紧以防止露出空白，框外使用50%黑色遮罩。桌面端支持鼠标拖拽、滚轮缩放与双击复位；移动端支持单指拖拽、双指缩放与双击复位。对话框提供取消、重置、确认，并接入Esc取消和Enter确认；处理期间禁止重复提交或关闭。
 - 确认时Canvas输出960×960头像或1600×533 Banner，保留PNG／WebP输出格式，其他情况输出JPEG；之后复用现有`/manage/coser-assets/{uuid}/{avatar|banner}`端点。因服务端收到的已是完成取景的固定比例托管图，上传统一使用全图头像裁切或居中Banner焦点，无需新增数据库／Manifest字段；服务端仍权威校验实际输出文件的字节、格式、像素和revision，客户端额外拦截20MiB以上文件及50MP以上源图。GalleryEpic Provider、GraphQL、资源URL和Docker存储映射均不变。
-- 定向组件回归覆盖头像滚轮缩放／双击复位／确认上传、鼠标拖拽、双指缩放、Banner键盘确认、Esc取消、非法MIME拒绝、50MP源图拒绝和裁剪数学边界。定向7项及Web全量43文件195项Vitest、TypeScript检查和2559模块生产构建通过，仅保留既有大chunk提示；本轮尚未提交或部署，正式服务仍运行上一版参数取景UI。未修改schema、正式数据、Coser资源、媒体或Manifest，与`Check_VAAPI.md`无关。
+- 定向组件回归覆盖头像滚轮缩放／双击复位／确认上传、鼠标拖拽、双指缩放、Banner键盘确认、Esc取消、非法MIME拒绝、50MP源图拒绝和裁剪数学边界。定向7项及Web全量43文件195项Vitest、TypeScript检查和2559模块生产构建通过，仅保留既有大chunk提示。未修改schema、正式数据、Coser资源、媒体或Manifest，与`Check_VAAPI.md`无关。
+
+### 提交、回滚备份与本机部署
+
+- 功能与开发记录提交为`1db3a95e4fa0c9c3addfa412e06628c0325c5209`（`Replace Coser framing controls with cropper`），只包含本轮8个文件；未跟踪的`Check_VAAPI.md`未修改或纳入提交。为避免该未跟踪文件影响产物来源标记，从精确提交创建独立本地克隆，以Go 1.25.12、正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签和2559模块Web构建候选。Go VCS报告同一完整revision且`vcs.modified=false`，About构建时间为`2026-10-03T06:26:17Z`，候选与正式程序SHA-256均为`b7f959079836641d5d3cf3b402d1c2fc1349c534eb4a79ba887369caec9a79d0`。
+- 第一次停服备份已完成文件与两处Coser资源逐项比对，但校验语句误用了不存在的`product_identity`表，因此在程序替换前安全中止并恢复旧服务；该副本保留于`/home/rainbowrunner/cos/bk/cgm-pre-cropper-1db3a95-5mLNnH`，不作为最终时点基线。使用实际`cgm_product_identity.database_schema_version`后重新停服创建最终0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-cropper-final-1db3a95-5BHjfM`，保存并复验一致数据库、旧程序、配置、用户systemd单元、675个外部Coser资源及空的product-state Coser目录。备份库schema v22、完整性`ok`、七类计数`136/108/697/23/10/10/780`，SHA-256为`a662ea23ac87e8f5fd7132fb96ea6812bcde97fc5ca03fafe502eb01bdab58d1`；旧程序为`cf433fd1b20ed0d1a7a7d3a74a003a78c2a8cdc13513f2ee6726fb02c183b6f5`。
+- 候选经同目录暂存逐字节核对后原子替换，服务一次启动成功并保持`active/running`、`NRestarts=0`，Health／Ready均204；About精确报告功能提交、上述构建时间和`exactSourceAvailable=true`。首页实际加载`index-B_XIM2o_.js`与`index-BqlV96D6.css`，Manage Core分块`ManageCoreEntitiesPage-CrlowV_e.js`可访问，已核对中英文裁剪文案、裁剪器交互代码与样式标识。正式库仍为schema v22、完整性`ok`且业务计数不变；配置及单元SHA-256仍为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`／`720259e71db6d1235aa529f83467594d7e0777ae4924ef44a6b0aa72937efc0f`，启动日志无warning以上异常。未执行真实Coser图片上传，未修改媒体、Manifest、缓存、配置或Docker镜像，未推送远端。
 
 ## 2026-10-03 Coser头像／Banner浏览器上传与可视化取景
 

@@ -382,7 +382,7 @@ else
 - 完整`scale_vaapi`链失败时继续验证`hwdownload → CPU scale → hwupload`；本机FFmpeg 6.1.1现在报告兼容混合管线，而非错误宣称完整设备滤镜链可用。
 - 规划器v4让HLS和完整MP4按探测结果冻结完整或混合VAAPI策略，并把二者放入不同缓存Profile。
 - `Cannot allocate memory`的filter drain模式与VPP／VAProfile配置失败分别映射为稳定硬件技术错误码。允许回退时，完整VAAPI只尝试一次兼容VAAPI；兼容链仍失败才转软件并熔断后端。
-- 本机定向门禁已通过完整MP4、渐进HLS，以及目录、TAR、Copy 7z端到端来源。该源码截至本节记录时尚未提交或部署，正式服务仍使用此前HA-06版本。
+- 本机定向门禁已通过完整MP4、渐进HLS，以及目录、TAR、Copy 7z端到端来源。修复已提交为`34c5625a43e4cabebadac6b124a1000597c93c9a`并完成本机部署；正式程序SHA-256为`0edbbbb24774f3d72539cfd9067ad5db15ac2f3954fe0e42bfe287c0624a863b`，About精确对应提交。
 
 ## Artifacts
 

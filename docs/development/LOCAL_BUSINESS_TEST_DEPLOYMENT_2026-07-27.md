@@ -1,5 +1,11 @@
 # 本机实际业务应用测试部署
 
+### 2026-10-03 VAAPI EOF兼容修复增量部署
+
+- 从清洁提交`34c5625a43e4cabebadac6b124a1000597c93c9a`以Go 1.25.12、正式三标签及嵌入Web构建；正式程序SHA-256为`0edbbbb24774f3d72539cfd9067ad5db15ac2f3954fe0e42bfe287c0624a863b`且`vcs.modified=false`，About精确对应源码与`2026-10-03T02:05:47Z`构建时间。
+- 最终停服回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-vaapi-eof-final-34c5625-TuoSfyrB`保存并复验schema v22数据库、旧程序、配置、systemd用户单元及两处Coser资源。备份库`integrity_check=ok`，七类Coser／Work／Character／Tag／Gallery／Source／Item计数为`135/108/697/23/10/10/780`；本次无schema迁移。
+- 候选经同目录逐字节校验后原子替换；服务`active/running`、`NRestarts=0`，Health／Ready均204，首页与设置深链200，最终启动后无warning以上日志。启动烟测为NVENC／VAAPI／QSV可用；QSV目前仍无业务执行器。配置SHA-256保持`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`，未修改原始媒体、Manifest、配置或缓存，也未推送远端或更新Docker镜像。
+
 ### 2026-10-02 HA-03 NVIDIA渐进HLS增量部署
 
 - 从清洁提交`3805cc8d105578382a861ab381860297e48cf61f`构建并部署，正式程序SHA-256为`49e36111c09bdcf6b20356c7550ad1c62312791006eab3b7f8104dfc845bad1a`且`vcs.modified=false`。停服回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-ha03-3805cc8-TRNCGkvE`保存并复验schema v22数据库、旧程序、配置、systemd单元及两处Coser资源。

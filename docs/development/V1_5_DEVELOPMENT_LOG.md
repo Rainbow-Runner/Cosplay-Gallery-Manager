@@ -5,13 +5,19 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
-## 2026-10-03 VAAPI EOF兼容修复（本地源码，未提交／部署）
+## 2026-10-03 VAAPI EOF兼容修复
 
 - 在完整功能版Intel iHD驱动安装后，真实2160×3840 HEVC仍于2550帧中的第2542帧失败。逐层拆分确认解码、仅缩放、仅编码均能完整排空，只有`VAAPI decode → scale_vaapi → h264_vaapi`组合在EOF重排帧集中输出时返回`Cannot allocate memory`；libva trace中实际驱动调用均成功，排除真实显存耗尽。FFmpeg 6.1.1的`libavfilter/vaapi_vpp.c`把VPP输出池固定为4并以10帧初始化，尾部surface被下游同时占用后无法取得第11个输出；FFmpeg上游于2024-03-26改为VAAPI 1动态帧池，7.1及更新正式版本包含该修复。完整证据见仓库根目录`VAAPI_DIAGNOSTIC_REPORT.md`。
 - 启动探测不再以单帧、同尺寸缩放判定VAAPI可用。现在生成4帧H.264与24帧、含B帧重排的HEVC小样本，完整执行解码、真实`64×96→32×48`缩放、H.264编码并读到EOF；每条命令仍有5秒上限、结束清理临时文件、不读取业务媒体。完整VAAPI链失败后，再验证`hwdownload → CPU fast_bilinear scale → hwupload`兼容链；仅后者通过时后端仍为`AVAILABLE`，但明确报告`hwdownload+scale+hwupload`及`VAAPI_FULL_PIPELINE_UNAVAILABLE_HYBRID_ACTIVE`。
 - 规划器升级为v4：完整探测通过时继续使用`scale_vaapi`；兼容探测通过时，HLS与完整MP4统一使用VAAPI H.264／HEVC硬解、CPU缩放、VAAPI H.264编码，`FullHardwarePipeline=false`且Profile与旧完整管线隔离。本机FFmpeg 6.1.1实测被正确选择为`VAAPI_CPU_SCALE`，合成完整MP4、2／4秒HLS以及目录、TAR、Copy 7z渐进会话全部成功。
 - 运行错误分类新增`HARDWARE_FRAME_POOL_EXHAUSTED`及`HARDWARE_VAAPI_PIPELINE_UNSUPPORTED`，只在硬件执行上下文触发降级。允许回退时顺序为完整VAAPI→兼容VAAPI→软件，每层最多一次；只有最终硬件失败才熔断设备。鉴权、来源证明、revision、容量、磁盘、损坏输入和取消仍不回退。管理设置页同步解释实际滤镜策略和有界降级顺序。
-- 本阶段无schema、Manifest、迁移包或原媒体变更，尚未提交、备份或部署。mediaprocessing／videoplayback／processingworker／productapi／productserver回归与受影响三包Race、五包Vet通过；正式三标签同范围回归及嵌入式二进制构建通过。Web TypeScript、生产构建、Manage Settings定向测试通过。全量Vitest并行运行时既有`ManageLibrariesPage` Apollo mock偶发未选中Library而失败，该文件单独10项全过、其余42文件179项全过，确认与本轮设置文案无关但仍记录为既有并行稳定性缺口。最终VAAPI宿主机门禁通过完整MP4、HLS及目录／TAR／Copy 7z来源。
+- 本阶段无schema、Manifest、迁移包或原媒体变更。提交前，mediaprocessing／videoplayback／processingworker／productapi／productserver回归与受影响三包Race、五包Vet通过；正式三标签同范围回归及嵌入式二进制构建通过。Web TypeScript、生产构建、Manage Settings定向测试通过。全量Vitest并行运行时既有`ManageLibrariesPage` Apollo mock偶发未选中Library而失败，该文件单独10项全过、其余42文件179项全过，确认与本轮设置文案无关但仍记录为既有并行稳定性缺口。最终VAAPI宿主机门禁通过完整MP4、HLS及目录／TAR／Copy 7z来源。
+
+### 提交、回滚备份与本机部署
+
+- 功能与诊断报告提交为`34c5625a43e4cabebadac6b124a1000597c93c9a`（`Fix VAAPI EOF compatibility`）。从该清洁提交以正式三标签和嵌入Web构建，Go VCS为同一revision且`vcs.modified=false`，About注入`2026-10-03T02:05:47Z`；候选及正式程序SHA-256均为`0edbbbb24774f3d72539cfd9067ad5db15ac2f3954fe0e42bfe287c0624a863b`。用户未跟踪的`Check_VAAPI.md`未纳入提交，构建时仅临时移出并按SHA-256原样恢复。
+- 第一次停服备份脚本在副本完整性已为`ok`后，因核验语句误用不存在的`schema_version`列而在程序替换前安全中止并恢复旧服务；第二次尝试检测到恢复运行期间后台任务已改变主库，因此拒绝把较早副本冒充最终部署基线并再次恢复旧服务。两次均未替换程序或迁移schema。最终停服窗口重新创建`/home/rainbowrunner/cos/bk/cgm-pre-vaapi-eof-final-34c5625-TuoSfyrB`，保存并逐项核验即时数据库、旧程序、配置、用户systemd单元、外部及product-state Coser资源；备份库SHA-256为`dd3b73cafe69f017b16dc9b6e1a73db396d1bce566035ed128e87da24be8d81f`，旧程序为`4000f045717a4563d1a918bc4c9300bacfe403a879c0b9db6e9245220de47819`。
+- 最终候选经同目录暂存逐字节校验后原子替换，服务启动成功并保持`active/running`、`NRestarts=0`；Health／Ready均204，首页与设置深链200，About精确报告功能提交且`exactSourceAvailable=true`。正式库保持schema v22、`integrity_check=ok`和七类业务计数`135/108/697/23/10/10/780`；配置SHA-256仍为`fee095a8642c53278838475549251a48956d3058cd50fc652e4d0b392b877899`。最终启动探测报告NVENC／VAAPI／QSV均`AVAILABLE`，其中QSV仅表示当前宿主机烟测状态变化，不代表已实现QSV执行器；最终启动后无warning以上日志。本次未修改媒体、Manifest、配置或缓存，未推送远端或更新Docker镜像。
 
 ## 2026-10-01 真实渐进播放复核与硬件加速规划
 

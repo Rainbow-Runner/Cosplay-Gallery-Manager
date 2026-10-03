@@ -280,12 +280,13 @@ func (s *ManageStore) GalleryDetail(ctx context.Context, setID string) (manage.G
 type folderEntityToken struct {
 	UUID, Name, Token, WorkUUID, WorkName string
 	tokenKey                              string
+	matchStrength                         int
 }
 
 func (s *ManageStore) sourceEntityMatches(ctx context.Context, labels []string) ([]manage.GalleryFolderMatch, error) {
 	var keys []string
 	for _, label := range labels {
-		if key := normalizedKey(label); key != "" {
+		if key := normalizedKey(entityInferenceText(label)); key != "" {
 			keys = append(keys, key)
 		}
 	}
@@ -355,16 +356,25 @@ func (s *ManageStore) matchFolderEntityKind(
 			}
 		}
 		token.tokenKey = normalizedKey(token.Token)
-		matched := false
+		strength := entityMatchNone
 		for _, key := range folderKeys {
-			if token.tokenKey != "" && strings.Contains(key, token.tokenKey) && (len([]rune(token.tokenKey)) >= 2 || key == token.tokenKey) {
-				matched = true
-				break
+			if token.tokenKey == "" {
+				continue
+			}
+			candidateStrength := entityMatchNone
+			if kind == "CHARACTER" {
+				candidateStrength = characterTokenMatch(key, token.tokenKey)
+			} else if strings.Contains(key, token.tokenKey) && (len([]rune(token.tokenKey)) >= 2 || key == token.tokenKey) {
+				candidateStrength = entityMatchStrong
+			}
+			if candidateStrength > strength {
+				strength = candidateStrength
 			}
 		}
-		if !matched {
+		if strength == entityMatchNone {
 			continue
 		}
+		token.matchStrength = strength
 		if ownersByToken[token.tokenKey] == nil {
 			ownersByToken[token.tokenKey] = map[string]folderEntityToken{}
 		}
@@ -380,7 +390,8 @@ func (s *ManageStore) matchFolderEntityKind(
 		}
 		for uuid, token := range owners {
 			current, exists := bestByUUID[uuid]
-			if !exists || len([]rune(token.tokenKey)) > len([]rune(current.tokenKey)) {
+			if !exists || token.matchStrength > current.matchStrength ||
+				(token.matchStrength == current.matchStrength && len([]rune(token.tokenKey)) > len([]rune(current.tokenKey))) {
 				bestByUUID[uuid] = token
 			}
 		}
@@ -390,10 +401,23 @@ func (s *ManageStore) matchFolderEntityKind(
 		tokens = append(tokens, token)
 	}
 	result := make([]manage.GalleryFolderMatch, 0, len(tokens))
+	hasStrongCharacterMatch := false
+	if kind == "CHARACTER" {
+		for _, token := range tokens {
+			if token.matchStrength == entityMatchStrong {
+				hasStrongCharacterMatch = true
+				break
+			}
+		}
+	}
 	for index, token := range tokens {
+		if hasStrongCharacterMatch && token.matchStrength == entityMatchWeak {
+			continue
+		}
 		suppressed := false
 		for otherIndex, other := range tokens {
-			if index == otherIndex || len([]rune(other.tokenKey)) <= len([]rune(token.tokenKey)) {
+			if index == otherIndex || other.matchStrength < token.matchStrength ||
+				len([]rune(other.tokenKey)) <= len([]rune(token.tokenKey)) {
 				continue
 			}
 			if strings.Contains(other.tokenKey, token.tokenKey) {

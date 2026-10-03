@@ -525,10 +525,18 @@ func archiveEntitySuggestions(ctx context.Context, db discoveryQueryer, libraryR
 	}
 	parts[len(parts)-1] = archivefile.BaseName(parts[len(parts)-1])
 	tokens := make(map[string]struct{}, len(parts)*3)
+	coserTokens := make(map[string]struct{}, len(parts)*4)
 	for _, part := range parts {
-		for _, token := range archiveEntityNameTokens(part) {
+		partTokens := archiveEntityNameTokens(part)
+		for _, token := range partTokens {
 			if key := normalizedKey(token); key != "" {
 				tokens[key] = struct{}{}
+				coserTokens[key] = struct{}{}
+			}
+		}
+		for _, token := range archiveMultiCoserTokens(partTokens) {
+			if key := normalizedKey(token); key != "" {
+				coserTokens[key] = struct{}{}
 			}
 		}
 	}
@@ -554,7 +562,11 @@ func archiveEntitySuggestions(ctx context.Context, db discoveryQueryer, libraryR
 			return nil, err
 		}
 		key := normalizedKey(name)
-		if _, ok := tokens[key]; !ok || key == "" {
+		available := tokens
+		if kind == "COSER" {
+			available = coserTokens
+		}
+		if _, ok := available[key]; !ok || key == "" {
 			continue
 		}
 		if matched[kind] == nil {
@@ -572,7 +584,7 @@ func archiveEntitySuggestions(ctx context.Context, db discoveryQueryer, libraryR
 		for value := range values {
 			ordered = append(ordered, value)
 		}
-		pathKey := normalizedKey(filepath.ToSlash(relative))
+		pathKey := normalizedKey(entityInferenceText(filepath.ToSlash(relative)))
 		sort.Slice(ordered, func(i, j int) bool {
 			left, right := normalizedKey(ordered[i]), normalizedKey(ordered[j])
 			a, b := strings.Index(pathKey, left), strings.Index(pathKey, right)
@@ -594,6 +606,7 @@ func archiveEntitySuggestions(ctx context.Context, db discoveryQueryer, libraryR
 // common names such as "Coser - Character [100P]" become independently
 // matchable.
 func archiveEntityNameTokens(value string) []string {
+	value = entityInferenceText(value)
 	segments := []string{value}
 	var outside strings.Builder
 	var bracket strings.Builder
@@ -649,6 +662,17 @@ func archiveEntityNameTokens(value string) []string {
 			seen[key] = struct{}{}
 			result = append(result, token)
 		}
+	}
+	return result
+}
+
+// archiveMultiCoserTokens augments, rather than replaces, ordinary identity
+// tokens. The expansion is consulted only for Coser suggestions, preventing
+// '&', 'x', '×' and '+' in titles from changing Work/Character inference.
+func archiveMultiCoserTokens(tokens []string) []string {
+	var result []string
+	for _, token := range tokens {
+		result = append(result, splitMultiCoserToken(token)...)
 	}
 	return result
 }

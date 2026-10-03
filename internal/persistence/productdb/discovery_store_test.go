@@ -658,6 +658,51 @@ func TestArchiveEntitySuggestionsSplitPresentationNameSafely(t *testing.T) {
 	}
 }
 
+func TestArchiveEntitySuggestionsStripNoiseAndSplitMultipleCosers(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 10, 3, 0, 0, 0, 0, time.UTC)
+	library := createTestLibrary(t, db, now)
+	for _, name := range []string{"Alpha", "Beta", "Gamma", "Delta", "Epsilon"} {
+		if _, err := db.CoreEntities().CreateCoser(ctx, CreateCoserInput{
+			CreateNamedEntityInput: CreateNamedEntityInput{Name: name},
+		}, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	work, err := db.CoreEntities().CreateWork(ctx, CreateNamedEntityInput{Name: "Test Work"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.CoreEntities().CreateCharacter(ctx, work.UUID, CreateNamedEntityInput{Name: "Rem"}, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.CoreEntities().CreateCharacter(ctx, work.UUID, CreateNamedEntityInput{Name: "02"}, now); err != nil {
+		t.Fatal(err)
+	}
+
+	archivePath := filepath.Join(library.RootPath, "Alpha&Beta x Gamma×Delta+Epsilon - NO.002 Rem [120P10G3V-2.13GB].7z")
+	suggestions, err := archiveEntitySuggestions(ctx, db, library.RootPath, archivePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]map[string]bool{}
+	for _, suggestion := range suggestions {
+		if got[suggestion.Field] == nil {
+			got[suggestion.Field] = map[string]bool{}
+		}
+		got[suggestion.Field][suggestion.Value] = true
+	}
+	for _, name := range []string{"Alpha", "Beta", "Gamma", "Delta", "Epsilon"} {
+		if !got["coser"][name] {
+			t.Errorf("missing Coser %q in %#v", name, suggestions)
+		}
+	}
+	if !got["character"]["Rem"] || got["character"]["02"] {
+		t.Fatalf("noise-filtered character suggestions = %#v", suggestions)
+	}
+}
+
 func TestBoundAndIgnoredSourcesOutrankAutomaticRules(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openTestDatabaseAndRegistry(t)

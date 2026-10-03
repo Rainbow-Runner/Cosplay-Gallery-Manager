@@ -3,11 +3,93 @@ package productdb
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stashapp/stash/internal/gallery"
 )
+
+func TestEntityInferenceTextRemovesSequenceAndMediaNoise(t *testing.T) {
+	for _, value := range []string{
+		"NO.002", "vol.313", "120P10G3V-2.13GB", "133P-1.0G",
+		"123P-258MB", "55P10G-789M", "88P 3V 940MB",
+	} {
+		if cleaned := strings.TrimSpace(entityInferenceText(value)); cleaned != "" {
+			t.Errorf("entityInferenceText(%q) = %q, want empty", value, cleaned)
+		}
+	}
+	if cleaned := strings.Join(strings.Fields(entityInferenceText("Alice - NO.002 Rem [120P10G3V-2.13GB]")), " "); cleaned != "Alice - Rem [ ]" {
+		t.Fatalf("cleaned identity text = %q", cleaned)
+	}
+	if parts := splitMultiCoserToken("Maxine"); len(parts) != 0 {
+		t.Fatalf("ordinary Latin name split as multi-Coser token: %v", parts)
+	}
+	if parts := splitMultiCoserToken("甲x乙"); len(parts) != 2 || parts[0] != "甲" || parts[1] != "乙" {
+		t.Fatalf("Han x separator parts = %v", parts)
+	}
+}
+
+func TestManageCharacterMatchesRespectBoundariesAndWeakFallback(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openTestDatabaseAndRegistry(t)
+	now := time.Date(2026, 10, 3, 0, 0, 0, 0, time.UTC)
+	work, err := db.CoreEntities().CreateWork(ctx, CreateNamedEntityInput{Name: "Test Work"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rem, err := db.CoreEntities().CreateCharacter(ctx, work.UUID, CreateNamedEntityInput{Name: "Rem"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	anby, err := db.CoreEntities().CreateCharacter(ctx, work.UUID, CreateNamedEntityInput{Name: "安比"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zeroTwo, err := db.CoreEntities().CreateCharacter(ctx, work.UUID, CreateNamedEntityInput{Name: "02"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertCharacters := func(label string, want ...string) {
+		t.Helper()
+		matches, matchErr := db.Manage().sourceEntityMatches(ctx, []string{label})
+		if matchErr != nil {
+			t.Fatal(matchErr)
+		}
+		got := map[string]bool{}
+		for _, match := range matches {
+			if match.Kind == "CHARACTER" {
+				got[match.UUID] = true
+			}
+		}
+		if len(got) != len(want) {
+			t.Fatalf("characters for %q = %#v, want %v", label, matches, want)
+		}
+		for _, uuid := range want {
+			if !got[uuid] {
+				t.Fatalf("characters for %q = %#v, missing %s", label, matches, uuid)
+			}
+		}
+	}
+
+	assertCharacters("Bremerton")
+	assertCharacters("Galaxy Rem", rem.UUID)
+	assertCharacters("安比·德玛拉", anby.UUID)
+	assertCharacters("安比 德玛拉", anby.UUID)
+	assertCharacters("安比德玛拉", anby.UUID)
+	assertCharacters("02", zeroTwo.UUID)
+	assertCharacters("Alice - 02 - swimsuit", zeroTwo.UUID)
+	assertCharacters("Alice 2023-02 swimsuit")
+	assertCharacters("NO.002 Original [120P10G3V-2.13GB]")
+	assertCharacters("vol.02 Original [88P 3V 940MB]")
+
+	fullName, err := db.CoreEntities().CreateCharacter(ctx, work.UUID, CreateNamedEntityInput{Name: "安比德玛拉"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCharacters("安比德玛拉", fullName.UUID)
+}
 
 func TestManageSourceMatchesIndependentEntitiesAndNoWrites(t *testing.T) {
 	for _, scenario := range []struct {

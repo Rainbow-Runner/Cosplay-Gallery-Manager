@@ -1,6 +1,6 @@
 # CGM 视频硬件加速实施方案
 
-> 状态：HA-01至HA-06第一闭环已提交并部署；HA-03真实NVENC播放已验收；HA-06启动诊断与部署健康复验通过
+> 状态：HA-01至HA-06第一闭环已提交并部署；2026-10-03已在本地补齐VAAPI EOF排空探测与兼容管线，尚未提交／部署
 > 记录日期：2026-10-01
 > 当前范围：Linux原生与Docker；Windows原生继续延期
 > 关联决策：[按需渐进视频播放](../architecture/PROGRESSIVE_VIDEO_PLAYBACK_2026-09-30.md)
@@ -106,6 +106,8 @@ HA-04现已让渐进HLS与完整MP4代理共同消费冻结执行计划，NVENC 
 第一闭环进度（2026-10-02，已提交部署）：已将VAAPI从“只诊断／规划、执行前软件降级”推进为实际HLS与完整MP4执行器。规划器v3冻结`renderD<number>`、H.264／HEVC 8-bit解码、VAAPI surface、`scale_vaapi`、`h264_vaapi`及独立码控Profile；命令构造器只从受限标识生成`/dev/dri/renderD<number>`，不接受任意路径或参数。本机Intel iHD驱动实际只报告CQP，不支持原拟VBR，因此首版固定为已实测的`CQP/QP25/quality4`并与软件／NVENC缓存完全隔离；其他码控须以后由单独能力探测和画质校准授权，不能自动套用。
 
 启动诊断现额外生成有界64×64合成H.264／HEVC样本，分别实际完成VAAPI解码、设备缩放和H.264编码后才标记`AVAILABLE`；临时文件退出即清理，不读取业务媒体。运行期VAAPI设备／驱动白名单错误接入既有一次性软件回退和两分钟熔断，来源、鉴权、容量、磁盘、损坏输入与取消仍不得回退。合成实机门禁已通过完整MP4、2秒首片段／后续4秒HLS、随机Seek、目录完整提升及TAR／Copy 7z Range Seek，日志确认实际后端为VAAPI。相关Go回归、Race和Vet通过；功能提交`9246dcd`已完成独立回滚备份和本机部署，启动后VAAPI增强诊断仍为`AVAILABLE`。真实4K业务样本的画质、片段体积、首片段及持续速度仍须所有者播放验收。
+
+EOF兼容收敛（2026-10-03，本地源码未提交／部署）：完整功能iHD驱动解决VPP配置失败后，FFmpeg 6.1.1仍在4K HEVC EOF重排帧排空时暴露固定VAAPI VPP输出池问题。探测改为24帧带B帧HEVC全量排空及真实尺寸变化；完整链失败但混合链通过时，规划器v4自动选择`VAAPI decode → hwdownload → CPU scale → hwupload → h264_vaapi`，并以独立Profile标识部分硬件管线。稳定错误码区分surface pool耗尽和VPP／VAProfile不支持；运行期仅对这两类故障按完整VAAPI→混合VAAPI→软件逐级一次降级，最终硬件故障才进入两分钟熔断。此策略优先相信实测能力而非仅按FFmpeg版本判断，因此也兼容发行版回移上游动态帧池修复的构建；FFmpeg 7.1及更新仍是完整`scale_vaapi`管线的推荐基线。
 
 - 增加VAAPI完整管线；再根据实际iHD／QSV能力决定是否提供独立QSV模式。不同设备、驱动和10-bit/HDR能力必须分别烟测。
 - 拆分CPU与每块GPU的会话槽，前台HLS优先于Poster、动画预览和后台代理。初始每GPU仍为1，只有压力测试后才允许提高。

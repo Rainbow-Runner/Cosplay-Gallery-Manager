@@ -66,7 +66,7 @@ type session struct {
 	start, produced   int
 	started           time.Time
 	firstSegment      bool
-	fallbackAttempted bool
+	fallbackLevel     int
 	leases            map[string]time.Time
 }
 type Manager struct {
@@ -479,7 +479,7 @@ encodeLoop:
 		case err := <-finished:
 			cancel()
 			if backend, hardwareFailure := mediaprocessing.HardwareExecutionFailure(err); hardwareFailure {
-				fallback, fallbackErr := m.applyHLSFallback(s, backend)
+				fallback, fallbackErr := m.applyHLSFallback(s, backend, mediaprocessing.HardwareExecutionDiagnostic(err))
 				if fallbackErr != nil {
 					err = fallbackErr
 				} else if fallback {
@@ -509,13 +509,9 @@ encodeLoop:
 	}
 }
 
-func (m *Manager) applyHLSFallback(s *session, backend string) (bool, error) {
-	if !s.execution.AllowSoftwareFallback || s.fallbackAttempted {
+func (m *Manager) applyHLSFallback(s *session, backend, diagnostic string) (bool, error) {
+	if !s.execution.AllowSoftwareFallback || s.fallbackLevel >= 2 {
 		return false, nil
-	}
-	s.fallbackAttempted = true
-	if m.RecordHardwareFailure != nil {
-		m.RecordHardwareFailure(backend)
 	}
 	if err := clearHLSOutput(s.dir); err != nil {
 		return false, err
@@ -524,13 +520,29 @@ func (m *Manager) applyHLSFallback(s *session, backend string) (bool, error) {
 	if s.descriptor.Source.Type == gallery.SourceTypeArchive {
 		plan = mediaprocessing.ArchivePlaybackPlanFromMetadata(s.descriptor.Metadata)
 	}
+	if (diagnostic == mediaprocessing.DiagnosticHardwareFramePoolExhausted || diagnostic == mediaprocessing.DiagnosticHardwareVAAPIPipeline) && s.fallbackLevel == 0 {
+		if hybrid, ok := mediaprocessing.VAAPIHybridVideoTranscodePlan(s.execution); ok {
+			s.fallbackLevel = 1
+			s.execution = hybrid
+			s.profile = mediaprocessing.ProgressiveVideoProfileHashForSchedule(s.descriptor.Metadata, plan, m.Version, s.execution, hlsSchedule, s.descriptor.ContentRevision)
+			m.mu.Lock()
+			s.state.Backend, s.state.Status, s.state.ErrorCode, s.state.Progress = "VAAPI", "PENDING", "", mediaprocessing.VideoProgress{}
+			m.mu.Unlock()
+			slog.Warn("CGM_VIDEO_HARDWARE_RUNTIME_FALLBACK", "item", shortItem(s.descriptor.ItemUUID), "failed_backend", backend, "fallback_backend", "VAAPI_CPU_SCALE", "diagnostic", diagnostic)
+			return true, nil
+		}
+	}
+	s.fallbackLevel = 2
+	if m.RecordHardwareFailure != nil {
+		m.RecordHardwareFailure(backend)
+	}
 	s.execution = mediaprocessing.SoftwareVideoTranscodePlan(plan, s.descriptor.Metadata, mediaprocessing.VideoTranscodeHLS)
 	s.execution.ReasonCode = "HARDWARE_RUNTIME_FALLBACK"
 	s.profile = mediaprocessing.ProgressiveVideoProfileHashForSchedule(s.descriptor.Metadata, plan, m.Version, s.execution, hlsSchedule, s.descriptor.ContentRevision)
 	m.mu.Lock()
 	s.state.Backend, s.state.Status, s.state.ErrorCode, s.state.Progress = "SOFTWARE", "PENDING", "", mediaprocessing.VideoProgress{}
 	m.mu.Unlock()
-	slog.Warn("CGM_VIDEO_HARDWARE_RUNTIME_FALLBACK", "item", shortItem(s.descriptor.ItemUUID), "failed_backend", backend, "fallback_backend", "SOFTWARE")
+	slog.Warn("CGM_VIDEO_HARDWARE_RUNTIME_FALLBACK", "item", shortItem(s.descriptor.ItemUUID), "failed_backend", backend, "fallback_backend", "SOFTWARE", "diagnostic", diagnostic)
 	return true, nil
 }
 

@@ -19,11 +19,24 @@ type VideoCommandError struct {
 	DiagnosticCode string
 }
 
+const (
+	DiagnosticHardwareFramePoolExhausted = "HARDWARE_FRAME_POOL_EXHAUSTED"
+	DiagnosticHardwareVAAPIPipeline      = "HARDWARE_VAAPI_PIPELINE_UNSUPPORTED"
+)
+
 func (e *VideoCommandError) Error() string { return "video processor failed" }
 
 func HardwareVideoCommandFailure(err error) bool {
 	var failure *VideoCommandError
 	return errors.As(err, &failure) && strings.HasPrefix(failure.DiagnosticCode, "HARDWARE_")
+}
+
+func VideoCommandDiagnosticCode(err error) string {
+	var failure *VideoCommandError
+	if errors.As(err, &failure) {
+		return failure.DiagnosticCode
+	}
+	return ""
 }
 
 type boundedDiagnosticWriter struct {
@@ -44,6 +57,13 @@ func (w *boundedDiagnosticWriter) Write(p []byte) (int, error) {
 
 func videoCommandDiagnostic(value string) string {
 	lower := strings.ToLower(value)
+	if strings.Contains(lower, "cannot allocate memory") &&
+		(strings.Contains(lower, "error while filtering") || strings.Contains(lower, "failed to inject frame into filter network")) {
+		return DiagnosticHardwareFramePoolExhausted
+	}
+	if strings.Contains(lower, "failed to create processing pipeline config") || strings.Contains(lower, "the requested vaprofile is not supported") {
+		return DiagnosticHardwareVAAPIPipeline
+	}
 	for _, marker := range []string{
 		"cannot load libcuda", "cuda_error", "no capable devices found", "failed setup for format cuda", "cannot init cuda", "cuvid decode picture error", "nvenc unloaded", "failed to open nvenc", "openencode session ex failed",
 		"failed to initialise vaapi connection", "failed to initialize vaapi connection", "no va display found", "no vaapi device available", "failed setup for format vaapi", "failed to create vaapi device", "failed to create encode pipeline", "no usable encoding entrypoint", "driver does not support vbr rc mode",

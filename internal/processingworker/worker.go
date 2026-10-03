@@ -477,6 +477,18 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 		return generated, relative, size, generationFinished, generateErr
 	}
 	generated, relative, size, generationFinished, err := generate()
+	if backend, hardwareFailure := mediaprocessing.HardwareExecutionFailure(err); hardwareFailure && backend == "VAAPI" && request.VideoExecution != nil && request.VideoPlan != nil && request.VideoTechnical != nil && request.VideoExecution.AllowSoftwareFallback {
+		diagnostic := mediaprocessing.HardwareExecutionDiagnostic(err)
+		if diagnostic == mediaprocessing.DiagnosticHardwareFramePoolExhausted || diagnostic == mediaprocessing.DiagnosticHardwareVAAPIPipeline {
+			if hybrid, ok := mediaprocessing.VAAPIHybridVideoTranscodePlan(*request.VideoExecution); ok {
+				request.VideoExecution = &hybrid
+				profile = mediaprocessing.CompleteVideoProfileHash(*request.VideoTechnical, *request.VideoPlan, worker.FFmpegVersion, hybrid)
+				request.ProfileHash = profile
+				slog.Warn("CGM_VIDEO_HARDWARE_RUNTIME_FALLBACK", "item", shortWorkerItem(item.ItemUUID), "failed_backend", backend, "fallback_backend", "VAAPI_CPU_SCALE", "diagnostic", diagnostic, "workload", "MP4")
+				generated, relative, size, generationFinished, err = generate()
+			}
+		}
+	}
 	if backend, hardwareFailure := mediaprocessing.HardwareExecutionFailure(err); hardwareFailure && request.VideoExecution != nil && request.VideoExecution.AllowSoftwareFallback && request.VideoPlan != nil && request.VideoTechnical != nil {
 		if worker.RecordHardwareFailure != nil {
 			worker.RecordHardwareFailure(backend)

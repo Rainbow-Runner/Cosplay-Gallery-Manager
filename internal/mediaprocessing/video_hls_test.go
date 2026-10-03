@@ -190,6 +190,17 @@ func TestProgressiveVideoVAAPIArgumentsArePlanBounded(t *testing.T) {
 			t.Fatalf("VAAPI arguments lack %q: %s", required, joined)
 		}
 	}
+	execution.FilterStrategy = "VAAPI_CPU_SCALE"
+	hybridArgs, err := ProgressiveVideoArgsForSchedule("source.mp4", "segments", plan, execution, 0, ProgressiveSegmentSchedule{FirstSeconds: 2, FollowingSeconds: 4})
+	if err != nil {
+		t.Fatal(err)
+	}
+	hybrid := strings.Join(hybridArgs, " ")
+	for _, required := range []string{"hwdownload", "scale=w=", "flags=fast_bilinear", "hwupload", "-c:v h264_vaapi"} {
+		if !strings.Contains(hybrid, required) {
+			t.Fatalf("VAAPI hybrid arguments lack %q: %s", required, hybrid)
+		}
+	}
 	execution.Device = "/dev/dri/renderD128"
 	if _, err := ProgressiveVideoArgsForExecution("source.mp4", "segments", plan, execution, 0, 4); err == nil {
 		t.Fatal("absolute VAAPI device was accepted")
@@ -269,7 +280,7 @@ func TestProgressiveVideoVAAPIExternal(t *testing.T) {
 		t.Fatalf("fixture: %v: %s", err, output)
 	}
 	plan := VideoPlaybackPlan{Mode: PlaybackTranscode, SelectVideoTrack: 0, SelectAudioTrack: -1, MaximumWidth: 1920, MaximumHeight: 1080}
-	execution := VideoTranscodeExecutionPlan{Workload: VideoTranscodeHLS, EffectiveBackend: "VAAPI", Device: device, Decoder: "hevc", FilterStrategy: "VAAPI", Encoder: "h264_vaapi", RateControl: vaapiRateControl, Executable: true}
+	execution := VideoTranscodeExecutionPlan{Workload: VideoTranscodeHLS, EffectiveBackend: "VAAPI", Device: device, Decoder: "hevc", FilterStrategy: "VAAPI_CPU_SCALE", Encoder: "h264_vaapi", RateControl: vaapiRateControl, Executable: true}
 	schedule := ProgressiveSegmentSchedule{FirstSeconds: 2, FollowingSeconds: 4}
 	for _, start := range []int{0, 1} {
 		directory := filepath.Join(root, "segments-"+strconv.Itoa(start))

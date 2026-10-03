@@ -248,7 +248,7 @@ func TestHLSHardwareFallbackCleansPartialOutputSwitchesProfileAndRunsOnce(t *tes
 		profile: "hardware-profile", state: State{Backend: "NVENC", Status: "PROCESSING", ErrorCode: "old"}}
 	failures := []string{}
 	m := &Manager{Version: "7.1", RecordHardwareFailure: func(backend string) { failures = append(failures, backend) }}
-	applied, err := m.applyHLSFallback(s, "NVENC")
+	applied, err := m.applyHLSFallback(s, "NVENC", "HARDWARE_DEVICE_OR_DRIVER_FAILED")
 	if err != nil || !applied {
 		t.Fatalf("fallback = %v, %v", applied, err)
 	}
@@ -259,8 +259,28 @@ func TestHLSHardwareFallbackCleansPartialOutputSwitchesProfileAndRunsOnce(t *tes
 	if err != nil || len(entries) != 0 {
 		t.Fatalf("partial output remains: %v %v", entries, err)
 	}
-	if applied, err := m.applyHLSFallback(s, "NVENC"); err != nil || applied || len(failures) != 1 {
+	if applied, err := m.applyHLSFallback(s, "NVENC", "HARDWARE_DEVICE_OR_DRIVER_FAILED"); err != nil || applied || len(failures) != 1 {
 		t.Fatalf("second fallback = %v, %v failures=%v", applied, err, failures)
+	}
+}
+
+func TestHLSVAAPIPoolFailureFallsBackThroughHybridBeforeSoftware(t *testing.T) {
+	directory := t.TempDir()
+	metadata := mediaprocessing.VideoTechnicalMetadata{VideoCodec: "hevc", PixelFormat: "yuv420p", VideoStreamIndex: 0, DisplayWidth: 2160, DisplayHeight: 3840}
+	plan := mediaprocessing.PlaybackPlanFromMetadata(metadata)
+	hardware := mediaprocessing.HardwareAccelerationStatus{ProbeState: mediaprocessing.HardwareProbeCompleted, Backends: []mediaprocessing.HardwareBackendStatus{{Backend: "VAAPI", State: mediaprocessing.HardwareProbeAvailable, Device: "renderD128", DecodeCodecs: []string{"h264", "hevc"}}}}
+	execution := mediaprocessing.PlanVideoTranscode(plan, metadata, mediaprocessing.VideoHardwarePreference{Mode: "VAAPI", AllowSoftwareFallback: true}, hardware, mediaprocessing.VideoTranscodeHLS)
+	s := &session{dir: directory, descriptor: productdb.DirectVideoDescriptor{ItemUUID: "12345678-1234-1234-1234-123456789012", ContentRevision: 3, Metadata: metadata, Source: mediaaccess.Source{Type: gallery.SourceTypeDirectory}}, execution: execution,
+		profile: "full-profile", state: State{Backend: "VAAPI", Status: "PROCESSING"}}
+	failures := []string{}
+	m := &Manager{Version: "6.1.1", RecordHardwareFailure: func(backend string) { failures = append(failures, backend) }}
+	applied, err := m.applyHLSFallback(s, "VAAPI", "HARDWARE_FRAME_POOL_EXHAUSTED")
+	if err != nil || !applied || s.execution.FilterStrategy != "VAAPI_CPU_SCALE" || s.fallbackLevel != 1 || len(failures) != 0 || s.profile == "full-profile" {
+		t.Fatalf("hybrid fallback session=%#v failures=%v applied=%v err=%v", s, failures, applied, err)
+	}
+	applied, err = m.applyHLSFallback(s, "VAAPI", "HARDWARE_DEVICE_OR_DRIVER_FAILED")
+	if err != nil || !applied || s.execution.EffectiveBackend != "SOFTWARE" || s.fallbackLevel != 2 || len(failures) != 1 {
+		t.Fatalf("software fallback session=%#v failures=%v applied=%v err=%v", s, failures, applied, err)
 	}
 }
 
@@ -411,10 +431,12 @@ func testHardwareProgressiveSource(t *testing.T, ffmpeg, ffprobe, clip, sourceKi
 	}
 	m.HardwareStatus = func() mediaprocessing.HardwareAccelerationStatus {
 		decodeCodecs := []string{"h264_cuvid", "hevc_cuvid"}
+		scaleFilter := "scale_cuda"
 		if backend == "VAAPI" {
 			decodeCodecs = []string{"h264", "hevc"}
+			scaleFilter = mediaprocessing.VAAPIFilterHybrid
 		}
-		return mediaprocessing.HardwareAccelerationStatus{ProbeState: mediaprocessing.HardwareProbeCompleted, Backends: []mediaprocessing.HardwareBackendStatus{{Backend: backend, State: mediaprocessing.HardwareProbeAvailable, Device: device, DecodeCodecs: decodeCodecs}}}
+		return mediaprocessing.HardwareAccelerationStatus{ProbeState: mediaprocessing.HardwareProbeCompleted, Backends: []mediaprocessing.HardwareBackendStatus{{Backend: backend, State: mediaprocessing.HardwareProbeAvailable, Device: device, DecodeCodecs: decodeCodecs, ScaleFilter: scaleFilter}}}
 	}
 	closed := false
 	defer func() {

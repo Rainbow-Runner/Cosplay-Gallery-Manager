@@ -35,7 +35,7 @@ type VideoTranscodeExecutionPlan struct {
 	ReasonCode            string
 }
 
-const videoTranscodePlannerVersion = "3"
+const videoTranscodePlannerVersion = "4"
 const nvencHLSRateControl = "vbr-cq25-b3m-max5m-buf10m-p4-hq-forced-idr"
 const nvencMP4RateControl = "vbr-cq25-b3m-max5m-buf10m-p4-hq"
 const vaapiRateControl = "cqp-qp25-quality4"
@@ -94,6 +94,9 @@ func PlanVideoTranscode(playback VideoPlaybackPlan, metadata VideoTechnicalMetad
 			// name remains explicit in the frozen plan without accepting an
 			// arbitrary command-line codec string.
 			result.Decoder, result.FilterStrategy, result.Encoder, result.RateControl = metadata.VideoCodec, "VAAPI", "h264_vaapi", vaapiRateControl
+			if backend.ScaleFilter == VAAPIFilterHybrid {
+				result.FilterStrategy, result.FullHardwarePipeline, result.ReasonCode = "VAAPI_CPU_SCALE", false, "VAAPI_HYBRID_PLAN_READY"
+			}
 		}
 		return result
 	}

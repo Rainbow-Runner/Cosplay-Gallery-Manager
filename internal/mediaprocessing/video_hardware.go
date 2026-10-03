@@ -23,6 +23,8 @@ const (
 	HardwareProbePermissionDenied = "PERMISSION_DENIED"
 	HardwareProbeSmokeFailed      = "SMOKE_TEST_FAILED"
 	HardwareProbeFFmpegMissing    = "FFMPEG_UNAVAILABLE"
+	VAAPIFilterFull               = "scale_vaapi"
+	VAAPIFilterHybrid             = "hwdownload+scale+hwupload"
 )
 
 type HardwareBackendStatus struct {
@@ -219,7 +221,7 @@ func probeNVIDIA(ctx context.Context, executable string, runner hardwareProbeRun
 }
 
 func probeVAAPI(ctx context.Context, executable string, runner hardwareProbeRunner, devices []hardwareDevice, capabilities map[string]map[string]bool) HardwareBackendStatus {
-	status := HardwareBackendStatus{Backend: "VAAPI", Encoder: "h264_vaapi", ScaleFilter: "scale_vaapi", DecodeCodecs: []string{"h264", "hevc"}}
+	status := HardwareBackendStatus{Backend: "VAAPI", Encoder: "h264_vaapi", ScaleFilter: VAAPIFilterFull, DecodeCodecs: []string{"h264", "hevc"}}
 	if !capabilities["hwaccels"]["vaapi"] || !capabilities["encoders"][status.Encoder] || !capabilities["filters"][status.ScaleFilter] {
 		return unavailableHardware(status, HardwareProbeNotCompiled, "VAAPI_REQUIRED_COMPONENT_MISSING")
 	}
@@ -228,38 +230,61 @@ func probeVAAPI(ctx context.Context, executable string, runner hardwareProbeRunn
 		return unavailableHardware(status, state, hardwareDeviceError("VAAPI", state))
 	}
 	status.Device = device.ID
-	arguments := []string{"-hide_banner", "-v", "error", "-vaapi_device", device.Path, "-f", "lavfi", "-i", "color=c=black:s=64x64:r=1", "-frames:v", "1", "-an", "-vf", "format=nv12,hwupload,scale_vaapi=64:64", "-c:v", status.Encoder, "-f", "null", "-"}
-	if _, err := runner.Output(ctx, executable, arguments...); err != nil {
-		return smokeFailure(status, err, "VAAPI_SMOKE_TEST_FAILED")
-	}
-	if err := probeVAAPIDecodePipeline(ctx, executable, runner, device); err != nil {
+	filter, err := probeVAAPIDecodePipeline(ctx, executable, runner, device)
+	if err != nil {
 		return smokeFailure(status, err, "VAAPI_DECODE_SMOKE_TEST_FAILED")
+	}
+	status.ScaleFilter = filter
+	if filter == VAAPIFilterHybrid {
+		status.ErrorCode = "VAAPI_FULL_PIPELINE_UNAVAILABLE_HYBRID_ACTIVE"
 	}
 	status.State, status.RuntimeTested = HardwareProbeAvailable, true
 	return status
 }
 
-func probeVAAPIDecodePipeline(ctx context.Context, executable string, runner hardwareProbeRunner, device hardwareDevice) error {
+func probeVAAPIDecodePipeline(ctx context.Context, executable string, runner hardwareProbeRunner, device hardwareDevice) (string, error) {
 	root, err := os.MkdirTemp("", "cgm-vaapi-probe-")
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer os.RemoveAll(root)
+	paths := make([]string, 0, 2)
 	for _, fixture := range []struct {
 		name    string
 		encoder string
-	}{{"h264", "libx264"}, {"hevc", "libx265"}} {
+		frames  string
+	}{{"h264", "libx264", "4"}, {"hevc", "libx265", "24"}} {
 		path := filepath.Join(root, fixture.name+".mp4")
-		arguments := []string{"-hide_banner", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=64x64:r=2", "-frames:v", "2", "-an", "-c:v", fixture.encoder, "-pix_fmt", "yuv420p"}
+		arguments := []string{"-hide_banner", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=64x96:r=30", "-frames:v", fixture.frames, "-an", "-c:v", fixture.encoder, "-pix_fmt", "yuv420p"}
 		if fixture.encoder == "libx264" {
 			arguments = append(arguments, "-preset", "ultrafast")
 		} else {
-			arguments = append(arguments, "-preset", "ultrafast", "-x265-params", "log-level=error:pools=1:frame-threads=1")
+			// B-frame reordering is intentional: FFmpeg 6.1's fixed VAAPI VPP
+			// output pool can pass short one-frame probes and then fail while
+			// draining delayed frames at EOF.
+			arguments = append(arguments, "-preset", "ultrafast", "-x265-params", "log-level=error:pools=1:frame-threads=1:bframes=4:rc-lookahead=8:keyint=60:min-keyint=60")
 		}
 		if _, err := runner.Output(ctx, executable, append(arguments, path)...); err != nil {
-			return err
+			return "", err
 		}
-		arguments = []string{"-hide_banner", "-v", "error", "-init_hw_device", "vaapi=va:" + device.Path, "-filter_hw_device", "va", "-hwaccel", "vaapi", "-hwaccel_device", "va", "-hwaccel_output_format", "vaapi", "-i", path, "-frames:v", "1", "-an", "-vf", "scale_vaapi=64:64:format=nv12", "-c:v", "h264_vaapi", "-f", "null", "-"}
+		paths = append(paths, path)
+	}
+	if err := runVAAPIProbePipelines(ctx, executable, runner, device, paths, VAAPIFilterFull); err == nil {
+		return VAAPIFilterFull, nil
+	}
+	if err := runVAAPIProbePipelines(ctx, executable, runner, device, paths, VAAPIFilterHybrid); err != nil {
+		return "", err
+	}
+	return VAAPIFilterHybrid, nil
+}
+
+func runVAAPIProbePipelines(ctx context.Context, executable string, runner hardwareProbeRunner, device hardwareDevice, paths []string, filter string) error {
+	videoFilter := "scale_vaapi=32:48:format=nv12"
+	if filter == VAAPIFilterHybrid {
+		videoFilter = "hwdownload,format=nv12,scale=32:48:flags=fast_bilinear,format=nv12,hwupload"
+	}
+	for _, path := range paths {
+		arguments := []string{"-hide_banner", "-v", "error", "-init_hw_device", "vaapi=va:" + device.Path, "-filter_hw_device", "va", "-hwaccel", "vaapi", "-hwaccel_device", "va", "-hwaccel_output_format", "vaapi", "-i", path, "-an", "-vf", videoFilter, "-c:v", "h264_vaapi", "-f", "null", "-"}
 		if _, err := runner.Output(ctx, executable, arguments...); err != nil {
 			return err
 		}

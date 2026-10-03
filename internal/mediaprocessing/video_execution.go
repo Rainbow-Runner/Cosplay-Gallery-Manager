@@ -32,12 +32,30 @@ func HardwareExecutionFailure(err error) (string, bool) {
 	return "", false
 }
 
+func HardwareExecutionDiagnostic(err error) string {
+	var failure *VideoHardwareExecutionError
+	if errors.As(err, &failure) {
+		return VideoCommandDiagnosticCode(failure.Err)
+	}
+	return ""
+}
+
 func IsHardwareExecutionBackend(backend string) bool {
 	return backend == "NVENC" || backend == "VAAPI"
 }
 
 func SoftwareVideoTranscodePlan(playback VideoPlaybackPlan, metadata VideoTechnicalMetadata, workload VideoTranscodeWorkload) VideoTranscodeExecutionPlan {
 	return PlanVideoTranscode(playback, metadata, VideoHardwarePreference{Mode: "SOFTWARE", AllowSoftwareFallback: true}, HardwareAccelerationStatus{}, workload)
+}
+
+func VAAPIHybridVideoTranscodePlan(execution VideoTranscodeExecutionPlan) (VideoTranscodeExecutionPlan, bool) {
+	if execution.EffectiveBackend != "VAAPI" || execution.FilterStrategy != "VAAPI" || !execution.Executable {
+		return execution, false
+	}
+	execution.FilterStrategy = "VAAPI_CPU_SCALE"
+	execution.FullHardwarePipeline = false
+	execution.ReasonCode = "VAAPI_RUNTIME_HYBRID_FALLBACK"
+	return execution, true
 }
 
 func HardwareExecutionAvailable(status HardwareAccelerationStatus, execution VideoTranscodeExecutionPlan) bool {
@@ -113,7 +131,7 @@ func CompleteVideoArgsForExecution(input, output string, plan VideoPlaybackPlan,
 		args = append(args, "-vf", fmt.Sprintf("scale_cuda=w='min(%d,iw)':h='min(%d,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:format=nv12", plan.MaximumWidth, plan.MaximumHeight),
 			"-c:v", "h264_nvenc", "-preset", "p4", "-tune", "hq", "-rc", "vbr", "-cq", "25", "-b:v", "3M", "-maxrate", "5M", "-bufsize", "10M", "-profile:v", "high")
 	} else if execution.EffectiveBackend == "VAAPI" {
-		args = append(args, "-vf", fmt.Sprintf("scale_vaapi=w='min(%d,iw)':h='min(%d,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:format=nv12", plan.MaximumWidth, plan.MaximumHeight),
+		args = append(args, "-vf", vaapiScaleFilter(plan, execution.FilterStrategy),
 			"-c:v", "h264_vaapi", "-rc_mode", "CQP", "-qp", "25", "-quality", "4", "-profile:v", "high")
 	} else {
 		if filters := videoFilters(plan); filters != "" {

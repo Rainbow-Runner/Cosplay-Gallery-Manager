@@ -109,7 +109,7 @@ func ProgressiveVideoArgsForSchedule(input, directory string, plan VideoPlayback
 	if execution.EffectiveBackend == "NVENC" {
 		args = append(args, "-vf", fmt.Sprintf("scale_cuda=w='min(%d,iw)':h='min(%d,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:format=nv12", plan.MaximumWidth, plan.MaximumHeight))
 	} else if execution.EffectiveBackend == "VAAPI" {
-		args = append(args, "-vf", fmt.Sprintf("scale_vaapi=w='min(%d,iw)':h='min(%d,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:format=nv12", plan.MaximumWidth, plan.MaximumHeight))
+		args = append(args, "-vf", vaapiScaleFilter(plan, execution.FilterStrategy))
 	} else if filters := videoFilters(plan); filters != "" {
 		args = append(args, "-vf", filters)
 	}
@@ -150,8 +150,16 @@ func ProgressiveVideoArgsForSchedule(input, directory string, plan VideoPlayback
 
 func validVAAPIExecution(execution VideoTranscodeExecutionPlan, workload VideoTranscodeWorkload) bool {
 	return execution.Executable && execution.Workload == workload && vaapiDevicePattern.MatchString(execution.Device) &&
-		(execution.Decoder == "h264" || execution.Decoder == "hevc") && execution.FilterStrategy == "VAAPI" &&
+		(execution.Decoder == "h264" || execution.Decoder == "hevc") && (execution.FilterStrategy == "VAAPI" || execution.FilterStrategy == "VAAPI_CPU_SCALE") &&
 		execution.Encoder == "h264_vaapi" && execution.RateControl == vaapiRateControl
+}
+
+func vaapiScaleFilter(plan VideoPlaybackPlan, strategy string) string {
+	scale := fmt.Sprintf("w='min(%d,iw)':h='min(%d,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2", plan.MaximumWidth, plan.MaximumHeight)
+	if strategy == "VAAPI_CPU_SCALE" {
+		return "hwdownload,format=nv12,scale=" + scale + ":flags=fast_bilinear,format=nv12,hwupload"
+	}
+	return "scale_vaapi=" + scale + ":format=nv12"
 }
 
 func ProgressiveVideoProfileHash(metadata VideoTechnicalMetadata, plan VideoPlaybackPlan, version string, execution VideoTranscodeExecutionPlan, seconds int, revision int64) string {

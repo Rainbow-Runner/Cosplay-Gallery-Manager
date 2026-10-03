@@ -23,6 +23,9 @@ func (runner *fakeHardwareProbeRunner) Output(_ context.Context, executable stri
 	joined := strings.Join(arguments, " ")
 	if strings.Contains(joined, "-hwaccel vaapi") && strings.Contains(joined, "cgm-vaapi-probe-") {
 		key = "vaapi_decode"
+		if strings.Contains(joined, "hwdownload") {
+			key = "vaapi_hybrid_decode"
+		}
 	} else if strings.Contains(joined, "color=c=black") {
 		for _, backend := range []string{"h264_nvenc", "h264_vaapi", "h264_qsv"} {
 			if strings.Contains(joined, backend) {
@@ -89,7 +92,7 @@ func TestProbeHardwareAccelerationDistinguishesCompilationDevicePermissionAndSmo
 		{name: "smoke failed", outputs: completeHardwareCapabilities(), errors: map[string]error{"h264_nvenc": errors.New("exit status 1")}, devices: func(string) []hardwareDevice {
 			return []hardwareDevice{{ID: "device0", Path: "/dev/device", Writable: true}}
 		}, backend: 0, wantState: HardwareProbeSmokeFailed, wantCode: "NVENC_SMOKE_TEST_FAILED"},
-		{name: "VAAPI decode smoke failed", outputs: completeHardwareCapabilities(), errors: map[string]error{"vaapi_decode": errors.New("exit status 1")}, devices: func(backend string) []hardwareDevice {
+		{name: "VAAPI decode smoke failed", outputs: completeHardwareCapabilities(), errors: map[string]error{"vaapi_decode": errors.New("exit status 1"), "vaapi_hybrid_decode": errors.New("exit status 1")}, devices: func(backend string) []hardwareDevice {
 			if backend == "NVIDIA" {
 				return []hardwareDevice{{ID: "nvidia0", Path: "/dev/nvidia0", Writable: true}}
 			}
@@ -105,6 +108,34 @@ func TestProbeHardwareAccelerationDistinguishesCompilationDevicePermissionAndSmo
 				t.Fatalf("backend = %#v", got)
 			}
 		})
+	}
+}
+
+func TestProbeHardwareAccelerationUsesVAAPIHybridWhenFullDrainFails(t *testing.T) {
+	runner := &fakeHardwareProbeRunner{outputs: completeHardwareCapabilities(), errors: map[string]error{"vaapi_decode": errors.New("exit status 244")}}
+	devices := func(backend string) []hardwareDevice {
+		if backend == "NVIDIA" {
+			return []hardwareDevice{{ID: "nvidia0", Path: "/dev/nvidia0", Writable: true}}
+		}
+		return []hardwareDevice{{ID: "renderD128", Path: "/dev/dri/renderD128", Writable: true}}
+	}
+	status := probeHardwareAcceleration(context.Background(), "/usr/bin/ffmpeg", runner, devices, time.Now)
+	vaapi := status.Backends[1]
+	if vaapi.State != HardwareProbeAvailable || !vaapi.RuntimeTested || vaapi.ScaleFilter != VAAPIFilterHybrid || vaapi.ErrorCode != "VAAPI_FULL_PIPELINE_UNAVAILABLE_HYBRID_ACTIVE" {
+		t.Fatalf("VAAPI hybrid status = %#v", vaapi)
+	}
+	foundDrain, foundHybrid := false, false
+	for _, call := range runner.calls {
+		joined := strings.Join(call, " ")
+		if strings.Contains(joined, "scale_vaapi=32:48") {
+			foundDrain = true
+		}
+		if strings.Contains(joined, "hwdownload,format=nv12,scale=32:48") {
+			foundHybrid = true
+		}
+	}
+	if !foundDrain || !foundHybrid {
+		t.Fatalf("probe calls did not cover full drain and hybrid fallback: %#v", runner.calls)
 	}
 }
 
@@ -156,7 +187,9 @@ func TestVAAPIProbeExternal(t *testing.T) {
 	status := ProbeHardwareAcceleration(context.Background(), ffmpeg)
 	for _, backend := range status.Backends {
 		if backend.Backend == "VAAPI" {
-			if backend.State != HardwareProbeAvailable || !backend.RuntimeTested || backend.ErrorCode != "" || len(backend.DecodeCodecs) != 2 {
+			validFilter := backend.ScaleFilter == VAAPIFilterFull && backend.ErrorCode == ""
+			validFilter = validFilter || (backend.ScaleFilter == VAAPIFilterHybrid && backend.ErrorCode == "VAAPI_FULL_PIPELINE_UNAVAILABLE_HYBRID_ACTIVE")
+			if backend.State != HardwareProbeAvailable || !backend.RuntimeTested || !validFilter || len(backend.DecodeCodecs) != 2 {
 				t.Fatalf("VAAPI probe = %#v", backend)
 			}
 			return

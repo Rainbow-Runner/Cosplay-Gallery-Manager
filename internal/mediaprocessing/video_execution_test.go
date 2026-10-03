@@ -61,6 +61,20 @@ func TestCompleteVideoVAAPIArgumentsArePlanBounded(t *testing.T) {
 	if strings.Contains(command, "libx264") || strings.Contains(command, "h264_nvenc") {
 		t.Fatalf("VAAPI command contains another backend: %s", command)
 	}
+	hybrid, ok := VAAPIHybridVideoTranscodePlan(execution)
+	if !ok {
+		t.Fatal("VAAPI hybrid plan unavailable")
+	}
+	hybridArgs, err := CompleteVideoArgsForExecution("source.mkv", "output.mp4", playback, hybrid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hybridCommand := strings.Join(hybridArgs, " ")
+	for _, required := range []string{"hwdownload", "format=nv12", "scale=w=", "flags=fast_bilinear", "hwupload", "-c:v h264_vaapi"} {
+		if !strings.Contains(hybridCommand, required) {
+			t.Fatalf("VAAPI hybrid command lacks %q: %s", required, hybridCommand)
+		}
+	}
 	execution.Device = "../../renderD128"
 	if _, err := CompleteVideoArgsForExecution("source.mkv", "output.mp4", playback, execution); err == nil {
 		t.Fatal("unsafe VAAPI device was accepted")
@@ -92,7 +106,7 @@ func TestCompleteVideoVAAPIExternal(t *testing.T) {
 	}
 	metadata := VideoTechnicalMetadata{Container: "matroska", VideoCodec: "hevc", PixelFormat: "yuv420p", VideoStreamIndex: 0, DisplayWidth: 320, DisplayHeight: 180, DurationSeconds: 7}
 	plan := PlaybackPlanFromMetadata(metadata)
-	hardware := HardwareAccelerationStatus{ProbeState: HardwareProbeCompleted, Backends: []HardwareBackendStatus{{Backend: "VAAPI", State: HardwareProbeAvailable, Device: device, DecodeCodecs: []string{"h264", "hevc"}}}}
+	hardware := HardwareAccelerationStatus{ProbeState: HardwareProbeCompleted, Backends: []HardwareBackendStatus{{Backend: "VAAPI", State: HardwareProbeAvailable, Device: device, DecodeCodecs: []string{"h264", "hevc"}, ScaleFilter: VAAPIFilterHybrid}}}
 	execution := PlanVideoTranscode(plan, metadata, VideoHardwarePreference{Mode: "VAAPI", Device: device}, hardware, VideoTranscodeMP4)
 	args, err := CompleteVideoArgsForExecution(source, output, plan, execution)
 	if err != nil {
@@ -181,6 +195,30 @@ func TestVideoCommandHardwareClassificationUsesTechnicalWhitelist(t *testing.T) 
 	vaapi := &VideoCommandError{ExitCode: 1, DiagnosticCode: videoCommandDiagnostic("Failed to initialise VAAPI connection: unknown libva error")}
 	if !HardwareVideoCommandFailure(vaapi) {
 		t.Fatal("VAAPI driver failure was not classified as a hardware failure")
+	}
+	pool := &VideoCommandError{ExitCode: 244, DiagnosticCode: videoCommandDiagnostic("Error while filtering: Cannot allocate memory\nFailed to inject frame into filter network: Cannot allocate memory")}
+	if !HardwareVideoCommandFailure(pool) || pool.DiagnosticCode != "HARDWARE_FRAME_POOL_EXHAUSTED" {
+		t.Fatalf("VAAPI frame pool failure = %#v", pool)
+	}
+	pipeline := &VideoCommandError{ExitCode: 1, DiagnosticCode: videoCommandDiagnostic("Failed to create processing pipeline config: 12 (the requested VAProfile is not supported)")}
+	if !HardwareVideoCommandFailure(pipeline) || pipeline.DiagnosticCode != "HARDWARE_VAAPI_PIPELINE_UNSUPPORTED" {
+		t.Fatalf("VAAPI VPP failure = %#v", pipeline)
+	}
+}
+
+func TestVAAPIHybridFallbackPlanIsExplicitAndOneWay(t *testing.T) {
+	playback, metadata := transcodeFixture()
+	full := PlanVideoTranscode(playback, metadata, VideoHardwarePreference{Mode: "VAAPI", AllowSoftwareFallback: true}, availableHardware(), VideoTranscodeMP4)
+	hybrid, ok := VAAPIHybridVideoTranscodePlan(full)
+	if !ok || hybrid.FilterStrategy != "VAAPI_CPU_SCALE" || hybrid.FullHardwarePipeline || hybrid.ReasonCode != "VAAPI_RUNTIME_HYBRID_FALLBACK" {
+		t.Fatalf("hybrid = %#v ok=%v", hybrid, ok)
+	}
+	if _, ok := VAAPIHybridVideoTranscodePlan(hybrid); ok {
+		t.Fatal("hybrid fallback may not repeat")
+	}
+	wrapped := &VideoHardwareExecutionError{Backend: "VAAPI", Err: &VideoCommandError{ExitCode: 244, DiagnosticCode: "HARDWARE_FRAME_POOL_EXHAUSTED"}}
+	if got := HardwareExecutionDiagnostic(wrapped); got != "HARDWARE_FRAME_POOL_EXHAUSTED" {
+		t.Fatalf("diagnostic = %q", got)
 	}
 }
 

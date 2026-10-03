@@ -51,6 +51,15 @@ func TestVideoTranscodePlannerUsesDeviceAndSafeFallback(t *testing.T) {
 	}
 }
 
+func TestVideoTranscodePlannerUsesProbedVAAPIHybridFilter(t *testing.T) {
+	playback, metadata := transcodeFixture()
+	hardware := HardwareAccelerationStatus{ProbeState: HardwareProbeCompleted, Backends: []HardwareBackendStatus{{Backend: "VAAPI", State: HardwareProbeAvailable, Device: "renderD128", DecodeCodecs: []string{"h264", "hevc"}, ScaleFilter: VAAPIFilterHybrid}}}
+	plan := PlanVideoTranscode(playback, metadata, VideoHardwarePreference{Mode: "VAAPI", AllowSoftwareFallback: true}, hardware, VideoTranscodeHLS)
+	if plan.EffectiveBackend != "VAAPI" || plan.FilterStrategy != "VAAPI_CPU_SCALE" || plan.FullHardwarePipeline || plan.ReasonCode != "VAAPI_HYBRID_PLAN_READY" {
+		t.Fatalf("hybrid plan = %#v", plan)
+	}
+}
+
 func TestVideoTranscodePlannerDoesNotUseHardwareForUnsupportedTransformsOrPassthrough(t *testing.T) {
 	playback, metadata := transcodeFixture()
 	playback.ToneMapHDRToSDR, metadata.HDR = true, true

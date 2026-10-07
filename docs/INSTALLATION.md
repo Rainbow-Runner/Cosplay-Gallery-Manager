@@ -52,9 +52,9 @@ diagnostic codes until the dependencies are available.
 through 8. `log_level` accepts `DEBUG`, `INFO`, `WARN`, or `ERROR`; use
 `DEBUG` only while diagnosing a local development instance. Request logs use
 technical request IDs and endpoint categories and do not include query
-strings, GraphQL variables, media paths, or business metadata. A native
-first-time Setup reached through a literal loopback bind does not require a
-ticket.
+strings, GraphQL variables, media paths, or business metadata. While Setup is
+incomplete, the first client that finishes the wizard creates the Owner
+password. Setup closes immediately after that atomic operation.
 
 `metadata_scraping_enabled` and `entity_metadata_scraping_enabled` both default
 to `false`. The first controls Coser profile imports; the second controls Work
@@ -77,13 +77,14 @@ docker compose -f docker/cgm/compose.yml build
 docker compose -f docker/cgm/compose.yml up -d
 ```
 
-Open `http://127.0.0.1:9999/setup` on the Docker host. The supplied Compose
-binds the port only to host loopback and explicitly enables local first-time
-Setup, so no terminal ticket is required. Do not publish this Compose service
-to a public or LAN address before Setup. If using a custom remote deployment,
-omit `CGM_LOCAL_DOCKER_SETUP=1` and generate a one-time ticket with
-`docker compose run --rm --no-deps cgm -setup-ticket`; enter it in the Setup
-page. Never put the ticket in Compose files, URLs, logs or shell history.
+Open `http://<NAS-IP>:9999/setup` from a trusted LAN device. The supplied
+Compose publishes the port on the host so another device can complete the
+wizard. CGM follows a first-run ownership model: while Setup is incomplete,
+the first client that successfully submits the wizard creates the Owner;
+afterwards Setup is closed and normal authentication is required. Do not
+forward the port to the public Internet or expose it on an untrusted network
+before Setup. For remote access, finish Setup on the trusted LAN first and
+then use a controlled HTTPS reverse proxy or VPN.
 
 Docker Setup fixes Coser metadata at `/var/lib/cgm/cosers` and backups at
 `/var/lib/cgm/backups` inside the `cgm-state` volume, checking both directories

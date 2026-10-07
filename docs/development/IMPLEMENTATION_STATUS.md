@@ -23,6 +23,8 @@
 
 ## 已完成
 
+- 2026-10-07 NAS首次初始化源码改为Jellyfin式首次认领：删除一次性Setup门票的CLI、HTTP交换端点、Cookie／Session校验、前端输入和`CGM_LOCAL_DOCKER_SETUP`，不再根据可伪造的HTTP `Host`或容器内来源地址决定初始化权限。数据库尚未初始化时，任一可达浏览器都可直接完成五步向导；Owner密码与`complete=1`仍在同一事务写入，因此只有首个提交成功，完成后后续提交被拒绝。Docker Compose改为发布`9999`供可信局域网设备使用，README与安装手册同步首个用户认领及禁止初始化前公网暴露的边界；旧`setup_tokens`表仅为schema兼容保留且不再读写，无schema迁移。Go `productauth`／`productserver`／CLI及嵌入式UI测试与定向Vet通过；Web TypeScript、43文件195项测试及2559模块生产构建通过，仅保留既有大chunk提示。当前源码未提交、未部署，Docker Hub仍为上一镜像。
+
 - 2026-10-07 最新分支Docker Hub镜像发布：从分支`agent/cgm-migration-handoff-20260726`的清洁提交`2c64fe0a0a1f6aad957b43fee9f56eddd2524398`构建`linux/amd64`镜像，前端生产构建、Go三标签编译及只读根文件系统／临时空数据库容器启动均通过；容器Health为`healthy`，`/healthz`为204，About报告`1.5.0-dev`及完整提交，日志无启动错误。镜像已推送为`rainbowrunner2015/cosplay-gallery-manager:sha-2c64fe0a0a1f6aad957b43fee9f56eddd2524398`，远端OCI索引摘要`sha256:3daa57fb13b6cedb69ed7afb7e6bc52e2f5798318c2f713faa3bfb4af570dc44`，包含`linux/amd64`清单`sha256:781abac94a070f33af8c7af0e59bb1ca3be35f82c6027165a1f422d327bda09f`及构建证明；证明中的VCS来源为项目GitHub URL和目标完整提交，Docker Hub仍无`latest`标签。构建上下文未包含数据库、媒体、配置覆盖或未跟踪的`Check_VAAPI.md`；尚未执行另一台机器的真实首次设置、卷权限及迁移恢复验收，本轮也未推送Git远端。
 
 - 2026-10-03 Gallery外部命名推测规则及真实数据审计部署：实体匹配会先剔除作品序号与媒体数量／容量噪声；Character英文词界、中文强弱优先级和纯数字完整词元门禁生效，扫描层支持`&`／`x`／`×`／`+`多Coser署名。逻辑提交`10fde7bd5749cb5c4940a325aef2287ac53ccc79`、审计报告提交`5b43ca51b07fe39ee182422b02391ed31744b605`已部署；1170条业务名称更新为确认471、存疑688、冲突11，Character `02`的旧误候选201条和`Rem`单词内部误候选均降为0。正式程序SHA-256为`24f4a27b84ca14e3f4cefc7dfe8e9cbc64f416972040c6d3762d1aa40eedbb1f`，回滚目录为`/home/rainbowrunner/cos/bk/cgm-pre-inference-5b43ca5-CzwlCqD8`；服务active、`NRestarts=0`、Health／Ready均204，正式库保持schema v22、完整性`ok`及七类计数`136/108/697/23/10/10/780`。报告中的“确认”仍只表示两层规则一致，剩余存疑／冲突需人工复核。

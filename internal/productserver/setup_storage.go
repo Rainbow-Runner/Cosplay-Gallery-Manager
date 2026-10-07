@@ -19,8 +19,7 @@ func (s *Server) setupOptions() productauth.SetupOptions {
 	if runtime == "" {
 		runtime = "NATIVE"
 	}
-	options := productauth.SetupOptions{RuntimeEnvironment: runtime,
-		AllowDockerLocal: s.Config.LocalDockerSetup, ValidateStorage: s.validateSetupStorage}
+	options := productauth.SetupOptions{RuntimeEnvironment: runtime, ValidateStorage: s.validateSetupStorage}
 	if runtime == "DOCKER" {
 		options.CoserMetadataRoot = dockerCoserRoot
 		options.BackupRoot = dockerBackupRoot

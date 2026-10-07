@@ -47,7 +47,6 @@ type Config struct {
 	MetadataScrapingEnabled       bool   `json:"metadata_scraping_enabled"`
 	EntityMetadataScrapingEnabled bool   `json:"entity_metadata_scraping_enabled"`
 	RuntimeEnvironment            string `json:"runtime_environment"`
-	LocalDockerSetup              bool   `json:"-"`
 }
 
 func DefaultConfig() Config {
@@ -70,11 +69,6 @@ func LoadConfig(path string) (Config, error) {
 	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
 		return Config{}, errors.New("startup configuration must contain exactly one JSON object")
 	}
-	if local := os.Getenv("CGM_LOCAL_DOCKER_SETUP"); local != "" && local != "0" && local != "1" {
-		return Config{}, errors.New("CGM_LOCAL_DOCKER_SETUP must be 0 or 1")
-	} else if local == "1" {
-		value.LocalDockerSetup = true
-	}
 	if err := value.Validate(); err != nil {
 		return Config{}, err
 	}
@@ -91,9 +85,6 @@ func (c Config) Validate() error {
 	}
 	if c.RuntimeEnvironment != "" && c.RuntimeEnvironment != "NATIVE" && c.RuntimeEnvironment != "DOCKER" {
 		return errors.New("runtime_environment must be NATIVE or DOCKER")
-	}
-	if c.LocalDockerSetup && c.RuntimeEnvironment != "DOCKER" {
-		return errors.New("local Docker Setup requires DOCKER runtime_environment")
 	}
 	if c.WorkerCount < 1 || c.WorkerCount > 8 {
 		return errors.New("worker_count must be between 1 and 8")
@@ -214,11 +205,8 @@ func (s *Server) rebuildHandler() {
 	mux.Handle("/session/logout", sameOrigin(auth.LogoutHandler()))
 	mux.Handle("/session/recover", sameOrigin(auth.RecoveryHandler()))
 	mux.Handle("/session/status", auth.SessionStatusHandler())
-	listenHost, _, _ := net.SplitHostPort(s.Config.Listen)
 	setupOptions := s.setupOptions()
-	setupOptions.AllowDirectLoopback = net.ParseIP(listenHost) != nil && net.ParseIP(listenHost).IsLoopback()
 	mux.Handle("/setup/status", auth.SetupStatusHandler(setupOptions))
-	mux.Handle("/setup/ticket/exchange", sameOrigin(auth.SetupTicketExchangeHandler()))
 	mux.Handle("/setup/complete", sameOrigin(auth.CompleteSetupHandler(setupOptions)))
 	mux.Handle("/graphql", sameOrigin(productapi.NewHandlerWithServices(database, auth.AuthorizeRequest, s, auth)))
 	mux.Handle("/manage/portable/packages", sameOrigin(s.portablePackagesHandler(portableTransferRoot())))

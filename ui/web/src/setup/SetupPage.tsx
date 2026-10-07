@@ -10,7 +10,7 @@ interface SetupInput {
   backupRoot: string;
   password: string;
 }
-interface SetupStatus { complete: boolean; runtimeEnvironment: "NATIVE" | "DOCKER"; ticketRequired: boolean; coserMetadataRoot: string; backupRoot: string }
+interface SetupStatus { complete: boolean; runtimeEnvironment: "NATIVE" | "DOCKER"; coserMetadataRoot: string; backupRoot: string }
 
 export function SetupPage() {
   const intl = useIntl();
@@ -18,7 +18,6 @@ export function SetupPage() {
   const detectedLocale = navigator.language.toLowerCase().startsWith("zh") ? "zh-CN" : "en-GB";
   const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const [step, setStep] = useState(1);
-  const [ticket, setTicket] = useState("");
   const [status, setStatus] = useState<SetupStatus | null>(null);
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [error, setError] = useState("");
@@ -36,21 +35,15 @@ export function SetupPage() {
   }, [navigate, intl]);
 
   const canContinue = useMemo(() => {
-    if (step === 1) return !!status && (!status.ticketRequired || ticket.trim().length > 20);
+    if (step === 1) return !!status;
     if (step === 2) return input.password.length >= 8 && input.password === passwordConfirmation;
     if (step === 3) return input.timezone.length > 0;
     if (step === 4) return isAbsolutePath(input.coserMetadataRoot) && isAbsolutePath(input.backupRoot);
     return true;
-  }, [input, passwordConfirmation, status, step, ticket]);
+  }, [input, passwordConfirmation, status, step]);
 
   async function next() {
     setError("");
-    if (step === 1 && status?.ticketRequired) {
-      const response = await fetch("/setup/ticket/exchange", { method: "POST", credentials: "same-origin",
-        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticket: ticket.trim() }) });
-      if (!response.ok) { setError(intl.formatMessage({ id: "setup.ticketInvalid" })); return; }
-      setTicket("");
-    }
     setStep((current) => Math.min(5, current + 1));
   }
 
@@ -79,7 +72,7 @@ export function SetupPage() {
         </header>
         {step === 1 ? <section><h2>{intl.formatMessage({ id: "setup.environment" })}</h2>
           <p>{input.runtimeEnvironment === "DOCKER" ? "Docker" : intl.formatMessage({ id: "setup.native" })}</p>
-          {status?.ticketRequired ? <label className="field"><span>{intl.formatMessage({ id: "setup.ticket" })}</span><input type="password" value={ticket} onChange={(event) => setTicket(event.target.value)} autoComplete="one-time-code" /></label> : <p className="setup-note">{intl.formatMessage({ id: "setup.localNoTicket" })}</p>}
+          <p className="setup-note">{intl.formatMessage({ id: "setup.firstRunAccess" })}</p>
         </section> : null}
         {step === 2 ? <section><h2>{intl.formatMessage({ id: "setup.authentication" })}</h2>
           <label className="field"><span>{intl.formatMessage({ id: "setup.password" })}</span><input type="password" value={input.password} onChange={(event) => setInput({ ...input, password: event.target.value })} autoComplete="new-password" /></label>

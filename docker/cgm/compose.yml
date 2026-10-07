@@ -5,9 +5,7 @@ services:
       dockerfile: docker/cgm/Dockerfile
     image: cosplay-gallery-manager:local
     ports:
-      - "127.0.0.1:9999:9999"
-    environment:
-      CGM_LOCAL_DOCKER_SETUP: "1"
+      - "9999:9999"
     read_only: true
     security_opt:
       - no-new-privileges:true

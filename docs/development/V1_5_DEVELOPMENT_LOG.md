@@ -2730,3 +2730,10 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 - 23:38:33 CST停服，确认PID为0、WAL／SHM已关闭；0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-cover-icon-78f7baa-Ln9f6tqm`保存完整业务库、旧程序、运行配置、systemd单元及外部／product-state Coser元数据资源，逐项`cmp`和资源树`diff`一致。备份库schema v20、完整性`ok`，七类Coser／Work／Character／Tag／Gallery／Source／Item计数为`135/108/697/23/9/9/600`；备份库SHA-256为`078ed1385bcdd628ccbf50f66983566b2aad05578906720d74301744ca2074c3`，旧程序为`775acc83bd2fd8ca8d9707d6bd17f141533132c5a2651af06b99189c76b6151f`。备份不含原媒体、派生缓存、历史备份或日志。
 - 原子替换后同一分钟正式服务启动，`active/running`、`NRestarts=0`，Health／Ready均204；首次健康探测早于监听就绪短暂连接失败，自动重试通过。About精确对应功能提交。入口HTML、详情`GalleryDetailPage-D6z73I6t.js`及`index-CUXZufsW.css`均200且与本地构建逐字节相同，部署JS包含仅图标标记及ARIA／Tooltip。两个worker、FFmpeg／FFprobe／LibRaw正常启动，本轮journal无WARN／ERROR／panic／fatal。
 - 无数据库迁移或替换，正式库仍为v20、完整性`ok`、七类计数不变；配置及服务单元与备份一致，未改变媒体、Manifest或Coser资源。部署记录另行本地提交，正式程序保持指向`78f7baa`；未推送远端或更新Docker镜像，未进行正式业务浏览器像素验收。
+
+## 2026-10-07 NAS首次初始化改为首次认领（源码完成，未提交／未部署）
+
+- 按所有者确认取消一次性Setup门票，直接采用适合个人NAS局域网的首次认领：数据库尚未初始化时，任一能够访问服务的浏览器都可打开并提交五步向导；Owner密码和Setup完成状态继续在同一SQLite事务内写入，只有首个提交成功，完成后初始化入口永久失效。
+- 后端删除`-setup-ticket`、`/setup/ticket/exchange`、Setup Cookie／Session和`CGM_LOCAL_DOCKER_SETUP`，不再把客户端可控制的HTTP `Host`或Docker bridge请求地址作为初始化权限依据。旧`setup_tokens`表不再读写，仅作为既有schema兼容结构保留，不升级数据库版本。
+- 前端移除门票状态、输入、交换请求及双语文案，首屏明确提示首个完成者成为Owner。Docker Compose改为发布`9999`供其他局域网设备访问；README、安装手册和开发备忘录同步要求初始化前不得向公网或不可信网络暴露端口。
+- Go `productauth`、`productserver`、CLI及`cgm_web_embed`回归通过；Web TypeScript检查、43文件195项Vitest和2559模块生产构建通过，只有既有大chunk提示；`gofmt`及`git diff --check`通过。未提交、推送、部署或更新Docker Hub镜像，未访问正式数据库、媒体、Manifest及与本次无关的`Check_VAAPI.md`。

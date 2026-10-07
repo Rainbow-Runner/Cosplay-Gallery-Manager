@@ -20,7 +20,6 @@ export default defineConfig(() => {
         "/graphql": proxy,
         "/session": proxy,
         "/setup/status": proxy,
-        "/setup/ticket": proxy,
         "/setup/complete": proxy,
         "/about.json": proxy,
         "/resource": proxy,

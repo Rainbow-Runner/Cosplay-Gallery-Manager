@@ -818,8 +818,8 @@ SocialAccount：
 ### 24.2 首次Setup
 
 - 五步：环境、所有者认证、界面/时间、存储位置、确认创建；完成后手工启动首次扫描。
-- 原生loopback可直接Setup；提供的Docker Compose仅绑定宿主机`127.0.0.1`且显式启用本机首次Setup时可免门票；其他Docker/非loopback部署必须从服务器CLI生成15分钟单次Setup Token。Docker不得仅凭容器内请求源地址推断宿主机loopback。
-- Token换短期HttpOnly Setup Cookie后从URL移除；Setup完成后入口永久失效。
+- Setup采用面向个人NAS的首次认领模式：数据库未完成初始化时，任何能够访问服务的客户端都可进入五步向导；首个原子提交成功的用户创建Owner密码，其他并发提交失败。
+- Setup授权不依赖HTTP `Host`、容器内请求源地址、一次性门票或Setup Cookie；Setup完成后入口永久失效，后续访问必须正常登录。部署文档必须要求初始化前只在可信局域网暴露端口。
 
 ### 24.3 媒体资源
 
@@ -962,6 +962,8 @@ SocialAccount：
 - Windows原生发行（含amd64/ARM）、macOS原生发行和移动原生应用。
 
 ## 35. 当前结论
+
+- 2026-10-07：首次初始化改为面向个人NAS局域网的Jellyfin式首次认领；取消Setup门票、短期Setup Cookie、CLI生成命令和基于HTTP `Host`／loopback的分支判断。数据库未初始化时任一可达客户端均可完成向导，Owner密码与完成状态继续原子写入，首个成功提交后入口永久关闭。Docker模板默认发布`9999`供局域网设备访问，部署者负责在初始化前避免公网或不可信网络暴露；旧`setup_tokens`表仅作为历史schema兼容结构保留，不再读写。
 
 - 2026-09-26：迁移实测MT-00～MT-03已按依赖顺序完成源码闭环：format v3双档位、schema v17证据字段、共享Manifest身份检查、目标来源重新定位、显式／自动接管、READY部分重建、可信目录Manifest自动化和独立副本局部身份分叉均已实现；旧format v1/v2保持可读。自动激活只通过目标媒体库既有`TRUSTED + autoActivate`持久化队列继续，所有门禁保持不变。2026-09-27随提交`c07fc8f`完成正式v16→v18迁移部署；真实跨机迁移模拟仍由所有者执行。详细实现与限制见[迁移测试问题与改进备忘录](development/MIGRATION_TEST_ISSUES_AND_IMPROVEMENTS_2026-09-23.md)。
 

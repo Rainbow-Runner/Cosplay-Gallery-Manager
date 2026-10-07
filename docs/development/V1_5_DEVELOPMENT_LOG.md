@@ -2733,7 +2733,16 @@ GOMAXPROCS=2 GOTOOLCHAIN=local \
 
 ## 2026-10-07 NAS首次初始化改为首次认领（源码完成，未提交／未部署）
 
+> 当前已随功能提交`64c99f1`部署并发布Docker Hub；以下未提交／未部署内容保留源码阶段历史状态，最终证据见下一节。
+
 - 按所有者确认取消一次性Setup门票，直接采用适合个人NAS局域网的首次认领：数据库尚未初始化时，任一能够访问服务的浏览器都可打开并提交五步向导；Owner密码和Setup完成状态继续在同一SQLite事务内写入，只有首个提交成功，完成后初始化入口永久失效。
 - 后端删除`-setup-ticket`、`/setup/ticket/exchange`、Setup Cookie／Session和`CGM_LOCAL_DOCKER_SETUP`，不再把客户端可控制的HTTP `Host`或Docker bridge请求地址作为初始化权限依据。旧`setup_tokens`表不再读写，仅作为既有schema兼容结构保留，不升级数据库版本。
 - 前端移除门票状态、输入、交换请求及双语文案，首屏明确提示首个完成者成为Owner。Docker Compose改为发布`9999`供其他局域网设备访问；README、安装手册和开发备忘录同步要求初始化前不得向公网或不可信网络暴露端口。
 - Go `productauth`、`productserver`、CLI及`cgm_web_embed`回归通过；Web TypeScript检查、43文件195项Vitest和2559模块生产构建通过，只有既有大chunk提示；`gofmt`及`git diff --check`通过。未提交、推送、部署或更新Docker Hub镜像，未访问正式数据库、媒体、Manifest及与本次无关的`Check_VAAPI.md`。
+
+## 2026-10-07 NAS首次认领提交、本机部署及Docker Hub发布
+
+- 功能提交`64c99f1fec8ca7c612e358488d6f39845015a079`（`Use first-run owner setup for NAS deployments`）。独立干净克隆排除未跟踪的`Check_VAAPI.md`，正式三标签原生构建VCS为完整提交且`modified=false`，程序SHA-256为`f0ab40701b66dce0143e9a62a1e8f49dd304bd2a0c6a6005d2febde6a40a9b4b`。
+- 停服确认MainPID为0后，在0700目录`/home/rainbowrunner/cos/bk/cgm-pre-nas-64c99f1-RW16a2BG`保存一致业务数据库、旧程序、配置、用户systemd单元、外部及product-state Coser资源；数据库cmp及外部资源树diff一致，备份库完整性ok、schema v22。原子安装后服务active、NRestarts=0，Health／Ready为204，About精确对应提交，journal无warning以上条目。正式库完整性ok、schema v22及Coser／Work／Character／Tag／Gallery／Source／Item计数`136/108/697/23/10/10/780`保持不变，无schema迁移。
+- 同一提交Docker镜像前端生产构建及三标签Go编译通过；隔离空库非root、只读根文件系统容器通过NAS IP Host及同源Origin直接提交初始化，返回204，无需门票；重启后complete仍为true、重复提交400、Docker健康healthy、About及CLI对应完整提交。初始化烟测仅使用临时目录`/tmp/cgm-nas-smoke-8Sc3C2cb`，容器已停止，临时数据保留供复核。
+- 已推送`rainbowrunner2015/cosplay-gallery-manager:sha-64c99f1fec8ca7c612e358488d6f39845015a079`到Docker Hub并从远端核对索引摘要`sha256:a69be122e0d2c4a25300dcf07da2852a885d87c189681c2c3067f5cdd89649d4`、linux/amd64清单`sha256:7d8094077c7a0157c2e3d7a4d83c19af3e4eef1dd43c448a3e23250b01d5ebfb`。README同步新标签；未更新GHCR镜像、Git远端或latest标签。没有更改正式启动配置、媒体或Manifest，真实NAS浏览器验收仍由所有者进行。

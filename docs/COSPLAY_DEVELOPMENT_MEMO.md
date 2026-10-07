@@ -963,6 +963,8 @@ SocialAccount：
 
 ## 35. 当前结论
 
+- 2026-10-07：NAS首次认领已随`64c99f1`部署本机并发布Docker Hub `sha-64c99f1fec8ca7c612e358488d6f39845015a079`镜像（linux/amd64）；正式库schema v22与业务计数保持不变。空库容器已验证NAS IP直接初始化、完成后的重复提交拒绝、重启状态保留；真实NAS设备浏览器验收由所有者继续执行，详细证据见实施状态与开发日志。
+
 - 2026-10-07：首次初始化改为面向个人NAS局域网的Jellyfin式首次认领；取消Setup门票、短期Setup Cookie、CLI生成命令和基于HTTP `Host`／loopback的分支判断。数据库未初始化时任一可达客户端均可完成向导，Owner密码与完成状态继续原子写入，首个成功提交后入口永久关闭。Docker模板默认发布`9999`供局域网设备访问，部署者负责在初始化前避免公网或不可信网络暴露；旧`setup_tokens`表仅作为历史schema兼容结构保留，不再读写。
 
 - 2026-09-26：迁移实测MT-00～MT-03已按依赖顺序完成源码闭环：format v3双档位、schema v17证据字段、共享Manifest身份检查、目标来源重新定位、显式／自动接管、READY部分重建、可信目录Manifest自动化和独立副本局部身份分叉均已实现；旧format v1/v2保持可读。自动激活只通过目标媒体库既有`TRUSTED + autoActivate`持久化队列继续，所有门禁保持不变。2026-09-27随提交`c07fc8f`完成正式v16→v18迁移部署；真实跨机迁移模拟仍由所有者执行。详细实现与限制见[迁移测试问题与改进备忘录](development/MIGRATION_TEST_ISSUES_AND_IMPROVEMENTS_2026-09-23.md)。

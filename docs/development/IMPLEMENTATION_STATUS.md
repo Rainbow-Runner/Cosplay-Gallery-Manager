@@ -2,7 +2,7 @@
 
 > 当前里程碑：1.5 本机业务迭代与可诊断性增强
 > 状态：进行中
-> 更新日期：2026-10-03
+> 更新日期：2026-10-07
 
 ## 2026-10-01 已部署：视频耗时诊断与渐进播放
 
@@ -22,6 +22,8 @@
 - 后续（视频处理第三阶段A）：按需Storyboard Sprite/WebVTT和可访问辅助时间轴仍未实施。[第三阶段B原条件草案](VIDEO_PROCESSING_PHASE_3_PLAN_2026-08-15.md)已由真实冷启动证据及本轮ADR更新；当前渐进播放已经部署，但尚未完成真实4K浏览器验收。
 
 ## 已完成
+
+- 2026-10-07 最新分支Docker Hub镜像发布：从分支`agent/cgm-migration-handoff-20260726`的清洁提交`2c64fe0a0a1f6aad957b43fee9f56eddd2524398`构建`linux/amd64`镜像，前端生产构建、Go三标签编译及只读根文件系统／临时空数据库容器启动均通过；容器Health为`healthy`，`/healthz`为204，About报告`1.5.0-dev`及完整提交，日志无启动错误。镜像已推送为`rainbowrunner2015/cosplay-gallery-manager:sha-2c64fe0a0a1f6aad957b43fee9f56eddd2524398`，远端OCI索引摘要`sha256:3daa57fb13b6cedb69ed7afb7e6bc52e2f5798318c2f713faa3bfb4af570dc44`，包含`linux/amd64`清单`sha256:781abac94a070f33af8c7af0e59bb1ca3be35f82c6027165a1f422d327bda09f`及构建证明；证明中的VCS来源为项目GitHub URL和目标完整提交，Docker Hub仍无`latest`标签。构建上下文未包含数据库、媒体、配置覆盖或未跟踪的`Check_VAAPI.md`；尚未执行另一台机器的真实首次设置、卷权限及迁移恢复验收，本轮也未推送Git远端。
 
 - 2026-10-03 Gallery外部命名推测规则及真实数据审计部署：实体匹配会先剔除作品序号与媒体数量／容量噪声；Character英文词界、中文强弱优先级和纯数字完整词元门禁生效，扫描层支持`&`／`x`／`×`／`+`多Coser署名。逻辑提交`10fde7bd5749cb5c4940a325aef2287ac53ccc79`、审计报告提交`5b43ca51b07fe39ee182422b02391ed31744b605`已部署；1170条业务名称更新为确认471、存疑688、冲突11，Character `02`的旧误候选201条和`Rem`单词内部误候选均降为0。正式程序SHA-256为`24f4a27b84ca14e3f4cefc7dfe8e9cbc64f416972040c6d3762d1aa40eedbb1f`，回滚目录为`/home/rainbowrunner/cos/bk/cgm-pre-inference-5b43ca5-CzwlCqD8`；服务active、`NRestarts=0`、Health／Ready均204，正式库保持schema v22、完整性`ok`及七类计数`136/108/697/23/10/10/780`。报告中的“确认”仍只表示两层规则一致，剩余存疑／冲突需人工复核。
 

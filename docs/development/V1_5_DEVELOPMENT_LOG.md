@@ -5,6 +5,12 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-10-07 最新分支Docker Hub镜像更新
+
+- 发布源固定为分支`agent/cgm-migration-handoff-20260726`的清洁提交`2c64fe0a0a1f6aad957b43fee9f56eddd2524398`（`Record gallery inference deployment`）；从独立克隆构建，未跟踪的`Check_VAAPI.md`未修改、未复制到上下文或进入镜像。使用项目`docker/cgm/Dockerfile`、版本`1.5.0-dev`和正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签生成`linux/amd64`镜像，Node前端生产构建与Go后端编译通过。构建时Docker Hub下载当前Node／Debian基础层极慢，最终仍以Dockerfile解析到的官方当前摘要完成，没有回退或修改仓库Dockerfile。
+- 本地镜像为`linux/amd64`，默认用户`65532:65532`并保留内置Healthcheck。使用只读根文件系统、独立`/tmp`、`/var/lib/cgm`和`/var/cache/cgm`临时文件系统启动无业务数据容器；状态达到`healthy`，容器内`/healthz`返回204，`/about.json`报告`1.5.0-dev`、完整提交和`exactSourceAvailable=true`，启动日志仅见Worker、服务和无设备硬件探测信息，无错误。验证容器随后删除；没有挂载、读取或写入正式数据库、媒体、Manifest、Coser资源或运行配置。
+- 已推送不可变标签`rainbowrunner2015/cosplay-gallery-manager:sha-2c64fe0a0a1f6aad957b43fee9f56eddd2524398`。首次清单的应用镜像正确，但独立克隆的本地`origin`使公开证明记录了本机路径；随即只修改临时克隆的Git远端并利用相同构建缓存重发，应用清单保持不变，证明中的`vcs:source`已纠正为项目GitHub URL且revision为目标完整提交。Docker Hub最终复验为OCI索引摘要`sha256:3daa57fb13b6cedb69ed7afb7e6bc52e2f5798318c2f713faa3bfb4af570dc44`，其中`linux/amd64`镜像清单为`sha256:781abac94a070f33af8c7af0e59bb1ca3be35f82c6027165a1f422d327bda09f`，构建证明清单为`sha256:8a3bfc266f65e5f57490bffd1629106ad3ef53f7315cf25ae50f1b06c8d08261`。Docker Hub的`latest`仍不存在，旧SHA标签未改动；README Compose示例已切换到新SHA标签。尚未在另一台机器执行首次Setup、绑定目录权限、真实媒体挂载或Linux→Docker迁移恢复模拟，本轮未推送Git远端。
+
 ## 2026-10-03 Gallery外部命名推测规则与真实数据审计
 
 - 扫描建议和Manage候选现在共享窄范围名称预处理：在实体匹配前剔除`NO.xxx`／`Vol.xxx`及`120P10G3V-2.13GB`、`133P-1.0G`、`123P-258MB`、`55P10G-789M`、`88P 3V 940MB`等媒体数量／容量标记。纯数字Character只接受完整身份词元，不把日期尾段当作角色；Character英文名要求Unicode词界，中文连续词组仅作为最低优先级回退，存在强匹配时不再附加弱候选。扫描层另为Coser补齐`&`、`x`、`×`、`+`分隔，拉丁`x`只在带空格或两侧为汉字时拆分，避免破坏普通英文名称。

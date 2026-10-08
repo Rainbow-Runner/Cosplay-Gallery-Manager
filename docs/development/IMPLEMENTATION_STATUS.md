@@ -4,6 +4,17 @@
 > 状态：进行中
 > 更新日期：2026-10-09
 
+## 2026-10-09 月度时间轴／宽屏布局提交、本机部署及Docker Hub发布
+
+- 功能提交`5d7f4d60f972e33366b7537a41b3cbb09346477c`（`Add compact monthly Coser timeline and refine browse layout`）包含紧凑月度时间轴、宽屏浏览区、Coser名称颜色和保存按钮／完整E2E修复。正式三标签productdb／productapi／productserver／Web嵌入与CLI回归通过；前一轮Web45文件199项测试及固定基线Chrome6项E2E通过。
+- 从独立干净克隆构建，本机程序VCS为完整功能提交、`modified=false`，About构建时间`2026-10-08T16:17:45Z`，程序SHA-256为`aeb47858963aae923ed0d48e85a45b713eacde3ec357f2cf31f6cc79d8e58c88`。停服确认PID为0、WAL／SHM关闭后，在0700回滚目录`/home/rainbowrunner/cos/bk/cgm-pre-timeline-5d7f4d6-XpYIG4`备份一致数据库、旧程序、配置、用户systemd单元及外部／product-state Coser资源；数据库cmp、资源diff一致，备份库完整性ok，SHA-256为`d2d9f60d829458db1d6e368efbf4db8bdc26f662fbbaa7b05eb1a3527703b368`。
+- 原子替换并启动后服务active/running、NRestarts=0，Health／Ready均204，About对应完整功能提交。正式入口HTML、`index-BFCsp0l_.css`和`TimelinePage-ClK5bvVh.js`与干净构建逐字节一致；部署后warning以上journal为空。正式库仍schema v22、完整性ok，Coser／Work／Character／Tag／Gallery／Source／Item计数`136/108/697/23/10/10/780`保持不变，配置与服务单元未变，无媒体／Manifest写入。
+- 同一干净提交的Docker生产构建通过；独立四挂载、非root65532／只读根文件系统／no-new-privileges／移除全部capability容器通过NAS IP Host同源无门票初始化204、未登录GraphQL401、登录后的新`coserTimeline`查询、跨Origin403、前端资源逐字节比对、重启保持初始化状态和Health healthy。测试所需transfer卷所有者仅通过隔离准备容器设置，不更改正式卷；本次临时测试容器与3个测试卷已清理。
+- Docker Hub已发布`rainbowrunner2015/cosplay-gallery-manager:sha-5d7f4d60f972e33366b7537a41b3cbb09346477c`，远端OCI索引摘要`sha256:ad858a121bbdc85a9fae9f694c842b6117f1cfc5b08aeacb30710ff356228831`，linux/amd64应用清单`sha256:fee06024d327408eac12fcfbd700692de2ee15fd2aeca946b97de088d7e512da`，与本机验证镜像一致；包含构建证明，不更新latest或GHCR。README和安装手册同步新SHA标签，未声称arm64／目标NAS实机验收。
+- GitHub源码推送被权限审查拦截：本次用户明确授权的是提交、部署和Docker Hub发布，当前产品分支的源码推送另行等待确认，未尝试绕过。功能提交与发布记录均在本地保留，精确源码包SHA-256为`7056abb14d1b9f98b26eb9133915f6bb5cb2dfad2179e40fb683cb80bb5423ce`；About该功能提交的GitHub源码链接需源码获授权推送后才可访问。本轮不修改`Check_VAAPI.md`或实机截图。
+
+> 后续源码阶段“未提交／部署／发布”条目保留为历史记录，当前发布状态以本节为准。
+
 ## 2026-10-09 后台保存按钮对比度与完整E2E恢复（源码完成，尚未部署）
 
 - 修复`.settings-metadata-visibility__save`被后台通用按钮颜色规则覆盖：使用带`.manage-shell`作用域的主按钮规则保留#fafafa文字／#171717背景，并提高悬停规则优先级，避免浅色文字落在#f5f5f5背景上。新增独立生产CSS及真实设置页的普通／悬停颜色断言，原Axe无障碍断言不豁免。

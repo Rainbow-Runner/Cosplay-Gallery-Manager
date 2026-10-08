@@ -153,7 +153,7 @@ Setup 不会自动创建媒体库，也不会自动扫描。不要把 CGM 指向
 ```yaml
 services:
   cgm:
-    image: rainbowrunner2015/cosplay-gallery-manager:sha-495057363530c52d9df965a619fb85d38a1db3a2
+    image: rainbowrunner2015/cosplay-gallery-manager:sha-5d7f4d60f972e33366b7537a41b3cbb09346477c
     user: "${CGM_UID:-65532}:${CGM_GID:-65532}"
     ports:
       - "9999:9999"

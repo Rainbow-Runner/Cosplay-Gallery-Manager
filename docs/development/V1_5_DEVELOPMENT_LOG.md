@@ -5,6 +5,15 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-10-09 时间轴／宽屏布局提交、本机部署及Docker Hub发布
+
+- 功能提交`5d7f4d60f972e33366b7537a41b3cbb09346477c`覆盖紧凑月度时间轴、宽屏流式布局、Coser文字色和后台保存按钮／完整生命周期修复。正式三标签productdb／productapi／productserver／Web嵌入及CLI回归通过；此前45文件199项Web回归及固定基线Chrome全部6项E2E通过。
+- 独立清洁源码构建的原生程序VCS完整对应提交、modified=false，SHA-256为`aeb47858963aae923ed0d48e85a45b713eacde3ec357f2cf31f6cc79d8e58c88`，构建时间`2026-10-08T16:17:45Z`。停服确认PID0及WAL／SHM关闭，一致备份`/home/rainbowrunner/cos/bk/cgm-pre-timeline-5d7f4d6-XpYIG4`保存库、旧程序、配置、服务单元及两处Coser资源；cmp／diff一致，备份数据库完整性ok、SHA-256为`d2d9f60d829458db1d6e368efbf4db8bdc26f662fbbaa7b05eb1a3527703b368`。
+- 部署后active/running、NRestarts0、Health／Ready204，About精确对应功能提交，新HTML／CSS／时间轴JS与清洁构建逐字节一致，warning以上journal为空。正式schema仍v22、完整性ok、七类计数`136/108/697/23/10/10/780`不变，配置和服务单元不变，未改媒体或Manifest。
+- Docker同提交构建与四挂载空库验证通过，非root只读/no-new-privileges/无capability运行；NAS IP同源首次设置204、未登录401、新游标API查询、跨Origin403、资源一致性、重启完成状态和Health healthy均通过。启动就绪前一次连接重置增加重试；初次测试配置未挂载media／transfer被既有契约拒绝，补齐后通过，不改产品契约。所有临时容器与3个测试卷已清理。
+- Docker Hub推送SHA标签完成并远端复核索引`sha256:ad858a121bbdc85a9fae9f694c842b6117f1cfc5b08aeacb30710ff356228831`及linux/amd64清单`sha256:fee06024d327408eac12fcfbd700692de2ee15fd2aeca946b97de088d7e512da`，与已验证本地镜像相同，未修改latest或GHCR。README与安装手册更新新镜像标签，发布记录另行本地提交。
+- GitHub源码推送未获本次明确授权，被权限审查拒绝后已询问用户，待确认；未绕过或推送其他分支。已保留完整功能提交源码包（SHA-256`7056abb14d1b9f98b26eb9133915f6bb5cb2dfad2179e40fb683cb80bb5423ce`），About的新源码URL需授权推送后生效。未修改无关Check_VAAPI.md或实机截图。
+
 ## 2026-10-09 保存按钮对比度修复与完整E2E解阻
 
 - 查明元数据可见性保存按钮文字被`.manage-shell button`覆盖，修复主按钮及悬停选择器优先级；普通／悬停保持#fafafa文字与#171717背景，生产CSS独立回归与实际设置页断言通过，没有关闭Axe检查。

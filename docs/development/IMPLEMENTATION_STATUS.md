@@ -4,7 +4,14 @@
 > 状态：进行中
 > 更新日期：2026-10-08
 
-## 2026-10-08 Docker Intel 硬件加速部署与诊断改进（源码完成，尚未发布）
+## 2026-10-08 Docker Intel 硬件加速部署与诊断改进
+
+> 功能提交`495057363530c52d9df965a619fb85d38a1db3a2`已推送GitHub当前产品分支并完成本机部署；Docker Hub发布记录见本节后续验收记录。下方“未提交／部署／发布”描述保留为源码阶段历史记录。
+
+- Docker Hub已发布`rainbowrunner2015/cosplay-gallery-manager:sha-495057363530c52d9df965a619fb85d38a1db3a2`，OCI索引摘要`sha256:708284c1bc5563b1ea74128217748e73c591ff3a3de239a303b5d61a2dd93ac3`，linux/amd64应用清单`sha256:ae61a4003c8e1851dc4525aa6b2831db504b6cbb70c1227fc997d6ec0b726bfc`。README和安装手册同步正式标签，GitHub同步当前产品分支`agent/cgm-migration-handoff-20260726`；不覆盖旧main代码或更改默认分支，不更新GHCR或latest标签。上传经本机Docker代理耗时约15分钟，最终成功。
+
+- 本机正式程序从干净克隆构建，VCS `modified=false`，SHA-256为`8fc89c73774e7d812a9d875cedb713900841db88df14733bcbb0722d19e9d093`；停服一致回滚目录为`/home/rainbowrunner/cos/bk/cgm-pre-intel-4950573-iSb9H6tY`，保留数据库、旧程序、配置、服务单元及两处Coser资源。部署后active、NRestarts=0、Health／Ready均204、About精确对应功能提交，warning以上日志为空；正式库完整性ok、schema v22及七类计数`136/108/697/23/10/10/780`不变。
+- 正式linux/amd64镜像从同一干净提交构建，非root／只读／no-new-privileges容器完成四挂载空库初始化、登录、未登录401、跨Origin403、重新检测202／冷却429，检测后保持SOFTWARE且VAAPI AVAILABLE；vainfo及真实H.264编码成功，Health healthy。正式三标签后端／CLI回归通过。临时容器均已清理，不涉及正式业务卷；本轮未更新GHCR镜像。
 
 - 最终复验：定向Race与两个包Vet通过；真实驱动日志分类加入负返回值门禁，正常驱动加载后媒体错误不会误报。最终验证镜像应用探测正常为AVAILABLE、模拟缺驱动为DRIVER_UNAVAILABLE；Compose双文件组合校验通过。
 - Docker amd64运行镜像加入完整Intel iHD用户态驱动、vainfo及驱动依赖／VAAPI编码器构建检查；保留非root与只读根文件系统。新增可选`docker/cgm/compose.intel.yml`，仅映射指定render节点并补充宿主机数字设备组，不默认要求GPU、不启用privileged、不改变现有卷。

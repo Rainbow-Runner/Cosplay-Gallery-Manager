@@ -11,6 +11,8 @@
 
 ### 2026-10-08 补充：Docker Intel 核显部署边界
 
+> 已随功能提交`495057363530c52d9df965a619fb85d38a1db3a2`部署本机并发布Docker Hub同名SHA镜像；README同步当前GitHub产品分支。部署、回滚及远端摘要证据见[实施状态](development/IMPLEMENTATION_STATUS.md)。下方关于“完成不等于发布”的条目仍作为一般验收边界保留；目标NAS及arm64尚未完成实机验收。
+
 - amd64镜像内提供Intel iHD完整用户态驱动及vainfo；内核驱动、BIOS启用和设备节点仍由宿主机提供。容器不能自行映射宿主机设备或修复设备权限。
 - 基础Compose继续适用于无GPU部署；Intel用户叠加`docker/cgm/compose.intel.yml`，设置实际render节点和数字设备组ID。容器内统一为`/dev/dri/renderD128`，保留原媒体／状态／缓存卷，更新容器时必须继续使用两个Compose文件。不要改成privileged或全局放宽设备权限。
 - 模式默认SOFTWARE。只有实际解码、缩放、编码测试通过的后端才可选择；Intel执行使用VAAPI，QSV探测通过不代表已有QSV执行链路。AVAILABLE不自动修改用户保存模式，也不代表所有实际媒体格式受支持。

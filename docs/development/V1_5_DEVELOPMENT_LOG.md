@@ -7,11 +7,20 @@
 
 ## 2026-10-08 Docker Intel 硬件加速优化
 
+> 功能提交`495057363530c52d9df965a619fb85d38a1db3a2`已推送当前产品分支并完成本机部署；以下源码阶段“尚未提交／部署／发布”为历史记录，最终证据见本节末尾。
+
 - 最终补验：定向Race、两包Vet及Compose组合检查通过；FFmpeg内部有界详细日志补齐libva驱动故障签名，负返回值分类避免正常驱动初始化后其他错误误报。最终镜像实际应用分别报告AVAILABLE与模拟缺驱动DRIVER_UNAVAILABLE；本轮临时容器已清理，仅保留本地验证镜像。
 - 按镜像驱动、可选设备映射、设置页诊断、重新检测顺序完成源码。amd64使用Debian完整iHD驱动，新增vainfo、驱动依赖和h264_vaapi构建门禁；可选Compose只映射render节点并添加数字设备组，基础软件部署不变。
 - 新增登录／同源POST重新检测端点，与启动探测共享执行锁、25秒超时和30秒冷却；页面轮询有35秒上限，提示设备、权限、驱动、编译能力和烟测故障，显示保存模式，刷新诊断不丢失未保存设置。
 - 后端两个包测试通过；Web TypeScript、全量43文件196项测试及2559模块生产构建通过（保留既有大chunk提示），追加页面重新检测回归通过。验证镜像`cosplay-gallery-manager:intel-validation`构建成功，非root／只读容器Intel VAAPI实测AVAILABLE且H.264编码成功；缺少设备组、未映射设备分别准确报告PERMISSION_DENIED、DEVICE_MISSING。
 - 使用临时空状态／缓存文件系统，未挂载正式业务数据。验证镜像来自未提交源码，注入旧HEAD仅供本地验证，不能作为发布镜像；当前未提交、部署、发布Docker Hub，既有镜像标签不含本轮改动。目标NAS与arm64尚待实机验收，QSV保持仅诊断。本轮与`Check_VAAPI.md`无关。
+
+### 本机部署与正式镜像验收
+
+- 正式镜像已发布至Docker Hub：`rainbowrunner2015/cosplay-gallery-manager:sha-495057363530c52d9df965a619fb85d38a1db3a2`；远端OCI索引摘要`sha256:708284c1bc5563b1ea74128217748e73c591ff3a3de239a303b5d61a2dd93ac3`，应用清单`sha256:ae61a4003c8e1851dc4525aa6b2831db504b6cbb70c1227fc997d6ec0b726bfc`。本机Docker代理首传新增镜像层耗时922.7秒，实际传输持续增长，未修改代理或服务配置，最终清单发布成功。README与安装手册指向本轮SHA镜像；GitHub同步当前产品分支`agent/cgm-migration-handoff-20260726`，main及默认分支保持原状，GHCR、latest和旧SHA标签不变。
+
+- 干净克隆正式三标签程序VCS `modified=false`，SHA-256为`8fc89c73774e7d812a9d875cedb713900841db88df14733bcbb0722d19e9d093`。停服一致备份`/home/rainbowrunner/cos/bk/cgm-pre-intel-4950573-iSb9H6tY`保留旧程序、数据库、配置、systemd单元及外部／状态Coser资源，校验数据库与资源复制一致。原子安装后active、NRestarts=0、Health／Ready 204、About精确对应功能提交，journal无warning以上记录；schema v22、完整性ok和七类计数`136/108/697/23/10/10/780`不变。
+- 同一干净源码构建linux/amd64正式镜像；默认UID65532、只读根文件系统、no-new-privileges与四个临时挂载验收。第一次脚本漏挂`/media`与`/transfer`，初始化按既有安全契约返回400；补齐挂载后初始化／登录均204，未登录重新检测401、跨Origin403，30秒冷却后请求202、立即重复429，探测最终COMPLETED／VAAPI AVAILABLE，保存模式保持SOFTWARE。vainfo与H.264真实编码成功，容器健康healthy，临时容器已删除，正式业务数据未挂载。正式三标签Go `productserver`／CLI回归通过；不更新GHCR或旧SHA标签。
 
 ## 2026-10-07 最新分支Docker Hub镜像更新
 

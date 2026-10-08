@@ -153,7 +153,7 @@ Setup 不会自动创建媒体库，也不会自动扫描。不要把 CGM 指向
 ```yaml
 services:
   cgm:
-    image: rainbowrunner2015/cosplay-gallery-manager:sha-64c99f1fec8ca7c612e358488d6f39845015a079
+    image: rainbowrunner2015/cosplay-gallery-manager:sha-495057363530c52d9df965a619fb85d38a1db3a2
     user: "${CGM_UID:-65532}:${CGM_GID:-65532}"
     ports:
       - "9999:9999"
@@ -203,7 +203,7 @@ docker compose -f docker/cgm/compose.yml up -d
 
 ### Docker Intel 核显加速
 
-Intel VAAPI 镜像支持正在本轮源码中完善；上面的已发布镜像标签不包含本轮新增驱动，需使用本轮源码构建或后续发布的镜像。amd64 镜像预装完整 iHD 驱动、FFmpeg 和 `vainfo`，宿主机仍需启用核显并提供正常的 `/dev/dri/renderD*` 设备。
+上面的 amd64 镜像预装完整 Intel iHD 驱动、FFmpeg 和 `vainfo`，支持设置页硬件诊断与重新检测。宿主机仍需启用核显并提供正常的 `/dev/dri/renderD*` 设备，再按下方步骤映射设备和配置权限；更新镜像本身不会自动取得宿主机核显访问权限。
 
 在宿主机查询目标设备的组 ID（不要照抄其他机器的数字）：
 

@@ -49,6 +49,21 @@ func (s *BrowseStore) Timeline(ctx context.Context, scope browse.Scope, page int
 // sorts as the first day of its month, while retaining its original precision.
 // Combined uses publication, then shoot, then complete media-added evidence.
 func (s *BrowseStore) TimelineByDate(ctx context.Context, scope browse.Scope, page int, coserUUID string, date browse.TimelineDate) (browse.GalleryPage, error) {
+	extra, dateOrder, err := timelineDateSQL(date)
+	if err != nil {
+		return browse.GalleryPage{}, err
+	}
+	var args []any
+	if coserUUID != "" {
+		extra += ` AND EXISTS(SELECT 1 FROM gallery_credits timeline_credit WHERE timeline_credit.gallery_id=gallery.id AND timeline_credit.coser_uuid=?)`
+		args = append(args, coserUUID)
+	}
+	return s.galleryPage(ctx, scope, page, browse.GallerySortShootDate, extra, args, dateOrder+` DESC,`+timelineSecondaryOrder+` DESC,gallery.id DESC`)
+}
+
+const timelineSecondaryOrder = `COALESCE(CASE WHEN gallery.media_added_status='COMPLETE' THEN NULLIF(gallery.media_added_start_at_utc,'') END,gallery.first_activated_at_utc,gallery.added_at_utc,gallery.created_at_utc)`
+
+func timelineDateSQL(date browse.TimelineDate) (string, string, error) {
 	var extra, dateOrder string
 	switch date {
 	case browse.TimelineShoot:
@@ -72,16 +87,9 @@ func (s *BrowseStore) TimelineByDate(ctx context.Context, scope browse.Scope, pa
 			CASE gallery.shoot_date_precision WHEN 'MONTH' THEN gallery.shoot_date||'-01' ELSE gallery.shoot_date END
 			ELSE substr(gallery.media_added_start_at_utc,1,10) END`
 	default:
-		return browse.GalleryPage{}, errors.New("invalid timeline date")
+		return "", "", errors.New("invalid timeline date")
 	}
-	var args []any
-	if coserUUID != "" {
-		extra += ` AND EXISTS(SELECT 1 FROM gallery_credits timeline_credit WHERE timeline_credit.gallery_id=gallery.id AND timeline_credit.coser_uuid=?)`
-		args = append(args, coserUUID)
-	}
-	order := dateOrder + ` DESC,
-		COALESCE(CASE WHEN gallery.media_added_status='COMPLETE' THEN NULLIF(gallery.media_added_start_at_utc,'') END,gallery.first_activated_at_utc,gallery.added_at_utc,gallery.created_at_utc) DESC,gallery.id DESC`
-	return s.galleryPage(ctx, scope, page, browse.GallerySortShootDate, extra, args, order)
+	return extra, dateOrder, nil
 }
 
 func (s *BrowseStore) galleryPage(ctx context.Context, scope browse.Scope, page int, sortBy browse.GallerySort, extraWhere string, extraArgs []any, orderOverride string) (browse.GalleryPage, error) {

@@ -103,6 +103,17 @@ type ComplexityRoot struct {
 		SocialAccounts  func(childComplexity int) int
 	}
 
+	CoserTimelineConnection struct {
+		EndCursor   func(childComplexity int) int
+		HasNextPage func(childComplexity int) int
+		Items       func(childComplexity int) int
+	}
+
+	CoserTimelineEntry struct {
+		Card  func(childComplexity int) int
+		Month func(childComplexity int) int
+	}
+
 	EntityIndexItem struct {
 		Aliases   func(childComplexity int) int
 		AvatarURL func(childComplexity int) int
@@ -1301,6 +1312,7 @@ type ComplexityRoot struct {
 		BrowseUISettings                     func(childComplexity int) int
 		CharacterDetail                      func(childComplexity int, slug string, scope BrowseScope, page int) int
 		CoserDetail                          func(childComplexity int, slug string, scope BrowseScope, page int, collectionType *CollectionType) int
+		CoserTimeline                        func(childComplexity int, scope BrowseScope, coserUUID string, date TimelineDate, first int, after *string) int
 		EntityIndex                          func(childComplexity int, kind SearchEntityKind, scope BrowseScope, page int, sort EntitySort, collectionType *CollectionType, query string) int
 		FavoriteGalleries                    func(childComplexity int, scope BrowseScope, page int) int
 		FavoriteMedia                        func(childComplexity int, scope BrowseScope, page int, ratingSort bool) int
@@ -1528,6 +1540,7 @@ type QueryResolver interface {
 	HomeGalleries(ctx context.Context, page int) (*HomeGalleryPage, error)
 	BrowseGalleries(ctx context.Context, scope BrowseScope, page int, sort GallerySort, collectionType *CollectionType) (*GalleryPage, error)
 	TimelineGalleries(ctx context.Context, scope BrowseScope, page int, coserUUID *string, date TimelineDate) (*GalleryPage, error)
+	CoserTimeline(ctx context.Context, scope BrowseScope, coserUUID string, date TimelineDate, first int, after *string) (*CoserTimelineConnection, error)
 	GalleryDetail(ctx context.Context, slug string, scope BrowseScope) (*GalleryDetail, error)
 	GalleryMemberIndex(ctx context.Context, setID string) (*GalleryMemberIndex, error)
 	RelatedGalleries(ctx context.Context, setID string, scope BrowseScope) ([]*GalleryRecommendation, error)
@@ -1915,6 +1928,41 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.CoserDetail.SocialAccounts(childComplexity), true
+
+	case "CoserTimelineConnection.endCursor":
+		if e.complexity.CoserTimelineConnection.EndCursor == nil {
+			break
+		}
+
+		return e.complexity.CoserTimelineConnection.EndCursor(childComplexity), true
+
+	case "CoserTimelineConnection.hasNextPage":
+		if e.complexity.CoserTimelineConnection.HasNextPage == nil {
+			break
+		}
+
+		return e.complexity.CoserTimelineConnection.HasNextPage(childComplexity), true
+
+	case "CoserTimelineConnection.items":
+		if e.complexity.CoserTimelineConnection.Items == nil {
+			break
+		}
+
+		return e.complexity.CoserTimelineConnection.Items(childComplexity), true
+
+	case "CoserTimelineEntry.card":
+		if e.complexity.CoserTimelineEntry.Card == nil {
+			break
+		}
+
+		return e.complexity.CoserTimelineEntry.Card(childComplexity), true
+
+	case "CoserTimelineEntry.month":
+		if e.complexity.CoserTimelineEntry.Month == nil {
+			break
+		}
+
+		return e.complexity.CoserTimelineEntry.Month(childComplexity), true
 
 	case "EntityIndexItem.aliases":
 		if e.complexity.EntityIndexItem.Aliases == nil {
@@ -8380,6 +8428,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.CoserDetail(childComplexity, args["slug"].(string), args["scope"].(BrowseScope), args["page"].(int), args["collectionType"].(*CollectionType)), true
 
+	case "Query.coserTimeline":
+		if e.complexity.Query.CoserTimeline == nil {
+			break
+		}
+
+		args, err := ec.field_Query_coserTimeline_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.CoserTimeline(childComplexity, args["scope"].(BrowseScope), args["coserUUID"].(string), args["date"].(TimelineDate), args["first"].(int), args["after"].(*string)), true
+
 	case "Query.entityIndex":
 		if e.complexity.Query.EntityIndex == nil {
 			break
@@ -14218,6 +14278,126 @@ func (ec *executionContext) field_Query_coserDetail_argsCollectionType(
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Query_coserTimeline_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_coserTimeline_argsScope(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["scope"] = arg0
+	arg1, err := ec.field_Query_coserTimeline_argsCoserUUID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["coserUUID"] = arg1
+	arg2, err := ec.field_Query_coserTimeline_argsDate(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["date"] = arg2
+	arg3, err := ec.field_Query_coserTimeline_argsFirst(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["first"] = arg3
+	arg4, err := ec.field_Query_coserTimeline_argsAfter(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg4
+	return args, nil
+}
+func (ec *executionContext) field_Query_coserTimeline_argsScope(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (BrowseScope, error) {
+	if _, ok := rawArgs["scope"]; !ok {
+		var zeroVal BrowseScope
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("scope"))
+	if tmp, ok := rawArgs["scope"]; ok {
+		return ec.unmarshalNBrowseScope2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐBrowseScope(ctx, tmp)
+	}
+
+	var zeroVal BrowseScope
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_coserTimeline_argsCoserUUID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["coserUUID"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("coserUUID"))
+	if tmp, ok := rawArgs["coserUUID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_coserTimeline_argsDate(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (TimelineDate, error) {
+	if _, ok := rawArgs["date"]; !ok {
+		var zeroVal TimelineDate
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("date"))
+	if tmp, ok := rawArgs["date"]; ok {
+		return ec.unmarshalNTimelineDate2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐTimelineDate(ctx, tmp)
+	}
+
+	var zeroVal TimelineDate
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_coserTimeline_argsFirst(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int, error) {
+	if _, ok := rawArgs["first"]; !ok {
+		var zeroVal int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("first"))
+	if tmp, ok := rawArgs["first"]; ok {
+		return ec.unmarshalNInt2int(ctx, tmp)
+	}
+
+	var zeroVal int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_coserTimeline_argsAfter(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*string, error) {
+	if _, ok := rawArgs["after"]; !ok {
+		var zeroVal *string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("after"))
+	if tmp, ok := rawArgs["after"]; ok {
+		return ec.unmarshalOString2ᚖstring(ctx, tmp)
+	}
+
+	var zeroVal *string
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Query_entityIndex_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -18652,6 +18832,284 @@ func (ec *executionContext) fieldContext_CoserDetail_redirected(_ context.Contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CoserTimelineConnection_items(ctx context.Context, field graphql.CollectedField, obj *CoserTimelineConnection) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CoserTimelineConnection_items(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Items, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*CoserTimelineEntry)
+	fc.Result = res
+	return ec.marshalNCoserTimelineEntry2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐCoserTimelineEntryᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CoserTimelineConnection_items(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CoserTimelineConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "month":
+				return ec.fieldContext_CoserTimelineEntry_month(ctx, field)
+			case "card":
+				return ec.fieldContext_CoserTimelineEntry_card(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CoserTimelineEntry", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CoserTimelineConnection_endCursor(ctx context.Context, field graphql.CollectedField, obj *CoserTimelineConnection) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CoserTimelineConnection_endCursor(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EndCursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CoserTimelineConnection_endCursor(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CoserTimelineConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CoserTimelineConnection_hasNextPage(ctx context.Context, field graphql.CollectedField, obj *CoserTimelineConnection) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CoserTimelineConnection_hasNextPage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HasNextPage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CoserTimelineConnection_hasNextPage(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CoserTimelineConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CoserTimelineEntry_month(ctx context.Context, field graphql.CollectedField, obj *CoserTimelineEntry) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CoserTimelineEntry_month(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Month, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CoserTimelineEntry_month(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CoserTimelineEntry",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CoserTimelineEntry_card(ctx context.Context, field graphql.CollectedField, obj *CoserTimelineEntry) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CoserTimelineEntry_card(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Card, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*BrowseGalleryCard)
+	fc.Result = res
+	return ec.marshalNBrowseGalleryCard2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐBrowseGalleryCard(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CoserTimelineEntry_card(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CoserTimelineEntry",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "setID":
+				return ec.fieldContext_BrowseGalleryCard_setID(ctx, field)
+			case "slug":
+				return ec.fieldContext_BrowseGalleryCard_slug(ctx, field)
+			case "title":
+				return ec.fieldContext_BrowseGalleryCard_title(ctx, field)
+			case "collectionType":
+				return ec.fieldContext_BrowseGalleryCard_collectionType(ctx, field)
+			case "contentRating":
+				return ec.fieldContext_BrowseGalleryCard_contentRating(ctx, field)
+			case "cover":
+				return ec.fieldContext_BrowseGalleryCard_cover(ctx, field)
+			case "credits":
+				return ec.fieldContext_BrowseGalleryCard_credits(ctx, field)
+			case "creditCount":
+				return ec.fieldContext_BrowseGalleryCard_creditCount(ctx, field)
+			case "characters":
+				return ec.fieldContext_BrowseGalleryCard_characters(ctx, field)
+			case "characterCount":
+				return ec.fieldContext_BrowseGalleryCard_characterCount(ctx, field)
+			case "works":
+				return ec.fieldContext_BrowseGalleryCard_works(ctx, field)
+			case "workCount":
+				return ec.fieldContext_BrowseGalleryCard_workCount(ctx, field)
+			case "shootDate":
+				return ec.fieldContext_BrowseGalleryCard_shootDate(ctx, field)
+			case "shootDatePrecision":
+				return ec.fieldContext_BrowseGalleryCard_shootDatePrecision(ctx, field)
+			case "publishDate":
+				return ec.fieldContext_BrowseGalleryCard_publishDate(ctx, field)
+			case "publishDatePrecision":
+				return ec.fieldContext_BrowseGalleryCard_publishDatePrecision(ctx, field)
+			case "addedAtUTC":
+				return ec.fieldContext_BrowseGalleryCard_addedAtUTC(ctx, field)
+			case "mediaAddedStartUTC":
+				return ec.fieldContext_BrowseGalleryCard_mediaAddedStartUTC(ctx, field)
+			case "mediaAddedEndUTC":
+				return ec.fieldContext_BrowseGalleryCard_mediaAddedEndUTC(ctx, field)
+			case "mediaAddedStatus":
+				return ec.fieldContext_BrowseGalleryCard_mediaAddedStatus(ctx, field)
+			case "media":
+				return ec.fieldContext_BrowseGalleryCard_media(ctx, field)
+			case "favorite":
+				return ec.fieldContext_BrowseGalleryCard_favorite(ctx, field)
+			case "ratingHalfSteps":
+				return ec.fieldContext_BrowseGalleryCard_ratingHalfSteps(ctx, field)
+			case "scrubberCount":
+				return ec.fieldContext_BrowseGalleryCard_scrubberCount(ctx, field)
+			case "scrubberRevision":
+				return ec.fieldContext_BrowseGalleryCard_scrubberRevision(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type BrowseGalleryCard", field.Name)
 		},
 	}
 	return fc, nil
@@ -60953,6 +61411,69 @@ func (ec *executionContext) fieldContext_Query_timelineGalleries(ctx context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_coserTimeline(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_coserTimeline(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().CoserTimeline(rctx, fc.Args["scope"].(BrowseScope), fc.Args["coserUUID"].(string), fc.Args["date"].(TimelineDate), fc.Args["first"].(int), fc.Args["after"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*CoserTimelineConnection)
+	fc.Result = res
+	return ec.marshalNCoserTimelineConnection2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐCoserTimelineConnection(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_coserTimeline(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "items":
+				return ec.fieldContext_CoserTimelineConnection_items(ctx, field)
+			case "endCursor":
+				return ec.fieldContext_CoserTimelineConnection_endCursor(ctx, field)
+			case "hasNextPage":
+				return ec.fieldContext_CoserTimelineConnection_hasNextPage(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CoserTimelineConnection", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_coserTimeline_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_galleryDetail(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_galleryDetail(ctx, field)
 	if err != nil {
@@ -71863,6 +72384,99 @@ func (ec *executionContext) _CoserDetail(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
+var coserTimelineConnectionImplementors = []string{"CoserTimelineConnection"}
+
+func (ec *executionContext) _CoserTimelineConnection(ctx context.Context, sel ast.SelectionSet, obj *CoserTimelineConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, coserTimelineConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CoserTimelineConnection")
+		case "items":
+			out.Values[i] = ec._CoserTimelineConnection_items(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "endCursor":
+			out.Values[i] = ec._CoserTimelineConnection_endCursor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "hasNextPage":
+			out.Values[i] = ec._CoserTimelineConnection_hasNextPage(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var coserTimelineEntryImplementors = []string{"CoserTimelineEntry"}
+
+func (ec *executionContext) _CoserTimelineEntry(ctx context.Context, sel ast.SelectionSet, obj *CoserTimelineEntry) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, coserTimelineEntryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CoserTimelineEntry")
+		case "month":
+			out.Values[i] = ec._CoserTimelineEntry_month(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "card":
+			out.Values[i] = ec._CoserTimelineEntry_card(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var entityIndexItemImplementors = []string{"EntityIndexItem"}
 
 func (ec *executionContext) _EntityIndexItem(ctx context.Context, sel ast.SelectionSet, obj *EntityIndexItem) graphql.Marshaler {
@@ -80050,6 +80664,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "coserTimeline":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_coserTimeline(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "galleryDetail":
 			field := field
 
@@ -82319,6 +82955,74 @@ func (ec *executionContext) marshalNCoserDetail2ᚖgithubᚗcomᚋstashappᚋsta
 		return graphql.Null
 	}
 	return ec._CoserDetail(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNCoserTimelineConnection2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐCoserTimelineConnection(ctx context.Context, sel ast.SelectionSet, v CoserTimelineConnection) graphql.Marshaler {
+	return ec._CoserTimelineConnection(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNCoserTimelineConnection2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐCoserTimelineConnection(ctx context.Context, sel ast.SelectionSet, v *CoserTimelineConnection) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CoserTimelineConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNCoserTimelineEntry2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐCoserTimelineEntryᚄ(ctx context.Context, sel ast.SelectionSet, v []*CoserTimelineEntry) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNCoserTimelineEntry2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐCoserTimelineEntry(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNCoserTimelineEntry2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐCoserTimelineEntry(ctx context.Context, sel ast.SelectionSet, v *CoserTimelineEntry) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CoserTimelineEntry(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNCreateMediaLibraryInput2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐCreateMediaLibraryInput(ctx context.Context, v any) (CreateMediaLibraryInput, error) {

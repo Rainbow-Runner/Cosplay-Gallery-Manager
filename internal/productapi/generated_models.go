@@ -81,6 +81,17 @@ type CoserDetail struct {
 	Redirected      bool             `json:"redirected"`
 }
 
+type CoserTimelineConnection struct {
+	Items       []*CoserTimelineEntry `json:"items"`
+	EndCursor   string                `json:"endCursor"`
+	HasNextPage bool                  `json:"hasNextPage"`
+}
+
+type CoserTimelineEntry struct {
+	Month string             `json:"month"`
+	Card  *BrowseGalleryCard `json:"card"`
+}
+
 type CreateMediaLibraryInput struct {
 	Name                     string `json:"name"`
 	RootPath                 string `json:"rootPath"`

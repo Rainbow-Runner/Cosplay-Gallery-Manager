@@ -6,6 +6,8 @@ const password = "offline e2e owner password";
 const runtime = path.resolve("e2e/.runtime");
 const libraryRoot = path.join(runtime, "library");
 
+test.use({ actionTimeout: 15_000 });
+
 async function expectAccessible(page: Page) {
   const result = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
@@ -48,7 +50,12 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
     name: "Create local library",
   });
   await expect.poll(async () =>
-    new URL(page.url()).pathname === "/login" || await createLocalLibrary.isEnabled(),
+    new URL(page.url()).pathname === "/login" || await createLocalLibrary.evaluateAll((buttons) =>
+      buttons.some((button) => !(button as HTMLButtonElement).disabled),
+    ).catch((error: Error) => {
+      if (error.message.includes("Execution context was destroyed")) return false;
+      throw error;
+    }),
   ).toBe(true);
   if (new URL(page.url()).pathname !== "/login") {
     await createLocalLibrary.click({ noWaitAfter: true });
@@ -65,6 +72,15 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
     }))),
   );
   expect(settingsControlColours).toEqual(["rgb(255, 255, 255)|rgb(10, 10, 10)"]);
+  const metadataSave = page.locator(".settings-metadata-visibility__save");
+  for (const hover of [false, true]) {
+    if (hover) await metadataSave.hover();
+    expect(await metadataSave.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return `${style.backgroundColor}|${style.color}`;
+    })).toBe("rgb(23, 23, 23)|rgb(250, 250, 250)");
+  }
+  await page.mouse.move(0, 0);
   await expectAccessible(page);
 
   await page.goto("/manage/cosers");
@@ -80,18 +96,18 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
   await addLibrary.getByText("Add media library", { exact: true }).click();
   await addLibrary.getByLabel("Name (required)", { exact: true }).fill("Offline fixture");
   await addLibrary.getByLabel("Absolute path (required)").fill(libraryRoot);
-  await addLibrary.getByLabel("Read-only source").uncheck();
+  await addLibrary.getByLabel("Metadata sidecar writeback").check();
   await addLibrary.getByRole("button", { name: "Create", exact: true }).click();
-  await expect(page.getByRole("button", { name: /Offline fixture/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Offline fixture / })).toBeVisible();
   const addRule = page.locator("details").filter({
-    has: page.getByText("Add deterministic rule", { exact: true }),
+    has: page.getByText("Add deterministic discovery rule", { exact: true }),
   });
-  await addRule.getByText("Add deterministic rule", { exact: true }).click();
+  await addRule.getByText("Add deterministic discovery rule", { exact: true }).click();
   await addRule.getByLabel("Name (required)", { exact: true }).fill("Direct gallery directory");
   await addRule.getByLabel("Enable rule").check();
   await addRule.getByRole("button", { name: "Add rule" }).click();
   await expect(page.getByText(/FIXED_DEPTH · ON/)).toBeVisible();
-  await page.getByRole("button", { name: "Scan selected library" }).click();
+  await page.getByRole("button", { name: "Scan and review only" }).click();
   const candidate = page.locator(".candidate-card").filter({ hasText: "playwright-gallery" });
   await expect(candidate).toContainText("3 media");
   await candidate.getByRole("button", { name: "Create DRAFT" }).click();
@@ -122,7 +138,14 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
   await page.getByRole("button", { name: "Activate" }).click();
   await expect(page.getByText(/ACTIVE · revision/)).toBeVisible();
   await page.getByRole("button", { name: "manifest", exact: true }).click();
-  await page.getByRole("button", { name: "Push database → Manifest" }).click();
+  await expect(page.getByText(/\+3 added/)).toBeVisible();
+  const manifestConfirmation = page.waitForEvent("dialog");
+  const pushManifest = page.getByRole("button", { name: "Push database → Manifest" }).click();
+  const confirmation = await manifestConfirmation;
+  expect(confirmation.type()).toBe("confirm");
+  expect(confirmation.message()).toContain("Write database metadata to Manifest?");
+  await confirmation.accept();
+  await pushManifest;
   await expect(page.getByText("Manifest Push completed")).toBeVisible();
 
   await page.goto("/");
@@ -158,10 +181,19 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
   });
   await page.mouse.move(0, 0);
   await expect.poll(async () => galleryFavourite.evaluate((element) => getComputedStyle(element).opacity)).toBe("0");
-  for (const [width, columns] of [[390, 2], [768, 3], [1024, 4], [1536, 5]] as const) {
+  for (const [width, columns] of [[390, 2], [768, 3], [1024, 4], [1536, 5], [1920, 5], [2560, 5], [3840, 5]] as const) {
     await page.setViewportSize({ width, height: 844 });
     await expect.poll(async () => galleryGrid.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length)).toBe(columns);
     expect(await galleryGrid.evaluate((element) => getComputedStyle(element).gap)).toBe("16px");
+    if (width >= 1920) {
+      const bounds = await page.locator(".browse-main").evaluate((element) => ({
+        main: element.getBoundingClientRect().width,
+        workspace: document.querySelector(".browse-workspace")!.getBoundingClientRect().width,
+        titleSize: getComputedStyle(document.querySelector(".gallery-card h2")!).fontSize,
+      }));
+      expect(bounds.main).toBeCloseTo(bounds.workspace, 0);
+      expect(bounds.titleSize).toBe("16px");
+    }
   }
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
@@ -179,9 +211,10 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
       fontWeight: style.fontWeight,
       lineHeight: style.lineHeight,
       avatarWidth: avatar ? getComputedStyle(avatar).width : "",
+      color: style.color,
       avatarHeight: avatar ? getComputedStyle(avatar).height : "",
     };
-  })).toEqual({ height: "32px", gap: "6px", fontSize: "14px", fontWeight: "500", lineHeight: "14px", avatarWidth: "32px", avatarHeight: "32px" });
+  })).toEqual({ height: "32px", gap: "6px", fontSize: "14px", fontWeight: "500", lineHeight: "14px", avatarWidth: "32px", avatarHeight: "32px", color: "rgb(10, 10, 10)" });
   await expectAccessible(page);
   if (browserName === "chromium") {
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
@@ -282,7 +315,16 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
   await expect(page.getByText("2P 1G", { exact: true })).toBeVisible();
   const galleryHeading = page.locator(".gallery-detail__title h1");
   if (browserName === "chromium") {
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    const animatedPoster = page.locator(".media-tile").filter({ has: page.locator(".media-tile__kind", { hasText: "GIF" }) }).locator("img");
+    await expect(animatedPoster).toHaveAttribute("src", /\/ANIMATED_PREVIEW$/);
+    // CSS animation disabling does not freeze animated WebP/GIF images.
+    // Exercise the real reduced-motion fallback for deterministic snapshots.
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(animatedPoster).toHaveAttribute("src", /\/STATIC_POSTER$/);
+    await animatedPoster.evaluate((image) => (image as HTMLImageElement).decode());
+    // This deliberately long title needs a wide desktop viewport once the
+    // sidebar and header actions have taken their normal share of the row.
+    await page.setViewportSize({ width: 1920, height: 1000 });
     const originalHeading = await galleryHeading.textContent();
     await galleryHeading.evaluate((element) => { element.textContent = "Offline E2E Gallery — Complete Desktop Presentation Title 2026"; });
     const desktopHeadingMetrics = await galleryHeading.evaluate((element) => {
@@ -296,6 +338,7 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
     expect(desktopHeadingMetrics.maxWidth).toBe("none");
     expect(desktopHeadingMetrics.contentHeight).toBeLessThanOrEqual(desktopHeadingMetrics.lineHeight * 1.1);
     await galleryHeading.evaluate((element, title) => { element.textContent = title; }, originalHeading);
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.mouse.move(1400, 24);
     await expect(page).toHaveScreenshot("gallery-detail-desktop.png", { fullPage: true });
   }
@@ -337,6 +380,7 @@ test("offline owner lifecycle, backup restore and accessibility matrix", async (
   await expectAccessible(page);
   if (browserName === "chromium") {
     await expect(page).toHaveScreenshot("gallery-mobile.png", { fullPage: true });
+    await page.emulateMedia({ reducedMotion: "no-preference" });
   }
   await page.keyboard.press("Tab");
   await expect(page.locator(":focus")).toBeVisible();

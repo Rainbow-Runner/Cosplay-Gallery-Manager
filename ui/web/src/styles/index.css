@@ -178,7 +178,8 @@ a { color: inherit; text-decoration: none; }
 }
 
 .browse-main {
-  width: min(100%, 107.75rem);
+  /* Image-led browsing fills the workspace; prose/forms keep their own caps. */
+  width: 100%;
   min-height: calc(100vh - var(--cgm-topbar-height));
   margin: 0 auto;
   padding: 2rem var(--cgm-content-padding) 5rem;
@@ -243,7 +244,7 @@ a { color: inherit; text-decoration: none; }
 .gallery-card__work { overflow: hidden; min-height: 1.1rem; margin: .25rem 0 .45rem; color: var(--cgm-muted-foreground); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
 .gallery-card__people { display: flex; min-height: 2rem; align-items: center; gap: .375rem; color: var(--cgm-muted-foreground); font-size: .6875rem; }
 .gallery-card__cosers { display: flex; overflow: hidden; min-width: 0; flex: 1; align-items: center; gap: .5rem; white-space: nowrap; }
-.gallery-card__coser-link { display: flex; overflow: hidden; min-width: 0; height: 2rem; align-items: center; gap: .375rem; border-radius: .25rem; font-size: .875rem; font-weight: 500; line-height: 1; }
+.gallery-card__coser-link { display: flex; overflow: hidden; min-width: 0; height: 2rem; align-items: center; gap: .375rem; border-radius: .25rem; color: var(--cgm-foreground); font-size: .875rem; font-weight: 500; line-height: 1; }
 .gallery-card__coser-link > span:last-child { overflow: hidden; text-overflow: ellipsis; }
 .gallery-card__coser-link:hover { color: var(--cgm-foreground); text-decoration: underline; text-underline-offset: .14rem; }
 .gallery-card__coser-link:focus-visible { color: var(--cgm-foreground); outline: 2px solid var(--cgm-focus); outline-offset: 2px; }
@@ -313,6 +314,21 @@ a { color: inherit; text-decoration: none; }
   .search-result__content strong { font-size: .8rem; }
 }
 .coser-detail { padding-top: .75rem; }
+.coser-month-timeline { margin-top: 1.5rem; }
+.coser-month-timeline__months { position: relative; margin: 0; padding: 0; list-style: none; }
+.coser-month-timeline__months::before { position: absolute; top: .45rem; bottom: 0; left: 4.75rem; width: 2px; background: var(--cgm-border); content: ""; }
+.coser-month-timeline__month { position: relative; display: grid; grid-template-columns: 4.25rem minmax(0, 1fr); gap: 1.25rem; padding-bottom: 3rem; }
+.coser-month-timeline__month::before { position: absolute; top: .25rem; left: calc(4.75rem - 4px); width: 10px; height: 10px; border: 2px solid var(--cgm-background); border-radius: 50%; background: var(--cgm-muted-foreground); content: ""; }
+.coser-month-timeline__date { margin: 0; color: var(--cgm-muted-foreground); font: 500 .75rem/1.5 var(--cgm-font-sans); text-align: right; overflow-wrap: anywhere; }
+.coser-month-timeline__sentinel { min-height: 3rem; margin-left: 5.5rem; padding-block: .5rem; color: var(--cgm-muted-foreground); font-size: .875rem; }
+.coser-month-timeline__sentinel button { padding: .5rem .75rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface); color: var(--cgm-foreground); cursor: pointer; }
+@media (max-width: 767px) {
+  .coser-month-timeline__months::before { left: 4px; }
+  .coser-month-timeline__month { grid-template-columns: minmax(0, 1fr); gap: .75rem; padding-left: 1.5rem; padding-bottom: 2rem; }
+  .coser-month-timeline__month::before { left: 0; }
+  .coser-month-timeline__date { text-align: left; }
+  .coser-month-timeline__sentinel { margin-left: 1.5rem; }
+}
 .coser-detail > .cgm-breadcrumbs { margin-bottom: .75rem; }
 .coser-detail > .cgm-breadcrumbs ol { font-size: .875rem; line-height: 1.25rem; }
 .coser-detail > .cgm-breadcrumbs li + li::before { content: "›"; }
@@ -1155,7 +1171,9 @@ a { color: inherit; text-decoration: none; }
 .manage-shell .metadata-form .alias-chip__remove { border-left: 1px solid var(--cgm-border); }
 .manage-shell .manage-actions button:first-child,
 .manage-shell .metadata-form button[type="submit"],
+.manage-shell .settings-metadata-visibility__save,
 .manage-shell .settings-form footer button { border-color: var(--cgm-primary); background: var(--cgm-primary); color: var(--cgm-primary-foreground); }
+.manage-shell button.settings-metadata-visibility__save:hover:not(:disabled) { background: var(--cgm-primary); }
 .manage-shell .issue-summary strong { color: var(--cgm-foreground); font: 650 1.25rem var(--cgm-font-sans); }
 .manage-shell .manage-table td:nth-child(2) a { font: 550 .875rem var(--cgm-font-sans); }
 .manage-shell .editor-tabs button.is-active { border-bottom-color: var(--cgm-primary); color: var(--cgm-foreground); font-weight: 600; }

@@ -183,6 +183,15 @@ export const TIMELINE_GALLERIES = gql`
   }
 `;
 
+export const COSER_TIMELINE = gql`
+  ${GALLERY_CARD_FIELDS}
+  query CoserTimeline($scope: BrowseScope!, $coserUUID: ID!, $date: TimelineDate!, $first: Int!, $after: String) {
+    coserTimeline(scope: $scope, coserUUID: $coserUUID, date: $date, first: $first, after: $after) {
+      items { month card { ...GalleryCardFields } } endCursor hasNextPage
+    }
+  }
+`;
+
 export const RANDOM_MEDIA = gql`
   query RandomMedia($scope: BrowseScope!, $filter: RandomMediaFilter!) {
     randomMedia(scope: $scope, filter: $filter) {

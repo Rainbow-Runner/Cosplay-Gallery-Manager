@@ -1490,6 +1490,23 @@ func (r *queryResolver) TimelineGalleries(ctx context.Context, scope BrowseScope
 	return galleryPage(value), nil
 }
 
+// CoserTimeline is the resolver for the coserTimeline field.
+func (r *queryResolver) CoserTimeline(ctx context.Context, scope BrowseScope, coserUUID string, date TimelineDate, first int, after *string) (*CoserTimelineConnection, error) {
+	cursor := ""
+	if after != nil {
+		cursor = *after
+	}
+	value, err := r.Database.Browse().CoserTimeline(ctx, browse.Scope(scope), coserUUID, browse.TimelineDate(date), first, cursor)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	items := make([]*CoserTimelineEntry, 0, len(value.Items))
+	for _, entry := range value.Items {
+		items = append(items, &CoserTimelineEntry{Month: entry.Month, Card: galleryCard(entry.Card)})
+	}
+	return &CoserTimelineConnection{Items: items, EndCursor: value.EndCursor, HasNextPage: value.HasNextPage}, nil
+}
+
 // GalleryDetail is the resolver for the galleryDetail field.
 func (r *queryResolver) GalleryDetail(ctx context.Context, slug string, scope BrowseScope) (*GalleryDetail, error) {
 	value, err := r.Database.Browse().GalleryDetailBySlug(ctx, browse.Scope(scope), slug)

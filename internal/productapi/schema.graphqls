@@ -70,6 +70,9 @@ type BrowseGalleryCard {
   scrubberRevision: Int64!
 }
 
+type CoserTimelineEntry { month: String! card: BrowseGalleryCard! }
+type CoserTimelineConnection { items: [CoserTimelineEntry!]! endCursor: String! hasNextPage: Boolean! }
+
 type GalleryPage {
   items: [BrowseGalleryCard!]!
   page: Int!
@@ -516,6 +519,7 @@ type Query {
   homeGalleries(page: Int!): HomeGalleryPage!
   browseGalleries(scope: BrowseScope!, page: Int!, sort: GallerySort!, collectionType: CollectionType): GalleryPage!
   timelineGalleries(scope: BrowseScope!, page: Int!, coserUUID: ID, date: TimelineDate! = SHOOT): GalleryPage!
+  coserTimeline(scope: BrowseScope!, coserUUID: ID!, date: TimelineDate! = SHOOT, first: Int! = 24, after: String): CoserTimelineConnection!
   galleryDetail(slug: String!, scope: BrowseScope! = ALL): GalleryDetail!
   galleryMemberIndex(setID: ID!): GalleryMemberIndex!
   relatedGalleries(setID: ID!, scope: BrowseScope! = ALL): [GalleryRecommendation!]!

@@ -21,8 +21,16 @@ RUN CGO_ENABLED=1 go build -trimpath -tags "cgm_web_embed cgm_galleryepic cgm_mo
     -o /out/cgm ./cmd/cgm
 
 FROM debian:bookworm-slim
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl dcraw ffmpeg tzdata \
+COPY docker/cgm/intel.sources /etc/apt/sources.list.d/cgm-intel.sources
+RUN set -eu; apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl dcraw ffmpeg tzdata vainfo libva-drm2 \
+    && if [ "$(dpkg --print-architecture)" = amd64 ]; then \
+         apt-get install -y --no-install-recommends intel-media-va-driver-non-free; \
+         test -s /usr/lib/x86_64-linux-gnu/dri/iHD_drv_video.so; \
+         ldd /usr/lib/x86_64-linux-gnu/dri/iHD_drv_video.so | tee /tmp/cgm-driver-dependencies; \
+         ! grep -q 'not found' /tmp/cgm-driver-dependencies; \
+       fi \
+    && ffmpeg -hide_banner -encoders 2>/dev/null | grep -q h264_vaapi \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 65532 cgm \
     && useradd --system --uid 65532 --gid 65532 --home-dir /nonexistent --shell /usr/sbin/nologin cgm \

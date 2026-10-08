@@ -201,6 +201,27 @@ docker compose -f docker/cgm/compose.yml build
 docker compose -f docker/cgm/compose.yml up -d
 ```
 
+### Docker Intel 核显加速
+
+Intel VAAPI 镜像支持正在本轮源码中完善；上面的已发布镜像标签不包含本轮新增驱动，需使用本轮源码构建或后续发布的镜像。amd64 镜像预装完整 iHD 驱动、FFmpeg 和 `vainfo`，宿主机仍需启用核显并提供正常的 `/dev/dri/renderD*` 设备。
+
+在宿主机查询目标设备的组 ID（不要照抄其他机器的数字）：
+
+```bash
+ls -l /dev/dri
+stat -c '%g' /dev/dri/renderD128
+```
+
+在已有部署目录的 `.env` 增加 `CGM_RENDER_GID=查询得到的数字`，多 GPU 时另设 `CGM_RENDER_DEVICE=/dev/dri/renderD129` 指定实际 Intel 设备。将[Intel 配置文件](docker/cgm/compose.intel.yml)保存为同目录的 `compose.intel.yml`，与原来的 `compose.yml` 一起使用：
+
+```bash
+docker compose -f compose.yml -f compose.intel.yml up -d cgm
+docker compose -f compose.yml -f compose.intel.yml exec cgm \
+  vainfo --display drm --device /dev/dri/renderD128
+```
+
+配置只增加设备访问及附加组，继续使用原部署的数据库、缓存和媒体挂载。容器内目标设备统一为 `/dev/dri/renderD128`；后台 Settings 检测通过后选择 VAAPI 或 AUTO 并保存。更新时仍须同时传入两个 Compose 文件。无需使用 `privileged` 或给设备放开所有用户权限。没有核显的机器使用基础模板即可。
+
 忘记密码可在容器终端执行 `cgm -config /etc/cgm/cgm.json -recovery-token`，再在登录页输入单次令牌。权限、挂载及安全边界见[安装手册](docs/INSTALLATION.md)。
 
 ## 数据安全要点

@@ -24,6 +24,7 @@ export default defineConfig(() => {
         "/about.json": proxy,
         "/resource": proxy,
         "/manage/coser-assets": proxy,
+        "/manage/video-hardware": proxy,
         "/maintenance/status": proxy,
         "/maintenance/path-mappings": proxy,
         "/maintenance/resume": proxy,

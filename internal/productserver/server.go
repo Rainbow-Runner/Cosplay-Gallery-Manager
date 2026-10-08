@@ -96,15 +96,18 @@ func (c Config) Validate() error {
 }
 
 type Server struct {
-	Config         Config
-	Database       *productdb.Database
-	Auth           *productauth.Service
-	Handler        http.Handler
-	CoserMetadata  *cosermetadata.Service
-	EntityMetadata *entitymetadata.Service
-	VideoTools     mediaprocessing.VideoToolchain
-	VideoHardware  *mediaprocessing.HardwareAccelerationMonitor
-	playback       *videoplayback.Manager
+	Config                   Config
+	Database                 *productdb.Database
+	Auth                     *productauth.Service
+	Handler                  http.Handler
+	CoserMetadata            *cosermetadata.Service
+	EntityMetadata           *entitymetadata.Service
+	VideoTools               mediaprocessing.VideoToolchain
+	VideoHardware            *mediaprocessing.HardwareAccelerationMonitor
+	hardwareProbeMu          sync.Mutex
+	hardwareProbeRunning     bool
+	hardwareProbeLastStarted time.Time
+	playback                 *videoplayback.Manager
 
 	handlerSwitch      *switchHandler
 	operationMu        sync.Mutex
@@ -175,13 +178,7 @@ func NewWithProviders(config Config, database *productdb.Database, auth *product
 	if err := server.ensurePlayback(); err != nil {
 		return nil, err
 	}
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
-		defer cancel()
-		status := mediaprocessing.ProbeHardwareAcceleration(ctx, tools.FFmpeg.Path)
-		hardware.Set(status)
-		slog.Info("CGM_VIDEO_HARDWARE_PROBE_COMPLETED", mediaprocessing.HardwareProbeLogFields(status)...)
-	}()
+	server.startHardwareProbe()
 	server.rebuildHandler()
 	return server, nil
 }
@@ -208,6 +205,7 @@ func (s *Server) rebuildHandler() {
 	setupOptions := s.setupOptions()
 	mux.Handle("/setup/status", auth.SetupStatusHandler(setupOptions))
 	mux.Handle("/setup/complete", sameOrigin(auth.CompleteSetupHandler(setupOptions)))
+	mux.Handle("/manage/video-hardware/probe", sameOrigin(auth.RequireSession(http.HandlerFunc(s.hardwareProbeHandler))))
 	mux.Handle("/graphql", sameOrigin(productapi.NewHandlerWithServices(database, auth.AuthorizeRequest, s, auth)))
 	mux.Handle("/manage/portable/packages", sameOrigin(s.portablePackagesHandler(portableTransferRoot())))
 	mux.Handle(coserAssetReviewPath, sameOrigin(s.coserAssetReviewHandler(database)))

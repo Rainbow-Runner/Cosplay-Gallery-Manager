@@ -10,7 +10,31 @@ export function ManageSettingsPage() {
   const [draft, setDraft] = useState<ManageRuntimeSettings | null>(null); const [message, setMessage] = useState("");
   const [visibleMetadataFields, setVisibleMetadataFields] = useState(readMediaMetadataVisibleFields);
   const [metadataMessage, setMetadataMessage] = useState("");
-  useEffect(() => { if (query.data) setDraft(query.data.manageRuntimeSettings); }, [query.data]);
+  const [probing, setProbing] = useState(false);
+  const [probeStartedAt, setProbeStartedAt] = useState("");
+  const [probeMessage, setProbeMessage] = useState("");
+  const savedSettings = query.data?.manageRuntimeSettings;
+  useEffect(() => { if (savedSettings) setDraft(savedSettings); }, [savedSettings]);
+  useEffect(() => {
+    if (!probing) return;
+    query.startPolling(1000);
+    const timer = window.setTimeout(() => { query.stopPolling(); setProbing(false); setProbeMessage("检测超时，请刷新结果 / Detection timed out; refresh results"); }, 35000);
+    return () => { window.clearTimeout(timer); query.stopPolling(); };
+  }, [probing, query.startPolling, query.stopPolling]);
+  const hardwareStatus = query.data?.manageVideoDependencyStatus;
+  useEffect(() => {
+    if (probing && hardwareStatus?.hardwareProbedAt && hardwareStatus.hardwareProbedAt !== probeStartedAt && hardwareStatus.hardwareProbeState !== "PROBING") {
+      setProbing(false); setProbeMessage("检测完成 / Detection completed");
+    }
+  }, [probing, probeStartedAt, hardwareStatus]);
+  async function reprobe() {
+    setProbeMessage(""); setProbeStartedAt(hardwareStatus?.hardwareProbedAt ?? ""); setProbing(true);
+    try {
+      const response = await fetch("/manage/video-hardware/probe", { method: "POST", credentials: "same-origin" });
+      if (!response.ok) throw new Error(response.status === 429 ? "检测进行中或处于30秒冷却期 / Detection running or within 30-second cooldown" : "无法启动检测 / Unable to start detection");
+      await query.refetch();
+    } catch (error) { setProbing(false); setProbeMessage(error instanceof Error ? error.message : "Detection failed"); }
+  }
   if (!draft) return <main className="manage-page"><p className="state-message">{query.error ? "Unable to load settings." : "Loading…"}</p></main>;
   const current = draft;
   const input = { ...draft } as Partial<ManageRuntimeSettings>; delete input.settingsRevision;
@@ -41,6 +65,7 @@ export function ManageSettingsPage() {
     <fieldset><legend>Related & random</legend><NumberField label="Related limit" value={draft.relatedLimit} min={1} max={24} change={(value) => number("relatedLimit", value)} /><NumberField label="Tag parent weight" value={draft.tagParentWeight} min={0} max={1} step={0.01} change={(value) => number("tagParentWeight", value)} /><NumberField label="Tag minimum score" value={draft.tagMinimumScore} min={0} max={1} step={0.01} change={(value) => number("tagMinimumScore", value)} /><NumberField label="Tag ancestor depth" value={draft.tagMaximumDepth} min={0} max={10} change={(value) => number("tagMaximumDepth", value)} /><NumberField label="Random items" value={draft.randomLimit} min={1} max={100} change={(value) => number("randomLimit", value)} /><NumberField label="Static quota" value={draft.randomStaticQuota} min={0} max={1} step={0.01} change={(value) => number("randomStaticQuota", value)} /><NumberField label="GIF quota" value={draft.randomGIFQuota} min={0} max={1} step={0.01} change={(value) => number("randomGIFQuota", value)} /><NumberField label="Video quota" value={draft.randomVideoQuota} min={0} max={1} step={0.01} change={(value) => number("randomVideoQuota", value)} /><NumberField label="Gallery repeat decay" value={draft.randomGalleryRepeatDecay} min={0} max={1} step={0.01} change={(value) => number("randomGalleryRepeatDecay", value)} /></fieldset>
     <fieldset className="settings-cache-status"><legend>Generated cache</legend><dl><dt>Location</dt><dd><code>{query.data?.manageCacheStorage.path ?? "Unavailable"}</code></dd><dt>Occupied space</dt><dd>{formatStorageBytes(query.data?.manageCacheStorage.byteSize ?? 0)}<small>{(query.data?.manageCacheStorage.byteSize ?? 0).toLocaleString()} bytes · {(query.data?.manageCacheStorage.fileCount ?? 0).toLocaleString()} files</small></dd><dt>Permanent base</dt><dd>{formatStorageBytes(query.data?.manageCacheStorage.baseByteSize ?? 0)}</dd><dt>Reclaimable</dt><dd>{formatStorageBytes(query.data?.manageCacheStorage.enhancedByteSize ?? 0)}</dd></dl><p>The location is read-only. CARD_480 and static posters form the permanent base; on-demand Lightbox images are reclaimable.</p></fieldset>
     <VideoDependencyPanel value={query.data?.manageVideoDependencyStatus} />
+    <div><button type="button" onClick={reprobe} disabled={probing || hardwareStatus?.hardwareProbeState === "PROBING"}>{probing ? "检测中… / Detecting…" : "重新检测硬件加速 / Detect hardware acceleration again"}</button>{probeMessage ? <p role="status">{probeMessage}</p> : null}<p>当前保存模式 / Saved mode: {savedSettings?.videoHardwareMode}。可用能力须通过实际转码检测；无可用后端时只能选择 SOFTWARE。Available modes require a successful runtime test.</p></div>
     <fieldset><legend>视频硬件加速 / Video hardware acceleration</legend><label>转码模式 / Transcode mode<select value={draft.videoHardwareMode} onChange={(event) => setDraft({ ...draft, videoHardwareMode: event.target.value as ManageRuntimeSettings["videoHardwareMode"], videoHardwareDevice: "" })}><option value="SOFTWARE">SOFTWARE</option><option value="AUTO" disabled={!hasHardwareBackend(query.data?.manageVideoDependencyStatus)}>AUTO</option><option value="NVENC" disabled={!hasHardwareBackend(query.data?.manageVideoDependencyStatus,"NVENC")}>NVENC</option><option value="VAAPI" disabled={!hasHardwareBackend(query.data?.manageVideoDependencyStatus,"VAAPI")}>VAAPI</option></select></label><label>设备 / Device<select value={draft.videoHardwareDevice} disabled={draft.videoHardwareMode === "SOFTWARE"} onChange={(event) => setDraft({ ...draft, videoHardwareDevice: event.target.value })}><option value="">自动选择 / Automatic</option>{availableHardwareDevices(query.data?.manageVideoDependencyStatus,draft.videoHardwareMode).map((device) => <option key={device} value={device}>{device}</option>)}</select></label><Check label="硬件技术失败时允许安全降级 / Allow safe fallback after a technical hardware failure" checked={draft.videoHardwareFallbackEnabled} change={(value) => toggle("videoHardwareFallbackEnabled",value)} /><p>受支持的8-bit H.264／HEVC渐进HLS和完整MP4代理可使用NVDEC＋CUDA＋NVENC或VAAPI。VAAPI启动探测会实际排空带重排帧的视频；完整设备缩放不安全时自动采用VAAPI解码／编码与CPU缩放的兼容管线。运行中仅技术故障可按完整VAAPI→兼容VAAPI→软件的有界顺序降级；鉴权、来源、revision、容量、磁盘和损坏输入不会触发降级。设置不会写入Gallery Manifest或可移植迁移包。</p></fieldset>
     <MetadataVisibilityPanel selected={visibleMetadataFields} toggle={toggleMetadata} save={saveMetadata} message={metadataMessage} />
     <fieldset><legend>存储与计划 / Storage & schedules</legend><NumberField label="可回收缓存上限（GiB）/ Reclaimable cache limit" value={bytesToGiB(draft.enhancedCacheMaximumBytes)} min={0.25} step={0.25} change={(value) => setDraft({ ...draft, enhancedCacheMaximumBytes: gibToBytes(value) })} /><NumberField label="最小可用字节 / Minimum free bytes" value={draft.minimumFreeBytes} min={0} change={(value) => number("minimumFreeBytes", value)} /><NumberField label="最小可用比例 / Minimum free ratio" value={draft.minimumFreePercent} min={0} max={1} step={0.01} change={(value) => number("minimumFreePercent", value)} /><Check label="启用自动扫描 / Enable automatic scans" checked={draft.automaticScanEnabled} change={(value) => toggle("automaticScanEnabled", value)} />{draft.automaticScanEnabled ? <><Check label="服务启动后扫描一次 / Scan once after service startup" checked={draft.automaticScanOnStartup} change={(value) => toggle("automaticScanOnStartup", value)} /><NumberField label="扫描周期（分钟）/ Scan interval (minutes)" value={draft.automaticScanIntervalMinutes} min={15} max={10080} step={15} change={(value) => number("automaticScanIntervalMinutes", value)} /><p>计划每分钟检查一次到期状态；多个进程或重启不会重复执行同一周期。最短15分钟，最长7天。Scheduled work checks once per minute and uses a persistent lease.</p></> : null}<Check label="每日数据库快照 / Daily database snapshot" checked={draft.dailyBackupEnabled} change={(value) => toggle("dailyBackupEnabled", value)} /><NumberField label="快照保留数量 / Daily snapshots retained" value={draft.dailyBackupRetention} min={1} max={365} change={(value) => number("dailyBackupRetention", value)} /><Check label="暂停所有自动计划 / Suspend all automatic schedules" checked={draft.automaticSchedulesSuspended} change={(value) => toggle("automaticSchedulesSuspended", value)} /></fieldset>
@@ -75,12 +100,25 @@ function VideoDependencyPanel({ value }: { value?: ManageVideoDependencyStatus }
     <dt>FFmpeg</dt><dd>{value ? tool(value.ffmpegAvailable,value.ffmpegSource,value.ffmpegVersion,value.ffmpegErrorCode) : "Checking…"}</dd>
     <dt>FFprobe</dt><dd>{value ? tool(value.ffprobeAvailable,value.ffprobeSource,value.ffprobeVersion,value.ffprobeErrorCode) : "Checking…"}</dd>
     <dt>Hardware probe</dt><dd><strong>{hardwareStateLabel(value?.hardwareProbeState ?? "PROBING")}</strong><small>{value?.hardwareProbedAt ? new Date(value.hardwareProbedAt).toLocaleString() : "Bounded background diagnostic"}</small></dd>
-    {(value?.hardwareBackends ?? []).map((backend) => <Fragment key={backend.backend}><dt>{backend.backend}</dt><dd><strong>{hardwareStateLabel(backend.state)}</strong><small>{[backend.device, backend.encoder, backend.scaleFilter, backend.decodeCodecs.join(" / ")].filter(Boolean).join(" · ") || backend.errorCode || "No runtime result"}</small>{backend.errorCode ? <small>{backend.errorCode}</small> : null}</dd></Fragment>)}
+    {(value?.hardwareBackends ?? []).map((backend) => <Fragment key={backend.backend}><dt>{backend.backend}</dt><dd><strong>{hardwareStateLabel(backend.state)}</strong><small>{[backend.device, backend.encoder, backend.scaleFilter, backend.decodeCodecs.join(" / ")].filter(Boolean).join(" · ") || backend.errorCode || "No runtime result"}</small>{backend.errorCode ? <small>{backend.errorCode}</small> : null}<p>{hardwareHelp(backend.state, backend.backend)}</p></dd></Fragment>)}
   </dl><p>Paths come from startup configuration or the local executable search. Hardware results combine compiled capabilities, device access and a bounded decode-scale-encode drain test. For VAAPI, <code>scale_vaapi</code> means the full device pipeline passed; <code>hwdownload+scale+hwupload</code> means CGM selected the compatible CPU-scale bridge after the full path failed. AVAILABLE only makes a tested execution path selectable; the saved transcode mode controls execution and SOFTWARE remains the default. This page does not download or modify media tools.</p></fieldset>;
 }
 
 function hardwareStateLabel(state: string) {
-  return ({ PROBING: "检测中 / Probing", COMPLETED: "检测完成 / Completed", AVAILABLE: "可用 / Available", RUNTIME_CIRCUIT_OPEN: "运行故障暂时熔断 / Temporarily suspended", NOT_COMPILED: "未编译 / Not compiled", DEVICE_MISSING: "设备缺失 / Device missing", PERMISSION_DENIED: "权限不足 / Permission denied", SMOKE_TEST_FAILED: "烟测失败 / Smoke test failed", FFMPEG_UNAVAILABLE: "FFmpeg 不可用 / FFmpeg unavailable" } as Record<string,string>)[state] ?? state;
+  return ({ PROBING: "检测中 / Probing", COMPLETED: "检测完成 / Completed", AVAILABLE: "可用 / Available", RUNTIME_CIRCUIT_OPEN: "运行故障暂时熔断 / Temporarily suspended", NOT_COMPILED: "未编译 / Not compiled", DEVICE_MISSING: "设备缺失 / Device missing", PERMISSION_DENIED: "权限不足 / Permission denied", DRIVER_UNAVAILABLE: "驱动不可用 / Driver unavailable", SMOKE_TEST_FAILED: "烟测失败 / Smoke test failed", FFMPEG_UNAVAILABLE: "FFmpeg 不可用 / FFmpeg unavailable" } as Record<string,string>)[state] ?? state;
+}
+
+export function hardwareHelp(state: string, backend: string) {
+  switch (state) {
+    case "DEVICE_MISSING": return backend === "NVENC" ? "未检测到可访问的 NVIDIA 设备；检查容器 GPU 配置 / No accessible NVIDIA device; check container GPU configuration." : "应用未检测到核显设备；这不代表宿主机没有核显。检查 /dev/dri 和 compose.intel.yml 设备映射 / No render device visible; check host /dev/dri and the Intel Compose overlay.";
+    case "PERMISSION_DENIED": return "设备访问权限不足；查询宿主机设备组 ID，并配置 group_add 后重建容器 / Check the host device group ID and recreate the container with group_add.";
+    case "DRIVER_UNAVAILABLE": return "设备存在，但用户态驱动加载失败；更新包含驱动的镜像并检查驱动兼容性 / Device found but driver failed to load; update the image and check driver compatibility.";
+    case "NOT_COMPILED": return "当前 FFmpeg 缺少所需硬件组件；更新支持硬件加速的镜像 / Required FFmpeg components are missing; update the image.";
+    case "SMOKE_TEST_FAILED": return "实际解码、缩放或编码测试失败；检查诊断码和容器驱动，继续使用软件模式 / Runtime transcode test failed; check diagnostic code and drivers.";
+    case "AVAILABLE": return backend === "QSV" ? "设备检测通过；当前 CGM 使用 VAAPI 提供 Intel 转码 / Device test passed; CGM currently uses VAAPI for Intel transcoding." : "实际转码检测通过，可选择此模式；保存设置后生效 / Runtime test passed; select and save this mode to enable it.";
+    case "RUNTIME_CIRCUIT_OPEN": return "近期转码失败，暂时使用回退路径；稍后重试 / Temporarily suspended after a runtime failure; retry later.";
+    default: return "检查 FFmpeg 与设备诊断结果 / Check FFmpeg and device diagnostics.";
+  }
 }
 
 function hasHardwareBackend(value?: ManageVideoDependencyStatus, backend?: string) { return (value?.hardwareBackends ?? []).some((item) => (item.state === "AVAILABLE" || item.state === "RUNTIME_CIRCUIT_OPEN") && (!backend || item.backend === backend)); }

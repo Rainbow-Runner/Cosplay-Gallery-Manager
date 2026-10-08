@@ -1,13 +1,21 @@
 # Cosplay Gallery Manager 开发备忘录
 
 > 状态：第一版产品与架构基线；0.1～0.7 主干功能已进入实现与联调
-> 最后更新：2026-08-15
+> 最后更新：2026-10-08
 > 原始代码基线：Stash `develop` / `c7d2fe4f97b99c6a2aac968ac8a2aad3adf5b800`  
 > 分支策略：独立产品，不考虑与 Stash 上游合并  
 > 工作名：Cosplay Gallery Manager；最终品牌名延期决定  
 > 许可证：GNU AGPLv3，保留 Stash 归属和对应源码提供义务
 
 ## 1. 文档地位
+
+### 2026-10-08 补充：Docker Intel 核显部署边界
+
+- amd64镜像内提供Intel iHD完整用户态驱动及vainfo；内核驱动、BIOS启用和设备节点仍由宿主机提供。容器不能自行映射宿主机设备或修复设备权限。
+- 基础Compose继续适用于无GPU部署；Intel用户叠加`docker/cgm/compose.intel.yml`，设置实际render节点和数字设备组ID。容器内统一为`/dev/dri/renderD128`，保留原媒体／状态／缓存卷，更新容器时必须继续使用两个Compose文件。不要改成privileged或全局放宽设备权限。
+- 模式默认SOFTWARE。只有实际解码、缩放、编码测试通过的后端才可选择；Intel执行使用VAAPI，QSV探测通过不代表已有QSV执行链路。AVAILABLE不自动修改用户保存模式，也不代表所有实际媒体格式受支持。
+- 所有者可从设置页再次探测；登录及同源POST、单探测槽、25秒有界执行、30秒冷却。仅更新诊断能力，不写配置，不重置未保存表单；设备映射／设备组变化仍须重建容器后再检测。可识别的驱动加载错误单列DRIVER_UNAVAILABLE，其余实际失败保留SMOKE_TEST_FAILED与诊断码。
+- README、安装手册与驱动许可说明同步。源码／验证镜像完成不等于Docker Hub发布或目标NAS验收；本轮不改变schema、正式部署或`Check_VAAPI.md`。
 
 本文档是当前第一版开发的有效规范，覆盖此前讨论中与其冲突的旧结论。实现、Schema、GraphQL、前端和测试均以本文档为准。
 

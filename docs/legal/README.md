@@ -19,3 +19,11 @@ clearly labelled and link only to the repository root.
 The application SBOM describes compiled Go and production web dependencies.
 Docker releases must also enable and publish a platform-specific BuildKit
 SBOM/attestation so Debian, FFmpeg and dcraw/LibRaw packages are covered.
+
+The amd64 Docker image also distributes Debian's
+`intel-media-va-driver-non-free` for full Intel VAAPI media shader support.
+Its Debian copyright and license notices remain installed under
+`/usr/share/doc/intel-media-va-driver-non-free/copyright`; it is a separate
+runtime driver, not part of the application's AGPL source. Include the driver
+and its dependencies in the container SBOM. ARM images do not install this
+x86-specific package.

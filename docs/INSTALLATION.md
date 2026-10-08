@@ -101,6 +101,37 @@ writeback is not needed, but it blocks Push. A custom Compose file must
 provide equivalent persistent mounts; Setup does not create a media library
 or start scanning.
 
+### Intel GPU acceleration
+
+The updated amd64 image includes the full Intel iHD VAAPI driver and `vainfo`.
+This source change is not yet in the previously published image tag. The host
+must supply its kernel GPU driver and a working render node. Containers cannot
+grant themselves access to host devices.
+
+Use `stat -c '%g' /dev/dri/renderD128` on the host to get the device group ID.
+Set `CGM_RENDER_GID` to that numeric value in the existing deployment `.env`.
+Optionally set `CGM_RENDER_DEVICE` to another Intel render node. Copy
+`docker/cgm/compose.intel.yml` beside your existing Compose file, then run:
+
+```bash
+docker compose -f compose.yml -f compose.intel.yml up -d cgm
+docker compose -f compose.yml -f compose.intel.yml exec cgm vainfo --display drm --device /dev/dri/renderD128
+```
+
+For the repository's source-build template, use
+`-f docker/cgm/compose.yml -f docker/cgm/compose.intel.yml` instead. Keep the
+same deployment directory and both file arguments when updating. The overlay
+changes only device access and supplementary groups, preserving the original
+volumes and non-root user. Select VAAPI or AUTO in Settings after the runtime
+test succeeds, then save. The device appears inside the container as
+`/dev/dri/renderD128`, even if another host node was selected.
+
+Settings explains device visibility, group permissions, missing drivers and
+runtime test failures separately. The owner can request another bounded probe;
+concurrent probes and requests within a 30-second cooldown are rejected.
+Detection does not change the saved mode. Without an exposed device, use the
+base Compose template and SOFTWARE mode.
+
 Place portable migration `.zip` packages in `docker/cgm/transfer` on the host
 (`./transfer` relative to the Compose file). The container sees these files in
 `/transfer` read-only. Refresh the migration workbench, select a package, and

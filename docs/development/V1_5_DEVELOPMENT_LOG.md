@@ -5,6 +5,14 @@
 > 当前分支：`agent/cgm-migration-handoff-20260726`
 > 开发版本：`1.5.0-dev`
 
+## 2026-10-08 Docker Intel 硬件加速优化
+
+- 最终补验：定向Race、两包Vet及Compose组合检查通过；FFmpeg内部有界详细日志补齐libva驱动故障签名，负返回值分类避免正常驱动初始化后其他错误误报。最终镜像实际应用分别报告AVAILABLE与模拟缺驱动DRIVER_UNAVAILABLE；本轮临时容器已清理，仅保留本地验证镜像。
+- 按镜像驱动、可选设备映射、设置页诊断、重新检测顺序完成源码。amd64使用Debian完整iHD驱动，新增vainfo、驱动依赖和h264_vaapi构建门禁；可选Compose只映射render节点并添加数字设备组，基础软件部署不变。
+- 新增登录／同源POST重新检测端点，与启动探测共享执行锁、25秒超时和30秒冷却；页面轮询有35秒上限，提示设备、权限、驱动、编译能力和烟测故障，显示保存模式，刷新诊断不丢失未保存设置。
+- 后端两个包测试通过；Web TypeScript、全量43文件196项测试及2559模块生产构建通过（保留既有大chunk提示），追加页面重新检测回归通过。验证镜像`cosplay-gallery-manager:intel-validation`构建成功，非root／只读容器Intel VAAPI实测AVAILABLE且H.264编码成功；缺少设备组、未映射设备分别准确报告PERMISSION_DENIED、DEVICE_MISSING。
+- 使用临时空状态／缓存文件系统，未挂载正式业务数据。验证镜像来自未提交源码，注入旧HEAD仅供本地验证，不能作为发布镜像；当前未提交、部署、发布Docker Hub，既有镜像标签不含本轮改动。目标NAS与arm64尚待实机验收，QSV保持仅诊断。本轮与`Check_VAAPI.md`无关。
+
 ## 2026-10-07 最新分支Docker Hub镜像更新
 
 - 发布源固定为分支`agent/cgm-migration-handoff-20260726`的清洁提交`2c64fe0a0a1f6aad957b43fee9f56eddd2524398`（`Record gallery inference deployment`）；从独立克隆构建，未跟踪的`Check_VAAPI.md`未修改、未复制到上下文或进入镜像。使用项目`docker/cgm/Dockerfile`、版本`1.5.0-dev`和正式`cgm_web_embed cgm_galleryepic cgm_moegirl`标签生成`linux/amd64`镜像，Node前端生产构建与Go后端编译通过。构建时Docker Hub下载当前Node／Debian基础层极慢，最终仍以Dockerfile解析到的官方当前摘要完成，没有回退或修改仓库Dockerfile。

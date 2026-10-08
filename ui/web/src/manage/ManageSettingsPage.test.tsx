@@ -3,12 +3,12 @@ import "@testing-library/jest-dom/vitest";
 import type { MockedResponse } from "@apollo/client/testing";
 import { MockedProvider } from "@apollo/client/testing/react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MANAGE_RUNTIME_SETTINGS } from "../api/manage";
-import { bytesToGiB, formatStorageBytes, gibToBytes, ManageSettingsPage } from "./ManageSettingsPage";
+import { bytesToGiB, formatStorageBytes, gibToBytes, hardwareHelp, ManageSettingsPage } from "./ManageSettingsPage";
 
-afterEach(() => { cleanup(); window.localStorage?.clear(); });
+afterEach(() => { cleanup(); window.localStorage?.clear(); vi.unstubAllGlobals(); });
 
 const runtimeSettings = {
   settingsRevision: 1, homeScope: "LIST", galleryCardScrubberEnabled: true, galleryDetailMediaFilterEnabled: true,
@@ -24,6 +24,12 @@ const runtimeSettings = {
 };
 
 describe("ManageSettingsPage cache status", () => {
+  it("explains Docker device visibility, group permissions and driver failures separately", () => {
+    expect(hardwareHelp("DEVICE_MISSING", "VAAPI")).toContain("这不代表宿主机没有核显");
+    expect(hardwareHelp("PERMISSION_DENIED", "VAAPI")).toContain("group_add");
+    expect(hardwareHelp("DRIVER_UNAVAILABLE", "VAAPI")).toContain("驱动加载失败");
+    expect(hardwareHelp("SMOKE_TEST_FAILED", "VAAPI")).toContain("实际解码");
+  });
   it("shows the cache path and occupied space as read-only deployment information", async () => {
     const mocks: MockedResponse[] = [{
       request: { query: MANAGE_RUNTIME_SETTINGS },
@@ -41,7 +47,12 @@ describe("ManageSettingsPage cache status", () => {
 		},
       } },
     }];
-    render(<MockedProvider mocks={mocks}><ManageSettingsPage /></MockedProvider>);
+    const refreshed = structuredClone(mocks[0]);
+    const refreshedResult = refreshed.result as { data: { manageVideoDependencyStatus: { hardwareProbedAt: string } } };
+    refreshedResult.data.manageVideoDependencyStatus.hardwareProbedAt = "2026-10-08T02:03:04Z";
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 202 });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<MockedProvider mocks={[...mocks, refreshed]}><ManageSettingsPage /></MockedProvider>);
 
     expect(await screen.findByText("/var/cache/cgm")).toBeInTheDocument();
     expect(screen.getByText("149 MiB")).toBeInTheDocument();
@@ -60,6 +71,10 @@ describe("ManageSettingsPage cache status", () => {
 		fireEvent.change(screen.getByLabelText("转码模式 / Transcode mode"), { target: { value: "NVENC" } });
 		expect(screen.getByLabelText("设备 / Device")).toBeEnabled();
 		expect(screen.getByRole("option", { name: "nvidia0" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "重新检测硬件加速 / Detect hardware acceleration again" }));
+    expect(await screen.findByText("检测完成 / Detection completed")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith("/manage/video-hardware/probe", { method: "POST", credentials: "same-origin" });
+    expect(screen.getByLabelText("转码模式 / Transcode mode")).toHaveValue("NVENC");
     expect(screen.getByLabelText("作者 / Author")).toBeChecked();
     expect(screen.getByLabelText("GPS 位置元数据")).not.toBeChecked();
     expect(screen.queryByDisplayValue("/var/cache/cgm")).not.toBeInTheDocument();

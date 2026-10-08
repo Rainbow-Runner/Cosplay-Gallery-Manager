@@ -48,6 +48,22 @@ func completeHardwareCapabilities() map[string]string {
 	}
 }
 
+func TestHardwareSmokeFailureSeparatesDriverLoadFromCodecFailure(t *testing.T) {
+	for _, item := range []struct{ output, state string }{
+		{"libva error: failed to open iHD driver", HardwareProbeDriverFailed},
+		{"Failed to load driver iHD", HardwareProbeDriverFailed},
+		{"libva: va_openDriver() returns -1", HardwareProbeDriverFailed},
+		{"libva: va_openDriver() returns 0; corrupt media", HardwareProbeSmokeFailed},
+		{"Permission denied", HardwareProbePermissionDenied},
+		{"Invalid data found when processing input", HardwareProbeSmokeFailed},
+	} {
+		status := smokeFailure(HardwareBackendStatus{Backend: "VAAPI"}, &hardwareCommandError{err: errors.New("exit 1"), output: item.output}, "VAAPI_DECODE_SMOKE_TEST_FAILED")
+		if status.State != item.state {
+			t.Fatalf("%s: got %s, want %s", item.output, status.State, item.state)
+		}
+	}
+}
+
 func TestProbeHardwareAccelerationReportsRuntimeAvailability(t *testing.T) {
 	runner := &fakeHardwareProbeRunner{outputs: completeHardwareCapabilities(), errors: map[string]error{}}
 	devices := func(backend string) []hardwareDevice {

@@ -21,6 +21,7 @@ const (
 	HardwareProbeNotCompiled      = "NOT_COMPILED"
 	HardwareProbeDeviceMissing    = "DEVICE_MISSING"
 	HardwareProbePermissionDenied = "PERMISSION_DENIED"
+	HardwareProbeDriverFailed     = "DRIVER_UNAVAILABLE"
 	HardwareProbeSmokeFailed      = "SMOKE_TEST_FAILED"
 	HardwareProbeFFmpegMissing    = "FFMPEG_UNAVAILABLE"
 	VAAPIFilterFull               = "scale_vaapi"
@@ -285,6 +286,9 @@ func runVAAPIProbePipelines(ctx context.Context, executable string, runner hardw
 	}
 	for _, path := range paths {
 		arguments := []string{"-hide_banner", "-v", "error", "-init_hw_device", "vaapi=va:" + device.Path, "-filter_hw_device", "va", "-hwaccel", "vaapi", "-hwaccel_device", "va", "-hwaccel_output_format", "vaapi", "-i", path, "-an", "-vf", videoFilter, "-c:v", "h264_vaapi", "-f", "null", "-"}
+		// libva driver-load diagnostics are only emitted at verbose level.
+		// The runner still caps stderr at 64 KiB and never exposes it to clients.
+		arguments[2] = "verbose"
 		if _, err := runner.Output(ctx, executable, arguments...); err != nil {
 			return err
 		}
@@ -304,6 +308,7 @@ func probeQSV(ctx context.Context, executable string, runner hardwareProbeRunner
 	}
 	status.Device = device.ID
 	arguments := []string{"-hide_banner", "-v", "error", "-init_hw_device", "qsv=hw:" + device.Path, "-filter_hw_device", "hw", "-f", "lavfi", "-i", "color=c=black:s=64x64:r=1", "-frames:v", "1", "-an", "-vf", "format=nv12,hwupload=extra_hw_frames=16,scale_qsv=64:64", "-c:v", status.Encoder, "-f", "null", "-"}
+	arguments[2] = "verbose"
 	if _, err := runner.Output(ctx, executable, arguments...); err != nil {
 		return smokeFailure(status, err, "QSV_SMOKE_TEST_FAILED")
 	}
@@ -321,6 +326,15 @@ func smokeFailure(status HardwareBackendStatus, err error, code string) Hardware
 	if errors.As(err, &commandError) && strings.Contains(strings.ToLower(commandError.output), "permission denied") {
 		status.State, status.ErrorCode = HardwareProbePermissionDenied, hardwareDeviceError(status.Backend, HardwareProbePermissionDenied)
 		return status
+	}
+	if errors.As(err, &commandError) {
+		output := strings.ToLower(commandError.output)
+		for _, marker := range []string{"failed to open", "failed to load", "va_opendriver() returns -"} {
+			if strings.Contains(output, strings.ToLower(marker)) && strings.Contains(output, "driver") {
+				status.State, status.ErrorCode = HardwareProbeDriverFailed, status.Backend+"_DRIVER_UNAVAILABLE"
+				return status
+			}
+		}
 	}
 	status.State, status.ErrorCode = HardwareProbeSmokeFailed, code
 	return status

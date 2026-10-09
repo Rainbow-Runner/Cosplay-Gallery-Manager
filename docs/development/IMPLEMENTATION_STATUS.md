@@ -4,6 +4,14 @@
 > 状态：进行中
 > 更新日期：2026-10-09
 
+## 2026-10-09 名称匹配优化提交、本机部署及Docker Hub发布
+
+- 功能提交`27b848633a1fae76ad77c4eb87109ede875048ca`包含标签／词界／原文重叠匹配、Tag软边界、多Coser角色归属保护及1170条业务审计。正式三标签productdb／productapi／productserver／Web嵌入／CLI回归、静态检查及Web生产构建通过；干净源码新增定向回归通过。
+- 干净隔离源码构建，原生程序VCS为功能提交且`modified=false`，SHA-256`d0d56be2f0703bad7d1c394ab9193ab741308e8d275d5e2322144bc9075adc40`。停服一致备份位于0700目录`/home/rainbowrunner/cos/bk/cgm-pre-names-27b8486-Hq8fo9`，包含旧程序、数据库、配置、服务单元及外部／state Coser资源；数据库备份SHA-256`bb661b51d5b3a0406f220128f20442de3ff160d490bfa1b0e5db9a63f436404e`，精确源码包SHA-256`164671a1ce7c67e5384d4ac7d6c3308a7c1e202d46eadc653c8840772d2a67e0`已保留于备份目录。
+- 本机已原子部署，Health／Ready204、active/running、NRestarts=0，warning以上日志为空。数据库完整性ok，Coser／Work／Character／Tag／Gallery／Source／Item计数`136/108/697/23/10/10/780`不变，配置／Coser资源不变，首页与构建逐字节一致。没有运行正式库自动化或改写历史关联。
+- Docker Hub已推送`rainbowrunner2015/cosplay-gallery-manager:sha-27b848633a1fae76ad77c4eb87109ede875048ca`，linux/amd64，OCI索引摘要`sha256:2950a3f5b2db20e2d0dcd995c084415db274292a6b07e53772ba4e8094f379ab`，应用清单`sha256:df407ab4b93158ab20b13679d15ae4eb714e12a6535c894eacb22f3063c20e2b`。发布前隔离四挂载非root／只读容器验证版本、首页、NAS IP无门票初始化、未登录401／登录API、跨Origin403及重启初始化持久化通过；测试容器和4个测试卷已清理。
+- README／安装手册同步新SHA标签；不更新latest、GHCR或GitHub远端源码。Check_VAAPI.md及用户截图目录未变。审计中单字符D／D.VA潜在误命中和Eve／尼尔上下文冲突仍为已记录待复核项，不声称解决。
+
 ## 2026-10-09 GalleryData新规则全量只读审计
 
 - 正式库在线一致副本完整性ok，SHA-256`80e0ef92cdc0505c146c11d898c2c018aa48bf8fa889af68d61294124afb0606`；136／108／697实体及23个Tag。直接调用当前生产扫描／管理页匹配规则完成1170条名称审计，无正式库写入或Gallery创建／激活。

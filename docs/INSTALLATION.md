@@ -104,7 +104,7 @@ or start scanning.
 ### Intel GPU acceleration
 
 The updated amd64 image includes the full Intel iHD VAAPI driver and `vainfo`.
-Use the published `sha-5d7f4d60f972e33366b7537a41b3cbb09346477c` image or a newer verified release. The host
+Use the published `sha-27b848633a1fae76ad77c4eb87109ede875048ca` image or a newer verified release. The host
 must supply its kernel GPU driver and a working render node. Containers cannot
 grant themselves access to host devices.
 

@@ -1,11 +1,100 @@
 package productdb
 
 import (
+	"context"
 	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 )
+
+type entityNameSpan struct{ start, end, strength int }
+
+// Match complete catalog names in source text; never tokenize catalog names.
+func entityNameSpans(text, name string, tags []string) []entityNameSpan {
+	if name == "" {
+		return nil
+	}
+	var result []entityNameSpan
+	for offset := 0; offset < len(text); {
+		i := strings.Index(text[offset:], name)
+		if i < 0 {
+			break
+		}
+		start, end := offset+i, offset+i+len(name)
+		left := start == 0 || !isEntityWordRune(lastRune(text[:start]))
+		right := end == len(text) || !isEntityWordRune(firstRune(text[end:]))
+		strength := entityMatchNone
+		if left && right {
+			strength = entityMatchStrong
+		} else if containsHanRune(name) {
+			strength = entityMatchWeak
+			if (left || entityTagSuffix(text[:start], tags)) && (right || entityTagPrefix(text[end:], tags)) {
+				strength = entityMatchStrong
+			}
+		}
+		if isDecimalEntityToken(name) && decimalCharacterTokenMatch(text, name) != entityMatchStrong {
+			strength = entityMatchNone
+		}
+		if strength != entityMatchNone {
+			result = append(result, entityNameSpan{start, end, strength})
+		}
+		offset = end
+	}
+	return result
+}
+
+func entityTagPrefix(text string, tags []string) bool {
+	if text == "" || !isEntityWordRune(firstRune(text)) {
+		return true
+	}
+	for _, tag := range tags {
+		if strings.HasPrefix(text, tag) && entityTagPrefix(text[len(tag):], tags) {
+			return true
+		}
+	}
+	return false
+}
+
+func entityTagSuffix(text string, tags []string) bool {
+	if text == "" || !isEntityWordRune(lastRune(text)) {
+		return true
+	}
+	for _, tag := range tags {
+		if strings.HasSuffix(text, tag) && entityTagSuffix(text[:len(text)-len(tag)], tags) {
+			return true
+		}
+	}
+	return false
+}
+
+func entityDescriptionTags(ctx context.Context, db discoveryQueryer) ([]string, error) {
+	rows, err := db.QueryContext(ctx, `SELECT name FROM tags UNION SELECT alias FROM tag_aliases`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var tags []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		if key := normalizedKey(name); key != "" {
+			tags = append(tags, key)
+		}
+	}
+	return tags, rows.Err()
+}
+
+func entitySpanDominated(span entityNameSpan, others []entityNameSpan) bool {
+	for _, other := range others {
+		if other.start <= span.start && other.end >= span.end && other.end-other.start > span.end-span.start && other.strength >= span.strength {
+			return true
+		}
+	}
+	return false
+}
 
 var (
 	// Sequence markers and media summaries are presentation metadata, not

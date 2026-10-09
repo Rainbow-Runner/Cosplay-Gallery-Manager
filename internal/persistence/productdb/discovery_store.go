@@ -512,7 +512,8 @@ func validateMarkerTitle(value string) (string, error) {
 }
 
 // archiveEntitySuggestions uses only the archive's external library path and
-// filename. Exact tokens produce pending suggestions, never relations. Identity
+// filename. Complete names with explicit or catalog-tag boundaries produce
+// pending suggestions, never relations. Identity
 // ambiguity is resolved separately against UUIDs before automatic acceptance.
 func archiveEntitySuggestions(ctx context.Context, db discoveryQueryer, libraryRoot, archivePath string) ([]discovery.Suggestion, error) {
 	relative, err := filepath.Rel(libraryRoot, archivePath)
@@ -543,7 +544,16 @@ func archiveEntitySuggestions(ctx context.Context, db discoveryQueryer, libraryR
 	if len(tokens) == 0 {
 		return nil, nil
 	}
-	type entity struct{ kind, name string }
+	tags, err := entityDescriptionTags(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+	text := normalizedKey(entityInferenceText(strings.Join(parts, " / ")))
+	type entity struct {
+		kind, name string
+		spans      []entityNameSpan
+	}
+	var candidates []entity
 	rows, err := db.QueryContext(ctx, `
 		SELECT 'COSER', name FROM cosers
 		UNION ALL SELECT 'COSER', alias FROM coser_aliases
@@ -566,9 +576,35 @@ func archiveEntitySuggestions(ctx context.Context, db discoveryQueryer, libraryR
 		if kind == "COSER" {
 			available = coserTokens
 		}
-		if _, ok := available[key]; !ok || key == "" {
+		spans := entityNameSpans(text, key, tags)
+		if _, exact := available[key]; exact && len(spans) == 0 {
+			spans = append(spans, entityNameSpan{-1, -1, entityMatchStrong})
+		}
+		if len(spans) == 0 {
 			continue
 		}
+		candidates = append(candidates, entity{kind, name, spans})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for _, candidate := range candidates {
+		var others []entityNameSpan
+		for _, other := range candidates {
+			if other.kind == candidate.kind {
+				others = append(others, other.spans...)
+			}
+		}
+		accept := false
+		for _, span := range candidate.spans {
+			if span.strength == entityMatchStrong && !entitySpanDominated(span, others) {
+				accept = true
+			}
+		}
+		if !accept {
+			continue
+		}
+		kind, name := candidate.kind, candidate.name
 		if matched[kind] == nil {
 			matched[kind] = map[string]struct{}{}
 		}
@@ -600,11 +636,9 @@ func archiveEntitySuggestions(ctx context.Context, db discoveryQueryer, libraryR
 	return result, nil
 }
 
-// archiveEntityNameTokens expands only explicit presentation separators and
-// bracket boundaries. It does not split ordinary whitespace or use substring
-// matching, so automatic acceptance remains exact and conservative while
-// common names such as "Coser - Character [100P]" become independently
-// matchable.
+// archiveEntityNameTokens preserves complete names while expanding explicit
+// separators, hashtags and brackets. Ordinary whitespace is handled by the
+// complete-name span matcher, not by tokenizing catalog names.
 func archiveEntityNameTokens(value string) []string {
 	value = entityInferenceText(value)
 	segments := []string{value}
@@ -649,7 +683,7 @@ func archiveEntityNameTokens(value string) []string {
 	result := make([]string, 0, len(segments)*2)
 	seen := map[string]struct{}{}
 	for _, segment := range segments {
-		expanded := strings.NewReplacer(" - ", "\x00", " – ", "\x00", " — ", "\x00", " | ", "\x00", " ｜ ", "\x00").Replace(segment)
+		expanded := strings.NewReplacer(" - ", "\x00", " – ", "\x00", " — ", "\x00", " | ", "\x00", " ｜ ", "\x00", "#", "\x00", "＃", "\x00").Replace(segment)
 		for _, token := range strings.Split(expanded, "\x00") {
 			token = strings.TrimSpace(token)
 			if token == "" {

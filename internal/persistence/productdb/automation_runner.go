@@ -436,6 +436,10 @@ func (s *AutomationStore) acceptDeterminateIdentities(ctx context.Context, value
 		if item.kind != "CHARACTER" {
 			continue
 		}
+		// Knowing the characters does not identify their owners in a multi-Coser set.
+		if len(cosers) != 1 {
+			continue
+		}
 		matches, err := exactEntityUUIDs(ctx, tx, "characters", "character_aliases", "character_uuid", item.value, "")
 		if err != nil {
 			return err

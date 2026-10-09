@@ -67,14 +67,14 @@ func TestAutomationAcceptsMultipleDeterminateEntitiesAndPreservesTags(t *testing
 		t.Fatalf("credit order = %s, %s", first, second)
 	}
 	var count int
-	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_cast role JOIN gallery_credits credit ON credit.id=role.gallery_credit_id WHERE role.gallery_id=? AND credit.coser_uuid=? AND role.character_uuid IN (?,?)`, value.ID, coserB.UUID, charA.UUID, charB.UUID).Scan(&count); err != nil || count != 2 {
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM gallery_cast role JOIN gallery_credits credit ON credit.id=role.gallery_credit_id WHERE role.gallery_id=? AND credit.coser_uuid=? AND role.character_uuid IN (?,?)`, value.ID, coserB.UUID, charA.UUID, charB.UUID).Scan(&count); err != nil || count != 0 {
 		t.Fatalf("first coser casts = %d: %v", count, err)
 	}
 	for _, query := range []string{`SELECT COUNT(*) FROM gallery_tags WHERE gallery_id=?`, `SELECT COUNT(*) FROM gallery_identity_suggestions WHERE gallery_id=? AND status='PENDING'`} {
 		if err := db.QueryRowContext(ctx, query, value.ID).Scan(&count); err != nil {
 			t.Fatal(err)
 		}
-		want := 0
+		want := 3 // Character ownership is unknown; retain all role suggestions for review.
 		if query == `SELECT COUNT(*) FROM gallery_tags WHERE gallery_id=?` {
 			want = 1
 		}

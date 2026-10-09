@@ -281,6 +281,7 @@ type folderEntityToken struct {
 	UUID, Name, Token, WorkUUID, WorkName string
 	tokenKey                              string
 	matchStrength                         int
+	spans                                 []entityNameSpan
 }
 
 func (s *ManageStore) sourceEntityMatches(ctx context.Context, labels []string) ([]manage.GalleryFolderMatch, error) {
@@ -339,6 +340,10 @@ func (s *ManageStore) matchFolderEntityKind(
 	query string,
 	allowedWorkUUIDs map[string]struct{},
 ) ([]manage.GalleryFolderMatch, error) {
+	tags, err := entityDescriptionTags(ctx, s.db)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -357,16 +362,24 @@ func (s *ManageStore) matchFolderEntityKind(
 		}
 		token.tokenKey = normalizedKey(token.Token)
 		strength := entityMatchNone
+		base := 0
 		for _, key := range folderKeys {
 			if token.tokenKey == "" {
 				continue
 			}
 			candidateStrength := entityMatchNone
-			if kind == "CHARACTER" {
-				candidateStrength = characterTokenMatch(key, token.tokenKey)
-			} else if strings.Contains(key, token.tokenKey) && (len([]rune(token.tokenKey)) >= 2 || key == token.tokenKey) {
-				candidateStrength = entityMatchStrong
+			for _, span := range entityNameSpans(key, token.tokenKey, tags) {
+				if len([]rune(token.tokenKey)) < 2 && key != token.tokenKey {
+					continue
+				}
+				if span.strength > candidateStrength {
+					candidateStrength = span.strength
+				}
+				span.start += base
+				span.end += base
+				token.spans = append(token.spans, span)
 			}
+			base += len(key) + 1
 			if candidateStrength > strength {
 				strength = candidateStrength
 			}
@@ -401,31 +414,18 @@ func (s *ManageStore) matchFolderEntityKind(
 		tokens = append(tokens, token)
 	}
 	result := make([]manage.GalleryFolderMatch, 0, len(tokens))
-	hasStrongCharacterMatch := false
-	if kind == "CHARACTER" {
-		for _, token := range tokens {
-			if token.matchStrength == entityMatchStrong {
-				hasStrongCharacterMatch = true
-				break
+	for _, token := range tokens {
+		var others []entityNameSpan
+		for _, other := range tokens {
+			others = append(others, other.spans...)
+		}
+		keep := false
+		for _, span := range token.spans {
+			if !entitySpanDominated(span, others) {
+				keep = true
 			}
 		}
-	}
-	for index, token := range tokens {
-		if hasStrongCharacterMatch && token.matchStrength == entityMatchWeak {
-			continue
-		}
-		suppressed := false
-		for otherIndex, other := range tokens {
-			if index == otherIndex || other.matchStrength < token.matchStrength ||
-				len([]rune(other.tokenKey)) <= len([]rune(token.tokenKey)) {
-				continue
-			}
-			if strings.Contains(other.tokenKey, token.tokenKey) {
-				suppressed = true
-				break
-			}
-		}
-		if suppressed {
+		if !keep {
 			continue
 		}
 		result = append(result, manage.GalleryFolderMatch{

@@ -4,6 +4,13 @@
 > 状态：进行中
 > 更新日期：2026-10-10
 
+## 2026-10-10 Docker双资料源修复提交与发布验证
+
+- 修复提交`a21c8836d08432fa72c0aa5192cde0dd26afad8e`已推送GitHub产品分支`agent/cgm-migration-handoff-20260726`，包含Docker双开关、README说明及配置／认证回归；之前本地保留的名称推测和发布记录也随快进推送同步。提交带`[skip ci]`，不触发GitHub镜像发布，不强推、不改默认分支。
+- 从独立干净提交构建linux/amd64生产镜像；源码归档SHA-256`3ef89b3d255861904a1b2ffcfc041b764b01e2d0a9cc5c1458e52fb563b00c30`。正式三标签productserver／CLI回归、干净源码双开关定向回归及Web生产构建通过。
+- 新镜像的隔离四卷、非root65532／只读容器确认内置GalleryEpic和萌娘百科资料源均默认可用，已登录资料源接口200、未登录401；NAS IP无门票初始化、跨Origin403、首页逐字节比对及重启初始化持久化通过。测试未查询外站或写正式业务库；临时容器和4卷已清理。本轮不部署／重启宿主机原生服务。
+- Docker Hub已推送`rainbowrunner2015/cosplay-gallery-manager:sha-a21c8836d08432fa72c0aa5192cde0dd26afad8e`（linux/amd64）；远端OCI索引摘要`sha256:bed24b4e6fc9cd5dab39db52e2baa592a84aa03121660cfee03476c0e1b6aa29`，应用清单`sha256:fd34df0a3fac5721249315a137bbefdb1ca73c5357afcb54f56a8bfcc72e8db7`，与本机构建一致。README／安装手册同步新标签并随发布记录推送GitHub产品分支；旧SHA镜像、latest／GHCR、自定义挂载配置及Check_VAAPI.md未变。
+
 ## 2026-10-10 Docker网络资料双开关配置修复
 
 - Docker随镜像提供的`cgm.json`显式设置`metadata_scraping_enabled=true`和`entity_metadata_scraping_enabled=true`，同时恢复Coser网络资料／头像／Banner入口和Work／Character网络名称导入入口。原生省略配置时仍默认关闭，不自动修改用户配置或正式库。

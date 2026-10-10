@@ -2,7 +2,13 @@
 
 > 当前里程碑：1.5 本机业务迭代与可诊断性增强
 > 状态：进行中
-> 更新日期：2026-10-09
+> 更新日期：2026-10-10
+
+## 2026-10-10 Docker网络资料双开关配置修复
+
+- Docker随镜像提供的`cgm.json`显式设置`metadata_scraping_enabled=true`和`entity_metadata_scraping_enabled=true`，同时恢复Coser网络资料／头像／Banner入口和Work／Character网络名称导入入口。原生省略配置时仍默认关闭，不自动修改用户配置或正式库。
+- 新增读取真实Docker模板的回归测试，验证两项开关、DOCKER环境、两类已登录资料源接口200且有候选资料源，未登录仍401；沿用显式禁用404和拔除资料源空列表的回归。无外站联网请求，不放宽主动操作／认证门禁。
+- README／安装手册说明Docker默认开启、原生默认关闭、自定义配置挂载覆盖及旧镜像需要重新发布的区别。定向配置／门禁测试、正式三构建标签下productserver／CLI回归、productserver的go vet、模板JSON校验及git diff --check通过。本轮尚未提交、部署或发布Docker Hub，旧SHA镜像保持不变；Check_VAAPI.md无关且未修改。
 
 ## 2026-10-09 名称匹配优化提交、本机部署及Docker Hub发布
 

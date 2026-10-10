@@ -6,5 +6,7 @@
   "ffprobe_path": "/usr/bin/ffprobe",
   "libraw_path": "/usr/bin/dcraw",
   "worker_count": 2,
+  "metadata_scraping_enabled": true,
+  "entity_metadata_scraping_enabled": true,
   "runtime_environment": "DOCKER"
 }

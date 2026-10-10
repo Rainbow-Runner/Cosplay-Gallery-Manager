@@ -57,7 +57,12 @@ incomplete, the first client that finishes the wizard creates the Owner
 password. Setup closes immediately after that atomic operation.
 
 `metadata_scraping_enabled` and `entity_metadata_scraping_enabled` both default
-to `false`. The first controls Coser profile imports; the second controls Work
+to `false` when omitted from a native configuration. The bundled Docker configuration
+explicitly sets both to `true` so both editor tools are available after setup.
+A custom configuration mount replaces the bundled file: preserve both `true`
+values if these tools are wanted. Existing published images require a new image
+release (or a custom configuration); source changes alone do not update them.
+The first controls Coser profile imports; the second controls Work
 and Character name imports. When enabled, only an authenticated owner's
 explicit action in the corresponding editor may contact a provider compiled
 into that build. Browse, source scans, startup, and scheduled jobs remain

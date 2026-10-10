@@ -1,0 +1,60 @@
+name: CGM Nightly Gates
+
+on:
+  schedule:
+    - cron: "23 18 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: cgm-nightly
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  performance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 1.25.12
+          cache: true
+      - name: Run one-million-item four-core gate
+        run: CGM_GO="$(command -v go)" CGM_PERF_GOMAXPROCS=4 scripts/test-cgm-performance-gate.sh
+
+  browser-engines:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 1.25.12
+          cache: true
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+        with:
+          package_json_file: ui/web/package.json
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ui/web/pnpm-lock.yaml
+      - name: Install application and browser
+        working-directory: ui/web
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm run build
+          corepack pnpm exec playwright install --with-deps "${{ matrix.browser }}"
+      - name: Run offline lifecycle and axe
+        working-directory: ui/web
+        env:
+          CGM_E2E_BROWSER: ${{ matrix.browser }}
+        run: corepack pnpm exec playwright test

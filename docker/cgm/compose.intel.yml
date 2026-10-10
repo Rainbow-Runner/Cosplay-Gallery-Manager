@@ -1,0 +1,8 @@
+# Optional overlay. Use with your existing compose.yml to preserve its volumes.
+# CGM_RENDER_GID: stat -c '%g' /dev/dri/renderD128 on the Docker host.
+services:
+  cgm:
+    devices:
+      - "${CGM_RENDER_DEVICE:-/dev/dri/renderD128}:/dev/dri/renderD128"
+    group_add:
+      - "${CGM_RENDER_GID:?set CGM_RENDER_GID to the render device numeric group ID}"

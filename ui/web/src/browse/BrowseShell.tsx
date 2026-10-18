@@ -46,6 +46,7 @@ const primaryGroups: NavigationGroup[] = [
       { to: "/favorites", messageID: "nav.favorites", icon: "heart" },
       { to: "/history", messageID: "nav.history", icon: "history" },
       { to: "/tags", messageID: "nav.tags", icon: "tags" },
+      { to: "/similar-images", messageID: "nav.similarImages", icon: "images" },
     ],
   },
 ];

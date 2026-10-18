@@ -1415,6 +1415,7 @@ type ComplexityRoot struct {
 		RelatedGalleries                     func(childComplexity int, setID string, scope BrowseScope) int
 		SearchPreview                        func(childComplexity int, query string, scope BrowseScope) int
 		SearchResults                        func(childComplexity int, query string, scope BrowseScope, kind SearchEntityKind, first int, after string) int
+		SimilarImages                        func(childComplexity int, maxDistance int, scope SimilarImageScope) int
 		TagDetail                            func(childComplexity int, slug string, scope BrowseScope, page int) int
 		TimelineGalleries                    func(childComplexity int, scope BrowseScope, page int, coserUUID *string, date TimelineDate) int
 		WorkDetail                           func(childComplexity int, slug string, scope BrowseScope) int
@@ -1476,6 +1477,34 @@ type ComplexityRoot struct {
 		HasNext   func(childComplexity int) int
 		Items     func(childComplexity int) int
 		Total     func(childComplexity int) int
+	}
+
+	SimilarImage struct {
+		FileName     func(childComplexity int) int
+		GallerySetID func(childComplexity int) int
+		GallerySlug  func(childComplexity int) int
+		GalleryTitle func(childComplexity int) int
+		ItemUUID     func(childComplexity int) int
+		Resource     func(childComplexity int) int
+	}
+
+	SimilarImagePair struct {
+		DHashDistance func(childComplexity int) int
+		Left          func(childComplexity int) int
+		PHashDistance func(childComplexity int) int
+		Right         func(childComplexity int) int
+		SameContent   func(childComplexity int) int
+	}
+
+	SimilarImageResult struct {
+		ComparedImages func(childComplexity int) int
+		Comparisons    func(childComplexity int) int
+		Complete       func(childComplexity int) int
+		HasMore        func(childComplexity int) int
+		HashedImages   func(childComplexity int) int
+		MatchedPairs   func(childComplexity int) int
+		Pairs          func(childComplexity int) int
+		TotalImages    func(childComplexity int) int
 	}
 
 	SocialAccount struct {
@@ -1616,6 +1645,7 @@ type QueryResolver interface {
 	RelatedGalleries(ctx context.Context, setID string, scope BrowseScope) ([]*GalleryRecommendation, error)
 	RandomMedia(ctx context.Context, scope BrowseScope, filter RandomMediaFilter) ([]*RandomMediaItem, error)
 	RandomGalleries(ctx context.Context) ([]*BrowseGalleryCard, error)
+	SimilarImages(ctx context.Context, maxDistance int, scope SimilarImageScope) (*SimilarImageResult, error)
 	EntityIndex(ctx context.Context, kind SearchEntityKind, scope BrowseScope, page int, sort EntitySort, collectionType *CollectionType, query string) (*EntityPage, error)
 	SearchPreview(ctx context.Context, query string, scope BrowseScope) (*SearchPreview, error)
 	SearchResults(ctx context.Context, query string, scope BrowseScope, kind SearchEntityKind, first int, after string) (*SearchResultBatch, error)
@@ -9390,6 +9420,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.SearchResults(childComplexity, args["query"].(string), args["scope"].(BrowseScope), args["kind"].(SearchEntityKind), args["first"].(int), args["after"].(string)), true
 
+	case "Query.similarImages":
+		if e.complexity.Query.SimilarImages == nil {
+			break
+		}
+
+		args, err := ec.field_Query_similarImages_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.SimilarImages(childComplexity, args["maxDistance"].(int), args["scope"].(SimilarImageScope)), true
+
 	case "Query.tagDetail":
 		if e.complexity.Query.TagDetail == nil {
 			break
@@ -9726,6 +9768,139 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.SearchResultBatch.Total(childComplexity), true
+
+	case "SimilarImage.fileName":
+		if e.complexity.SimilarImage.FileName == nil {
+			break
+		}
+
+		return e.complexity.SimilarImage.FileName(childComplexity), true
+
+	case "SimilarImage.gallerySetID":
+		if e.complexity.SimilarImage.GallerySetID == nil {
+			break
+		}
+
+		return e.complexity.SimilarImage.GallerySetID(childComplexity), true
+
+	case "SimilarImage.gallerySlug":
+		if e.complexity.SimilarImage.GallerySlug == nil {
+			break
+		}
+
+		return e.complexity.SimilarImage.GallerySlug(childComplexity), true
+
+	case "SimilarImage.galleryTitle":
+		if e.complexity.SimilarImage.GalleryTitle == nil {
+			break
+		}
+
+		return e.complexity.SimilarImage.GalleryTitle(childComplexity), true
+
+	case "SimilarImage.itemUUID":
+		if e.complexity.SimilarImage.ItemUUID == nil {
+			break
+		}
+
+		return e.complexity.SimilarImage.ItemUUID(childComplexity), true
+
+	case "SimilarImage.resource":
+		if e.complexity.SimilarImage.Resource == nil {
+			break
+		}
+
+		return e.complexity.SimilarImage.Resource(childComplexity), true
+
+	case "SimilarImagePair.dHashDistance":
+		if e.complexity.SimilarImagePair.DHashDistance == nil {
+			break
+		}
+
+		return e.complexity.SimilarImagePair.DHashDistance(childComplexity), true
+
+	case "SimilarImagePair.left":
+		if e.complexity.SimilarImagePair.Left == nil {
+			break
+		}
+
+		return e.complexity.SimilarImagePair.Left(childComplexity), true
+
+	case "SimilarImagePair.pHashDistance":
+		if e.complexity.SimilarImagePair.PHashDistance == nil {
+			break
+		}
+
+		return e.complexity.SimilarImagePair.PHashDistance(childComplexity), true
+
+	case "SimilarImagePair.right":
+		if e.complexity.SimilarImagePair.Right == nil {
+			break
+		}
+
+		return e.complexity.SimilarImagePair.Right(childComplexity), true
+
+	case "SimilarImagePair.sameContent":
+		if e.complexity.SimilarImagePair.SameContent == nil {
+			break
+		}
+
+		return e.complexity.SimilarImagePair.SameContent(childComplexity), true
+
+	case "SimilarImageResult.comparedImages":
+		if e.complexity.SimilarImageResult.ComparedImages == nil {
+			break
+		}
+
+		return e.complexity.SimilarImageResult.ComparedImages(childComplexity), true
+
+	case "SimilarImageResult.comparisons":
+		if e.complexity.SimilarImageResult.Comparisons == nil {
+			break
+		}
+
+		return e.complexity.SimilarImageResult.Comparisons(childComplexity), true
+
+	case "SimilarImageResult.complete":
+		if e.complexity.SimilarImageResult.Complete == nil {
+			break
+		}
+
+		return e.complexity.SimilarImageResult.Complete(childComplexity), true
+
+	case "SimilarImageResult.hasMore":
+		if e.complexity.SimilarImageResult.HasMore == nil {
+			break
+		}
+
+		return e.complexity.SimilarImageResult.HasMore(childComplexity), true
+
+	case "SimilarImageResult.hashedImages":
+		if e.complexity.SimilarImageResult.HashedImages == nil {
+			break
+		}
+
+		return e.complexity.SimilarImageResult.HashedImages(childComplexity), true
+
+	case "SimilarImageResult.matchedPairs":
+		if e.complexity.SimilarImageResult.MatchedPairs == nil {
+			break
+		}
+
+		return e.complexity.SimilarImageResult.MatchedPairs(childComplexity), true
+
+	case "SimilarImageResult.pairs":
+		if e.complexity.SimilarImageResult.Pairs == nil {
+			break
+		}
+
+		return e.complexity.SimilarImageResult.Pairs(childComplexity), true
+
+	case "SimilarImageResult.totalImages":
+		if e.complexity.SimilarImageResult.TotalImages == nil {
+			break
+		}
+
+		return e.complexity.SimilarImageResult.TotalImages(childComplexity), true
 
 	case "SocialAccount.handle":
 		if e.complexity.SocialAccount.Handle == nil {
@@ -17297,6 +17472,57 @@ func (ec *executionContext) field_Query_searchResults_argsAfter(
 	}
 
 	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_similarImages_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_similarImages_argsMaxDistance(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["maxDistance"] = arg0
+	arg1, err := ec.field_Query_similarImages_argsScope(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["scope"] = arg1
+	return args, nil
+}
+func (ec *executionContext) field_Query_similarImages_argsMaxDistance(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int, error) {
+	if _, ok := rawArgs["maxDistance"]; !ok {
+		var zeroVal int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("maxDistance"))
+	if tmp, ok := rawArgs["maxDistance"]; ok {
+		return ec.unmarshalNInt2int(ctx, tmp)
+	}
+
+	var zeroVal int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_similarImages_argsScope(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (SimilarImageScope, error) {
+	if _, ok := rawArgs["scope"]; !ok {
+		var zeroVal SimilarImageScope
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("scope"))
+	if tmp, ok := rawArgs["scope"]; ok {
+		return ec.unmarshalNSimilarImageScope2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSimilarImageScope(ctx, tmp)
+	}
+
+	var zeroVal SimilarImageScope
 	return zeroVal, nil
 }
 
@@ -64607,6 +64833,79 @@ func (ec *executionContext) fieldContext_Query_randomGalleries(_ context.Context
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_similarImages(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_similarImages(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().SimilarImages(rctx, fc.Args["maxDistance"].(int), fc.Args["scope"].(SimilarImageScope))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*SimilarImageResult)
+	fc.Result = res
+	return ec.marshalNSimilarImageResult2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSimilarImageResult(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_similarImages(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "totalImages":
+				return ec.fieldContext_SimilarImageResult_totalImages(ctx, field)
+			case "hashedImages":
+				return ec.fieldContext_SimilarImageResult_hashedImages(ctx, field)
+			case "comparedImages":
+				return ec.fieldContext_SimilarImageResult_comparedImages(ctx, field)
+			case "comparisons":
+				return ec.fieldContext_SimilarImageResult_comparisons(ctx, field)
+			case "matchedPairs":
+				return ec.fieldContext_SimilarImageResult_matchedPairs(ctx, field)
+			case "complete":
+				return ec.fieldContext_SimilarImageResult_complete(ctx, field)
+			case "hasMore":
+				return ec.fieldContext_SimilarImageResult_hasMore(ctx, field)
+			case "pairs":
+				return ec.fieldContext_SimilarImageResult_pairs(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SimilarImageResult", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_similarImages_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_entityIndex(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_entityIndex(ctx, field)
 	if err != nil {
@@ -70568,6 +70867,894 @@ func (ec *executionContext) fieldContext_SearchResultBatch_hasNext(_ context.Con
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImage_itemUUID(ctx context.Context, field graphql.CollectedField, obj *SimilarImage) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImage_itemUUID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ItemUUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImage_itemUUID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImage_gallerySetID(ctx context.Context, field graphql.CollectedField, obj *SimilarImage) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImage_gallerySetID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GallerySetID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImage_gallerySetID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImage_gallerySlug(ctx context.Context, field graphql.CollectedField, obj *SimilarImage) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImage_gallerySlug(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GallerySlug, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImage_gallerySlug(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImage_galleryTitle(ctx context.Context, field graphql.CollectedField, obj *SimilarImage) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImage_galleryTitle(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryTitle, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImage_galleryTitle(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImage_fileName(ctx context.Context, field graphql.CollectedField, obj *SimilarImage) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImage_fileName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FileName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImage_fileName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImage_resource(ctx context.Context, field graphql.CollectedField, obj *SimilarImage) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImage_resource(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Resource, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ResourceIdentity)
+	fc.Result = res
+	return ec.marshalNResourceIdentity2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐResourceIdentity(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImage_resource(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "itemUUID":
+				return ec.fieldContext_ResourceIdentity_itemUUID(ctx, field)
+			case "contentRevision":
+				return ec.fieldContext_ResourceIdentity_contentRevision(ctx, field)
+			case "profileHash":
+				return ec.fieldContext_ResourceIdentity_profileHash(ctx, field)
+			case "variant":
+				return ec.fieldContext_ResourceIdentity_variant(ctx, field)
+			case "mimeType":
+				return ec.fieldContext_ResourceIdentity_mimeType(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ResourceIdentity", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImagePair_left(ctx context.Context, field graphql.CollectedField, obj *SimilarImagePair) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImagePair_left(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Left, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*SimilarImage)
+	fc.Result = res
+	return ec.marshalNSimilarImage2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSimilarImage(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImagePair_left(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImagePair",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "itemUUID":
+				return ec.fieldContext_SimilarImage_itemUUID(ctx, field)
+			case "gallerySetID":
+				return ec.fieldContext_SimilarImage_gallerySetID(ctx, field)
+			case "gallerySlug":
+				return ec.fieldContext_SimilarImage_gallerySlug(ctx, field)
+			case "galleryTitle":
+				return ec.fieldContext_SimilarImage_galleryTitle(ctx, field)
+			case "fileName":
+				return ec.fieldContext_SimilarImage_fileName(ctx, field)
+			case "resource":
+				return ec.fieldContext_SimilarImage_resource(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SimilarImage", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImagePair_right(ctx context.Context, field graphql.CollectedField, obj *SimilarImagePair) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImagePair_right(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Right, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*SimilarImage)
+	fc.Result = res
+	return ec.marshalNSimilarImage2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSimilarImage(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImagePair_right(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImagePair",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "itemUUID":
+				return ec.fieldContext_SimilarImage_itemUUID(ctx, field)
+			case "gallerySetID":
+				return ec.fieldContext_SimilarImage_gallerySetID(ctx, field)
+			case "gallerySlug":
+				return ec.fieldContext_SimilarImage_gallerySlug(ctx, field)
+			case "galleryTitle":
+				return ec.fieldContext_SimilarImage_galleryTitle(ctx, field)
+			case "fileName":
+				return ec.fieldContext_SimilarImage_fileName(ctx, field)
+			case "resource":
+				return ec.fieldContext_SimilarImage_resource(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SimilarImage", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImagePair_pHashDistance(ctx context.Context, field graphql.CollectedField, obj *SimilarImagePair) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImagePair_pHashDistance(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PHashDistance, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImagePair_pHashDistance(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImagePair",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImagePair_dHashDistance(ctx context.Context, field graphql.CollectedField, obj *SimilarImagePair) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImagePair_dHashDistance(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DHashDistance, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImagePair_dHashDistance(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImagePair",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImagePair_sameContent(ctx context.Context, field graphql.CollectedField, obj *SimilarImagePair) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImagePair_sameContent(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SameContent, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImagePair_sameContent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImagePair",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImageResult_totalImages(ctx context.Context, field graphql.CollectedField, obj *SimilarImageResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImageResult_totalImages(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TotalImages, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImageResult_totalImages(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImageResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImageResult_hashedImages(ctx context.Context, field graphql.CollectedField, obj *SimilarImageResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImageResult_hashedImages(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HashedImages, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImageResult_hashedImages(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImageResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImageResult_comparedImages(ctx context.Context, field graphql.CollectedField, obj *SimilarImageResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImageResult_comparedImages(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ComparedImages, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImageResult_comparedImages(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImageResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImageResult_comparisons(ctx context.Context, field graphql.CollectedField, obj *SimilarImageResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImageResult_comparisons(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Comparisons, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImageResult_comparisons(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImageResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImageResult_matchedPairs(ctx context.Context, field graphql.CollectedField, obj *SimilarImageResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImageResult_matchedPairs(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MatchedPairs, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImageResult_matchedPairs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImageResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImageResult_complete(ctx context.Context, field graphql.CollectedField, obj *SimilarImageResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImageResult_complete(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Complete, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImageResult_complete(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImageResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImageResult_hasMore(ctx context.Context, field graphql.CollectedField, obj *SimilarImageResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImageResult_hasMore(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HasMore, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImageResult_hasMore(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImageResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarImageResult_pairs(ctx context.Context, field graphql.CollectedField, obj *SimilarImageResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SimilarImageResult_pairs(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Pairs, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*SimilarImagePair)
+	fc.Result = res
+	return ec.marshalNSimilarImagePair2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSimilarImagePairᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SimilarImageResult_pairs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarImageResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "left":
+				return ec.fieldContext_SimilarImagePair_left(ctx, field)
+			case "right":
+				return ec.fieldContext_SimilarImagePair_right(ctx, field)
+			case "pHashDistance":
+				return ec.fieldContext_SimilarImagePair_pHashDistance(ctx, field)
+			case "dHashDistance":
+				return ec.fieldContext_SimilarImagePair_dHashDistance(ctx, field)
+			case "sameContent":
+				return ec.fieldContext_SimilarImagePair_sameContent(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SimilarImagePair", field.Name)
 		},
 	}
 	return fc, nil
@@ -84691,6 +85878,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "similarImages":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_similarImages(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "entityIndex":
 			field := field
 
@@ -86216,6 +87425,203 @@ func (ec *executionContext) _SearchResultBatch(ctx context.Context, sel ast.Sele
 			}
 		case "hasNext":
 			out.Values[i] = ec._SearchResultBatch_hasNext(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var similarImageImplementors = []string{"SimilarImage"}
+
+func (ec *executionContext) _SimilarImage(ctx context.Context, sel ast.SelectionSet, obj *SimilarImage) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, similarImageImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SimilarImage")
+		case "itemUUID":
+			out.Values[i] = ec._SimilarImage_itemUUID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gallerySetID":
+			out.Values[i] = ec._SimilarImage_gallerySetID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gallerySlug":
+			out.Values[i] = ec._SimilarImage_gallerySlug(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "galleryTitle":
+			out.Values[i] = ec._SimilarImage_galleryTitle(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "fileName":
+			out.Values[i] = ec._SimilarImage_fileName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resource":
+			out.Values[i] = ec._SimilarImage_resource(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var similarImagePairImplementors = []string{"SimilarImagePair"}
+
+func (ec *executionContext) _SimilarImagePair(ctx context.Context, sel ast.SelectionSet, obj *SimilarImagePair) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, similarImagePairImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SimilarImagePair")
+		case "left":
+			out.Values[i] = ec._SimilarImagePair_left(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "right":
+			out.Values[i] = ec._SimilarImagePair_right(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pHashDistance":
+			out.Values[i] = ec._SimilarImagePair_pHashDistance(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "dHashDistance":
+			out.Values[i] = ec._SimilarImagePair_dHashDistance(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sameContent":
+			out.Values[i] = ec._SimilarImagePair_sameContent(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var similarImageResultImplementors = []string{"SimilarImageResult"}
+
+func (ec *executionContext) _SimilarImageResult(ctx context.Context, sel ast.SelectionSet, obj *SimilarImageResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, similarImageResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SimilarImageResult")
+		case "totalImages":
+			out.Values[i] = ec._SimilarImageResult_totalImages(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "hashedImages":
+			out.Values[i] = ec._SimilarImageResult_hashedImages(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "comparedImages":
+			out.Values[i] = ec._SimilarImageResult_comparedImages(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "comparisons":
+			out.Values[i] = ec._SimilarImageResult_comparisons(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "matchedPairs":
+			out.Values[i] = ec._SimilarImageResult_matchedPairs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "complete":
+			out.Values[i] = ec._SimilarImageResult_complete(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "hasMore":
+			out.Values[i] = ec._SimilarImageResult_hasMore(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pairs":
+			out.Values[i] = ec._SimilarImageResult_pairs(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -91705,6 +93111,94 @@ func (ec *executionContext) unmarshalNShootDatePrecision2githubᚗcomᚋstashapp
 }
 
 func (ec *executionContext) marshalNShootDatePrecision2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐShootDatePrecision(ctx context.Context, sel ast.SelectionSet, v ShootDatePrecision) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNSimilarImage2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSimilarImage(ctx context.Context, sel ast.SelectionSet, v *SimilarImage) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SimilarImage(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNSimilarImagePair2ᚕᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSimilarImagePairᚄ(ctx context.Context, sel ast.SelectionSet, v []*SimilarImagePair) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNSimilarImagePair2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSimilarImagePair(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNSimilarImagePair2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSimilarImagePair(ctx context.Context, sel ast.SelectionSet, v *SimilarImagePair) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SimilarImagePair(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNSimilarImageResult2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSimilarImageResult(ctx context.Context, sel ast.SelectionSet, v SimilarImageResult) graphql.Marshaler {
+	return ec._SimilarImageResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSimilarImageResult2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSimilarImageResult(ctx context.Context, sel ast.SelectionSet, v *SimilarImageResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SimilarImageResult(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNSimilarImageScope2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSimilarImageScope(ctx context.Context, v any) (SimilarImageScope, error) {
+	var res SimilarImageScope
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNSimilarImageScope2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐSimilarImageScope(ctx context.Context, sel ast.SelectionSet, v SimilarImageScope) graphql.Marshaler {
 	return v
 }
 

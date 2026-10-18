@@ -1485,6 +1485,34 @@ type SearchResultBatch struct {
 	HasNext   bool         `json:"hasNext"`
 }
 
+type SimilarImage struct {
+	ItemUUID     string            `json:"itemUUID"`
+	GallerySetID string            `json:"gallerySetID"`
+	GallerySlug  string            `json:"gallerySlug"`
+	GalleryTitle string            `json:"galleryTitle"`
+	FileName     string            `json:"fileName"`
+	Resource     *ResourceIdentity `json:"resource"`
+}
+
+type SimilarImagePair struct {
+	Left          *SimilarImage `json:"left"`
+	Right         *SimilarImage `json:"right"`
+	PHashDistance int           `json:"pHashDistance"`
+	DHashDistance int           `json:"dHashDistance"`
+	SameContent   bool          `json:"sameContent"`
+}
+
+type SimilarImageResult struct {
+	TotalImages    int                 `json:"totalImages"`
+	HashedImages   int                 `json:"hashedImages"`
+	ComparedImages int                 `json:"comparedImages"`
+	Comparisons    int                 `json:"comparisons"`
+	MatchedPairs   int                 `json:"matchedPairs"`
+	Complete       bool                `json:"complete"`
+	HasMore        bool                `json:"hasMore"`
+	Pairs          []*SimilarImagePair `json:"pairs"`
+}
+
 type SocialAccount struct {
 	UUID        string `json:"uuid"`
 	PlatformKey string `json:"platformKey"`
@@ -2589,6 +2617,63 @@ func (e *ShootDatePrecision) UnmarshalJSON(b []byte) error {
 }
 
 func (e ShootDatePrecision) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type SimilarImageScope string
+
+const (
+	SimilarImageScopeAll          SimilarImageScope = "ALL"
+	SimilarImageScopeSameGallery  SimilarImageScope = "SAME_GALLERY"
+	SimilarImageScopeCrossGallery SimilarImageScope = "CROSS_GALLERY"
+)
+
+var AllSimilarImageScope = []SimilarImageScope{
+	SimilarImageScopeAll,
+	SimilarImageScopeSameGallery,
+	SimilarImageScopeCrossGallery,
+}
+
+func (e SimilarImageScope) IsValid() bool {
+	switch e {
+	case SimilarImageScopeAll, SimilarImageScopeSameGallery, SimilarImageScopeCrossGallery:
+		return true
+	}
+	return false
+}
+
+func (e SimilarImageScope) String() string {
+	return string(e)
+}
+
+func (e *SimilarImageScope) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SimilarImageScope(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SimilarImageScope", str)
+	}
+	return nil
+}
+
+func (e SimilarImageScope) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *SimilarImageScope) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e SimilarImageScope) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

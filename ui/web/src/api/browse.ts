@@ -1,5 +1,17 @@
 import { gql } from "@apollo/client";
 
+export const SIMILAR_IMAGES = gql`
+  query SimilarImages($maxDistance: Int!, $scope: SimilarImageScope!) {
+    similarImages(maxDistance: $maxDistance, scope: $scope) {
+      totalImages hashedImages comparedImages comparisons matchedPairs complete hasMore
+      pairs { pHashDistance dHashDistance sameContent
+        left { itemUUID gallerySetID gallerySlug galleryTitle fileName resource { itemUUID contentRevision profileHash variant mimeType } }
+        right { itemUUID gallerySetID gallerySlug galleryTitle fileName resource { itemUUID contentRevision profileHash variant mimeType } }
+      }
+    }
+  }
+`;
+
 export const REQUEST_GALLERY_COVER = gql`
   mutation RequestGalleryCover($setID: ID!, $itemUUID: ID!, $variant: GalleryCoverVariant!) {
     requestGalleryCover(setID: $setID, itemUUID: $itemUUID, variant: $variant) {

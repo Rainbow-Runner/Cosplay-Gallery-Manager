@@ -16,6 +16,11 @@ enum EntitySort { NAME RECENTLY_ADDED }
 enum GalleryState { DRAFT ACTIVE ARCHIVED }
 scalar Int64
 
+enum SimilarImageScope { ALL SAME_GALLERY CROSS_GALLERY }
+type SimilarImage { itemUUID: ID! gallerySetID: ID! gallerySlug: String! galleryTitle: String! fileName: String! resource: ResourceIdentity! }
+type SimilarImagePair { left: SimilarImage! right: SimilarImage! pHashDistance: Int! dHashDistance: Int! sameContent: Boolean! }
+type SimilarImageResult { totalImages: Int! hashedImages: Int! comparedImages: Int! comparisons: Int! matchedPairs: Int! complete: Boolean! hasMore: Boolean! pairs: [SimilarImagePair!]! }
+
 type EntitySummary { uuid: ID! name: String! }
 type PersonSummary { uuid: ID! name: String! avatarURL: String }
 
@@ -547,6 +552,7 @@ type Query {
   relatedGalleries(setID: ID!, scope: BrowseScope! = ALL): [GalleryRecommendation!]!
   randomMedia(scope: BrowseScope! = LIST, filter: RandomMediaFilter! = ALL): [RandomMediaItem!]!
   randomGalleries: [BrowseGalleryCard!]!
+  similarImages(maxDistance: Int! = 4, scope: SimilarImageScope! = ALL): SimilarImageResult!
   entityIndex(kind: SearchEntityKind!, scope: BrowseScope!, page: Int!, sort: EntitySort! = NAME, collectionType: CollectionType, query: String! = ""): EntityPage!
   searchPreview(query: String!, scope: BrowseScope!): SearchPreview!
   searchResults(query: String!, scope: BrowseScope!, kind: SearchEntityKind!, first: Int! = 24, after: String! = ""): SearchResultBatch!

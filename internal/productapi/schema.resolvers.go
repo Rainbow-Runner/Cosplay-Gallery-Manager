@@ -1622,6 +1622,22 @@ func (r *queryResolver) RandomGalleries(ctx context.Context) ([]*BrowseGalleryCa
 	return result, nil
 }
 
+// SimilarImages is the resolver for the similarImages field.
+func (r *queryResolver) SimilarImages(ctx context.Context, maxDistance int, scope SimilarImageScope) (*SimilarImageResult, error) {
+	value, err := r.Database.Browse().SimilarImages(ctx, maxDistance, string(scope))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	image := func(v productdb.SimilarImage) *SimilarImage {
+		return &SimilarImage{ItemUUID: v.ItemUUID, GallerySetID: v.GallerySetID, GallerySlug: v.GallerySlug, GalleryTitle: v.GalleryTitle, FileName: v.FileName, Resource: resourceIdentity(&v.Resource)}
+	}
+	result := &SimilarImageResult{TotalImages: value.TotalImages, HashedImages: value.HashedImages, ComparedImages: value.ComparedImages, Comparisons: value.Comparisons, MatchedPairs: value.MatchedPairs, Complete: value.Complete, HasMore: value.HasMore, Pairs: []*SimilarImagePair{}}
+	for _, pair := range value.Pairs {
+		result.Pairs = append(result.Pairs, &SimilarImagePair{Left: image(pair.Left), Right: image(pair.Right), PHashDistance: pair.PHashDistance, DHashDistance: pair.DHashDistance, SameContent: pair.SameContent})
+	}
+	return result, nil
+}
+
 // EntityIndex is the resolver for the entityIndex field.
 func (r *queryResolver) EntityIndex(ctx context.Context, kind SearchEntityKind, scope BrowseScope, page int, sort EntitySort, collectionType *CollectionType, query string) (*EntityPage, error) {
 	collection := browse.CollectionType("")

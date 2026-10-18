@@ -18,6 +18,7 @@ const TagDetailPage = lazy(() => import("../browse/EntityDetailPages").then((mod
 const WorkDetailPage = lazy(() => import("../browse/EntityDetailPages").then((module) => ({ default: module.WorkDetailPage })));
 const RandomPage = lazy(() => import("../browse/RandomPage").then((module) => ({ default: module.RandomPage })));
 const SearchPage = lazy(() => import("../browse/SearchPage").then((module) => ({ default: module.SearchPage })));
+const SimilarImagesPage = lazy(() => import("../browse/SimilarImagesPage").then((module) => ({ default: module.SimilarImagesPage })));
 const TimelinePage = lazy(() => import("../browse/TimelinePage").then((module) => ({ default: module.TimelinePage })));
 const MediaDetailPage = lazy(() => import("../browse/MediaDetailPage").then((module) => ({ default: module.MediaDetailPage })));
 const FavoritesPage = lazy(() => import("../browse/PersonalPages").then((module) => ({ default: module.FavoritesPage })));
@@ -77,6 +78,7 @@ export function AppRoutes() {
           <Route path="history" element={<HistoryPage />} />
           <Route path="media/:uuid" element={<MediaDetailPage />} />
           <Route path="search" element={<SearchPage />} />
+          <Route path="similar-images" element={<SimilarImagesPage />} />
         </Route>
       </Routes>
     </Suspense>

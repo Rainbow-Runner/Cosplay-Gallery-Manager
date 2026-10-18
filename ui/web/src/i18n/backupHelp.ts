@@ -1,0 +1,4 @@
+export const backupRetentionHelp = {
+  en: "Automatic cleanup keeps the newest successful daily snapshots by count (default 7; Settings allows 1–365), not by age in days. Expired snapshots and their SQLite WAL/SHM sidecars are removed. Startup, saved schedule settings and hourly recovery can retry cleanup without creating another backup. Cleanup failures remain retryable; disabled backups, suspended schedules and maintenance block automatic cleanup. Old orphan sidecars need a successful retention audit, no main file or registered backup, and a file age of at least 24 hours. Manual full packages, restore safety packages, deployment rollback backups and unknown files are not automatically deleted.",
+  zh: "自动清理按份数保留最近成功的每日快照（默认7份，在设置中可选1～365份），不是按天数过期；超额旧快照及其 SQLite WAL／SHM 一并删除。启动、保存计划设置及每小时兜底可在不新建备份的情况下重试清理；失败保留重试机会。关闭每日备份、暂停计划或维护时不自动清理。历史孤立附属文件须有成功删除审计、无主文件和登记备份，且文件至少存放24小时。手工完整包、恢复安全包、部署回退备份及未知文件不会自动删除。",
+};

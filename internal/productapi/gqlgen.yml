@@ -1,0 +1,22 @@
+schema:
+  - schema.graphqls
+exec:
+  filename: generated_exec.go
+  package: productapi
+model:
+  filename: generated_models.go
+  package: productapi
+resolver:
+  layout: follow-schema
+  dir: .
+  package: productapi
+models:
+  ID:
+    model:
+      - github.com/99designs/gqlgen/graphql.ID
+  Int:
+    model:
+      - github.com/99designs/gqlgen/graphql.Int
+  Int64:
+    model:
+      - github.com/99designs/gqlgen/graphql.Int64

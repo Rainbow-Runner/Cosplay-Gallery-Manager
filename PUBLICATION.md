@@ -20,5 +20,18 @@ GitHub cached commit views or pull-request references. Cached historical data
 may require a separate GitHub Support removal request. This publication does
 not claim that externally copied data can be recalled.
 
-Docker images identify the public source commit in their revision metadata.
-Keep the exact source archive and image digest together for reproducibility.
+Docker images identify their privacy-reviewed source snapshot in revision
+metadata. Registry publication and GitHub branch updates can happen separately.
+Images built with the bundled-source release workflow include the exact clean
+source archive at `/usr/share/cgm/source.tar.gz`; it contains no private history
+or tests. To retrieve it without starting the application:
+
+```sh
+docker create --name cgm-source IMAGE
+docker cp cgm-source:/usr/share/cgm/source.tar.gz ./cgm-source.tar.gz
+docker rm cgm-source
+```
+
+Replace IMAGE with the chosen immutable image tag or digest. Keep the source
+archive, source revision and image digest together for reproducibility. The
+archive is also available when the corresponding GitHub update is pending.

@@ -1,0 +1,133 @@
+/* Admin presentation only. Browsing, setup and image-crop surfaces keep their own UI. */
+.manage-shell {
+  --manage-control-height: 2.25rem;
+  background: var(--cgm-surface-subtle);
+  font-size: .8125rem;
+  line-height: 1.55;
+}
+.manage-shell .manage-page { padding: clamp(1rem, 2vw, 2rem); }
+.manage-shell .manage-heading { align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+.manage-shell .manage-heading > div { min-width: 0; }
+.manage-shell .manage-heading p { margin-bottom: .35rem; font-size: .6875rem; letter-spacing: .1em; }
+.manage-shell .manage-heading h2 { overflow-wrap: anywhere; font-size: clamp(1.5rem, 2vw, 1.875rem); line-height: 1.25; }
+.manage-shell .manage-nav { overflow-y: auto; background: var(--cgm-surface); }
+.manage-shell .manage-nav nav a { min-height: 2.5rem; font-size: .8125rem; }
+.manage-shell .manage-nav nav a:hover { background: var(--cgm-surface-subtle); color: var(--cgm-foreground); }
+.manage-shell .manage-nav nav a.active { background: var(--cgm-muted); }
+.manage-shell :is(.metadata-form, .settings-form, .settings-form fieldset, .manage-panel, .library-list, .library-workspace, .operation-panel, .entity-manage-list, .manage-credit) { min-width: 0; }
+.manage-shell :is(.metadata-form, .manage-panel, .library-list, .rule-section, .candidate-section, .operation-panel, .settings-form fieldset) { padding: 1.25rem; }
+.manage-shell :is(.metadata-form, .settings-form, .rule-form) { gap: 1rem; }
+.manage-shell :is(.metadata-form, .settings-form, .rule-form, .library-list, .automation-form) label:not(.check):not(.settings-check) {
+  min-width: 0; align-content: start; gap: .375rem; font-size: .8125rem; font-weight: 500; color: var(--cgm-foreground);
+}
+.manage-shell :is(.metadata-form, .settings-form, .rule-form, .library-list, .manage-panel, .operation-panel) small,
+.manage-shell :is(.manage-toolbar-help, .rule-section header p, .automation-last-run, .classification-empty, .classification-rule-group header p, .classification-target header p, .classification-review p, .classification-review article span, .classification-review article small) {
+  color: var(--cgm-muted-foreground); font-size: .75rem; font-weight: 400; line-height: 1.6; overflow-wrap: anywhere;
+}
+.manage-shell :is(.manage-panel p, .manage-panel dl, .operation-panel p, .settings-form p, .library-list p) { font-size: .8125rem; line-height: 1.65; overflow-wrap: anywhere; }
+.manage-shell :is(input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"])), select, textarea) {
+  min-width: 0; padding: .45rem .625rem;
+  border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm);
+  background: var(--cgm-surface); color: var(--cgm-foreground); font: inherit; line-height: 1.4;
+}
+.manage-shell :is(input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"])), select) { min-height: var(--manage-control-height); }
+.manage-shell .settings-form :is(input[type="number"], select) { min-height: var(--manage-control-height); }
+.manage-shell textarea { min-height: 8rem; resize: vertical; }
+.manage-shell :is(input, select, textarea):focus-visible { outline: 2px solid var(--cgm-focus); outline-offset: 2px; }
+.manage-shell :is(input[type="checkbox"], input[type="radio"]) {
+  width: 1rem; height: 1rem; min-width: 1rem; min-height: 1rem; max-width: 1rem;
+  flex: 0 0 1rem; margin: 0; padding: 0; accent-color: var(--cgm-primary); cursor: pointer;
+}
+.manage-shell label:is(.settings-check, .check) {
+  display: flex; align-items: center; justify-content: flex-start; gap: .625rem;
+  min-height: var(--manage-control-height); color: var(--cgm-foreground); font-size: .8125rem; line-height: 1.5; cursor: pointer;
+}
+.manage-shell .manage-field-option { padding: .75rem 1rem; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface-subtle); }
+.manage-shell .manage-field-option > small { display: block; padding-left: 1.625rem; }
+.manage-shell :is(.manage-actions, .manage-panel-actions, .rule-actions, .rule-form-actions, .manage-inline-toolbar, .manage-review-actions) { align-items: center; gap: .5rem; }
+.manage-shell :is(.manage-heading, .manage-actions, .manage-panel-actions, .manage-pagination, .rule-actions, .rule-form-actions, .task-filters, .manage-batch-toolbar, .settings-form footer) > button,
+.manage-shell :is(.library-workspace, .library-list, .media-classification, .rule-section, .automation-actions, .coser-asset-review__actions, .coser-assets__grid, .manage-inline-toolbar, .manage-review-actions) button,
+.manage-shell :is(.metadata-form, .manage-inline-form, .rule-form, .library-list) button[type="submit"] {
+  min-height: var(--manage-control-height); padding: .45rem .75rem; border: 1px solid var(--cgm-border);
+  background: var(--cgm-surface); color: var(--cgm-foreground); font: 500 .75rem/1.5 var(--cgm-font-sans); cursor: pointer;
+}
+.manage-shell .library-list > button.is-active { border-color: var(--cgm-primary); background: var(--cgm-surface-subtle); }
+.manage-shell button:disabled { cursor: not-allowed; opacity: .45; }
+.manage-shell :is(.manage-actions > button:first-child, .metadata-form button[type="submit"], .settings-form footer button, .settings-metadata-visibility__save, .task-filters button.is-active) {
+  border-color: var(--cgm-primary); background: var(--cgm-primary); color: var(--cgm-primary-foreground);
+}
+.manage-shell :is(.manage-actions > button:first-child, .metadata-form button[type="submit"], .settings-form footer button, .settings-metadata-visibility__save, .task-filters button.is-active):hover:not(:disabled) {
+  background: var(--cgm-primary); color: var(--cgm-primary-foreground); box-shadow: 0 0 0 2px rgb(0 0 0 / 10%);
+}
+.manage-shell button.danger { border-color: #e2b9b9; background: #fff7f7; color: #a52323; }
+.manage-shell button.danger:hover:not(:disabled) { border-color: #a52323; background: #feecec; color: #8c1d1d; }
+.manage-shell .metadata-form > footer { padding-top: 1rem; border-top: 1px solid var(--cgm-border); }
+.manage-shell .editor-tabs { gap: .25rem; margin-bottom: 1.25rem; }
+.manage-shell .editor-tabs button { flex: 0 0 auto; padding: .65rem .8rem; font-size: .8125rem; border-radius: 0; }
+.manage-shell .issue-summary { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+.manage-shell .issue-summary button { display: inline-flex; align-items: center; justify-content: space-between; gap: .625rem; padding: .5rem .625rem; min-height: var(--manage-control-height); }
+.manage-shell .issue-summary button span { font-size: .75rem; letter-spacing: 0; line-height: 1.4; }
+.manage-shell .issue-summary button strong { min-width: 1.5rem; padding: .0625rem .375rem; border-radius: .25rem; background: var(--cgm-muted); font: 600 .75rem/1.5 var(--cgm-font-sans); text-align: center; font-variant-numeric: tabular-nums; }
+.manage-shell .issue-summary button.is-active { box-shadow: none; }
+.manage-shell .issue-summary button.is-active strong { background: var(--cgm-primary); color: var(--cgm-primary-foreground); }
+.manage-shell .manage-gallery-search { gap: .5rem .75rem; margin: 1rem 0 .75rem; }
+.manage-shell .manage-gallery-search :is(label, span) { font-size: .75rem; }
+.manage-shell .manage-gallery-search input { max-width: 38rem; }
+.manage-shell .manage-batch-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.manage-shell .manage-toolbar-help { margin: .5rem 0 1rem; max-width: 85rem; }
+.manage-shell .manage-table { font-size: .75rem; }
+.manage-shell .manage-table th { background: var(--cgm-surface-subtle); font-size: .6875rem; font-weight: 600; letter-spacing: .025em; white-space: nowrap; }
+.manage-shell .manage-table :is(th, td) { padding: .75rem; vertical-align: middle; }
+.manage-shell .manage-table td small { display: block; margin-top: .25rem; color: var(--cgm-muted-foreground); font-size: .6875rem; line-height: 1.5; }
+.manage-shell .manage-table tbody tr:hover { background: var(--cgm-surface-subtle); }
+.manage-shell .manage-table tbody tr.has-issue:hover { background: #fff1f1; }
+.manage-shell .manage-gallery-table :is(th, td):first-child { width: 2.5rem; text-align: center; }
+.manage-shell .manage-gallery-table td:nth-child(2) { min-width: 0; width: 1%; white-space: nowrap; }
+.manage-shell .manage-gallery-table td:nth-child(3) { width: 1%; white-space: nowrap; }
+.manage-shell .manage-gallery-table td:nth-child(4) { min-width: 15rem; max-width: 28rem; overflow-wrap: anywhere; }
+.manage-shell .manage-gallery-table td:nth-child(4) > a { display: block; color: var(--cgm-foreground); font-size: .8125rem; font-weight: 600; }
+.manage-shell .manage-gallery-table td:nth-child(5) { min-width: 10rem; }
+.manage-shell .manage-gallery-table td:nth-child(n+6):nth-child(-n+9) { text-align: right; font-variant-numeric: tabular-nums; }
+.manage-shell .manage-gallery-table th:nth-child(n+6):nth-child(-n+9) { text-align: right; }
+.manage-shell .state { border-radius: .25rem; padding: .2rem .4rem; font-size: .6875rem; letter-spacing: .025em; line-height: 1.4; }
+.manage-shell .state--active { border-color: #b5d5bf; background: #eff8f2; color: #23623c; }
+.manage-shell .state--draft { border-color: #e2d2ad; background: #fff9ed; color: #815e1e; }
+.manage-shell .state--archived { background: var(--cgm-muted); color: var(--cgm-muted-foreground); }
+.manage-shell .manage-pagination { margin-top: 1rem; font-size: .75rem; }
+.manage-shell .manage-message { border-radius: var(--cgm-radius-sm); font-size: .8125rem; line-height: 1.6; }
+.manage-shell :is(.manage-error, small.manage-error, p.manage-error) { color: #a52323; }
+.manage-shell .manage-entity-selector { grid-template-columns: minmax(0, 1.2fr) minmax(0, .7fr) minmax(0, 1fr); }
+.manage-shell :is(.manage-credit__head, .manage-cast-row, .manage-tag-row) { grid-template-columns: minmax(0, 1fr) auto; }
+.manage-shell :is(.manage-credit, .manage-cast-row, .manage-tag-row, .manage-entity-selector) label { font-size: .75rem; letter-spacing: 0; text-transform: none; }
+.manage-shell .manage-inline-form { grid-template-columns: 7rem minmax(0, .7fr) minmax(0, 1.5fr) auto; }
+.manage-shell :is(.task-filters, .backup-filters) { align-items: center; gap: .5rem; font-size: .75rem; }
+.manage-shell :is(.entity-manage-list > button, .entity-lifecycle, .rule-list > div, .rule-preview p, .rule-validation span, .automation-summary span) { font-size: .75rem; }
+.manage-shell .settings-form legend { padding-inline: .375rem; }
+.manage-shell .settings-form fieldset { align-content: start; }
+.manage-shell .settings-form footer { padding-top: 1rem; }
+.manage-shell .manage-help-article > section { scroll-margin-top: 1.5rem; }
+.manage-shell :is(.manage-help-card-grid p, .manage-help-card-grid small, .manage-help-safety ul, .manage-help-table-wrap th, .manage-help-table-wrap td) { font-size: .75rem; }
+.manage-shell :is(.entity-manage-list__copy > span, .entity-list-tools__sort-note, .entity-list-tools label) { font-size: .75rem; }
+@media (max-width: 1100px) {
+  .manage-shell :is(.library-layout, .entity-manage-layout, .classification-rule-groups) { grid-template-columns: minmax(0, 1fr); }
+  .manage-shell .settings-form { grid-template-columns: minmax(0, 1fr); }
+  .manage-shell .entity-manage-list { max-height: 22rem; }
+  .manage-shell .manage-entity-selector { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 780px) {
+  .manage-shell { --manage-control-height: 2.5rem; grid-template-columns: minmax(0, 1fr); }
+  .manage-shell .manage-page { padding: 1rem; }
+  .manage-shell .manage-nav { min-width: 0; overflow-y: visible; padding: .75rem; }
+  .manage-shell .manage-nav nav a { flex: 0 0 auto; }
+  .manage-shell :is(.metadata-form, .manage-panel, .library-list, .rule-section, .candidate-section, .operation-panel, .settings-form fieldset) { padding: 1rem; }
+  .manage-shell :is(.settings-form fieldset, .manage-inline-form, .automation-form, .manage-credit__head, .manage-cast-row, .manage-tag-row) { grid-template-columns: minmax(0, 1fr); }
+  .manage-shell .issue-summary button { flex: 1 1 9rem; }
+  .manage-shell .manage-gallery-search input { flex-basis: 100%; max-width: none; }
+  .manage-shell .manage-batch-toolbar > button { flex: 1 1 auto; }
+  .manage-shell .manage-panel dl { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
+  .manage-shell .manage-panel dd { margin-bottom: .75rem; }
+  .manage-shell :is(.manage-relations > header, .rule-section > header, .candidate-section > header) { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .manage-shell *, .manage-shell *::before, .manage-shell *::after { scroll-behavior: auto; transition-duration: 0s; }
+}

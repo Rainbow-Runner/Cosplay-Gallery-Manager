@@ -9,10 +9,25 @@ type Entry struct {
 	Label         string `json:"label"`
 	Group         string `json:"group"`
 	Value         string `json:"value"`
+	Source        string `json:"source"`
+	RawValue      string `json:"raw_value"`
+	Timestamp     string `json:"timestamp"`
+}
+
+type HistoryEvent struct {
+	Index      int
+	Action     string
+	Software   string
+	When       string
+	Timestamp  string
+	Parameters string
 }
 
 type Result struct {
-	Width   int
-	Height  int
-	Entries []Entry
+	Width     int
+	Height    int
+	Entries   []Entry
+	History   []HistoryEvent
+	Warnings  []string
+	Truncated bool
 }

@@ -1,5 +1,7 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { viewerBackgroundLocation } from "../browse/mediaViewerRoute";
+import { MediaViewerPlaceholder } from "../browse/MediaViewerPlaceholder";
 
 import { SessionBoundary } from "../auth/SessionBoundary";
 import { Providers } from "./Providers";
@@ -36,9 +38,12 @@ const MaintenancePage = lazy(() => import("../manage/MaintenancePage").then((mod
 const SetupPage = lazy(() => import("../setup/SetupPage").then((module) => ({ default: module.SetupPage })));
 
 export function AppRoutes() {
+  const location = useLocation();
+  const background = viewerBackgroundLocation(location);
   return (
     <Suspense fallback={<div role="status">Loading…</div>}>
-      <Routes>
+      <Routes location={background ?? location}>
+        <Route path="/media/:uuid" element={<Suspense fallback={<MediaViewerPlaceholder />}><MediaDetailPage /></Suspense>} />
         <Route path="/manage" element={<ManageShell />}>
           <Route index element={<ManageGalleryIndexPage />} />
           <Route path="gallery/:setID" element={<ManageGalleryEditorPage />} />
@@ -76,11 +81,11 @@ export function AppRoutes() {
           <Route path="random-galleries" element={<RandomPage mode="galleries" />} />
           <Route path="favorites" element={<FavoritesPage />} />
           <Route path="history" element={<HistoryPage />} />
-          <Route path="media/:uuid" element={<MediaDetailPage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="similar-images" element={<SimilarImagesPage />} />
         </Route>
       </Routes>
+      {background ? <Routes><Route path="/media/:uuid" element={<Suspense fallback={<MediaViewerPlaceholder />}><MediaDetailPage /></Suspense>} /></Routes> : null}
     </Suspense>
   );
 }

@@ -1,6 +1,8 @@
-const storageKey = "cgm.mediaMetadataVisibleFields.v1";
+const storageKey = "cgm.mediaMetadataVisibleFields.v2";
+const newMetadataKeys = ["file.name", "file.original_filename", "file.source_modified", "date.created", "date.metadata_modified", "history.edits", "history.conversions", "image.icc"] as const;
 
 export const mediaMetadataVisibilityKeys = [
+  ...newMetadataKeys,
   "file.type", "file.size", "file.dimensions", "file.added_at",
   "descriptive.title", "descriptive.description", "descriptive.author", "descriptive.source", "descriptive.software", "descriptive.copyright", "descriptive.keywords", "descriptive.comment",
   "date.modified", "date.original", "date.digitized",
@@ -16,9 +18,13 @@ export const defaultMediaMetadataVisibleFields = mediaMetadataVisibilityKeys.fil
 export function readMediaMetadataVisibleFields(): string[] {
   if (typeof window === "undefined") return [...defaultMediaMetadataVisibleFields];
   try {
-    const stored = JSON.parse(window.localStorage.getItem(storageKey) ?? "null");
+    const current = window.localStorage.getItem(storageKey);
+    const stored = JSON.parse(current ?? window.localStorage.getItem("cgm.mediaMetadataVisibleFields.v1") ?? "null");
     if (!Array.isArray(stored)) return [...defaultMediaMetadataVisibleFields];
-    return [...new Set(stored.filter((value): value is string => typeof value === "string" && allowed.has(value)))];
+    const valid = stored.filter((value): value is string => typeof value === "string" && allowed.has(value));
+    // Preserve old exclusions, including an explicit all-off choice. Only the
+    // newly introduced non-sensitive controls get their default on migration.
+    return [...new Set([...valid, ...(current === null && valid.length ? newMetadataKeys : [])])];
   } catch {
     return [...defaultMediaMetadataVisibleFields];
   }

@@ -154,6 +154,8 @@ export interface CoserDetail { entity: EntityIndexItem; profileSummary: string; 
 export interface WorkDetail { entity: EntityIndexItem; characters: EntityIndexItem[]; redirected: boolean }
 export interface CharacterDetail { entity: EntityIndexItem; work: EntityIndexItem; galleries: GalleryPage; redirected: boolean }
 export interface TagDetail { entity: EntityIndexItem; galleries: GalleryPage; redirected: boolean }
-export interface MediaInformation { state: "READY" | "ERROR"; errorCode: string; entries: { key: string; visibilityKey: string; label: string; group: string; value: string }[] }
+export interface MediaMetadataEntry { key: string; visibilityKey: string; label: string; group: string; value: string; source?: string; rawValue?: string; timestamp?: string }
+export interface MediaMetadataEvent { index: number; action: string; software: string; when: string; timestamp: string; parameters: string }
+export interface MediaInformation { state: "READY" | "ERROR"; errorCode: string; entries: MediaMetadataEntry[]; history?: MediaMetadataEvent[]; warnings?: string[]; truncated?: boolean }
 export interface MediaDetail { item: GalleryMember; displayResource?: ResourceIdentity | null; gallery: BrowseGalleryCard; metadataRevision: number; videoTechnical?: { probeState: string; errorCode: string; container: string; durationSeconds: number; width: number; height: number; frameRate: number; videoCodec: string; audioCodec: string } | null }
 export interface MediaPage { items: RandomMediaItem[]; page: number; pageSize: number; totalItems: number; totalPages: number }

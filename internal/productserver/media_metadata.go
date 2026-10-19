@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/stashapp/stash/internal/browse"
 	"github.com/stashapp/stash/internal/gallery"
@@ -35,7 +36,7 @@ func (s *Server) MediaEmbeddedMetadata(ctx context.Context, itemUUID string, vis
 	result := browse.MediaInformationSummary{State: "READY"}
 	appendEntry := func(key, label, group, value string) {
 		if visible[key] && strings.TrimSpace(value) != "" {
-			result.Entries = append(result.Entries, browse.MediaInformationEntry{Key: key, VisibilityKey: key, Label: label, Group: group, Value: value})
+			result.Entries = append(result.Entries, browse.MediaInformationEntry{Key: key, VisibilityKey: key, Label: label, Group: group, Value: value, Source: "CGM", RawValue: value})
 		}
 	}
 	var byteSize int64
@@ -46,6 +47,14 @@ func (s *Server) MediaEmbeddedMetadata(ctx context.Context, itemUUID string, vis
 	appendEntry(settings.MetadataFileType, "Media type", "FILE", fmt.Sprintf("%s · %s", detail.Item.MediaKind, detail.Item.ContentFormat))
 	appendEntry(settings.MetadataFileSize, "File size", "FILE", formatMetadataByteSize(byteSize))
 	appendEntry(settings.MetadataFileAddedAt, "Added to CGM", "FILE", createdAt)
+	appendEntry(settings.MetadataCurrentFilename, "Current filename", "FILE", filepath.Base(filepath.FromSlash(item.RelativePath)))
+	var sourceModified, sourceOrigin string
+	if err := s.Database.QueryRowContext(ctx, `SELECT source_modified_at_utc,source_modified_origin FROM gallery_items WHERE item_uuid=?`, itemUUID).Scan(&sourceModified, &sourceOrigin); err != nil {
+		return browse.MediaInformationSummary{}, err
+	}
+	if sourceModified != "" && visible[settings.MetadataSourceModified] {
+		result.Entries = append(result.Entries, browse.MediaInformationEntry{Key: settings.MetadataSourceModified, VisibilityKey: settings.MetadataSourceModified, Label: "Source modified time", Group: "FILE", Value: sourceModified, RawValue: sourceModified, Source: sourceOrigin, Timestamp: sourceModified})
+	}
 
 	if item.MediaKind == gallery.MediaKindVideo {
 		metadata, findErr := s.Database.VideoMetadata().Find(ctx, itemUUID)
@@ -87,19 +96,48 @@ func (s *Server) MediaEmbeddedMetadata(ctx context.Context, itemUUID string, vis
 		return result, nil
 	}
 	defer materialized.Close()
-	extracted, err := imagemetadata.ExtractPath(materialized.Path)
+	extracted, err := imagemetadata.ExtractDisplayPath(materialized.Path)
 	if err != nil {
 		result.State = "ERROR"
 		result.ErrorCode = "IMAGE_METADATA_READ_FAILED"
 		return result, nil
 	}
+	if err := materialized.Validate(); err != nil {
+		result.State = "ERROR"
+		result.ErrorCode = "IMAGE_METADATA_SOURCE_CHANGED"
+		return result, nil
+	}
 	if extracted.Width > 0 && extracted.Height > 0 {
 		appendEntry(settings.MetadataFileDimensions, "Dimensions", "FILE", fmt.Sprintf("%d × %d", extracted.Width, extracted.Height))
 	}
+	result.Truncated = extracted.Truncated
+	result.Warnings = extracted.Warnings
 	for _, entry := range extracted.Entries {
 		if visible[entry.VisibilityKey] {
-			result.Entries = append(result.Entries, browse.MediaInformationEntry{Key: entry.Key, VisibilityKey: entry.VisibilityKey, Label: entry.Label, Group: entry.Group, Value: entry.Value})
+			result.Entries = append(result.Entries, browse.MediaInformationEntry{Key: entry.Key, VisibilityKey: entry.VisibilityKey, Label: entry.Label, Group: entry.Group, Value: entry.Value, Source: entry.Source, RawValue: entry.RawValue, Timestamp: entry.Timestamp})
 		}
+	}
+	for _, event := range extracted.History {
+		conversion := event.Action == "converted" || event.Action == "derived"
+		if conversion && !visible[settings.MetadataHistoryConversions] || !conversion && !visible[settings.MetadataHistoryEdits] {
+			continue
+		}
+		result.History = append(result.History, browse.MediaHistoryEvent{Index: event.Index, Action: event.Action, Software: event.Software, When: event.When, Timestamp: event.Timestamp, Parameters: event.Parameters})
+	}
+	var modified *time.Time
+	for _, entry := range result.Entries {
+		if entry.VisibilityKey != settings.MetadataDateModified || entry.Timestamp == "" {
+			continue
+		}
+		stamp, err := time.Parse(time.RFC3339Nano, entry.Timestamp)
+		if err != nil {
+			continue
+		}
+		if modified != nil && !modified.Equal(stamp) {
+			result.Warnings = append(result.Warnings, "MODIFIED_TIME_CONFLICT")
+			break
+		}
+		modified = &stamp
 	}
 	return result, nil
 }

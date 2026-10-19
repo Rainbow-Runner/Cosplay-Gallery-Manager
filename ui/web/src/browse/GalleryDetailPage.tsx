@@ -25,11 +25,8 @@ import type { GalleryMediaLayout } from "./galleryMediaLayout";
 import { GalleryTagEditor } from "./GalleryTagEditor";
 import { itemResourceURL } from "./resourceUrl";
 import type { BrowseGalleryCard, BrowseUISettings, GalleryDetail, GalleryMember, GalleryMemberIndex } from "./types";
-import { useImageDisplay } from "./useImageDisplay";
+import { MediaViewer } from "./MediaViewer";
 import { useOnDemandAnimatedPreview } from "./useOnDemandAnimatedPreview";
-import { useOnDemandVideoPlayback } from "./useOnDemandVideoPlayback";
-import { VideoPlaybackNotice } from "./VideoPlaybackNotice";
-import { PlaybackVideo } from "./PlaybackVideo";
 
 const memberBatchSize = 24;
 const animationHoverConfirmationMS = 150;
@@ -312,7 +309,11 @@ export function GalleryDetailPage() {
     if (!group) return;
     const required = group.items.findIndex((item) => item.itemUUID === itemUUID) + 1;
     setVisible((current) => current[group.key] >= required ? current : { ...current, [group.key]: required });
-    requestAnimationFrame(() => requestAnimationFrame(() => tileElements.current.get(itemUUID)?.scrollIntoView?.({ block: "center" })));
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const tile = tileElements.current.get(itemUUID);
+      tile?.scrollIntoView?.({ block: "center" });
+      tile?.querySelector<HTMLButtonElement>(".media-tile__open")?.focus({ preventScroll: true });
+    }));
   }
 
   useEffect(() => {
@@ -339,10 +340,11 @@ export function GalleryDetailPage() {
   const mediaCount = formatGalleryMediaCount(detail.card.media);
   const personalControlsVisible = settings?.detailRatingControlVisible ?? false;
 
-  function openItem(itemUUID: string) {
+  function openItem(itemUUID: string, information = false) {
     openedHere.current = true;
     const next = new URLSearchParams(parameters);
     next.set("item", itemUUID);
+    if (information) next.set("info","1"); else next.delete("info");
     setParameters(next);
   }
   function moveLightbox(index: number) {
@@ -359,6 +361,7 @@ export function GalleryDetailPage() {
     }
     const next = new URLSearchParams(parameters);
     next.delete("item");
+    next.delete("info");
     setParameters(next, { replace: true });
   }
   async function toggleGalleryFavorite() {
@@ -503,6 +506,7 @@ export function GalleryDetailPage() {
                       busy={busyItemUUID === item.itemUUID}
                       setElement={(element) => { if (element) tileElements.current.set(item.itemUUID, element); else tileElements.current.delete(item.itemUUID); }}
                       onOpen={() => openItem(item.itemUUID)}
+                      onOpenDetails={() => openItem(item.itemUUID,true)}
                       onAnimationHoverStart={animationHoverEnabled && item.mediaKind === "ANIMATED_IMAGE" ? () => beginAnimationHover(item.itemUUID) : undefined}
                       onAnimationHoverEnd={animationHoverEnabled && item.mediaKind === "ANIMATED_IMAGE" ? () => endAnimationHover(item.itemUUID) : undefined}
                       onFavorite={() => void toggleItemFavorite(item)}
@@ -530,8 +534,9 @@ export function GalleryDetailPage() {
 
       {lightboxItem ? (
         <Lightbox
-          key={lightboxItem.itemUUID}
           item={lightboxItem}
+          informationOpen={parameters.get("info") === "1"}
+          onInformationChange={(value) => {const next=new URLSearchParams(parameters);if(value)next.set("info","1");else next.delete("info");setParameters(next,{replace:true});}}
           favorite={favoriteOverrides[lightboxItem.itemUUID] ?? lightboxItem.favorite}
           rating={ratingOverrides[lightboxItem.itemUUID] ?? lightboxItem.ratingHalfSteps ?? null}
           currentCover={coverItemUUID === lightboxItem.itemUUID}
@@ -569,7 +574,7 @@ function RelatedGallery({ card }: { card: BrowseGalleryCard }) {
   );
 }
 
-function MediaTile({ item, tileStyle, animate, favorite, currentCover, personalControlsVisible, busy, setElement, onOpen, onAnimationHoverStart, onAnimationHoverEnd, onFavorite, onSetCover }: {
+function MediaTile({ item, tileStyle, animate, favorite, currentCover, personalControlsVisible, busy, setElement, onOpen, onOpenDetails, onAnimationHoverStart, onAnimationHoverEnd, onFavorite, onSetCover }: {
   item: GalleryMember;
   tileStyle?: CSSProperties;
   animate: boolean;
@@ -579,6 +584,7 @@ function MediaTile({ item, tileStyle, animate, favorite, currentCover, personalC
   busy: boolean;
   setElement: (element: HTMLElement | null) => void;
   onOpen: () => void;
+  onOpenDetails: () => void;
   onAnimationHoverStart?: () => void;
   onAnimationHoverEnd?: () => void;
   onFavorite: () => void;
@@ -623,7 +629,7 @@ function MediaTile({ item, tileStyle, animate, favorite, currentCover, personalC
       <details ref={menuRef} className="media-tile__menu" onToggle={(event) => setMenuOpen(event.currentTarget.open)}>
         <summary aria-label={intl.formatMessage({ id: "gallery.itemMenu" })}><Icon name="more-horizontal" /></summary>
         <div>
-          <Link to={`/media/${item.itemUUID}`} onClick={closeMenu}><Icon name="info" />{intl.formatMessage({ id: "gallery.openMedia" })}</Link>
+          <button type="button" onClick={() => {closeMenu();onOpenDetails();}}><Icon name="info" />{intl.formatMessage({ id: "gallery.openMedia" })}</button>
           {item.mediaKind === "STATIC_IMAGE" ? <button type="button" disabled={busy || currentCover} onClick={() => { closeMenu(); onSetCover(); }}><Icon name="gallery" />{intl.formatMessage({ id: currentCover ? "gallery.currentCover" : "gallery.setCover" })}</button> : null}
         </div>
       </details>
@@ -631,66 +637,23 @@ function MediaTile({ item, tileStyle, animate, favorite, currentCover, personalC
   );
 }
 
-function Lightbox({ item, favorite, rating, currentCover, personalControlsVisible, busy, onClose, canPrevious, canNext, onPrevious, onNext, onFavorite, onRating, onSetCover }: {
-  item: GalleryMember;
-  favorite: boolean;
-  rating: number | null;
-  currentCover: boolean;
-  personalControlsVisible: boolean;
-  busy: boolean;
-  onClose: () => void;
-  canPrevious: boolean;
-  canNext: boolean;
-  onPrevious: () => void;
-  onNext: () => void;
-  onFavorite: () => void;
-  onRating: (rating: number | null) => void;
-  onSetCover: () => void;
+function Lightbox({ item, favorite, rating, currentCover, personalControlsVisible, busy, onClose, canPrevious, canNext, onPrevious, onNext, onFavorite, onRating, onSetCover, informationOpen, onInformationChange }: {
+  item: GalleryMember; favorite: boolean; rating: number | null; currentCover: boolean; personalControlsVisible: boolean; busy: boolean;
+  onClose: () => void; canPrevious: boolean; canNext: boolean; onPrevious: () => void; onNext: () => void;
+  onFavorite: () => void; onRating: (rating: number | null) => void; onSetCover: () => void;
+  informationOpen: boolean; onInformationChange: (value: boolean) => void;
 }) {
   const intl = useIntl();
-  const imageDisplay = useImageDisplay(item);
-  const videoPlayback = useOnDemandVideoPlayback(item);
-  const resourceURL = item.mediaKind === "VIDEO" ? videoPlayback.url : imageDisplay.url;
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const favoriteLabel = intl.formatMessage({ id: favorite ? "gallery.itemUnfavorite" : "gallery.itemFavorite" });
-  const ratingLabel = intl.formatMessage({ id: "gallery.rating" });
-  const coverLabel = intl.formatMessage({ id: currentCover ? "gallery.currentCover" : "gallery.setCover" });
-  const mediaDetailsLabel = intl.formatMessage({ id: "gallery.openMedia" });
-  const closeLabel = intl.formatMessage({ id: "gallery.closeViewer" });
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeRef.current?.focus();
-    return () => { document.body.style.overflow = previousOverflow; };
-  }, []);
-  return (
-    <div className="lightbox" role="dialog" aria-modal="true" aria-label={item.caption || item.mediaKind} onClick={onClose}
-      onKeyDown={(event) => { if (event.key === "Escape") onClose(); else if (event.key === "ArrowLeft" && canPrevious) onPrevious(); else if (event.key === "ArrowRight" && canNext) onNext(); }}>
-      <div className="lightbox__toolbar" onClick={(event) => event.stopPropagation()}>
-        {personalControlsVisible ? <>
-          <button className={favorite ? "is-active" : ""} type="button" disabled={busy} aria-label={favoriteLabel} title={favoriteLabel} aria-pressed={favorite} onClick={onFavorite}><Icon name="heart" /></button>
-          <select aria-label={ratingLabel} title={ratingLabel} value={rating ?? 0} disabled={busy} onChange={(event) => onRating(Number(event.target.value) || null)}>
-            <option value={0}>—</option>{Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <option key={value} value={value}>{value / 2} / 5</option>)}
-          </select>
-        </> : null}
-        {item.mediaKind === "STATIC_IMAGE" ? <button type="button" disabled={busy || currentCover} aria-label={coverLabel} title={coverLabel} onClick={onSetCover}><Icon name="gallery" /></button> : null}
-        <Link to={`/media/${item.itemUUID}`} aria-label={mediaDetailsLabel} title={mediaDetailsLabel}><Icon name="info" /></Link>
-        <button ref={closeRef} className="lightbox__close" type="button" aria-label={closeLabel} title={closeLabel} onClick={onClose}><Icon name="close" /></button>
-      </div>
-      <button className="lightbox__previous" type="button" aria-label="Previous media" disabled={!canPrevious} onClick={(event) => { event.stopPropagation(); onPrevious(); }}><Icon name="chevron-left" /></button>
-      <div className="lightbox__content" onClick={(event) => event.stopPropagation()}>
-        {item.mediaKind === "VIDEO" && resourceURL ? <PlaybackVideo key={item.itemUUID} url={resourceURL} hls={videoPlayback.hls} autoPlay onError={videoPlayback.onPlaybackError} />
-          : item.mediaKind !== "VIDEO" && resourceURL ? <img key={item.itemUUID} src={resourceURL} alt={item.caption} />
-            : item.cardResource ? <img key={`${item.itemUUID}-poster`} src={itemResourceURL(item.cardResource) ?? undefined} alt={item.caption} />
-              : <span>{item.processingState}</span>}
-        {item.mediaKind === "VIDEO" ? <VideoPlaybackNotice state={videoPlayback} className="lightbox__status" /> : null}
-        {item.mediaKind !== "VIDEO" && imageDisplay.preparing ? <span className="lightbox__status">Preparing full-size view…</span> : null}
-        {item.mediaKind !== "VIDEO" && imageDisplay.failed ? <span className="lightbox__status" role="alert">Full-size view is temporarily unavailable.</span> : null}
-        {item.caption ? <p>{item.caption}</p> : null}
-      </div>
-      <button className="lightbox__next" type="button" aria-label="Next media" disabled={!canNext} onClick={(event) => { event.stopPropagation(); onNext(); }}><Icon name="chevron-right" /></button>
-    </div>
-  );
+  const favoriteLabel = intl.formatMessage({id: favorite ? "gallery.itemUnfavorite" : "gallery.itemFavorite"});
+  const ratingLabel = intl.formatMessage({id:"gallery.rating"});
+  const coverLabel = intl.formatMessage({id:currentCover ? "gallery.currentCover" : "gallery.setCover"});
+  return <MediaViewer item={item} informationOpen={informationOpen} onInformationChange={onInformationChange} onClose={onClose}
+    canPrevious={canPrevious} canNext={canNext} onPrevious={onPrevious} onNext={onNext}
+    actions={<>
+      {personalControlsVisible ? <><button className={favorite ? "is-active" : ""} type="button" disabled={busy} aria-label={favoriteLabel} title={favoriteLabel} aria-pressed={favorite} onClick={onFavorite}><Icon name="heart" /></button>
+      <select aria-label={ratingLabel} title={ratingLabel} value={rating ?? 0} disabled={busy} onChange={event => onRating(Number(event.target.value) || null)}><option value={0}>—</option>{Array.from({length:10},(_,index) => index+1).map(value => <option key={value} value={value}>{value/2} / 5</option>)}</select></> : null}
+      {item.mediaKind === "STATIC_IMAGE" ? <button type="button" disabled={busy || currentCover} aria-label={coverLabel} title={coverLabel} onClick={onSetCover}><Icon name="gallery" /></button> : null}
+    </>} />;
 }
 
 function formatBytes(value: number) {

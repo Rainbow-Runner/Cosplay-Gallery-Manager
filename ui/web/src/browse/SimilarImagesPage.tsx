@@ -1,7 +1,7 @@
 import { useLazyQuery } from "@apollo/client/react";
 import { useState, type FormEvent } from "react";
 import { useIntl } from "react-intl";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { SIMILAR_IMAGES } from "../api/browse";
 import { itemResourceURL } from "./resourceUrl";
 import type { ResourceIdentity } from "./types";
@@ -17,6 +17,7 @@ export interface SimilarImageResult {
 type MatchScope = "ALL" | "SAME_GALLERY" | "CROSS_GALLERY";
 
 export function SimilarImagesPage() {
+  const location = useLocation();
   const intl = useIntl();
   const text = (key: string) => intl.formatMessage({ id: `similar.${key}` });
   const [maxDistance, setMaxDistance] = useState(4);
@@ -58,7 +59,7 @@ export function SimilarImagesPage() {
         {result.pairs.slice(0, visible).map((pair) => <article className="similar-images-pair" key={`${pair.left.itemUUID}-${pair.right.itemUUID}`}>
           <header><strong>pHash {pair.pHashDistance} / 64 · dHash {pair.dHashDistance} / 128</strong><span>{text(pair.sameContent ? "sameContent" : "review")}</span></header>
           <div className="similar-images-pair__images">{[pair.left, pair.right].map((image) => <div key={image.itemUUID}>
-            <Link className="similar-images-preview" to={`/media/${encodeURIComponent(image.itemUUID)}`} aria-label={`${text("open")} · ${image.fileName}`}><img src={itemResourceURL(image.resource) ?? undefined} alt={image.fileName} loading="lazy" decoding="async" /></Link>
+            <Link className="similar-images-preview" to={`/media/${encodeURIComponent(image.itemUUID)}`} state={{backgroundLocation:location}} aria-label={`${text("open")} · ${image.fileName}`}><img src={itemResourceURL(image.resource) ?? undefined} alt={image.fileName} loading="lazy" decoding="async" /></Link>
             <p title={image.fileName}>{image.fileName}</p><Link title={image.galleryTitle} to={`/gallery/${encodeURIComponent(image.gallerySlug)}`}>{image.galleryTitle}</Link>
           </div>)}</div>
         </article>)}

@@ -335,12 +335,27 @@ type MediaInformationEntry struct {
 	Label         string
 	Group         string
 	Value         string
+	Source        string
+	RawValue      string
+	Timestamp     string
+}
+
+type MediaHistoryEvent struct {
+	Index      int
+	Action     string
+	Software   string
+	When       string
+	Timestamp  string
+	Parameters string
 }
 
 type MediaInformationSummary struct {
 	State     string
 	ErrorCode string
 	Entries   []MediaInformationEntry
+	History   []MediaHistoryEvent
+	Warnings  []string
+	Truncated bool
 }
 
 type VideoTechnicalSummary struct {

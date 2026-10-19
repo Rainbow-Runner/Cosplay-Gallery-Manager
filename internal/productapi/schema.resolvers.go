@@ -1737,9 +1737,12 @@ func (r *queryResolver) MediaEmbeddedMetadata(ctx context.Context, itemUUID stri
 	if err != nil {
 		return nil, publicError(err)
 	}
-	result := &MediaInformationSummary{State: value.State, ErrorCode: value.ErrorCode}
+	result := &MediaInformationSummary{State: value.State, ErrorCode: value.ErrorCode, Warnings: value.Warnings, Truncated: value.Truncated}
 	for _, entry := range value.Entries {
-		result.Entries = append(result.Entries, &MediaInformationEntry{Key: entry.Key, VisibilityKey: entry.VisibilityKey, Label: entry.Label, Group: entry.Group, Value: entry.Value})
+		result.Entries = append(result.Entries, &MediaInformationEntry{Key: entry.Key, VisibilityKey: entry.VisibilityKey, Label: entry.Label, Group: entry.Group, Value: entry.Value, Source: entry.Source, RawValue: entry.RawValue, Timestamp: entry.Timestamp})
+	}
+	for _, event := range value.History {
+		result.History = append(result.History, &MediaHistoryEvent{Index: event.Index, Action: event.Action, Software: event.Software, When: event.When, Timestamp: event.Timestamp, Parameters: event.Parameters})
 	}
 	return result, nil
 }

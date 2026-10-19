@@ -6,49 +6,58 @@ import "fmt"
 // extractor may discover many concrete EXIF tags, but every returned value is
 // assigned to one of these bounded controls before it can reach Browse.
 const (
-	MetadataFileType          = "file.type"
-	MetadataFileSize          = "file.size"
-	MetadataFileDimensions    = "file.dimensions"
-	MetadataFileAddedAt       = "file.added_at"
-	MetadataTitle             = "descriptive.title"
-	MetadataDescription       = "descriptive.description"
-	MetadataAuthor            = "descriptive.author"
-	MetadataSource            = "descriptive.source"
-	MetadataSoftware          = "descriptive.software"
-	MetadataCopyright         = "descriptive.copyright"
-	MetadataKeywords          = "descriptive.keywords"
-	MetadataComment           = "descriptive.comment"
-	MetadataDateModified      = "date.modified"
-	MetadataDateOriginal      = "date.original"
-	MetadataDateDigitized     = "date.digitized"
-	MetadataCameraMake        = "camera.make"
-	MetadataCameraModel       = "camera.model"
-	MetadataLens              = "camera.lens"
-	MetadataExposureTime      = "camera.exposure_time"
-	MetadataAperture          = "camera.aperture"
-	MetadataISO               = "camera.iso"
-	MetadataFocalLength       = "camera.focal_length"
-	MetadataExposureBias      = "camera.exposure_bias"
-	MetadataFlash             = "camera.flash"
-	MetadataMeteringMode      = "camera.metering_mode"
-	MetadataWhiteBalance      = "camera.white_balance"
-	MetadataOrientation       = "image.orientation"
-	MetadataColorSpace        = "image.color_space"
-	MetadataResolution        = "image.resolution"
-	MetadataVideoDuration     = "video.duration"
-	MetadataVideoContainer    = "video.container"
-	MetadataVideoCodec        = "video.codec"
-	MetadataVideoFrameRate    = "video.frame_rate"
-	MetadataAudioCodec        = "video.audio_codec"
-	MetadataGPS               = "sensitive.gps"
-	MetadataDeviceIdentifiers = "sensitive.device_identifiers"
-	MetadataOtherEXIF         = "other.exif"
+	MetadataFileType           = "file.type"
+	MetadataFileSize           = "file.size"
+	MetadataFileDimensions     = "file.dimensions"
+	MetadataFileAddedAt        = "file.added_at"
+	MetadataTitle              = "descriptive.title"
+	MetadataDescription        = "descriptive.description"
+	MetadataAuthor             = "descriptive.author"
+	MetadataSource             = "descriptive.source"
+	MetadataSoftware           = "descriptive.software"
+	MetadataCopyright          = "descriptive.copyright"
+	MetadataKeywords           = "descriptive.keywords"
+	MetadataComment            = "descriptive.comment"
+	MetadataDateModified       = "date.modified"
+	MetadataDateOriginal       = "date.original"
+	MetadataDateDigitized      = "date.digitized"
+	MetadataDateCreated        = "date.created"
+	MetadataDateMetadata       = "date.metadata_modified"
+	MetadataOriginalFilename   = "file.original_filename"
+	MetadataCurrentFilename    = "file.name"
+	MetadataSourceModified     = "file.source_modified"
+	MetadataHistoryEdits       = "history.edits"
+	MetadataHistoryConversions = "history.conversions"
+	MetadataICC                = "image.icc"
+	MetadataCameraMake         = "camera.make"
+	MetadataCameraModel        = "camera.model"
+	MetadataLens               = "camera.lens"
+	MetadataExposureTime       = "camera.exposure_time"
+	MetadataAperture           = "camera.aperture"
+	MetadataISO                = "camera.iso"
+	MetadataFocalLength        = "camera.focal_length"
+	MetadataExposureBias       = "camera.exposure_bias"
+	MetadataFlash              = "camera.flash"
+	MetadataMeteringMode       = "camera.metering_mode"
+	MetadataWhiteBalance       = "camera.white_balance"
+	MetadataOrientation        = "image.orientation"
+	MetadataColorSpace         = "image.color_space"
+	MetadataResolution         = "image.resolution"
+	MetadataVideoDuration      = "video.duration"
+	MetadataVideoContainer     = "video.container"
+	MetadataVideoCodec         = "video.codec"
+	MetadataVideoFrameRate     = "video.frame_rate"
+	MetadataAudioCodec         = "video.audio_codec"
+	MetadataGPS                = "sensitive.gps"
+	MetadataDeviceIdentifiers  = "sensitive.device_identifiers"
+	MetadataOtherEXIF          = "other.exif"
 )
 
 // MediaMetadataVisibilityCatalog is ordered for the Manage settings UI.
 // GPS and unique device/image identifiers are supported but intentionally not
 // enabled by default.
 var MediaMetadataVisibilityCatalog = []string{
+	MetadataDateCreated, MetadataDateMetadata, MetadataOriginalFilename, MetadataCurrentFilename, MetadataSourceModified, MetadataHistoryEdits, MetadataHistoryConversions, MetadataICC,
 	MetadataFileType, MetadataFileSize, MetadataFileDimensions, MetadataFileAddedAt,
 	MetadataTitle, MetadataDescription, MetadataAuthor, MetadataSource, MetadataSoftware,
 	MetadataCopyright, MetadataKeywords, MetadataComment,
@@ -63,6 +72,7 @@ var MediaMetadataVisibilityCatalog = []string{
 }
 
 var DefaultMediaMetadataVisibleFields = []string{
+	MetadataDateCreated, MetadataDateMetadata, MetadataOriginalFilename, MetadataCurrentFilename, MetadataSourceModified, MetadataHistoryEdits, MetadataHistoryConversions, MetadataICC,
 	MetadataFileType, MetadataFileSize, MetadataFileDimensions, MetadataFileAddedAt,
 	MetadataTitle, MetadataDescription, MetadataAuthor, MetadataSource, MetadataSoftware,
 	MetadataCopyright, MetadataKeywords, MetadataComment,

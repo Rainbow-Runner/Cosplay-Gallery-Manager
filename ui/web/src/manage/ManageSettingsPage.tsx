@@ -76,7 +76,8 @@ export function ManageSettingsPage() {
 }
 
 const metadataVisibilityGroups = [
-  { name: "文件 / File", fields: [["file.type","媒体类型 / Media type"],["file.size","文件大小 / File size"],["file.dimensions","尺寸 / Dimensions"],["file.added_at","CGM 收录时间 / Added to CGM"]] },
+  { name: "来源与编辑历史 / Provenance & editing", fields: [["file.name","当前文件名 / Current filename"],["file.original_filename","保留原始文件名 / Preserved filename"],["file.source_modified","文件系统／存档条目修改时间 / Source modified time"],["date.created","内容创建时间 / Content creation"],["date.metadata_modified","元数据修改时间 / Metadata modified"],["history.edits","软件保存历史 / Software save history"],["history.conversions","格式转换历史 / Conversion history"],["image.icc","ICC 色彩配置 / ICC profile"]] },
+  { name: "文件 / File", fields: [["file.type","媒体类型 / Media type"],["file.size","文件大小 / File size"],["file.dimensions","尺寸 / Dimensions"]] },
   { name: "描述 / Description", fields: [["descriptive.title","标题 / Title"],["descriptive.description","描述 / Description"],["descriptive.author","作者 / Author"],["descriptive.source","来源 / Source"],["descriptive.software","程序名称 / Software"],["descriptive.copyright","版权 / Copyright"],["descriptive.keywords","关键词 / Keywords"],["descriptive.comment","备注 / Comment"]] },
   { name: "日期 / Dates", fields: [["date.modified","修改日期 / Modified"],["date.original","拍摄日期 / Date taken"],["date.digitized","获取／数字化日期 / Digitized"]] },
   { name: "相机 / Camera", fields: [["camera.make","制造商 / Manufacturer"],["camera.model","型号 / Model"],["camera.lens","镜头 / Lens"],["camera.exposure_time","曝光时间 / Exposure"],["camera.aperture","光圈值 / Aperture"],["camera.iso","ISO 感光度"],["camera.focal_length","焦距 / Focal length"],["camera.exposure_bias","曝光补偿 / Exposure bias"],["camera.flash","闪光灯 / Flash"],["camera.metering_mode","测光模式 / Metering"],["camera.white_balance","白平衡 / White balance"]] },
@@ -88,7 +89,7 @@ const metadataVisibilityKeySet = new Set<string>(mediaMetadataVisibilityKeys);
 function MetadataVisibilityPanel({ selected, toggle, save, message }: { selected: string[]; toggle: (key: string, checked: boolean) => void; save: () => void; message: string }) {
   const enabled = new Set(selected);
   return <fieldset className="settings-metadata-visibility"><legend>媒体详情元数据 / Media detail metadata</legend>
-    <p>详情页会按需只读原始媒体，不写入数据库或缓存。此选择仅保存在当前浏览器，不包含在完整备份中；服务端仍会校验并过滤每次请求。嵌入缩略图、MakerNote、二进制块和物理路径不会被提取，GPS 与唯一标识需要明确启用。</p>
+    <p>查看器侧栏按需只读原始媒体中的 EXIF／XMP／IPTC，按内容分类，属性紧凑展示、点击展开原始记录，支持搜索和折叠分类／来源筛选；同属性同值合并但保留各来源和冲突值，时间完整的历史事件按时区换算从早到晚排列，否则保留原记录顺序；信息区独立滚动，不再额外弹窗，不展示系统收录信息。随机浏览中的静态图片隐藏信息入口。此选择仅保存于当前浏览器，不包含在备份中；服务器同样执行字段开关。不会写入元数据表或改变自动拍摄日期算法。嵌入缩略图、MakerNote、二进制块和物理路径不展示，GPS 与唯一标识须明确启用。Source metadata is read on demand in the viewer sidebar; visibility is browser-local and enforced by the server.</p>
     {metadataVisibilityGroups.map((group) => <section className={"sensitive" in group && group.sensitive ? "is-sensitive" : ""} key={group.name}><h3>{group.name}</h3>{group.fields.map(([key,label]) => <Check key={key} label={label} checked={enabled.has(key)} change={(checked) => metadataVisibilityKeySet.has(key) && toggle(key,checked)} />)}</section>)}
     <button className="settings-metadata-visibility__save" type="button" onClick={save}>保存元数据显示设置 / Save metadata visibility</button>{message ? <p role="status">{message}</p> : null}
   </fieldset>;

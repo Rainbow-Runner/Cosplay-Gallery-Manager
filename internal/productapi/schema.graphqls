@@ -274,8 +274,9 @@ type MediaDetail {
   videoTechnical: VideoTechnicalSummary
 }
 type VideoTechnicalSummary { probeState: String! errorCode: String! container: String! durationSeconds: Float! width: Int! height: Int! frameRate: Float! videoCodec: String! audioCodec: String! }
-type MediaInformationEntry { key: String! visibilityKey: String! label: String! group: String! value: String! }
-type MediaInformationSummary { state: String! errorCode: String! entries: [MediaInformationEntry!]! }
+type MediaInformationEntry { key: String! visibilityKey: String! label: String! group: String! value: String! source: String! rawValue: String! timestamp: String! }
+type MediaHistoryEvent { index: Int! action: String! software: String! when: String! timestamp: String! parameters: String! }
+type MediaInformationSummary { state: String! errorCode: String! entries: [MediaInformationEntry!]! history: [MediaHistoryEvent!]! warnings: [String!]! truncated: Boolean! }
 
 type MediaPage {
   items: [RandomMediaItem!]!

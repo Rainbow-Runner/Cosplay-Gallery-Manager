@@ -1279,18 +1279,33 @@ type MediaExclusionRuleInput struct {
 	Decision      string `json:"decision"`
 }
 
+type MediaHistoryEvent struct {
+	Index      int    `json:"index"`
+	Action     string `json:"action"`
+	Software   string `json:"software"`
+	When       string `json:"when"`
+	Timestamp  string `json:"timestamp"`
+	Parameters string `json:"parameters"`
+}
+
 type MediaInformationEntry struct {
 	Key           string `json:"key"`
 	VisibilityKey string `json:"visibilityKey"`
 	Label         string `json:"label"`
 	Group         string `json:"group"`
 	Value         string `json:"value"`
+	Source        string `json:"source"`
+	RawValue      string `json:"rawValue"`
+	Timestamp     string `json:"timestamp"`
 }
 
 type MediaInformationSummary struct {
 	State     string                   `json:"state"`
 	ErrorCode string                   `json:"errorCode"`
 	Entries   []*MediaInformationEntry `json:"entries"`
+	History   []*MediaHistoryEvent     `json:"history"`
+	Warnings  []string                 `json:"warnings"`
+	Truncated bool                     `json:"truncated"`
 }
 
 type MediaPage struct {

@@ -38,6 +38,17 @@ export function MediaInformationPanel({ information, loading, error, historyEnab
   async function copy(key: string,value: string) { try { await navigator.clipboard.writeText(value); setCopied(key); } catch { setCopied("failed"); } }
   const filterActive = category !== "all" || sourceFilter !== "all";
   const available = groups.filter(g => entries.some(e => groupOf(e) === g) || g === "EDITING" && events.length);
+  function renderRows(items: MediaMetadataEntry[][]) { return items.map(records => {
+          const e = records[0], sources = [...new Set(records.map(r=>sourceName(r.source)).filter(Boolean))].join(" / ");
+          const unzoned = groupOf(e) === "DATES" && /\d{2}:\d{2}/.test(e.value) && records.some(r=>!r.timestamp);
+          return <details className="media-metadata-row" key={e.key} data-property={e.visibilityKey}>
+            <summary title={t("expandRecord")}><span className="media-metadata-label">{name(e)}{sources ? <small className="media-metadata-source">{sources}</small> : null}</span><span className="media-metadata-value"><span>{e.value}</span>{unzoned ? <small className="media-metadata-indicator" aria-label={t("unzoned")} title={t("unzoned")}>⚠</small> : null}</span></summary>
+            <div className="media-metadata-records">{unzoned ? <p>{t("unzoned")}</p> : null}{records.map(r => <div className="media-metadata-raw" key={r.key}>
+              <header><small>{sourceName(r.source)}</small><code>{r.key}</code><button type="button" onClick={() => void copy(r.key,r.rawValue || r.value)} aria-label={t("copy")+" · "+r.key}>{t(copied === r.key ? "copied" : "copy")}</button></header>
+              {r.rawValue && r.rawValue !== r.value ? <code className="media-metadata-original">{r.rawValue}</code> : null}
+            </div>)}{e.visibilityKey === "file.original_filename" ? <p className="media-metadata-note">{t("filenameNote")}</p> : null}</div>
+          </details>;
+        }); }
   return <section className="media-metadata-panel">
     <div className="media-metadata-tools">
       <label>{t("search")}<input type="search" value={search} onChange={e => setSearch(e.target.value)} maxLength={200} /></label>
@@ -55,18 +66,14 @@ export function MediaInformationPanel({ information, loading, error, historyEnab
       const history = group === "EDITING" && filteredEvents.length > 0;
       return items.length || history ? <details className="media-metadata-section" key={group} open={["FILE","IMAGE","DATES","EDITING"].includes(group) || !!search || filterActive}>
         <summary>{groupTitle(group)}<small>{items.length + (history ? filteredEvents.length : 0)}</small></summary>
-        {items.map(records => {
-          const e = records[0], sources = [...new Set(records.map(r=>sourceName(r.source)).filter(Boolean))].join(" / ");
-          const unzoned = group === "DATES" && /\d{2}:\d{2}/.test(e.value) && records.some(r=>!r.timestamp);
-          return <details className="media-metadata-row" key={e.key} data-property={e.visibilityKey}>
-            <summary title={t("expandRecord")}><span className="media-metadata-label">{name(e)}{sources ? <small className="media-metadata-source">{sources}</small> : null}</span><span className="media-metadata-value"><span>{e.value}</span>{unzoned ? <small className="media-metadata-indicator" aria-label={t("unzoned")} title={t("unzoned")}>⚠</small> : null}</span></summary>
-            <div className="media-metadata-records">{unzoned ? <p>{t("unzoned")}</p> : null}{records.map(r => <div className="media-metadata-raw" key={r.key}>
-              <header><small>{sourceName(r.source)}</small><code>{r.key}</code><button type="button" onClick={() => void copy(r.key,r.rawValue || r.value)} aria-label={t("copy")+" · "+r.key}>{t(copied === r.key ? "copied" : "copy")}</button></header>
-              {r.rawValue && r.rawValue !== r.value ? <code className="media-metadata-original">{r.rawValue}</code> : null}
-            </div>)}{e.visibilityKey === "file.original_filename" ? <p className="media-metadata-note">{t("filenameNote")}</p> : null}</div>
-          </details>;
-        })}
-        {history ? <><p className="media-metadata-note">{t(allEventsDated ? "timeOrder" : "sourceOrder")}</p><ol className="media-metadata-history">{filteredEvents.map(e => <li key={e.index}><details><summary><span><strong>{t("action."+e.action)}</strong>{e.software ? <span>{e.software}</span> : null}</span><time>{e.when || t("unknownTime")}</time></summary><div className="media-metadata-event-detail"><small>#{e.index} · XMP</small>{e.when && !e.timestamp ? <p>{t("unzoned")}</p> : null}{e.parameters ? <p>{e.parameters}</p> : null}<button type="button" onClick={() => void copy("history."+e.index,[e.action,e.when,e.software,e.parameters].filter(Boolean).join("\n"))}>{t(copied === "history."+e.index ? "copied" : "copy")}</button></div></details></li>)}</ol></> : null}
+        {group !== "EDITING" ? renderRows(items) : null}
+        {history ? <><p className="media-metadata-note">{t(allEventsDated ? "timeOrder" : "sourceOrder")}</p><ol className="media-metadata-history">{filteredEvents.map(e => {
+          const conversion = e.action === "derived" || e.action === "converted";
+          const heading = <><span><strong>{t("action."+e.action)}</strong>{e.software ? <span>{e.software}</span> : null}</span><time>{e.when || t("unknownTime")}</time></>;
+          const detail = <div className="media-metadata-event-detail"><small>#{e.index} · XMP</small>{e.when && !e.timestamp ? <p>{t("unzoned")}</p> : null}{e.parameters ? <p>{e.parameters}</p> : null}<button type="button" onClick={() => void copy("history."+e.index,[e.action,e.when,e.software,e.parameters].filter(Boolean).join("\n"))}>{t(copied === "history."+e.index ? "copied" : "copy")}</button></div>;
+          return <li key={e.index}>{conversion ? <><header className="media-metadata-event-heading">{heading}</header>{detail}</> : <details><summary>{heading}</summary>{detail}</details>}</li>;
+        })}</ol></> : null}
+        {group === "EDITING" ? <>{renderRows(items.filter(records=>records[0].visibilityKey !== "descriptive.software"))}{items.some(records=>records[0].visibilityKey === "descriptive.software") ? <details className="media-metadata-software"><summary>{t("declaredSoftware")}</summary><p className="media-metadata-note">{t("declaredSoftwareNote")}</p>{renderRows(items.filter(records=>records[0].visibilityKey === "descriptive.software"))}</details> : null}</> : null}
       </details> : null;
     })}
     {!events.length && historyEnabled && information?.state === "READY" && category === "all" && !search && sourceFilter === "all" ? <p className="media-metadata-note">{t("noHistory")}</p> : null}

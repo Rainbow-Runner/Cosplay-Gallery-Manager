@@ -89,7 +89,7 @@ const metadataVisibilityKeySet = new Set<string>(mediaMetadataVisibilityKeys);
 function MetadataVisibilityPanel({ selected, toggle, save, message }: { selected: string[]; toggle: (key: string, checked: boolean) => void; save: () => void; message: string }) {
   const enabled = new Set(selected);
   return <fieldset className="settings-metadata-visibility"><legend>媒体详情元数据 / Media detail metadata</legend>
-    <p>查看器侧栏按需只读原始媒体中的 EXIF／XMP／IPTC，按内容分类，属性紧凑展示、点击展开原始记录，支持搜索和折叠分类／来源筛选；同属性同值合并但保留各来源和冲突值，时间完整的历史事件按时区换算从早到晚排列，否则保留原记录顺序；信息区独立滚动，不再额外弹窗，不展示系统收录信息。随机浏览中的静态图片隐藏信息入口。此选择仅保存于当前浏览器，不包含在备份中；服务器同样执行字段开关。不会写入元数据表或改变自动拍摄日期算法。嵌入缩略图、MakerNote、二进制块和物理路径不展示，GPS 与唯一标识须明确启用。Source metadata is read on demand in the viewer sidebar; visibility is browser-local and enforced by the server.</p>
+    <p>查看器侧栏按需只读原始媒体中的 EXIF／XMP／IPTC，按内容分类，属性紧凑展示、点击展开原始记录，支持搜索和折叠分类／来源筛选；同属性同值合并但保留各来源和冲突值；编辑事件优先，文件声明的软件末尾折叠，派生／转换详情直接展示；时间完整的历史事件按时区换算从早到晚排列，否则保留原记录顺序；信息区独立滚动，不再额外弹窗，不展示系统收录信息。随机浏览中的静态图片隐藏信息入口。此选择仅保存于当前浏览器，不包含在备份中；服务器同样执行字段开关。不会写入元数据表或改变自动拍摄日期算法。嵌入缩略图、MakerNote、二进制块和物理路径不展示，GPS 与唯一标识须明确启用。Source metadata is read on demand in the viewer sidebar; visibility is browser-local and enforced by the server.</p>
     {metadataVisibilityGroups.map((group) => <section className={"sensitive" in group && group.sensitive ? "is-sensitive" : ""} key={group.name}><h3>{group.name}</h3>{group.fields.map(([key,label]) => <Check key={key} label={label} checked={enabled.has(key)} change={(checked) => metadataVisibilityKeySet.has(key) && toggle(key,checked)} />)}</section>)}
     <button className="settings-metadata-visibility__save" type="button" onClick={save}>保存元数据显示设置 / Save metadata visibility</button>{message ? <p role="status">{message}</p> : null}
   </fieldset>;

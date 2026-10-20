@@ -14,6 +14,7 @@ import { useOnDemandVideoPlayback } from "./useOnDemandVideoPlayback";
 import { PlaybackVideo } from "./PlaybackVideo";
 import { VideoPlaybackNotice } from "./VideoPlaybackNotice";
 import { useViewerIsolation } from "./useViewerIsolation";
+import { useDecodedImage } from "./useDecodedImage";
 
 export function MediaViewer({ item, informationOpen, onInformationChange, onClose, informationAllowed = true, galleryHref, actions, canPrevious = false, canNext = false, onPrevious, onNext }: {
   item: GalleryMember; informationOpen: boolean; onInformationChange: (value: boolean) => void; onClose: () => void;
@@ -30,7 +31,8 @@ export function MediaViewer({ item, informationOpen, onInformationChange, onClos
   // here: the previous image's properties must not appear next to a new image.
   const currentMetadata: MediaInformation | undefined = !visibleFields.length ? {state:"READY",errorCode:"",entries:[]} : metadata.variables?.itemUUID === item.itemUUID ? metadata.data?.mediaEmbeddedMetadata : undefined;
   const image = useImageDisplay(item); const video = useOnDemandVideoPlayback(item);
-  const url = item.mediaKind === "VIDEO" ? video.url : image.url ?? itemResourceURL(item.cardResource);
+  const decoded = useDecodedImage(image.url, itemResourceURL(item.cardResource), `${item.itemUUID}@${item.cardResource?.contentRevision ?? item.largeResource?.contentRevision ?? 0}`, item.mediaKind === "STATIC_IMAGE");
+  const url = item.mediaKind === "VIDEO" ? video.url : decoded.url;
   const root = useRef<HTMLDivElement>(null); const close = useRef<HTMLButtonElement>(null); const information = useRef<HTMLButtonElement>(null);
   const scroll = useRef<HTMLDivElement>(null);
   const exit = useRef(onClose); exit.current = onClose;
@@ -62,7 +64,7 @@ export function MediaViewer({ item, informationOpen, onInformationChange, onClos
         <div className="media-viewer__image lightbox__content">{item.mediaKind === "VIDEO" && url ? <PlaybackVideo key={item.itemUUID} url={url} hls={video.hls} autoPlay onError={video.onPlaybackError} /> : url ? <img key={item.itemUUID} src={url} alt={item.caption} /> : <p role="status">{t("state.loading")}</p>}</div>
         {onPrevious ? <button className="media-viewer__previous lightbox__previous" type="button" aria-label={t("media.viewer.previous")} disabled={!canPrevious} onClick={onPrevious}><Icon name="chevron-left" /></button> : null}
         {onNext ? <button className="media-viewer__next lightbox__next" type="button" aria-label={t("media.viewer.next")} disabled={!canNext} onClick={onNext}><Icon name="chevron-right" /></button> : null}
-        {item.mediaKind === "VIDEO" ? <VideoPlaybackNotice state={video} className="media-viewer__status" /> : image.preparing ? <p className="media-viewer__status" role="status">{t("state.loading")}</p> : image.failed ? <p className="media-viewer__status" role="status">{t("media.metadataError")}</p> : null}
+        {item.mediaKind === "VIDEO" ? <VideoPlaybackNotice state={video} className="media-viewer__status" /> : decoded.failed || image.failed ? <p className="media-viewer__status" role="status">{t("media.viewer.imageError")}{decoded.failed ? <button type="button" onClick={decoded.retry}>{t("media.viewer.retryImage")}</button> : null}</p> : image.preparing || decoded.preparing ? <p className="media-viewer__status" role="status">{t("state.loading")}</p> : null}
       </section>
       {panelOpen ? <aside id="media-viewer-information" className="media-viewer__information" aria-label={t("media.information")}><header><h2>{t("media.information")}</h2><button type="button" aria-label={t("media.viewer.hideInformation")} onClick={() => { onInformationChange(false); information.current?.focus(); }}><Icon name="close" /></button></header>
         <div ref={scroll} className="media-viewer__information-scroll"><MediaInformationPanel information={currentMetadata} loading={metadata.loading} error={!!metadata.error} historyEnabled={item.mediaKind !== "VIDEO" && visibleFields.some(key => key.startsWith("history."))} /></div>

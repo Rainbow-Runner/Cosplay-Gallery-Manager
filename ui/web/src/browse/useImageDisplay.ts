@@ -16,29 +16,21 @@ export function originalImageURL(item: GalleryMember) {
 export function useImageDisplay(item?: GalleryMember | null) {
   const eligible = item?.mediaKind === "STATIC_IMAGE" || item?.mediaKind === "ANIMATED_IMAGE";
   const candidate = useMemo(() => item && eligible ? originalImageURL(item) : null, [eligible, item]);
-  const [directURL, setDirectURL] = useState<string | null>(null);
-  const [probeComplete, setProbeComplete] = useState(false);
-  const [probeFailed, setProbeFailed] = useState(false);
+  const [probe, setProbe] = useState<{candidate: string | null; accepted: boolean} | null>(null);
+  const probeComplete = !candidate || probe?.candidate === candidate;
+  const directURL = candidate && probe?.candidate === candidate && probe.accepted ? candidate : null;
+  const probeFailed = probeComplete && !!candidate && !directURL;
   const useProxy = Boolean(item?.mediaKind === "STATIC_IMAGE" && probeComplete && !directURL);
   const proxy = useOnDemandLightbox(item, useProxy);
 
   useEffect(() => {
-    setDirectURL(null);
-    setProbeComplete(false);
-    setProbeFailed(false);
-    if (!candidate) {
-      setProbeComplete(true);
-      return;
-    }
+    if (!candidate) return;
     const controller = new AbortController();
     void fetch(candidate, { method: "HEAD", credentials: "same-origin", signal: controller.signal }).then((response) => {
-      if (response.ok) setDirectURL(candidate);
-      else setProbeFailed(true);
-      setProbeComplete(true);
+      if (!controller.signal.aborted) setProbe({candidate,accepted:response.ok});
     }).catch((error: unknown) => {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      setProbeFailed(true);
-      setProbeComplete(true);
+      if (!controller.signal.aborted) setProbe({candidate,accepted:false});
     });
     return () => controller.abort();
   }, [candidate]);

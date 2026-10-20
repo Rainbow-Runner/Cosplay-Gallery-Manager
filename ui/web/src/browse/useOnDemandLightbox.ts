@@ -16,8 +16,10 @@ export function useOnDemandLightbox(item?: GalleryMember | null, enabled = true)
 	const eligible = enabled && item?.mediaKind === "STATIC_IMAGE";
   const existing = item?.largeResource;
   const itemUUID = item?.itemUUID ?? "";
+  const revision = item?.cardResource?.contentRevision ?? item?.largeResource?.contentRevision;
+  const identity = `${itemUUID}@${revision ?? 0}`;
   const [settled, setSettled] = useState(Boolean(existing));
-  const [requested, setRequested] = useState<OnDemandResource | null>(null);
+  const [requested, setRequested] = useState<{identity: string; result: OnDemandResource} | null>(null);
   const [request, requestResult] = useMutation<{ requestItemLightbox: OnDemandResource }>(REQUEST_ITEM_LIGHTBOX);
   const status = useQuery<{ itemLightboxStatus: OnDemandResource }>(ITEM_LIGHTBOX_STATUS, {
     variables: { itemUUID },
@@ -33,13 +35,14 @@ export function useOnDemandLightbox(item?: GalleryMember | null, enabled = true)
     let active = true;
     void request({ variables: { itemUUID } }).then(({ data }) => {
       if (!active || !data) return;
-      setRequested(data.requestItemLightbox);
+      setRequested({identity,result:data.requestItemLightbox});
       if (data.requestItemLightbox.resource || data.requestItemLightbox.status === "ERROR") setSettled(true);
     }).catch(() => { if (active) setSettled(true); });
     return () => { active = false; };
-  }, [eligible, existing, itemUUID, request]);
+  }, [eligible, existing, itemUUID, identity, request]);
 
-  const current = status.data?.itemLightboxStatus ?? requested;
+  const valid = (value?: OnDemandResource | null) => value?.resource && (value.resource.itemUUID !== itemUUID || revision !== undefined && value.resource.contentRevision !== revision) ? null : value;
+  const current = valid(status.data?.itemLightboxStatus) ?? (requested?.identity === identity ? valid(requested.result) : null);
   useEffect(() => {
     if (current?.resource || current?.status === "ERROR") setSettled(true);
   }, [current]);

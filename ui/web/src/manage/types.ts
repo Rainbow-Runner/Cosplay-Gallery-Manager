@@ -60,6 +60,7 @@ export interface ManageLibraryAutomationPolicy { libraryID: number; mode: "MANUA
 export interface ManageLibraryAutomationRun { id: number; libraryID: number; policyRevision: number; mode: string; status: string; phase: string; processedTargets: number; totalTargets: number; currentGalleryTitle: string; cancellationRequested: boolean; candidatesSeen: number; draftsCreated: number; scanned: number; activated: number; needsReview: number; issueCount: number; errorCode: string; startedAt: string; completedAt?: string | null }
 export interface ManageLibraryAutomation { policy: ManageLibraryAutomationPolicy; preview: { candidateCount: number; autoCreateEligible: number; draftCount: number; activationReady: number; needsReview: number }; recentRuns: ManageLibraryAutomationRun[] }
 export interface ManageRuntimeSettings {
+  galleryDetailLoadingMode?: "MANUAL" | "AUTO"; mediaTimeBackfillEnabled?: boolean;
   libraryMonitorEnabled?: boolean;
   settingsRevision: number; homeScope: "LIST" | "MAGIC" | "ALL"; galleryCover1600Enabled?: boolean; galleryCardScrubberEnabled: boolean; galleryDetailMediaFilterEnabled: boolean;
   galleryCardControlsVisible: boolean; mediaCardControlsVisible: boolean; detailPersonalControlsVisible: boolean;

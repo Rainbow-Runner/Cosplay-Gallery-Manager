@@ -20,6 +20,7 @@ export interface PersonSummary extends EntitySummary {
 }
 
 export interface BrowseGalleryCard {
+  softwareTimeUTC?: string; softwareTimeDate?: string; softwareTimeStatus?: string;
   setID: string;
   slug: string;
   title: string;
@@ -64,6 +65,7 @@ export interface GalleryPage {
 }
 
 export interface BrowseUISettings {
+  galleryDetailLoadingMode?: "MANUAL" | "AUTO";
   settingsRevision: number;
   galleryScrubberEnabled: boolean;
   galleryCover1600Enabled?: boolean;
@@ -100,6 +102,7 @@ export interface GalleryDetail {
 }
 
 export interface GalleryMember {
+  captureTimeUTC?: string; captureTimePrecision?: string; captureTimeZoneSource?: string;
   itemUUID: string;
   mediaKind: "STATIC_IMAGE" | "ANIMATED_IMAGE" | "VIDEO";
   contentFormat: "IMAGE" | "RAW" | "VIDEO";
@@ -117,6 +120,7 @@ export interface GalleryMember {
 }
 
 export interface GalleryMemberIndex {
+  timeEvidenceRevision?: number; timeEvidenceStatus?: string;
   setID: string;
   metadataRevision: number;
   scanRevision: number;
@@ -155,7 +159,10 @@ export interface WorkDetail { entity: EntityIndexItem; characters: EntityIndexIt
 export interface CharacterDetail { entity: EntityIndexItem; work: EntityIndexItem; galleries: GalleryPage; redirected: boolean }
 export interface TagDetail { entity: EntityIndexItem; galleries: GalleryPage; redirected: boolean }
 export interface MediaMetadataEntry { key: string; visibilityKey: string; label: string; group: string; value: string; source?: string; rawValue?: string; timestamp?: string }
-export interface MediaMetadataEvent { index: number; action: string; software: string; when: string; timestamp: string; parameters: string }
+export interface MediaMetadataEvent {
+  index: number; action: string; software: string; when: string; timestamp: string; parameters: string;
+  inputFormat?: string; outputFormat?: string; rawParameters?: string; changed?: string; detailsRedacted?: boolean;
+}
 export interface MediaInformation { state: "READY" | "ERROR"; errorCode: string; entries: MediaMetadataEntry[]; history?: MediaMetadataEvent[]; warnings?: string[]; truncated?: boolean }
 export interface MediaDetail { item: GalleryMember; displayResource?: ResourceIdentity | null; gallery: BrowseGalleryCard; metadataRevision: number; videoTechnical?: { probeState: string; errorCode: string; container: string; durationSeconds: number; width: number; height: number; frameRate: number; videoCodec: string; audioCodec: string } | null }
 export interface MediaPage { items: RandomMediaItem[]; page: number; pageSize: number; totalItems: number; totalPages: number }

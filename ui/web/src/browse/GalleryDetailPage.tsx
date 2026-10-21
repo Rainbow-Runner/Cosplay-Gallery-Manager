@@ -27,6 +27,8 @@ import { itemResourceURL } from "./resourceUrl";
 import type { BrowseGalleryCard, BrowseUISettings, GalleryDetail, GalleryMember, GalleryMemberIndex } from "./types";
 import { MediaViewer } from "./MediaViewer";
 import { useOnDemandAnimatedPreview } from "./useOnDemandAnimatedPreview";
+import { useGalleryProgressiveLoading } from "./useGalleryProgressiveLoading";
+import { readGalleryMediaOrder, sortGalleryMedia } from "./galleryMediaOrder";
 
 const memberBatchSize = 24;
 const animationHoverConfirmationMS = 150;
@@ -71,6 +73,7 @@ export function GalleryDetailPage() {
   const { slug = "" } = useParams();
   const navigate = useNavigate();
   const [parameters, setParameters] = useSearchParams();
+  const mediaOrder = readGalleryMediaOrder(parameters.get("order"));
   const intl = useIntl();
   const detailQuery = useQuery<{ galleryDetail: GalleryDetail }>(GALLERY_DETAIL, { variables: { slug } });
   const settingsQuery = useQuery<{ browseUISettings: BrowseUISettings }>(BROWSE_UI_SETTINGS, { fetchPolicy: "cache-and-network" });
@@ -173,9 +176,22 @@ export function GalleryDetailPage() {
   }, []);
 
   const members = memberQuery.data?.galleryMemberIndex.items ?? [];
-  const groups = useMemo(() => visualMemberGroups(members, filter), [filter, members]);
-  const groupLayouts = useMemo(() => new Map(groups.map((group) => [group.key, justifiedMediaLayout(group.items.slice(0, visible[group.key]), mediaWidth || 720)])), [groups, mediaWidth, visible]);
+  const groups = useMemo(() => {
+    const filtered=visualMemberGroups(members,filter);
+    return mediaOrder==="DEFAULT"?filtered:[{key:"capture",items:sortGalleryMedia(filtered.flatMap(group=>group.items),mediaOrder)}];
+  }, [filter, members,mediaOrder]);
   const navigationItems = useMemo(() => groups.flatMap((group) => group.items), [groups]);
+  const automaticLoading = settingsQuery.data?.browseUISettings.galleryDetailLoadingMode === "AUTO";
+  const progressive = useGalleryProgressiveLoading({ enabled: automaticLoading, identity: `${slug}:${filter}:${mediaOrder}`, total: navigationItems.length, root: sequenceRef, layout: mediaLayout, paused: Boolean(parameters.get("item")) });
+  const effectiveVisible = useMemo(() => {
+    if (!automaticLoading) return {capture:memberBatchSize,...visible};
+    let left = progressive.budget;
+    const result: Record<string,number> = {};
+    for (const group of groups) { result[group.key] = Math.min(left, group.items.length); left -= result[group.key]; }
+    return result;
+  }, [automaticLoading, visible, groups, progressive.budget]);
+  useEffect(()=>{setVisible({photo:memberBatchSize,gif:memberBatchSize,video:memberBatchSize,capture:memberBatchSize});},[mediaOrder]);
+  const groupLayouts = useMemo(() => new Map(groups.map((group) => [group.key, justifiedMediaLayout(group.items.slice(0, effectiveVisible[group.key]), mediaWidth || 720)])), [groups, mediaWidth, effectiveVisible]);
   const orderedAnimatedUUIDs = useMemo(() => navigationItems.filter((item) => item.mediaKind === "ANIMATED_IMAGE").map((item) => item.itemUUID), [navigationItems]);
   const animatedPlaybackLimit = settingsQuery.data?.browseUISettings.galleryAnimatedPlaybackLimit ?? defaultAnimatedPlaybackLimit;
   const animatedLockIntervalMS = settingsQuery.data?.browseUISettings.galleryAnimatedLockIntervalMS ?? defaultAnimatedLockIntervalMS;
@@ -183,8 +199,8 @@ export function GalleryDetailPage() {
   const lightboxIndex = requestedItemUUID ? navigationItems.findIndex((item) => item.itemUUID === requestedItemUUID) : -1;
   const lightboxItem = lightboxIndex >= 0 ? navigationItems[lightboxIndex] : null;
   const lightboxNavigation = lightboxNavigationState(lightboxIndex, navigationItems.length);
-  const displayedAnimatedUUIDs = useMemo(() => groups.flatMap((group) => group.items.slice(0, visible[group.key]))
-    .filter((item) => item.mediaKind === "ANIMATED_IMAGE").map((item) => item.itemUUID), [groups, visible]);
+  const displayedAnimatedUUIDs = useMemo(() => groups.flatMap((group) => group.items.slice(0, effectiveVisible[group.key]))
+    .filter((item) => item.mediaKind === "ANIMATED_IMAGE").map((item) => item.itemUUID), [groups, effectiveVisible]);
   const displayedAnimatedKey = displayedAnimatedUUIDs.join("|");
   const orderedAnimatedKey = orderedAnimatedUUIDs.join("|");
 
@@ -305,10 +321,11 @@ export function GalleryDetailPage() {
   }
 
   function revealItem(itemUUID: string) {
-    const group = visualMemberGroups(members, filter).find((candidate) => candidate.items.some((item) => item.itemUUID === itemUUID));
+    if (automaticLoading) progressive.reveal(navigationItems.findIndex(item => item.itemUUID === itemUUID));
+    const group = groups.find((candidate) => candidate.items.some((item) => item.itemUUID === itemUUID));
     if (!group) return;
     const required = group.items.findIndex((item) => item.itemUUID === itemUUID) + 1;
-    setVisible((current) => current[group.key] >= required ? current : { ...current, [group.key]: required });
+    setVisible((current) => (current[group.key]??memberBatchSize) >= required ? current : { ...current, [group.key]: required });
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const tile = tileElements.current.get(itemUUID);
       tile?.scrollIntoView?.({ block: "center" });
@@ -430,6 +447,7 @@ export function GalleryDetailPage() {
         <div className="gallery-detail__title">
           <h1>{detail.card.title}</h1>
           <div className="gallery-detail__stats">
+            {detail.card.softwareTimeStatus==="COMPLETE"&&detail.card.softwareTimeUTC ? <time className="gallery-detail__stat" title={`${intl.formatMessage({id:"gallery.softwareTime"})}: ${detail.card.softwareTimeUTC}`}><CalendarDays className="cgm-icon" aria-hidden="true"/>{intl.formatMessage({id:"gallery.softwareTime"})}: {detail.card.softwareTimeDate}</time>:null}
             {detail.card.works.length ? <span className="gallery-detail__stat gallery-detail__stat--relation" title={intl.formatMessage({ id: "gallery.works" })}><BookOpen className="cgm-icon" aria-hidden="true" /><span>{detail.card.works.map((work, index) => <span key={work.uuid}>{index ? " · " : null}<Link to={`/work/${work.uuid}`}>{work.name}</Link></span>)}</span></span> : null}
             {detail.card.characters.length ? <span className="gallery-detail__stat gallery-detail__stat--relation" title={intl.formatMessage({ id: "gallery.characters" })}><UserRound className="cgm-icon" aria-hidden="true" /><span>{detail.card.characters.map((character, index) => <span key={character.uuid}>{index ? " · " : null}<Link to={`/character/${character.uuid}`}>{character.name}</Link></span>)}</span></span> : null}
             {mediaCount ? <span className="gallery-detail__stat" title={intl.formatMessage({ id: "gallery.mediaCount" })}><Images className="cgm-icon" aria-hidden="true" />{mediaCount}</span> : null}
@@ -447,6 +465,7 @@ export function GalleryDetailPage() {
           }} />
         </div>
         <div className="gallery-detail__actions">
+          <label className="media-sort-select">{intl.formatMessage({id:"gallery.mediaOrder"})}<select aria-label={intl.formatMessage({id:"gallery.mediaOrder"})} value={mediaOrder} onChange={event=>{const next=new URLSearchParams(parameters);if(event.target.value==="DEFAULT")next.delete("order");else next.set("order",event.target.value);setParameters(next);}}><option value="DEFAULT">{intl.formatMessage({id:"gallery.order.default"})}</option><option value="CAPTURE_ASC" disabled={!members.some(item=>item.captureTimeUTC)}>{intl.formatMessage({id:"gallery.order.captureAsc"})}</option><option value="CAPTURE_DESC" disabled={!members.some(item=>item.captureTimeUTC)}>{intl.formatMessage({id:"gallery.order.captureDesc"})}</option></select></label>
           <div className="media-layout-switch" role="group" aria-label={intl.formatMessage({ id: "gallery.layout" })}>
             <button type="button" aria-label={intl.formatMessage({ id: "gallery.layout.grid" })} title={intl.formatMessage({ id: "gallery.layout.grid" })} aria-pressed={mediaLayout === "GRID"} onClick={() => changeMediaLayout("GRID")}><LayoutGrid className="cgm-icon" aria-hidden="true" /></button>
             <button type="button" aria-label={intl.formatMessage({ id: "gallery.layout.justified" })} title={intl.formatMessage({ id: "gallery.layout.justified" })} aria-pressed={mediaLayout === "JUSTIFIED"} onClick={() => changeMediaLayout("JUSTIFIED")}><Rows3 className="cgm-icon" aria-hidden="true" /></button>
@@ -479,6 +498,7 @@ export function GalleryDetailPage() {
         </div>
       </header>
       {actionMessage ? <p className="gallery-detail__message" role="status">{actionMessage}</p> : null}
+      {memberQuery.data?.galleryMemberIndex.timeEvidenceStatus&&memberQuery.data.galleryMemberIndex.timeEvidenceStatus!=="COMPLETE" ? <p className="gallery-detail__message" role="status">{intl.formatMessage({id:"gallery.timesPending"})} <button type="button" disabled={memberQuery.loading} onClick={()=>void Promise.all([detailQuery.refetch(),memberQuery.refetch()])}>{intl.formatMessage({id:"gallery.refreshTimes"})}</button></p>:null}
 
       <div className="gallery-detail__columns">
         <section className="gallery-members" aria-label={intl.formatMessage({ id: "gallery.contents" })}>
@@ -494,7 +514,7 @@ export function GalleryDetailPage() {
             {groups.map((group) => (
               <section className="media-group" key={group.key} aria-label={group.key}>
                 <div className="media-grid" style={mediaLayout === "JUSTIFIED" ? { height: groupLayouts.get(group.key)?.height } : undefined}>
-                  {group.items.slice(0, visible[group.key]).map((item) => (
+                  {group.items.slice(0, effectiveVisible[group.key]).map((item) => (
                     <MediaTile
                       key={item.itemUUID}
                       item={item}
@@ -514,13 +534,14 @@ export function GalleryDetailPage() {
                     />
                   ))}
                 </div>
-                {visible[group.key] < group.items.length ? (
-                  <button className="load-more" type="button" onClick={() => setVisible((current) => ({ ...current, [group.key]: current[group.key] + memberBatchSize }))}>
+                {!automaticLoading && effectiveVisible[group.key] < group.items.length ? (
+                  <button className="load-more" type="button" onClick={() => setVisible((current) => ({ ...current, [group.key]: (current[group.key]??memberBatchSize) + memberBatchSize }))}>
                     {intl.formatMessage({ id: "gallery.loadMore" })}
                   </button>
                 ) : null}
               </section>
             ))}
+            {automaticLoading ? <div ref={progressive.sentinel} className="media-progressive-sentinel">{progressive.budget < navigationItems.length ? <button className="load-more" type="button" onClick={progressive.loadMore}>{intl.formatMessage({id:"gallery.loadMore"})}</button> : null}</div> : null}
           </div>
         </section>
 

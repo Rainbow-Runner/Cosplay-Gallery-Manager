@@ -24,6 +24,7 @@ type TimelineConnection struct {
 }
 
 type timelineCursor struct {
+	Evidence  int64 `json:"evidence,omitempty"`
 	Version   int
 	Scope     browse.Scope
 	Coser     string
@@ -42,6 +43,12 @@ func (s *BrowseStore) CoserTimeline(ctx context.Context, scope browse.Scope, cos
 	extra, primary, err := timelineDateSQL(date)
 	if err != nil {
 		return result, err
+	}
+	var evidenceRevision int64
+	if date == browse.TimelineSoftware || date == browse.TimelineCombined {
+		if err = s.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(time_evidence_revision),0) FROM galleries`).Scan(&evidenceRevision); err != nil {
+			return result, err
+		}
 	}
 	scopeSQL, scopeArg, err := browseScopePredicate(scope)
 	if err != nil {
@@ -66,6 +73,9 @@ func (s *BrowseStore) CoserTimeline(ctx context.Context, scope browse.Scope, cos
 		}
 		extra += ` AND (` + primary + `,` + timelineSecondaryOrder + `,gallery.id) < (?,?,?)`
 		args = append(args, cursor.Primary, cursor.Secondary, cursor.ID)
+		if cursor.Evidence != evidenceRevision {
+			return result, errors.New("timeline dates changed; refresh the timeline")
+		}
 	}
 	args = append(args, first+1)
 	rows, err := s.db.QueryContext(ctx, `SELECT gallery.id,gallery.set_id,`+primary+`,`+timelineSecondaryOrder+`
@@ -118,7 +128,16 @@ func (s *BrowseStore) CoserTimeline(ctx context.Context, scope browse.Scope, cos
 		result.Items = append(result.Items, TimelineEntry{Month: months[card.SetID], Card: card})
 	}
 	last := entries[len(entries)-1]
-	raw, err := json.Marshal(timelineCursor{Version: 1, Scope: scope, Coser: coser, Date: date, Primary: last.primary, Secondary: last.secondary, ID: last.id})
+	if date == browse.TimelineSoftware || date == browse.TimelineCombined {
+		var current int64
+		if err = s.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(time_evidence_revision),0) FROM galleries`).Scan(&current); err != nil {
+			return result, err
+		}
+		if current != evidenceRevision {
+			return result, errors.New("timeline dates changed; refresh the timeline")
+		}
+	}
+	raw, err := json.Marshal(timelineCursor{Evidence: evidenceRevision, Version: 1, Scope: scope, Coser: coser, Date: date, Primary: last.primary, Secondary: last.secondary, ID: last.id})
 	if err != nil {
 		return result, err
 	}

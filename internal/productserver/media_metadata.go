@@ -122,7 +122,8 @@ func (s *Server) MediaEmbeddedMetadata(ctx context.Context, itemUUID string, vis
 		if conversion && !visible[settings.MetadataHistoryConversions] || !conversion && !visible[settings.MetadataHistoryEdits] {
 			continue
 		}
-		result.History = append(result.History, browse.MediaHistoryEvent{Index: event.Index, Action: event.Action, Software: event.Software, When: event.When, Timestamp: event.Timestamp, Parameters: event.Parameters})
+		result.History = append(result.History, browse.MediaHistoryEvent{Index: event.Index, Action: event.Action, Software: event.Software, When: event.When, Timestamp: event.Timestamp, Parameters: event.Parameters,
+			InputFormat: event.InputFormat, OutputFormat: event.OutputFormat, RawParameters: event.RawParameters, Changed: event.Changed, DetailsRedacted: event.DetailsRedacted})
 	}
 	var modified *time.Time
 	for _, entry := range result.Entries {

@@ -25,9 +25,11 @@ export function ManageHelpPage() {
         <a href="#archive-video">{f("manage.help.archiveVideo.title")}</a>
         <a href="#generated-cache">{f("manage.help.generatedCache.title")}</a>
         <a href="#media-metadata">{f("manage.help.mediaMetadata.title")}</a>
+        <a href="#media-loading-times">{f("manage.help.mediaLoadingTimes.title")}</a>
         <a href="#cache-cleanup">{f("manage.cacheCleanup.title")}</a>
       </nav>
       <article id="media-metadata" className="manage-help-article"><header><h3>{f("manage.help.mediaMetadata.title")}</h3></header><section><p>{f("manage.help.mediaMetadata.body")}</p><Link to="/manage/settings">{f("manage.settings")}</Link></section></article>
+      <article id="media-loading-times" className="manage-help-article"><header><h3>{f("manage.help.mediaLoadingTimes.title")}</h3></header><section><p>{f("manage.help.mediaLoadingTimes.body")}</p><Link to="/manage/settings">{f("manage.settings")}</Link></section></article>
       <article id="archive-video" className="manage-help-article"><header><h3>{f("manage.help.archiveVideo.title")}</h3></header><section><p>{f("manage.help.archiveVideo.body")}</p></section></article>
       <article id="backup-retention" className="manage-help-article"><header><h3>{f("manage.help.backups.title")}</h3></header><section><p>{f("manage.help.backups.body")}</p><div className="manage-help-actions"><Link to="/manage/settings">{f("manage.settings")}</Link><Link to="/manage/operations">{f("manage.help.backups.openOperations")}</Link></div></section></article>
       <article id="generated-cache" className="manage-help-article"><header><h3>{f("manage.help.generatedCache.title")}</h3></header><section><p>{f("manage.help.generatedCache.metrics")}</p><p>{f("manage.help.generatedCache.retention")}</p><p>{f("manage.help.generatedCache.display")}</p><p>{f("manage.help.generatedCache.high")}</p><Link to="/manage/settings">{f("manage.help.generatedCache.openSettings")}</Link></section></article>

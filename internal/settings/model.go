@@ -24,6 +24,8 @@ type Runtime struct {
 	GalleryCardScrubberEnabled      bool
 	GalleryCover1600Enabled         bool
 	GalleryDetailMediaFilterEnabled bool
+	GalleryDetailLoadingMode        string
+	MediaTimeBackfillEnabled        bool
 	GalleryCardControlsVisible      bool
 	MediaCardControlsVisible        bool
 	DetailPersonalControlsVisible   bool

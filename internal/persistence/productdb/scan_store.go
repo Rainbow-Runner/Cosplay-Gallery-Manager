@@ -489,6 +489,9 @@ func (s *ScanStore) commit(ctx context.Context, scanRunID int64, issues []source
 	if err := reconcileGalleryMediaAdded(ctx, tx, galleryID); err != nil {
 		return err
 	}
+	if err := reconcileGallerySoftwareTime(ctx, tx, galleryID); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 

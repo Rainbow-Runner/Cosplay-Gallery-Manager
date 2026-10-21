@@ -10,6 +10,9 @@ import (
 )
 
 type BrowseGalleryCard struct {
+	SoftwareTimeUtc      string             `json:"softwareTimeUTC"`
+	SoftwareTimeDate     string             `json:"softwareTimeDate"`
+	SoftwareTimeStatus   string             `json:"softwareTimeStatus"`
 	SetID                string             `json:"setID"`
 	Slug                 string             `json:"slug"`
 	Title                string             `json:"title"`
@@ -39,15 +42,16 @@ type BrowseGalleryCard struct {
 }
 
 type BrowseUISettings struct {
-	SettingsRevision              int64 `json:"settingsRevision"`
-	GalleryScrubberEnabled        bool  `json:"galleryScrubberEnabled"`
-	GalleryCover1600Enabled       bool  `json:"galleryCover1600Enabled"`
-	DetailMediaFilterEnabled      bool  `json:"detailMediaFilterEnabled"`
-	GalleryAnimatedPlaybackLimit  int   `json:"galleryAnimatedPlaybackLimit"`
-	GalleryAnimatedLockIntervalMs int   `json:"galleryAnimatedLockIntervalMS"`
-	CardFavoriteControlVisible    bool  `json:"cardFavoriteControlVisible"`
-	CardRatingSummaryVisible      bool  `json:"cardRatingSummaryVisible"`
-	DetailRatingControlVisible    bool  `json:"detailRatingControlVisible"`
+	GalleryDetailLoadingMode      string `json:"galleryDetailLoadingMode"`
+	SettingsRevision              int64  `json:"settingsRevision"`
+	GalleryScrubberEnabled        bool   `json:"galleryScrubberEnabled"`
+	GalleryCover1600Enabled       bool   `json:"galleryCover1600Enabled"`
+	DetailMediaFilterEnabled      bool   `json:"detailMediaFilterEnabled"`
+	GalleryAnimatedPlaybackLimit  int    `json:"galleryAnimatedPlaybackLimit"`
+	GalleryAnimatedLockIntervalMs int    `json:"galleryAnimatedLockIntervalMS"`
+	CardFavoriteControlVisible    bool   `json:"cardFavoriteControlVisible"`
+	CardRatingSummaryVisible      bool   `json:"cardRatingSummaryVisible"`
+	DetailRatingControlVisible    bool   `json:"detailRatingControlVisible"`
 }
 
 type CharacterDetail struct {
@@ -210,27 +214,32 @@ type GalleryManifestBatchPushInput struct {
 }
 
 type GalleryMember struct {
-	ItemUUID             string            `json:"itemUUID"`
-	MediaKind            MediaKind         `json:"mediaKind"`
-	ContentFormat        ContentFormat     `json:"contentFormat"`
-	ImageCategory        *ImageCategory    `json:"imageCategory,omitempty"`
-	Position             string            `json:"position"`
-	Caption              string            `json:"caption"`
-	ProcessingState      ProcessingState   `json:"processingState"`
-	CardResource         *ResourceIdentity `json:"cardResource,omitempty"`
-	FallbackCardResource *ResourceIdentity `json:"fallbackCardResource,omitempty"`
-	LargeResource        *ResourceIdentity `json:"largeResource,omitempty"`
-	PreviewWidth         int               `json:"previewWidth"`
-	PreviewHeight        int               `json:"previewHeight"`
-	Favorite             bool              `json:"favorite"`
-	RatingHalfSteps      *int              `json:"ratingHalfSteps,omitempty"`
+	CaptureTimeUtc        string            `json:"captureTimeUTC"`
+	CaptureTimePrecision  string            `json:"captureTimePrecision"`
+	CaptureTimeZoneSource string            `json:"captureTimeZoneSource"`
+	ItemUUID              string            `json:"itemUUID"`
+	MediaKind             MediaKind         `json:"mediaKind"`
+	ContentFormat         ContentFormat     `json:"contentFormat"`
+	ImageCategory         *ImageCategory    `json:"imageCategory,omitempty"`
+	Position              string            `json:"position"`
+	Caption               string            `json:"caption"`
+	ProcessingState       ProcessingState   `json:"processingState"`
+	CardResource          *ResourceIdentity `json:"cardResource,omitempty"`
+	FallbackCardResource  *ResourceIdentity `json:"fallbackCardResource,omitempty"`
+	LargeResource         *ResourceIdentity `json:"largeResource,omitempty"`
+	PreviewWidth          int               `json:"previewWidth"`
+	PreviewHeight         int               `json:"previewHeight"`
+	Favorite              bool              `json:"favorite"`
+	RatingHalfSteps       *int              `json:"ratingHalfSteps,omitempty"`
 }
 
 type GalleryMemberIndex struct {
-	SetID            string           `json:"setID"`
-	MetadataRevision int64            `json:"metadataRevision"`
-	ScanRevision     int64            `json:"scanRevision"`
-	Items            []*GalleryMember `json:"items"`
+	TimeEvidenceRevision int64            `json:"timeEvidenceRevision"`
+	TimeEvidenceStatus   string           `json:"timeEvidenceStatus"`
+	SetID                string           `json:"setID"`
+	MetadataRevision     int64            `json:"metadataRevision"`
+	ScanRevision         int64            `json:"scanRevision"`
+	Items                []*GalleryMember `json:"items"`
 }
 
 type GalleryPage struct {
@@ -1137,6 +1146,8 @@ type ManageRuleValidation struct {
 }
 
 type ManageRuntimeSettings struct {
+	GalleryDetailLoadingMode        string      `json:"galleryDetailLoadingMode"`
+	MediaTimeBackfillEnabled        bool        `json:"mediaTimeBackfillEnabled"`
 	LibraryMonitorEnabled           bool        `json:"libraryMonitorEnabled"`
 	SettingsRevision                int64       `json:"settingsRevision"`
 	HomeScope                       BrowseScope `json:"homeScope"`
@@ -1280,12 +1291,17 @@ type MediaExclusionRuleInput struct {
 }
 
 type MediaHistoryEvent struct {
-	Index      int    `json:"index"`
-	Action     string `json:"action"`
-	Software   string `json:"software"`
-	When       string `json:"when"`
-	Timestamp  string `json:"timestamp"`
-	Parameters string `json:"parameters"`
+	Index           int    `json:"index"`
+	Action          string `json:"action"`
+	Software        string `json:"software"`
+	When            string `json:"when"`
+	Timestamp       string `json:"timestamp"`
+	Parameters      string `json:"parameters"`
+	InputFormat     string `json:"inputFormat"`
+	OutputFormat    string `json:"outputFormat"`
+	RawParameters   string `json:"rawParameters"`
+	Changed         string `json:"changed"`
+	DetailsRedacted bool   `json:"detailsRedacted"`
 }
 
 type MediaInformationEntry struct {
@@ -1314,6 +1330,14 @@ type MediaPage struct {
 	PageSize   int                `json:"pageSize"`
 	TotalItems int                `json:"totalItems"`
 	TotalPages int                `json:"totalPages"`
+}
+
+type MediaTimeProgress struct {
+	Total   int `json:"total"`
+	Checked int `json:"checked"`
+	Partial int `json:"partial"`
+	Pending int `json:"pending"`
+	Failed  int `json:"failed"`
 }
 
 type Mutation struct {
@@ -1425,6 +1449,8 @@ type ResourceIdentity struct {
 }
 
 type RuntimeSettingsInput struct {
+	GalleryDetailLoadingMode        *string     `json:"galleryDetailLoadingMode,omitempty"`
+	MediaTimeBackfillEnabled        *bool       `json:"mediaTimeBackfillEnabled,omitempty"`
 	LibraryMonitorEnabled           *bool       `json:"libraryMonitorEnabled,omitempty"`
 	HomeScope                       BrowseScope `json:"homeScope"`
 	GalleryCover1600Enabled         bool        `json:"galleryCover1600Enabled"`
@@ -2700,6 +2726,7 @@ const (
 	TimelineDateShoot      TimelineDate = "SHOOT"
 	TimelineDateMediaAdded TimelineDate = "MEDIA_ADDED"
 	TimelineDatePublish    TimelineDate = "PUBLISH"
+	TimelineDateSoftware   TimelineDate = "SOFTWARE"
 	TimelineDateCombined   TimelineDate = "COMBINED"
 )
 
@@ -2707,12 +2734,13 @@ var AllTimelineDate = []TimelineDate{
 	TimelineDateShoot,
 	TimelineDateMediaAdded,
 	TimelineDatePublish,
+	TimelineDateSoftware,
 	TimelineDateCombined,
 }
 
 func (e TimelineDate) IsValid() bool {
 	switch e {
-	case TimelineDateShoot, TimelineDateMediaAdded, TimelineDatePublish, TimelineDateCombined:
+	case TimelineDateShoot, TimelineDateMediaAdded, TimelineDatePublish, TimelineDateSoftware, TimelineDateCombined:
 		return true
 	}
 	return false

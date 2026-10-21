@@ -49,7 +49,8 @@ func installBackgroundTriggers(c *sqlite3.SQLiteConn) error {
 		{"gallery_source_issues", "resolved_at_utc,severity", "cgm_background_changed"},
 		{"media_libraries", "enabled,capture_timezone", "cgm_background_changed"},
 		{"runtime_settings", "library_monitor_enabled,automatic_scan_enabled,automatic_scan_on_startup,automatic_scan_interval_minutes,automatic_schedules_suspended,daily_backup_enabled,daily_backup_retention,archive_max_entries,archive_max_entry_bytes,archive_max_total_bytes,archive_max_compression_ratio,archive_max_image_pixels", "cgm_schedule_changed"},
-		{"runtime_settings", "gallery_cover_1600_enabled", "cgm_processing_changed"},
+		{"runtime_settings", "gallery_cover_1600_enabled,media_time_backfill_enabled,automatic_schedules_suspended", "cgm_processing_changed"},
+		{"runtime_settings", "media_time_backfill_enabled", "cgm_background_changed"},
 		{"maintenance_state", "state", "cgm_schedule_changed"},
 		{"product_setup", "complete,backup_root", "cgm_schedule_changed"},
 	} {

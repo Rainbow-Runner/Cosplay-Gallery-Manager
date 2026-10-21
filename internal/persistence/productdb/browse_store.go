@@ -75,16 +75,20 @@ func timelineDateSQL(date browse.TimelineDate) (string, string, error) {
 	case browse.TimelinePublish:
 		extra = ` AND gallery.publish_date IS NOT NULL`
 		dateOrder = `CASE gallery.publish_date_precision WHEN 'MONTH' THEN gallery.publish_date||'-01' ELSE gallery.publish_date END`
+	case browse.TimelineSoftware:
+		extra = ` AND gallery.software_time_status='COMPLETE' AND gallery.software_time_date<>''`
+		dateOrder = `gallery.software_time_date`
 	case browse.TimelineCombined:
 		// Normalize all three sources to a calendar day before comparing them.
 		// The source priority selects a date for each gallery, not a global
 		// priority between galleries with different sources.
 		extra = ` AND (gallery.publish_date IS NOT NULL OR gallery.shoot_date IS NOT NULL OR
-			(gallery.media_added_status='COMPLETE' AND NULLIF(gallery.media_added_start_at_utc,'') IS NOT NULL))`
+			(gallery.software_time_status='COMPLETE' AND gallery.software_time_date<>'') OR (gallery.media_added_status='COMPLETE' AND NULLIF(gallery.media_added_start_at_utc,'') IS NOT NULL))`
 		dateOrder = `CASE WHEN gallery.publish_date IS NOT NULL THEN
 			CASE gallery.publish_date_precision WHEN 'MONTH' THEN gallery.publish_date||'-01' ELSE gallery.publish_date END
 			WHEN gallery.shoot_date IS NOT NULL THEN
 			CASE gallery.shoot_date_precision WHEN 'MONTH' THEN gallery.shoot_date||'-01' ELSE gallery.shoot_date END
+			WHEN gallery.software_time_status='COMPLETE' AND gallery.software_time_date<>'' THEN gallery.software_time_date
 			ELSE substr(gallery.media_added_start_at_utc,1,10) END`
 	default:
 		return "", "", errors.New("invalid timeline date")
@@ -259,6 +263,9 @@ func browseGalleryOrder(sortBy browse.GallerySort) (string, error) {
 }
 
 func (s *BrowseStore) populateGalleryCardRelations(ctx context.Context, galleryID int64, card *browse.GalleryCard) error {
+	if err := s.db.QueryRowContext(ctx, `SELECT software_time_utc,software_time_date,software_time_status FROM galleries WHERE id=?`, galleryID).Scan(&card.SoftwareTimeUTC, &card.SoftwareTimeDate, &card.SoftwareTimeStatus); err != nil {
+		return err
+	}
 	if err := s.populateCardCredits(ctx, galleryID, card); err != nil {
 		return err
 	}

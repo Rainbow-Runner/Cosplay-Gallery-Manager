@@ -184,7 +184,7 @@ func (s *ProcessingJobStore) List(ctx context.Context, status string, page int) 
 }
 
 // Shared with idle deadline selection: disabled work must not cause busy waits.
-const processingJobEnabledSQL = `(variant NOT IN ('CARD_1600','CARD_DISPLAY_1600') OR EXISTS(SELECT 1 FROM runtime_settings WHERE id=1 AND gallery_cover_1600_enabled=1))`
+const processingJobEnabledSQL = `(variant NOT IN ('CARD_1600','CARD_DISPLAY_1600') OR EXISTS(SELECT 1 FROM runtime_settings WHERE id=1 AND gallery_cover_1600_enabled=1)) AND (variant<>'MEDIA_TIMES' OR EXISTS(SELECT 1 FROM runtime_settings WHERE id=1 AND media_time_backfill_enabled=1 AND automatic_schedules_suspended=0))`
 
 func (s *ProcessingJobStore) ClaimNext(ctx context.Context, owner string, leaseDuration time.Duration, now time.Time) (mediaprocessing.Job, error) {
 	if owner == "" || len(owner) > 200 || leaseDuration <= 0 {

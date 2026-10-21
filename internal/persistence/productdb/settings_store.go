@@ -23,14 +23,14 @@ func (db *Database) Settings() *SettingsStore { return &SettingsStore{db: db.DB}
 func (s *SettingsStore) Find(ctx context.Context) (settings.Runtime, error) {
 	var result settings.Runtime
 	var scrubber, mediaFilter, galleryControls, mediaControls, detailControls, autoScan, autoScanStartup, suspended, dailyBackup, hardwareFallback int
-	err := s.db.QueryRowContext(ctx, `SELECT library_monitor_enabled,gallery_cover_1600_enabled,settings_revision,home_scope,gallery_card_scrubber_enabled,
+	err := s.db.QueryRowContext(ctx, `SELECT gallery_detail_loading_mode,media_time_backfill_enabled,library_monitor_enabled,gallery_cover_1600_enabled,settings_revision,home_scope,gallery_card_scrubber_enabled,
 		gallery_detail_media_filter_enabled,gallery_card_controls_visible,media_card_controls_visible,
 		detail_personal_controls_visible,gallery_animated_playback_limit,gallery_animated_lock_interval_ms,
 		related_limit,tag_parent_weight,tag_minimum_score,tag_maximum_depth,
 		random_limit,random_static_quota,random_gif_quota,random_video_quota,random_gallery_repeat_decay,
 		enhanced_cache_maximum_bytes,minimum_free_bytes,minimum_free_percent,automatic_scan_enabled,automatic_scan_on_startup,automatic_scan_interval_minutes,
 		automatic_schedules_suspended,daily_backup_enabled,daily_backup_retention,archive_max_entries,archive_max_entry_bytes,archive_max_total_bytes,
-		archive_max_compression_ratio,archive_max_image_pixels,video_hardware_mode,video_hardware_fallback_enabled,video_hardware_device FROM runtime_settings WHERE id=1`).Scan(&result.LibraryMonitorEnabled, &result.GalleryCover1600Enabled, &result.Revision, &result.HomeScope,
+		archive_max_compression_ratio,archive_max_image_pixels,video_hardware_mode,video_hardware_fallback_enabled,video_hardware_device FROM runtime_settings WHERE id=1`).Scan(&result.GalleryDetailLoadingMode, &result.MediaTimeBackfillEnabled, &result.LibraryMonitorEnabled, &result.GalleryCover1600Enabled, &result.Revision, &result.HomeScope,
 		&scrubber, &mediaFilter, &galleryControls, &mediaControls, &detailControls,
 		&result.GalleryAnimatedPlaybackLimit, &result.GalleryAnimatedLockIntervalMS, &result.RelatedLimit,
 		&result.TagParentWeight, &result.TagMinimumScore, &result.TagMaximumDepth, &result.RandomLimit,
@@ -56,18 +56,21 @@ func (s *SettingsStore) Find(ctx context.Context) (settings.Runtime, error) {
 }
 
 func (s *SettingsStore) Update(ctx context.Context, expectedRevision int64, input settings.Runtime, now time.Time) (settings.Runtime, error) {
+	if input.GalleryDetailLoadingMode == "" {
+		input.GalleryDetailLoadingMode = "MANUAL"
+	}
 	if err := validateRuntimeSettings(input); err != nil {
 		return settings.Runtime{}, err
 	}
 	result, err := s.db.ExecContext(ctx, `UPDATE runtime_settings SET settings_revision=settings_revision+1,
-		library_monitor_enabled=?,gallery_cover_1600_enabled=?,home_scope=?,gallery_card_scrubber_enabled=?,gallery_detail_media_filter_enabled=?,
+		gallery_detail_loading_mode=?,media_time_backfill_enabled=?,library_monitor_enabled=?,gallery_cover_1600_enabled=?,home_scope=?,gallery_card_scrubber_enabled=?,gallery_detail_media_filter_enabled=?,
 		gallery_card_controls_visible=?,media_card_controls_visible=?,detail_personal_controls_visible=?,
 		gallery_animated_playback_limit=?,gallery_animated_lock_interval_ms=?,
 		related_limit=?,tag_parent_weight=?,tag_minimum_score=?,tag_maximum_depth=?,random_limit=?,
 		random_static_quota=?,random_gif_quota=?,random_video_quota=?,random_gallery_repeat_decay=?,
 		enhanced_cache_maximum_bytes=?,minimum_free_bytes=?,minimum_free_percent=?,automatic_scan_enabled=?,automatic_scan_on_startup=?,automatic_scan_interval_minutes=?,
 		automatic_schedules_suspended=?,daily_backup_enabled=?,daily_backup_retention=?,archive_max_entries=?,archive_max_entry_bytes=?,archive_max_total_bytes=?,
-		archive_max_compression_ratio=?,archive_max_image_pixels=?,video_hardware_mode=?,video_hardware_fallback_enabled=?,video_hardware_device=?,updated_at_utc=? WHERE id=1 AND settings_revision=?`, input.LibraryMonitorEnabled, input.GalleryCover1600Enabled, input.HomeScope,
+		archive_max_compression_ratio=?,archive_max_image_pixels=?,video_hardware_mode=?,video_hardware_fallback_enabled=?,video_hardware_device=?,updated_at_utc=? WHERE id=1 AND settings_revision=?`, input.GalleryDetailLoadingMode, input.MediaTimeBackfillEnabled, input.LibraryMonitorEnabled, input.GalleryCover1600Enabled, input.HomeScope,
 		input.GalleryCardScrubberEnabled, input.GalleryDetailMediaFilterEnabled, input.GalleryCardControlsVisible,
 		input.MediaCardControlsVisible, input.DetailPersonalControlsVisible, input.GalleryAnimatedPlaybackLimit,
 		input.GalleryAnimatedLockIntervalMS, input.RelatedLimit, input.TagParentWeight,
@@ -91,6 +94,9 @@ func (s *SettingsStore) Update(ctx context.Context, expectedRevision int64, inpu
 }
 
 func validateRuntimeSettings(value settings.Runtime) error {
+	if value.GalleryDetailLoadingMode != "" && value.GalleryDetailLoadingMode != "MANUAL" && value.GalleryDetailLoadingMode != "AUTO" {
+		return errors.New("invalid gallery detail loading mode")
+	}
 	if value.HomeScope != settings.HomeList && value.HomeScope != settings.HomeMagic && value.HomeScope != settings.HomeAll {
 		return errors.New("invalid Home scope")
 	}

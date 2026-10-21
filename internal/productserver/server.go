@@ -435,7 +435,12 @@ func logMediaJobResult(job mediaprocessing.Job, success bool, errorCode string, 
 		event = "CGM_MEDIA_JOB_FAILED"
 	}
 	if job.Kind == mediaprocessing.JobItemTechnicalMetadata {
-		if job.Variant == productdb.CaptureDateVariant {
+		if job.Variant == productdb.MediaTimeVariant {
+			event = "CGM_MEDIA_TIME_COMPLETED"
+			if !success {
+				event = "CGM_MEDIA_TIME_FAILED"
+			}
+		} else if job.Variant == productdb.CaptureDateVariant {
 			event = "CGM_CAPTURE_DATE_COMPLETED"
 			if !success {
 				event = "CGM_CAPTURE_DATE_FAILED"

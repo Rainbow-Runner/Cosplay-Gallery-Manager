@@ -34,6 +34,7 @@ export function CoserMonthTimeline({ coserUUID, scope, date }: { coserUUID: stri
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [invalidated,setInvalidated]=useState(false);
   const [hasNext, setHasNext] = useState(true);
   const [started, setStarted] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -63,8 +64,8 @@ export function CoserMonthTimeline({ coserUUID, scope, date }: { coserUUID: stri
       next.current = batch.hasNextPage;
       setEntries((previous) => [...previous, ...batch.items]);
       setHasNext(batch.hasNextPage); setStarted(true);
-    } catch {
-      if (!disposed.current && !controller.signal.aborted) { setFailed(true); failure.current = true; }
+    } catch (error) {
+      if (!disposed.current && !controller.signal.aborted) { setFailed(true); failure.current = true;setInvalidated(error instanceof Error&&error.message.includes("timeline dates changed")); }
     } finally {
       if (request.current === controller) {
         request.current = null;
@@ -103,8 +104,8 @@ export function CoserMonthTimeline({ coserUUID, scope, date }: { coserUUID: stri
     {!entries.length && started && !hasNext ? <p className="state-message">{intl.formatMessage({ id: "state.empty" })}</p> : null}
     <div className="coser-month-timeline__sentinel" ref={sentinel}>
       {loading ? <p role="status">{intl.formatMessage({ id: "state.loading" })}</p> : null}
-      {failed ? <p role="alert">{intl.formatMessage({ id: "state.error" })}</p> : null}
-      {hasNext && !loading ? <button type="button" onClick={() => void load()}>{intl.formatMessage({ id: failed ? "timeline.retry" : "timeline.loadMore" })}</button> : null}
+      {failed ? <p role="alert">{intl.formatMessage({ id: invalidated ? "timeline.datesChanged" : "state.error" })}</p> : null}
+      {hasNext && !loading ? <button type="button" onClick={() => {if(invalidated){cursor.current=null;next.current=true;setEntries([]);setStarted(false);setInvalidated(false);}void load();}}>{intl.formatMessage({ id: invalidated?"gallery.refreshTimes":failed ? "timeline.retry" : "timeline.loadMore" })}</button> : null}
       {entries.length > 0 && !hasNext ? <p role="status">{intl.formatMessage({ id: "timeline.end" })}</p> : null}
     </div>
   </div>;

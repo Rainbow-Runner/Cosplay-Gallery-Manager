@@ -90,6 +90,7 @@ export const HOME_GALLERIES = gql`
 export const BROWSE_UI_SETTINGS = gql`
   query BrowseUISettings {
     browseUISettings {
+      galleryDetailLoadingMode
       settingsRevision
       galleryScrubberEnabled
       galleryCover1600Enabled
@@ -107,7 +108,7 @@ export const GALLERY_DETAIL = gql`
   ${GALLERY_CARD_FIELDS}
   query GalleryDetail($slug: String!) {
     galleryDetail(slug: $slug, scope: ALL) {
-      card { ...GalleryCardFields }
+      card { ...GalleryCardFields softwareTimeUTC softwareTimeDate softwareTimeStatus }
       metadataRevision description photographerName studioName availableBytes mediaParentDirectories redirected
       imageCaptureStart imageCaptureEnd videoCaptureStart videoCaptureEnd
       credits { coser { uuid name avatarURL } characters { uuid name } works { uuid name } }
@@ -137,9 +138,9 @@ export const REPLACE_GALLERY_TAGS = gql`
 export const GALLERY_MEMBER_INDEX = gql`
   query GalleryMemberIndex($setID: ID!) {
     galleryMemberIndex(setID: $setID) {
-      setID metadataRevision scanRevision
+      setID metadataRevision scanRevision timeEvidenceRevision timeEvidenceStatus
       items {
-        itemUUID mediaKind contentFormat imageCategory position caption processingState favorite ratingHalfSteps previewWidth previewHeight
+        itemUUID mediaKind contentFormat imageCategory position caption processingState favorite ratingHalfSteps previewWidth previewHeight captureTimeUTC captureTimePrecision captureTimeZoneSource
         cardResource { itemUUID contentRevision profileHash variant mimeType }
         fallbackCardResource { itemUUID contentRevision profileHash variant mimeType }
         largeResource { itemUUID contentRevision profileHash variant mimeType }
@@ -338,7 +339,7 @@ export const MEDIA_EMBEDDED_METADATA = gql`
     mediaEmbeddedMetadata(itemUUID: $itemUUID, visibleFields: $visibleFields) {
       state errorCode truncated warnings
       entries { key visibilityKey label group value source rawValue timestamp }
-      history { index action software when timestamp parameters }
+      history { index action software when timestamp parameters inputFormat outputFormat rawParameters changed detailsRedacted }
     }
   }
 `;

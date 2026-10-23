@@ -52,6 +52,11 @@ func Compute(reader io.Reader) (Signature, error) {
 	if width != config.Width || height != config.Height {
 		return Signature{}, errors.New("invalid cover signature dimensions")
 	}
+	return computeImage(img)
+}
+
+func computeImage(img image.Image) (Signature, error) {
+	width, height := img.Bounds().Dx(), img.Bounds().Dy()
 	small := imaging.Resize(img, 9, 9, imaging.Lanczos)
 	var gray [9][9]uint8
 	for y := 0; y < 9; y++ {

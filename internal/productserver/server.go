@@ -117,6 +117,8 @@ type Server struct {
 	workerRoot         context.Context
 	mediaMetadataOnce  sync.Once
 	mediaMetadataSlots chan struct{}
+	similarUploadOnce  sync.Once
+	similarUploadSlots chan struct{}
 
 	restoreAfterDatabaseSwapHook func() error
 }
@@ -207,6 +209,7 @@ func (s *Server) rebuildHandler() {
 	mux.Handle("/setup/complete", sameOrigin(auth.CompleteSetupHandler(setupOptions)))
 	mux.Handle("/manage/video-hardware/probe", sameOrigin(auth.RequireSession(http.HandlerFunc(s.hardwareProbeHandler))))
 	mux.Handle("/graphql", sameOrigin(productapi.NewHandlerWithServices(database, auth.AuthorizeRequest, s, auth)))
+	mux.Handle(similarImageUploadPath, sameOrigin(s.similarImageUploadHandler(database)))
 	mux.Handle("/manage/portable/packages", sameOrigin(s.portablePackagesHandler(portableTransferRoot())))
 	mux.Handle(coserAssetReviewPath, sameOrigin(s.coserAssetReviewHandler(database)))
 	mux.Handle(cacheCleanupReviewPath, sameOrigin(s.cacheCleanupHandler(database)))
@@ -291,7 +294,11 @@ func (s *Server) startWorkers(ctx context.Context) error {
 	}
 	generators := []mediaprocessing.Generator{mediaprocessing.ImageGenerator{}}
 	if s.Config.LibRawPath != "" {
-		generators = append(generators, mediaprocessing.LibRawGenerator{Executable: s.Config.LibRawPath})
+		raw := mediaprocessing.LibRawGenerator{Executable: s.Config.LibRawPath}
+		if s.VideoTools.FFmpeg.Available {
+			raw.FFmpegExecutable = s.VideoTools.FFmpeg.Path
+		}
+		generators = append(generators, raw)
 	}
 	if s.VideoTools.FFmpeg.Available {
 		generators = append(generators, mediaprocessing.DisplayGenerator{Executable: s.VideoTools.FFmpeg.Path})
@@ -536,6 +543,8 @@ func endpointCategory(path string) string {
 	switch {
 	case path == "/graphql":
 		return "GRAPHQL"
+	case path == similarImageUploadPath:
+		return "SIMILAR_IMAGE_UPLOAD"
 	case strings.HasPrefix(path, "/resource/"):
 		return "MEDIA_RESOURCE"
 	case strings.HasPrefix(path, "/manage/coser-assets/"):

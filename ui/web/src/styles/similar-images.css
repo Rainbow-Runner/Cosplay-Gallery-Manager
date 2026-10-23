@@ -1,4 +1,22 @@
 .similar-images-help { max-width: 76rem; color: var(--cgm-muted-foreground); font-size: .8125rem; line-height: 1.7; }
+.similar-images-modes { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: 1rem; }
+.similar-images-modes button, .similar-upload button { border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); background: var(--cgm-surface); color: var(--cgm-foreground); padding: .55rem .8rem; font: inherit; cursor: pointer; }
+.similar-images-modes button[aria-pressed="true"] { background: var(--cgm-surface-subtle); border-color: var(--cgm-focus); }
+.similar-upload button:disabled { opacity: .5; cursor: default; }
+.similar-upload-dropzone { border: 1px dashed var(--cgm-border); border-radius: var(--cgm-radius); padding: 1rem; max-width: 48rem; background: var(--cgm-surface-subtle); font-size: .8125rem; }
+.similar-upload-dropzone.is-dragging { border-color: var(--cgm-focus); outline: 2px solid var(--cgm-focus); }
+.similar-upload-dropzone label { display: grid; gap: .75rem; }
+.similar-upload-dropzone input { width: 100%; min-width: 0; }
+.similar-upload-dropzone .similar-upload-file-label { display: inline-flex; position: relative; border: 1px solid var(--cgm-border); border-radius: var(--cgm-radius-sm); padding: .55rem .8rem; background: var(--cgm-surface); cursor: pointer; }
+.similar-upload-dropzone .similar-upload-file-input { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; clip-path: inset(50%); overflow: hidden; }
+.similar-upload-file-label:focus-within { outline: 2px solid var(--cgm-focus); outline-offset: 2px; }
+.similar-upload-preview { display: flex; align-items: center; justify-content: center; max-width: 24rem; height: 18rem; }
+.similar-upload-preview img { width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; }
+.similar-upload-selection p, .similar-upload-match p, .similar-upload-match > a { overflow-wrap: anywhere; }
+.similar-upload-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); gap: 1rem; }
+.similar-upload-match { padding: .75rem; font-size: .8125rem; }
+.similar-upload-match > a:not(.similar-images-preview) { color: var(--cgm-muted-foreground); }
+.similar-images-modes button:focus-visible, .similar-upload :is(button,input):focus-visible { outline: 2px solid var(--cgm-focus); outline-offset: 2px; }
 .similar-images-rules { margin-block: 1rem; font-size: .8125rem; color: var(--cgm-muted-foreground); }
 .similar-images-rules summary { cursor: pointer; }
 .similar-images-form { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; margin-block: 1.25rem; }

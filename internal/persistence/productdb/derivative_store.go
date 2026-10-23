@@ -61,11 +61,12 @@ func (s *DerivativeStore) Publish(ctx context.Context, input PublishDerivativeIn
 	}
 	if input.Variant == mediaprocessing.VariantCardDisplay960 || input.Variant == mediaprocessing.VariantCardDisplay1600 {
 		var eligible bool
-		if err := tx.QueryRowContext(ctx, `SELECT i.excluded=0 AND i.availability_state='AVAILABLE' AND i.media_kind='STATIC_IMAGE' AND i.content_format='IMAGE'
+		if err := tx.QueryRowContext(ctx, `SELECT i.excluded=0 AND i.availability_state='AVAILABLE' AND i.media_kind='STATIC_IMAGE'
+			AND (i.content_format='IMAGE' OR (i.content_format='RAW' AND ?='CARD_DISPLAY_960'))
 			AND source.availability_state='AVAILABLE' AND source.over_limit=0
 			AND (?=0 OR EXISTS(SELECT 1 FROM processing_jobs j WHERE j.id=? AND j.item_uuid=i.item_uuid AND j.content_revision=i.content_revision
 			AND j.variant=? AND j.profile_hash=? AND j.status='RUNNING' AND j.lease_owner=? AND j.lease_expires_at_utc>?))
-			FROM gallery_items i JOIN gallery_sources source ON source.id=i.source_id WHERE i.item_uuid=?`, input.JobID, input.JobID, input.Variant, input.ProfileHash, input.JobLeaseOwner, formatTime(normalisedTime(now)), input.ItemUUID).Scan(&eligible); err != nil {
+			FROM gallery_items i JOIN gallery_sources source ON source.id=i.source_id WHERE i.item_uuid=?`, input.Variant, input.JobID, input.JobID, input.Variant, input.ProfileHash, input.JobLeaseOwner, formatTime(normalisedTime(now)), input.ItemUUID).Scan(&eligible); err != nil {
 			return mediaprocessing.Derivative{}, err
 		}
 		expectedProfile := mediaprocessing.DisplayProfileHash()

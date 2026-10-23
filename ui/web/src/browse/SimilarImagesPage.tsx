@@ -5,6 +5,7 @@ import { Link, useLocation } from "react-router-dom";
 import { SIMILAR_IMAGES } from "../api/browse";
 import { itemResourceURL } from "./resourceUrl";
 import type { ResourceIdentity } from "./types";
+import { UploadedImageSearch } from "./UploadedImageSearch";
 
 export interface SimilarImage {
   itemUUID: string; gallerySetID: string; gallerySlug: string; galleryTitle: string; fileName: string; resource: ResourceIdentity;
@@ -18,6 +19,7 @@ type MatchScope = "ALL" | "SAME_GALLERY" | "CROSS_GALLERY";
 
 export function SimilarImagesPage() {
   const location = useLocation();
+  const [mode, setMode] = useState<"PAIRS" | "UPLOAD">("PAIRS");
   const intl = useIntl();
   const text = (key: string) => intl.formatMessage({ id: `similar.${key}` });
   const [maxDistance, setMaxDistance] = useState(4);
@@ -33,6 +35,11 @@ export function SimilarImagesPage() {
   const result = !query.loading && !query.error ? query.data?.similarImages : undefined;
   return <main className="browse-main similar-images-page">
     <header className="page-heading"><h1>{text("title")}</h1></header>
+    <div className="similar-images-modes" role="group" aria-label={text("mode")}>
+      <button type="button" aria-pressed={mode === "PAIRS"} onClick={() => setMode("PAIRS")}>{text("pairsMode")}</button>
+      <button type="button" aria-pressed={mode === "UPLOAD"} onClick={() => setMode("UPLOAD")}>{text("upload.title")}</button>
+    </div>
+    {mode === "UPLOAD" ? <UploadedImageSearch /> : <>
     <p className="similar-images-help">{text("help")}</p>
     <form className="similar-images-form" onSubmit={submit}>
       <label>{text("distance")}<select disabled={query.loading} value={maxDistance} onChange={(event) => setMaxDistance(Number(event.target.value))}>
@@ -66,5 +73,6 @@ export function SimilarImagesPage() {
       </div>}
       {visible < result.pairs.length ? <button type="button" className="load-more" onClick={() => setVisible((current) => current + 24)}>{text("more")}</button> : null}
     </section> : null}
+    </>}
   </main>;
 }

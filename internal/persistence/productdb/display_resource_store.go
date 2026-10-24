@@ -22,7 +22,7 @@ func (s *ProcessingJobStore) DisplayImageStatus(ctx context.Context, setID strin
 		COALESCE(SUM(EXISTS(SELECT 1 FROM media_derivatives d WHERE d.item_uuid=i.item_uuid AND d.content_revision=i.content_revision AND d.variant=? AND d.profile_hash=? AND d.is_current=1 AND d.state='READY')),0),
 		COALESCE(SUM(EXISTS(SELECT 1 FROM processing_jobs j WHERE j.item_uuid=i.item_uuid AND j.content_revision=i.content_revision AND j.variant=? AND j.profile_hash=? AND j.status IN ('PENDING','RUNNING','RETRY_WAIT','PAUSED'))),0),
 		COALESCE(SUM(EXISTS(SELECT 1 FROM processing_jobs j WHERE j.item_uuid=i.item_uuid AND j.content_revision=i.content_revision AND j.variant=? AND j.profile_hash=? AND j.status='FAILED')),0)
-		FROM gallery_items i JOIN galleries g ON g.id=i.gallery_id WHERE g.set_id=? AND i.excluded=0 AND i.availability_state='AVAILABLE' AND i.media_kind='STATIC_IMAGE' AND i.content_format='IMAGE'`,
+		FROM gallery_items i JOIN galleries g ON g.id=i.gallery_id WHERE g.set_id=? AND i.excluded=0 AND i.availability_state='AVAILABLE' AND i.media_kind='STATIC_IMAGE' AND i.content_format IN ('IMAGE','RAW')`,
 		mediaprocessing.VariantCardDisplay960, mediaprocessing.DisplayProfileHash(), mediaprocessing.VariantCardDisplay960, mediaprocessing.DisplayProfileHash(), mediaprocessing.VariantCardDisplay960, mediaprocessing.DisplayProfileHash(), setID).Scan(&result.Total, &result.Ready, &result.Pending, &result.Failed)
 	return result, err
 }
@@ -32,7 +32,7 @@ func (s *ProcessingJobStore) DisplayImageStatus(ctx context.Context, setID strin
 func (s *BrowseStore) displayResources(ctx context.Context, galleryID int64, itemUUID string) (map[string]*displayBaseResource, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT d.item_uuid,d.content_revision,d.profile_hash,d.variant,d.mime_type,d.width,d.height
 		FROM media_derivatives d JOIN gallery_items i ON i.item_uuid=d.item_uuid
-		WHERE i.gallery_id=? AND i.excluded=0 AND i.availability_state='AVAILABLE' AND i.media_kind='STATIC_IMAGE' AND i.content_format='IMAGE'
+		WHERE i.gallery_id=? AND i.excluded=0 AND i.availability_state='AVAILABLE' AND i.media_kind='STATIC_IMAGE' AND i.content_format IN ('IMAGE','RAW')
 		AND d.variant=? AND d.profile_hash=? AND d.content_revision=i.content_revision AND d.is_current=1 AND d.state='READY'
 		AND (?='' OR i.item_uuid=?)`, galleryID, mediaprocessing.VariantCardDisplay960, mediaprocessing.DisplayProfileHash(), itemUUID, itemUUID)
 	if err != nil {
@@ -57,7 +57,7 @@ func (s *ProcessingJobStore) PrepareDisplayImages(ctx context.Context, setID str
 	rows, err := s.db.QueryContext(ctx, `SELECT i.item_uuid,i.content_revision,i.gallery_id FROM gallery_items i
 		JOIN galleries g ON g.id=i.gallery_id JOIN gallery_sources source ON source.id=i.source_id
 		WHERE g.set_id=? AND i.excluded=0 AND i.availability_state='AVAILABLE' AND source.availability_state='AVAILABLE' AND source.over_limit=0
-		AND i.media_kind='STATIC_IMAGE' AND i.content_format='IMAGE'
+		AND i.media_kind='STATIC_IMAGE' AND i.content_format IN ('IMAGE','RAW')
 		AND NOT EXISTS(SELECT 1 FROM media_derivatives d WHERE d.item_uuid=i.item_uuid AND d.variant=? AND d.profile_hash=?
 		AND d.content_revision=i.content_revision AND d.is_current=1 AND d.state='READY')`, setID, mediaprocessing.VariantCardDisplay960, mediaprocessing.DisplayProfileHash())
 	if err != nil {

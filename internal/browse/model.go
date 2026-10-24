@@ -26,6 +26,7 @@ const (
 	TimelineMediaAdded TimelineDate = "MEDIA_ADDED"
 	TimelinePublish    TimelineDate = "PUBLISH"
 	TimelineCombined   TimelineDate = "COMBINED"
+	TimelineSoftware   TimelineDate = "SOFTWARE"
 )
 
 const (
@@ -83,32 +84,33 @@ type MediaCounts struct {
 }
 
 type GalleryCard struct {
-	SetID                string
-	Slug                 string
-	Title                string
-	DisplayTitle         string
-	CollectionType       CollectionType
-	ContentRating        gallery.ContentRating
-	Cover                Cover
-	Credits              []PersonSummary
-	CreditCount          int
-	Characters           []EntitySummary
-	CharacterCount       int
-	Works                []EntitySummary
-	WorkCount            int
-	ShootDate            string
-	ShootDatePrecision   gallery.ShootDatePrecision
-	PublishDate          string
-	PublishDatePrecision gallery.ShootDatePrecision
-	AddedAtUTC           time.Time
-	MediaAddedStartUTC   string
-	MediaAddedEndUTC     string
-	MediaAddedStatus     string
-	Media                MediaCounts
-	Favorite             bool
-	RatingHalfSteps      *int
-	ScrubberCount        int
-	ScrubberRevision     int64
+	SoftwareTimeUTC, SoftwareTimeDate, SoftwareTimeStatus string
+	SetID                                                 string
+	Slug                                                  string
+	Title                                                 string
+	DisplayTitle                                          string
+	CollectionType                                        CollectionType
+	ContentRating                                         gallery.ContentRating
+	Cover                                                 Cover
+	Credits                                               []PersonSummary
+	CreditCount                                           int
+	Characters                                            []EntitySummary
+	CharacterCount                                        int
+	Works                                                 []EntitySummary
+	WorkCount                                             int
+	ShootDate                                             string
+	ShootDatePrecision                                    gallery.ShootDatePrecision
+	PublishDate                                           string
+	PublishDatePrecision                                  gallery.ShootDatePrecision
+	AddedAtUTC                                            time.Time
+	MediaAddedStartUTC                                    string
+	MediaAddedEndUTC                                      string
+	MediaAddedStatus                                      string
+	Media                                                 MediaCounts
+	Favorite                                              bool
+	RatingHalfSteps                                       *int
+	ScrubberCount                                         int
+	ScrubberRevision                                      int64
 }
 
 type GalleryPage struct {
@@ -159,27 +161,30 @@ type RandomMediaItem struct {
 }
 
 type GalleryMember struct {
-	ItemUUID             string
-	MediaKind            gallery.MediaKind
-	ContentFormat        gallery.ContentFormat
-	ImageCategory        gallery.ImageCategory
-	Position             int64
-	Caption              string
-	ProcessingState      gallery.ProcessingState
-	CardResource         *ResourceIdentity
-	FallbackCardResource *ResourceIdentity
-	LargeResource        *ResourceIdentity
-	PreviewWidth         int
-	PreviewHeight        int
-	Favorite             bool
-	RatingHalfSteps      *int
+	CaptureTimeUTC, CaptureTimePrecision, CaptureTimeZoneSource string
+	ItemUUID                                                    string
+	MediaKind                                                   gallery.MediaKind
+	ContentFormat                                               gallery.ContentFormat
+	ImageCategory                                               gallery.ImageCategory
+	Position                                                    int64
+	Caption                                                     string
+	ProcessingState                                             gallery.ProcessingState
+	CardResource                                                *ResourceIdentity
+	FallbackCardResource                                        *ResourceIdentity
+	LargeResource                                               *ResourceIdentity
+	PreviewWidth                                                int
+	PreviewHeight                                               int
+	Favorite                                                    bool
+	RatingHalfSteps                                             *int
 }
 
 type GalleryMemberIndex struct {
-	SetID            string
-	MetadataRevision int64
-	ScanRevision     int64
-	Items            []GalleryMember
+	TimeEvidenceRevision int64
+	TimeEvidenceStatus   string
+	SetID                string
+	MetadataRevision     int64
+	ScanRevision         int64
+	Items                []GalleryMember
 }
 
 type SearchEntityKind string
@@ -341,12 +346,17 @@ type MediaInformationEntry struct {
 }
 
 type MediaHistoryEvent struct {
-	Index      int
-	Action     string
-	Software   string
-	When       string
-	Timestamp  string
-	Parameters string
+	Index           int
+	Action          string
+	Software        string
+	When            string
+	Timestamp       string
+	Parameters      string
+	InputFormat     string
+	OutputFormat    string
+	RawParameters   string
+	Changed         string
+	DetailsRedacted bool
 }
 
 type MediaInformationSummary struct {

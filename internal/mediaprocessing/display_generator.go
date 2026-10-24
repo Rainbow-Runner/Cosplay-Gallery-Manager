@@ -3,6 +3,7 @@ package mediaprocessing
 import (
 	"context"
 	"errors"
+	"image"
 	"image/png"
 	"io"
 	"os"
@@ -35,13 +36,22 @@ func (g DisplayGenerator) Generate(ctx context.Context, r GenerateRequest) (Gene
 	if err != nil {
 		return GenerateResult{}, err
 	}
-	maximum := variantMaximum(r.Variant)
+	return encodeDisplayImage(ctx, g.Executable, img, r.Variant, r.DestinationPath)
+}
+
+// RAW and ordinary images share exactly the same resize and WebP contract;
+// callers supply oriented pixels decoded by their respective source decoder.
+func encodeDisplayImage(ctx context.Context, executable string, img image.Image, variant, destination string) (GenerateResult, error) {
+	if err := ctx.Err(); err != nil {
+		return GenerateResult{}, err
+	}
+	maximum := variantMaximum(variant)
 	if img.Bounds().Dx() > maximum || img.Bounds().Dy() > maximum {
 		img = imaging.Fit(img, maximum, maximum, imaging.Lanczos)
 	}
 	reader, writer := io.Pipe()
-	cmd := exec.CommandContext(ctx, g.Executable, "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-threads", "1", "-i", "pipe:0",
-		"-frames:v", "1", "-pix_fmt", "bgra", "-c:v", "libwebp", "-threads", "1", "-quality", "80", "-compression_level", "4", "-f", "webp", r.DestinationPath)
+	cmd := exec.CommandContext(ctx, executable, "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-threads", "1", "-i", "pipe:0",
+		"-frames:v", "1", "-pix_fmt", "bgra", "-c:v", "libwebp", "-threads", "1", "-quality", "80", "-compression_level", "4", "-f", "webp", destination)
 	cmd.Stdin = reader
 	if err := cmd.Start(); err != nil {
 		reader.Close()
@@ -50,7 +60,7 @@ func (g DisplayGenerator) Generate(ctx context.Context, r GenerateRequest) (Gene
 	}
 	encoded := make(chan error, 1)
 	go func() { err := png.Encode(writer, img); _ = writer.CloseWithError(err); encoded <- err }()
-	err = cmd.Wait()
+	err := cmd.Wait()
 	_ = reader.Close()
 	encodeErr := <-encoded
 	if err != nil {
@@ -62,7 +72,7 @@ func (g DisplayGenerator) Generate(ctx context.Context, r GenerateRequest) (Gene
 	if err := ctx.Err(); err != nil {
 		return GenerateResult{}, err
 	}
-	info, err := os.Stat(r.DestinationPath)
+	info, err := os.Stat(destination)
 	if err != nil {
 		return GenerateResult{}, err
 	}

@@ -32,6 +32,10 @@ const (
 )
 
 func ExtractDisplayPath(filename string) (Result, error) {
+	return extractDisplayPath(filename, nil, nil)
+}
+
+func extractDisplayPath(filename string, business *TimeSummary, location *time.Location) (Result, error) {
 	result, err := ExtractPath(filename)
 	if err != nil {
 		return result, err
@@ -46,7 +50,7 @@ func ExtractDisplayPath(filename string) (Result, error) {
 		return result, err
 	}
 	defer f.Close()
-	reader := &displayReader{result: &result, remaining: metadataBudget, extended: make(map[string]*extendedPacket)}
+	reader := &displayReader{result: &result, remaining: metadataBudget, extended: make(map[string]*extendedPacket), business: business, timeLocation: location}
 	var header [12]byte
 	n, _ := io.ReadFull(f, header[:])
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
@@ -170,9 +174,12 @@ type extendedPacket struct {
 	parts []extendedPart
 }
 type displayReader struct {
-	result    *Result
-	remaining int
-	extended  map[string]*extendedPacket
+	business     *TimeSummary
+	timeLocation *time.Location
+	timeEvents   int
+	result       *Result
+	remaining    int
+	extended     map[string]*extendedPacket
 }
 
 func (r *displayReader) warn(code string) {
@@ -560,9 +567,24 @@ func (r *displayReader) xmp(data []byte) {
 	staged.Entries = append([]Entry(nil), r.result.Entries...)
 	staged.History = append([]HistoryEvent(nil), r.result.History...)
 	original := r.result
+	originalBusiness, originalCount := r.business, r.timeEvents
+	var stagedBusiness TimeSummary
+	if r.business != nil {
+		stagedBusiness = *r.business
+		r.business = &stagedBusiness
+	}
 	r.result = &staged
 	success := false
 	defer func() {
+		r.business = originalBusiness
+		if originalBusiness != nil {
+			if success {
+				*originalBusiness = stagedBusiness
+			} else {
+				r.timeEvents = originalCount
+				originalBusiness.Partial = true
+			}
+		}
 		r.result = original
 		if success {
 			*original = staged
@@ -601,6 +623,9 @@ func (r *displayReader) xmp(data []byte) {
 			}
 			for _, attr := range item.Attr {
 				if attr.Name.Space == nsEvent && event != nil {
+					if utf8.RuneCountInString(attr.Value) > maximumValueRunes {
+						r.result.Truncated = true
+					}
 					event[attr.Name.Local] = cleanValue(attr.Value)
 				} else if historyDepth == 0 {
 					r.xmpProperty(attr.Name, attr.Value)
@@ -622,6 +647,9 @@ func (r *displayReader) xmp(data []byte) {
 			node := stack[len(stack)-1]
 			text := strings.TrimSpace(node.text.String())
 			if node.name.Space == nsEvent && event != nil {
+				if utf8.RuneCountInString(text) > maximumValueRunes {
+					r.result.Truncated = true
+				}
 				event[node.name.Local] = cleanValue(text)
 			} else if historyDepth == 0 && text != "" {
 				if node.name.Space == nsRDF && node.name.Local == "li" {
@@ -746,8 +774,36 @@ func (r *displayReader) xmpProperty(name xml.Name, value string) {
 
 var conversionPattern = regexp.MustCompile(`(?i)(?:converted\s+)?from\s+([a-z0-9.+-]+/[a-z0-9.+-]+)\s+to\s+([a-z0-9.+-]+/[a-z0-9.+-]+)`)
 
+// ResourceEvent parameters are free text, not a safe filesystem location API.
+// Redact locations before exposing descriptions; retain RDF part paths such as
+// "/metadata" only in the changed field, where they describe document scope.
+var historyLocationPattern = regexp.MustCompile(`(?i)(?:[a-z][a-z0-9+.-]*://|[a-z]:[\\/]|\\\\)[^,;"<>\r\n]*`)
+var historyQuotedPathPattern = regexp.MustCompile(`(?i)"(?:[a-z][a-z0-9+.-]*://|[a-z]:[\\/]|\\\\|/|~/|\.\.?/)[^"]*"|'(?:[a-z][a-z0-9+.-]*://|[a-z]:[\\/]|\\\\|/|~/|\.\.?/)[^']*'`)
+var historyPathPattern = regexp.MustCompile(`(^|[\s("'=:;,])(?:/|~/|\.\.?/)[^,;"<>\r\n]*`)
+var historyPartPathPattern = regexp.MustCompile(`^/(?:metadata|content|pages|layers|artboards)(?:/[^\s;,]*)?$`)
+
+func safeHistoryText(value string, scope bool) (string, bool) {
+	value = cleanValue(value)
+	safe := historyQuotedPathPattern.ReplaceAllString(value, "[path hidden]")
+	safe = historyLocationPattern.ReplaceAllString(safe, "[path hidden]")
+	// A sole slash and standard document part paths are not physical paths.
+	partPaths := strings.FieldsFunc(value, func(r rune) bool { return r == ';' || r == ',' || r == ' ' })
+	validScope := scope && len(partPaths) > 0
+	for _, part := range partPaths {
+		validScope = validScope && (part == "/" || historyPartPathPattern.MatchString(part))
+	}
+	if !validScope {
+		safe = historyPathPattern.ReplaceAllString(safe, "${1}[path hidden]")
+	}
+	return safe, safe != value
+}
+
 func (r *displayReader) history(value map[string]string) {
 	if len(value) == 0 {
+		return
+	}
+	if r.business != nil {
+		r.timeEvent(value)
 		return
 	}
 	if len(r.result.History) >= historyLimit {
@@ -760,12 +816,16 @@ func (r *displayReader) history(value map[string]string) {
 	default:
 		action = "other"
 	}
-	parameters := ""
+	parameters, inputFormat, outputFormat := "", "", ""
 	if match := conversionPattern.FindStringSubmatch(value["parameters"]); len(match) == 3 {
-		parameters = match[1] + " → " + match[2]
+		inputFormat, outputFormat = match[1], match[2]
+		parameters = inputFormat + " → " + outputFormat
 	}
+	raw, rawRedacted := safeHistoryText(value["parameters"], false)
+	changed, changedRedacted := safeHistoryText(value["changed"], true)
 	when, stamp := displayTime(value["when"])
-	r.result.History = append(r.result.History, HistoryEvent{Index: len(r.result.History) + 1, Action: action, Software: cleanValue(value["softwareAgent"]), When: when, Timestamp: stamp, Parameters: parameters})
+	r.result.History = append(r.result.History, HistoryEvent{Index: len(r.result.History) + 1, Action: action, Software: cleanValue(value["softwareAgent"]), When: when, Timestamp: stamp, Parameters: parameters,
+		InputFormat: inputFormat, OutputFormat: outputFormat, RawParameters: raw, Changed: changed, DetailsRedacted: rawRedacted || changedRedacted})
 }
 
 func (r *displayReader) photoshop(data []byte) {

@@ -240,13 +240,15 @@ func validateSchemaVersion(ctx context.Context, db *sql.DB, version uint) error 
 		return validateSchemaV24(ctx, db)
 	case 25:
 		return validateSchemaV25(ctx, db)
+	case 26:
+		return validateSchemaV26(ctx, db)
 	default:
 		return &SchemaVersionMismatchError{Found: version, Required: product.DatabaseSchemaVersion}
 	}
 }
 
 func migrateProductDatabase(ctx context.Context, connection *sql.DB, databasePath string, from uint) error {
-	if from < 1 || from >= product.DatabaseSchemaVersion || product.DatabaseSchemaVersion != 25 {
+	if from < 1 || from >= product.DatabaseSchemaVersion || product.DatabaseSchemaVersion != 26 {
 		return &SchemaVersionMismatchError{Found: from, Required: product.DatabaseSchemaVersion}
 	}
 	backupPath := fmt.Sprintf("%s.pre-schema-v%d-%d.bak", databasePath, from, time.Now().UTC().UnixNano())
@@ -372,13 +374,16 @@ func migrateProductDatabase(ctx context.Context, connection *sql.DB, databasePat
 	if err := createScanOptimizationSchemaV25(ctx, tx); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE cgm_product_identity SET database_schema_version=25 WHERE singleton_id=1 AND database_schema_version=?`, from); err != nil {
+	if err := createMediaTimeSchemaV26(ctx, tx); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE cgm_product_identity SET database_schema_version=26 WHERE singleton_id=1 AND database_schema_version=?`, from); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	if err := validateSchemaV25(ctx, connection); err != nil {
+	if err := validateSchemaV26(ctx, connection); err != nil {
 		return fmt.Errorf("validating migrated schema: %w", err)
 	}
 	return validateIntegrity(ctx, connection)

@@ -33,7 +33,7 @@ var legacy480SupersededPredicate = `(d.variant='CARD_480' AND d.is_current=1 AND
 	SELECT 1 FROM gallery_items current_item JOIN gallery_sources current_source ON current_source.id=current_item.source_id
 	JOIN media_derivatives new_base ON new_base.item_uuid=current_item.item_uuid
 	WHERE current_item.item_uuid=d.item_uuid AND current_item.content_revision=d.content_revision
-	AND current_item.media_kind='STATIC_IMAGE' AND current_item.content_format='IMAGE' AND current_item.excluded=0
+	AND current_item.media_kind='STATIC_IMAGE' AND current_item.content_format IN ('IMAGE','RAW') AND current_item.excluded=0
 	AND current_item.availability_state='AVAILABLE' AND current_source.availability_state='AVAILABLE' AND current_source.over_limit=0
 	AND new_base.variant='CARD_DISPLAY_960' AND new_base.profile_hash='` + mediaprocessing.DisplayProfileHash() + `'
 	AND new_base.content_revision=current_item.content_revision AND new_base.is_current=1 AND new_base.state='READY'))`

@@ -3,6 +3,7 @@ package productserver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -62,6 +63,21 @@ func (s *Server) runCaptureDateBackfill(ctx context.Context, now time.Time) bool
 		slog.Info("CGM_CAPTURE_DATE_BACKFILL_QUEUED", "item_count", count)
 	}
 	return count > 0
+}
+
+func (s *Server) runMediaTimeBackfill(ctx context.Context, now time.Time) bool {
+	reconciled, err := s.Database.MediaTimes().ReconcilePending(ctx, 25)
+	if err != nil {
+		return true
+	}
+	count, err := s.Database.MediaTimes().EnqueueBackfill(ctx, 25, s.VideoTools.FFprobe.Available, now)
+	if err != nil {
+		if ctx.Err() == nil {
+			slog.Error("CGM_MEDIA_TIME_BACKFILL_FAILED", "error_type", fmt.Sprintf("%T", err))
+		}
+		return true
+	}
+	return count > 0 || reconciled > 0
 }
 
 func (s *Server) runAutomaticStartupScan(ctx context.Context, now time.Time) {

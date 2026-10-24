@@ -70,6 +70,9 @@ type ComplexityRoot struct {
 		ShootDate            func(childComplexity int) int
 		ShootDatePrecision   func(childComplexity int) int
 		Slug                 func(childComplexity int) int
+		SoftwareTimeDate     func(childComplexity int) int
+		SoftwareTimeStatus   func(childComplexity int) int
+		SoftwareTimeUtc      func(childComplexity int) int
 		Title                func(childComplexity int) int
 		WorkCount            func(childComplexity int) int
 		Works                func(childComplexity int) int
@@ -83,6 +86,7 @@ type ComplexityRoot struct {
 		GalleryAnimatedLockIntervalMs func(childComplexity int) int
 		GalleryAnimatedPlaybackLimit  func(childComplexity int) int
 		GalleryCover1600Enabled       func(childComplexity int) int
+		GalleryDetailLoadingMode      func(childComplexity int) int
 		GalleryScrubberEnabled        func(childComplexity int) int
 		SettingsRevision              func(childComplexity int) int
 	}
@@ -194,27 +198,32 @@ type ComplexityRoot struct {
 	}
 
 	GalleryMember struct {
-		Caption              func(childComplexity int) int
-		CardResource         func(childComplexity int) int
-		ContentFormat        func(childComplexity int) int
-		FallbackCardResource func(childComplexity int) int
-		Favorite             func(childComplexity int) int
-		ImageCategory        func(childComplexity int) int
-		ItemUUID             func(childComplexity int) int
-		LargeResource        func(childComplexity int) int
-		MediaKind            func(childComplexity int) int
-		Position             func(childComplexity int) int
-		PreviewHeight        func(childComplexity int) int
-		PreviewWidth         func(childComplexity int) int
-		ProcessingState      func(childComplexity int) int
-		RatingHalfSteps      func(childComplexity int) int
+		Caption               func(childComplexity int) int
+		CaptureTimePrecision  func(childComplexity int) int
+		CaptureTimeUtc        func(childComplexity int) int
+		CaptureTimeZoneSource func(childComplexity int) int
+		CardResource          func(childComplexity int) int
+		ContentFormat         func(childComplexity int) int
+		FallbackCardResource  func(childComplexity int) int
+		Favorite              func(childComplexity int) int
+		ImageCategory         func(childComplexity int) int
+		ItemUUID              func(childComplexity int) int
+		LargeResource         func(childComplexity int) int
+		MediaKind             func(childComplexity int) int
+		Position              func(childComplexity int) int
+		PreviewHeight         func(childComplexity int) int
+		PreviewWidth          func(childComplexity int) int
+		ProcessingState       func(childComplexity int) int
+		RatingHalfSteps       func(childComplexity int) int
 	}
 
 	GalleryMemberIndex struct {
-		Items            func(childComplexity int) int
-		MetadataRevision func(childComplexity int) int
-		ScanRevision     func(childComplexity int) int
-		SetID            func(childComplexity int) int
+		Items                func(childComplexity int) int
+		MetadataRevision     func(childComplexity int) int
+		ScanRevision         func(childComplexity int) int
+		SetID                func(childComplexity int) int
+		TimeEvidenceRevision func(childComplexity int) int
+		TimeEvidenceStatus   func(childComplexity int) int
 	}
 
 	GalleryPage struct {
@@ -1129,10 +1138,12 @@ type ComplexityRoot struct {
 		GalleryCardControlsVisible      func(childComplexity int) int
 		GalleryCardScrubberEnabled      func(childComplexity int) int
 		GalleryCover1600Enabled         func(childComplexity int) int
+		GalleryDetailLoadingMode        func(childComplexity int) int
 		GalleryDetailMediaFilterEnabled func(childComplexity int) int
 		HomeScope                       func(childComplexity int) int
 		LibraryMonitorEnabled           func(childComplexity int) int
 		MediaCardControlsVisible        func(childComplexity int) int
+		MediaTimeBackfillEnabled        func(childComplexity int) int
 		MinimumFreeBytes                func(childComplexity int) int
 		MinimumFreePercent              func(childComplexity int) int
 		RandomGIFQuota                  func(childComplexity int) int
@@ -1223,12 +1234,17 @@ type ComplexityRoot struct {
 	}
 
 	MediaHistoryEvent struct {
-		Action     func(childComplexity int) int
-		Index      func(childComplexity int) int
-		Parameters func(childComplexity int) int
-		Software   func(childComplexity int) int
-		Timestamp  func(childComplexity int) int
-		When       func(childComplexity int) int
+		Action          func(childComplexity int) int
+		Changed         func(childComplexity int) int
+		DetailsRedacted func(childComplexity int) int
+		Index           func(childComplexity int) int
+		InputFormat     func(childComplexity int) int
+		OutputFormat    func(childComplexity int) int
+		Parameters      func(childComplexity int) int
+		RawParameters   func(childComplexity int) int
+		Software        func(childComplexity int) int
+		Timestamp       func(childComplexity int) int
+		When            func(childComplexity int) int
 	}
 
 	MediaInformationEntry struct {
@@ -1257,6 +1273,14 @@ type ComplexityRoot struct {
 		PageSize   func(childComplexity int) int
 		TotalItems func(childComplexity int) int
 		TotalPages func(childComplexity int) int
+	}
+
+	MediaTimeProgress struct {
+		Checked func(childComplexity int) int
+		Failed  func(childComplexity int) int
+		Partial func(childComplexity int) int
+		Pending func(childComplexity int) int
+		Total   func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -1419,6 +1443,7 @@ type ComplexityRoot struct {
 		ManageWorkCharacters                 func(childComplexity int, workUUID string) int
 		MediaDetail                          func(childComplexity int, itemUUID string) int
 		MediaEmbeddedMetadata                func(childComplexity int, itemUUID string, visibleFields []string) int
+		MediaTimeProgress                    func(childComplexity int) int
 		PreviewCoreEntityDelete              func(childComplexity int, kind SearchEntityKind, uuid string) int
 		PreviewCoreEntityMerge               func(childComplexity int, kind SearchEntityKind, sourceUUID string, targetUUID string) int
 		PreviewGalleryDelete                 func(childComplexity int, setID string) int
@@ -1651,6 +1676,7 @@ type MutationResolver interface {
 	ResolveCoserManifest(ctx context.Context, coserUUID string, expectedMetadataRevision int64, choices []*ManifestConflictChoiceInput) (*ManageCoserManifestState, error)
 }
 type QueryResolver interface {
+	MediaTimeProgress(ctx context.Context) (*MediaTimeProgress, error)
 	HomeGalleries(ctx context.Context, page int) (*HomeGalleryPage, error)
 	BrowseGalleries(ctx context.Context, scope BrowseScope, page int, sort GallerySort, collectionType *CollectionType) (*GalleryPage, error)
 	TimelineGalleries(ctx context.Context, scope BrowseScope, page int, coserUUID *string, date TimelineDate) (*GalleryPage, error)
@@ -1895,6 +1921,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.BrowseGalleryCard.Slug(childComplexity), true
 
+	case "BrowseGalleryCard.softwareTimeDate":
+		if e.complexity.BrowseGalleryCard.SoftwareTimeDate == nil {
+			break
+		}
+
+		return e.complexity.BrowseGalleryCard.SoftwareTimeDate(childComplexity), true
+
+	case "BrowseGalleryCard.softwareTimeStatus":
+		if e.complexity.BrowseGalleryCard.SoftwareTimeStatus == nil {
+			break
+		}
+
+		return e.complexity.BrowseGalleryCard.SoftwareTimeStatus(childComplexity), true
+
+	case "BrowseGalleryCard.softwareTimeUTC":
+		if e.complexity.BrowseGalleryCard.SoftwareTimeUtc == nil {
+			break
+		}
+
+		return e.complexity.BrowseGalleryCard.SoftwareTimeUtc(childComplexity), true
+
 	case "BrowseGalleryCard.title":
 		if e.complexity.BrowseGalleryCard.Title == nil {
 			break
@@ -1964,6 +2011,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.BrowseUISettings.GalleryCover1600Enabled(childComplexity), true
+
+	case "BrowseUISettings.galleryDetailLoadingMode":
+		if e.complexity.BrowseUISettings.GalleryDetailLoadingMode == nil {
+			break
+		}
+
+		return e.complexity.BrowseUISettings.GalleryDetailLoadingMode(childComplexity), true
 
 	case "BrowseUISettings.galleryScrubberEnabled":
 		if e.complexity.BrowseUISettings.GalleryScrubberEnabled == nil {
@@ -2455,6 +2509,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.GalleryMember.Caption(childComplexity), true
 
+	case "GalleryMember.captureTimePrecision":
+		if e.complexity.GalleryMember.CaptureTimePrecision == nil {
+			break
+		}
+
+		return e.complexity.GalleryMember.CaptureTimePrecision(childComplexity), true
+
+	case "GalleryMember.captureTimeUTC":
+		if e.complexity.GalleryMember.CaptureTimeUtc == nil {
+			break
+		}
+
+		return e.complexity.GalleryMember.CaptureTimeUtc(childComplexity), true
+
+	case "GalleryMember.captureTimeZoneSource":
+		if e.complexity.GalleryMember.CaptureTimeZoneSource == nil {
+			break
+		}
+
+		return e.complexity.GalleryMember.CaptureTimeZoneSource(childComplexity), true
+
 	case "GalleryMember.cardResource":
 		if e.complexity.GalleryMember.CardResource == nil {
 			break
@@ -2573,6 +2648,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.GalleryMemberIndex.SetID(childComplexity), true
+
+	case "GalleryMemberIndex.timeEvidenceRevision":
+		if e.complexity.GalleryMemberIndex.TimeEvidenceRevision == nil {
+			break
+		}
+
+		return e.complexity.GalleryMemberIndex.TimeEvidenceRevision(childComplexity), true
+
+	case "GalleryMemberIndex.timeEvidenceStatus":
+		if e.complexity.GalleryMemberIndex.TimeEvidenceStatus == nil {
+			break
+		}
+
+		return e.complexity.GalleryMemberIndex.TimeEvidenceStatus(childComplexity), true
 
 	case "GalleryPage.items":
 		if e.complexity.GalleryPage.Items == nil {
@@ -7145,6 +7234,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ManageRuntimeSettings.GalleryCover1600Enabled(childComplexity), true
 
+	case "ManageRuntimeSettings.galleryDetailLoadingMode":
+		if e.complexity.ManageRuntimeSettings.GalleryDetailLoadingMode == nil {
+			break
+		}
+
+		return e.complexity.ManageRuntimeSettings.GalleryDetailLoadingMode(childComplexity), true
+
 	case "ManageRuntimeSettings.galleryDetailMediaFilterEnabled":
 		if e.complexity.ManageRuntimeSettings.GalleryDetailMediaFilterEnabled == nil {
 			break
@@ -7172,6 +7268,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ManageRuntimeSettings.MediaCardControlsVisible(childComplexity), true
+
+	case "ManageRuntimeSettings.mediaTimeBackfillEnabled":
+		if e.complexity.ManageRuntimeSettings.MediaTimeBackfillEnabled == nil {
+			break
+		}
+
+		return e.complexity.ManageRuntimeSettings.MediaTimeBackfillEnabled(childComplexity), true
 
 	case "ManageRuntimeSettings.minimumFreeBytes":
 		if e.complexity.ManageRuntimeSettings.MinimumFreeBytes == nil {
@@ -7621,6 +7724,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.MediaHistoryEvent.Action(childComplexity), true
 
+	case "MediaHistoryEvent.changed":
+		if e.complexity.MediaHistoryEvent.Changed == nil {
+			break
+		}
+
+		return e.complexity.MediaHistoryEvent.Changed(childComplexity), true
+
+	case "MediaHistoryEvent.detailsRedacted":
+		if e.complexity.MediaHistoryEvent.DetailsRedacted == nil {
+			break
+		}
+
+		return e.complexity.MediaHistoryEvent.DetailsRedacted(childComplexity), true
+
 	case "MediaHistoryEvent.index":
 		if e.complexity.MediaHistoryEvent.Index == nil {
 			break
@@ -7628,12 +7745,33 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.MediaHistoryEvent.Index(childComplexity), true
 
+	case "MediaHistoryEvent.inputFormat":
+		if e.complexity.MediaHistoryEvent.InputFormat == nil {
+			break
+		}
+
+		return e.complexity.MediaHistoryEvent.InputFormat(childComplexity), true
+
+	case "MediaHistoryEvent.outputFormat":
+		if e.complexity.MediaHistoryEvent.OutputFormat == nil {
+			break
+		}
+
+		return e.complexity.MediaHistoryEvent.OutputFormat(childComplexity), true
+
 	case "MediaHistoryEvent.parameters":
 		if e.complexity.MediaHistoryEvent.Parameters == nil {
 			break
 		}
 
 		return e.complexity.MediaHistoryEvent.Parameters(childComplexity), true
+
+	case "MediaHistoryEvent.rawParameters":
+		if e.complexity.MediaHistoryEvent.RawParameters == nil {
+			break
+		}
+
+		return e.complexity.MediaHistoryEvent.RawParameters(childComplexity), true
 
 	case "MediaHistoryEvent.software":
 		if e.complexity.MediaHistoryEvent.Software == nil {
@@ -7788,6 +7926,41 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.MediaPage.TotalPages(childComplexity), true
+
+	case "MediaTimeProgress.checked":
+		if e.complexity.MediaTimeProgress.Checked == nil {
+			break
+		}
+
+		return e.complexity.MediaTimeProgress.Checked(childComplexity), true
+
+	case "MediaTimeProgress.failed":
+		if e.complexity.MediaTimeProgress.Failed == nil {
+			break
+		}
+
+		return e.complexity.MediaTimeProgress.Failed(childComplexity), true
+
+	case "MediaTimeProgress.partial":
+		if e.complexity.MediaTimeProgress.Partial == nil {
+			break
+		}
+
+		return e.complexity.MediaTimeProgress.Partial(childComplexity), true
+
+	case "MediaTimeProgress.pending":
+		if e.complexity.MediaTimeProgress.Pending == nil {
+			break
+		}
+
+		return e.complexity.MediaTimeProgress.Pending(childComplexity), true
+
+	case "MediaTimeProgress.total":
+		if e.complexity.MediaTimeProgress.Total == nil {
+			break
+		}
+
+		return e.complexity.MediaTimeProgress.Total(childComplexity), true
 
 	case "Mutation.addCoserSocialAccount":
 		if e.complexity.Mutation.AddCoserSocialAccount == nil {
@@ -9391,6 +9564,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.MediaEmbeddedMetadata(childComplexity, args["itemUUID"].(string), args["visibleFields"].([]string)), true
+
+	case "Query.mediaTimeProgress":
+		if e.complexity.Query.MediaTimeProgress == nil {
+			break
+		}
+
+		return e.complexity.Query.MediaTimeProgress(childComplexity), true
 
 	case "Query.previewCoreEntityDelete":
 		if e.complexity.Query.PreviewCoreEntityDelete == nil {
@@ -17967,6 +18147,138 @@ func (ec *executionContext) field___Type_fields_argsIncludeDeprecated(
 
 // region    **************************** field.gotpl *****************************
 
+func (ec *executionContext) _BrowseGalleryCard_softwareTimeUTC(ctx context.Context, field graphql.CollectedField, obj *BrowseGalleryCard) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrowseGalleryCard_softwareTimeUTC(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SoftwareTimeUtc, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrowseGalleryCard_softwareTimeUTC(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrowseGalleryCard",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrowseGalleryCard_softwareTimeDate(ctx context.Context, field graphql.CollectedField, obj *BrowseGalleryCard) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrowseGalleryCard_softwareTimeDate(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SoftwareTimeDate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrowseGalleryCard_softwareTimeDate(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrowseGalleryCard",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrowseGalleryCard_softwareTimeStatus(ctx context.Context, field graphql.CollectedField, obj *BrowseGalleryCard) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrowseGalleryCard_softwareTimeStatus(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SoftwareTimeStatus, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrowseGalleryCard_softwareTimeStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrowseGalleryCard",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _BrowseGalleryCard_setID(ctx context.Context, field graphql.CollectedField, obj *BrowseGalleryCard) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_BrowseGalleryCard_setID(ctx, field)
 	if err != nil {
@@ -19147,6 +19459,50 @@ func (ec *executionContext) fieldContext_BrowseGalleryCard_scrubberRevision(_ co
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrowseUISettings_galleryDetailLoadingMode(ctx context.Context, field graphql.CollectedField, obj *BrowseUISettings) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrowseUISettings_galleryDetailLoadingMode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryDetailLoadingMode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrowseUISettings_galleryDetailLoadingMode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrowseUISettings",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -20606,6 +20962,12 @@ func (ec *executionContext) fieldContext_CoserTimelineEntry_card(_ context.Conte
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "softwareTimeUTC":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeUTC(ctx, field)
+			case "softwareTimeDate":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeDate(ctx, field)
+			case "softwareTimeStatus":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeStatus(ctx, field)
 			case "setID":
 				return ec.fieldContext_BrowseGalleryCard_setID(ctx, field)
 			case "slug":
@@ -21897,6 +22259,12 @@ func (ec *executionContext) fieldContext_GalleryDetail_card(_ context.Context, f
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "softwareTimeUTC":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeUTC(ctx, field)
+			case "softwareTimeDate":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeDate(ctx, field)
+			case "softwareTimeStatus":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeStatus(ctx, field)
 			case "setID":
 				return ec.fieldContext_BrowseGalleryCard_setID(ctx, field)
 			case "slug":
@@ -22772,6 +23140,138 @@ func (ec *executionContext) fieldContext_GalleryDisplayImageStatus_failed(_ cont
 	return fc, nil
 }
 
+func (ec *executionContext) _GalleryMember_captureTimeUTC(ctx context.Context, field graphql.CollectedField, obj *GalleryMember) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryMember_captureTimeUTC(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CaptureTimeUtc, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryMember_captureTimeUTC(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryMember",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GalleryMember_captureTimePrecision(ctx context.Context, field graphql.CollectedField, obj *GalleryMember) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryMember_captureTimePrecision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CaptureTimePrecision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryMember_captureTimePrecision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryMember",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GalleryMember_captureTimeZoneSource(ctx context.Context, field graphql.CollectedField, obj *GalleryMember) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryMember_captureTimeZoneSource(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CaptureTimeZoneSource, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryMember_captureTimeZoneSource(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryMember",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _GalleryMember_itemUUID(ctx context.Context, field graphql.CollectedField, obj *GalleryMember) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_GalleryMember_itemUUID(ctx, field)
 	if err != nil {
@@ -23409,6 +23909,94 @@ func (ec *executionContext) fieldContext_GalleryMember_ratingHalfSteps(_ context
 	return fc, nil
 }
 
+func (ec *executionContext) _GalleryMemberIndex_timeEvidenceRevision(ctx context.Context, field graphql.CollectedField, obj *GalleryMemberIndex) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryMemberIndex_timeEvidenceRevision(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TimeEvidenceRevision, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryMemberIndex_timeEvidenceRevision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryMemberIndex",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GalleryMemberIndex_timeEvidenceStatus(ctx context.Context, field graphql.CollectedField, obj *GalleryMemberIndex) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GalleryMemberIndex_timeEvidenceStatus(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TimeEvidenceStatus, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GalleryMemberIndex_timeEvidenceStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GalleryMemberIndex",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _GalleryMemberIndex_setID(ctx context.Context, field graphql.CollectedField, obj *GalleryMemberIndex) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_GalleryMemberIndex_setID(ctx, field)
 	if err != nil {
@@ -23580,6 +24168,12 @@ func (ec *executionContext) fieldContext_GalleryMemberIndex_items(_ context.Cont
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "captureTimeUTC":
+				return ec.fieldContext_GalleryMember_captureTimeUTC(ctx, field)
+			case "captureTimePrecision":
+				return ec.fieldContext_GalleryMember_captureTimePrecision(ctx, field)
+			case "captureTimeZoneSource":
+				return ec.fieldContext_GalleryMember_captureTimeZoneSource(ctx, field)
 			case "itemUUID":
 				return ec.fieldContext_GalleryMember_itemUUID(ctx, field)
 			case "mediaKind":
@@ -23654,6 +24248,12 @@ func (ec *executionContext) fieldContext_GalleryPage_items(_ context.Context, fi
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "softwareTimeUTC":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeUTC(ctx, field)
+			case "softwareTimeDate":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeDate(ctx, field)
+			case "softwareTimeStatus":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeStatus(ctx, field)
 			case "setID":
 				return ec.fieldContext_BrowseGalleryCard_setID(ctx, field)
 			case "slug":
@@ -23928,6 +24528,12 @@ func (ec *executionContext) fieldContext_GalleryRecommendation_card(_ context.Co
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "softwareTimeUTC":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeUTC(ctx, field)
+			case "softwareTimeDate":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeDate(ctx, field)
+			case "softwareTimeStatus":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeStatus(ctx, field)
 			case "setID":
 				return ec.fieldContext_BrowseGalleryCard_setID(ctx, field)
 			case "slug":
@@ -52636,6 +53242,94 @@ func (ec *executionContext) fieldContext_ManageRuleValidation_message(_ context.
 	return fc, nil
 }
 
+func (ec *executionContext) _ManageRuntimeSettings_galleryDetailLoadingMode(ctx context.Context, field graphql.CollectedField, obj *ManageRuntimeSettings) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageRuntimeSettings_galleryDetailLoadingMode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GalleryDetailLoadingMode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageRuntimeSettings_galleryDetailLoadingMode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageRuntimeSettings",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManageRuntimeSettings_mediaTimeBackfillEnabled(ctx context.Context, field graphql.CollectedField, obj *ManageRuntimeSettings) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManageRuntimeSettings_mediaTimeBackfillEnabled(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MediaTimeBackfillEnabled, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManageRuntimeSettings_mediaTimeBackfillEnabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManageRuntimeSettings",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ManageRuntimeSettings_libraryMonitorEnabled(ctx context.Context, field graphql.CollectedField, obj *ManageRuntimeSettings) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ManageRuntimeSettings_libraryMonitorEnabled(ctx, field)
 	if err != nil {
@@ -56213,6 +56907,12 @@ func (ec *executionContext) fieldContext_MediaDetail_item(_ context.Context, fie
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "captureTimeUTC":
+				return ec.fieldContext_GalleryMember_captureTimeUTC(ctx, field)
+			case "captureTimePrecision":
+				return ec.fieldContext_GalleryMember_captureTimePrecision(ctx, field)
+			case "captureTimeZoneSource":
+				return ec.fieldContext_GalleryMember_captureTimeZoneSource(ctx, field)
 			case "itemUUID":
 				return ec.fieldContext_GalleryMember_itemUUID(ctx, field)
 			case "mediaKind":
@@ -56340,6 +57040,12 @@ func (ec *executionContext) fieldContext_MediaDetail_gallery(_ context.Context, 
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "softwareTimeUTC":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeUTC(ctx, field)
+			case "softwareTimeDate":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeDate(ctx, field)
+			case "softwareTimeStatus":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeStatus(ctx, field)
 			case "setID":
 				return ec.fieldContext_BrowseGalleryCard_setID(ctx, field)
 			case "slug":
@@ -56763,6 +57469,226 @@ func (ec *executionContext) fieldContext_MediaHistoryEvent_parameters(_ context.
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MediaHistoryEvent_inputFormat(ctx context.Context, field graphql.CollectedField, obj *MediaHistoryEvent) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MediaHistoryEvent_inputFormat(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.InputFormat, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MediaHistoryEvent_inputFormat(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MediaHistoryEvent",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MediaHistoryEvent_outputFormat(ctx context.Context, field graphql.CollectedField, obj *MediaHistoryEvent) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MediaHistoryEvent_outputFormat(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.OutputFormat, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MediaHistoryEvent_outputFormat(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MediaHistoryEvent",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MediaHistoryEvent_rawParameters(ctx context.Context, field graphql.CollectedField, obj *MediaHistoryEvent) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MediaHistoryEvent_rawParameters(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RawParameters, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MediaHistoryEvent_rawParameters(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MediaHistoryEvent",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MediaHistoryEvent_changed(ctx context.Context, field graphql.CollectedField, obj *MediaHistoryEvent) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MediaHistoryEvent_changed(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Changed, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MediaHistoryEvent_changed(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MediaHistoryEvent",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MediaHistoryEvent_detailsRedacted(ctx context.Context, field graphql.CollectedField, obj *MediaHistoryEvent) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MediaHistoryEvent_detailsRedacted(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DetailsRedacted, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MediaHistoryEvent_detailsRedacted(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MediaHistoryEvent",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -57321,6 +58247,16 @@ func (ec *executionContext) fieldContext_MediaInformationSummary_history(_ conte
 				return ec.fieldContext_MediaHistoryEvent_timestamp(ctx, field)
 			case "parameters":
 				return ec.fieldContext_MediaHistoryEvent_parameters(ctx, field)
+			case "inputFormat":
+				return ec.fieldContext_MediaHistoryEvent_inputFormat(ctx, field)
+			case "outputFormat":
+				return ec.fieldContext_MediaHistoryEvent_outputFormat(ctx, field)
+			case "rawParameters":
+				return ec.fieldContext_MediaHistoryEvent_rawParameters(ctx, field)
+			case "changed":
+				return ec.fieldContext_MediaHistoryEvent_changed(ctx, field)
+			case "detailsRedacted":
+				return ec.fieldContext_MediaHistoryEvent_detailsRedacted(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MediaHistoryEvent", field.Name)
 		},
@@ -57648,6 +58584,226 @@ func (ec *executionContext) _MediaPage_totalPages(ctx context.Context, field gra
 func (ec *executionContext) fieldContext_MediaPage_totalPages(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "MediaPage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MediaTimeProgress_total(ctx context.Context, field graphql.CollectedField, obj *MediaTimeProgress) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MediaTimeProgress_total(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Total, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MediaTimeProgress_total(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MediaTimeProgress",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MediaTimeProgress_checked(ctx context.Context, field graphql.CollectedField, obj *MediaTimeProgress) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MediaTimeProgress_checked(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Checked, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MediaTimeProgress_checked(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MediaTimeProgress",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MediaTimeProgress_partial(ctx context.Context, field graphql.CollectedField, obj *MediaTimeProgress) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MediaTimeProgress_partial(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Partial, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MediaTimeProgress_partial(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MediaTimeProgress",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MediaTimeProgress_pending(ctx context.Context, field graphql.CollectedField, obj *MediaTimeProgress) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MediaTimeProgress_pending(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Pending, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MediaTimeProgress_pending(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MediaTimeProgress",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MediaTimeProgress_failed(ctx context.Context, field graphql.CollectedField, obj *MediaTimeProgress) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MediaTimeProgress_failed(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Failed, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MediaTimeProgress_failed(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MediaTimeProgress",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -62162,6 +63318,10 @@ func (ec *executionContext) fieldContext_Mutation_updateRuntimeSettings(ctx cont
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "galleryDetailLoadingMode":
+				return ec.fieldContext_ManageRuntimeSettings_galleryDetailLoadingMode(ctx, field)
+			case "mediaTimeBackfillEnabled":
+				return ec.fieldContext_ManageRuntimeSettings_mediaTimeBackfillEnabled(ctx, field)
 			case "libraryMonitorEnabled":
 				return ec.fieldContext_ManageRuntimeSettings_libraryMonitorEnabled(ctx, field)
 			case "settingsRevision":
@@ -64832,6 +65992,62 @@ func (ec *executionContext) fieldContext_PortableMigrationActionResult_preflight
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_mediaTimeProgress(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_mediaTimeProgress(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().MediaTimeProgress(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*MediaTimeProgress)
+	fc.Result = res
+	return ec.marshalNMediaTimeProgress2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐMediaTimeProgress(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_mediaTimeProgress(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "total":
+				return ec.fieldContext_MediaTimeProgress_total(ctx, field)
+			case "checked":
+				return ec.fieldContext_MediaTimeProgress_checked(ctx, field)
+			case "partial":
+				return ec.fieldContext_MediaTimeProgress_partial(ctx, field)
+			case "pending":
+				return ec.fieldContext_MediaTimeProgress_pending(ctx, field)
+			case "failed":
+				return ec.fieldContext_MediaTimeProgress_failed(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type MediaTimeProgress", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_homeGalleries(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_homeGalleries(ctx, field)
 	if err != nil {
@@ -65216,6 +66432,10 @@ func (ec *executionContext) fieldContext_Query_galleryMemberIndex(ctx context.Co
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "timeEvidenceRevision":
+				return ec.fieldContext_GalleryMemberIndex_timeEvidenceRevision(ctx, field)
+			case "timeEvidenceStatus":
+				return ec.fieldContext_GalleryMemberIndex_timeEvidenceStatus(ctx, field)
 			case "setID":
 				return ec.fieldContext_GalleryMemberIndex_setID(ctx, field)
 			case "metadataRevision":
@@ -65421,6 +66641,12 @@ func (ec *executionContext) fieldContext_Query_randomGalleries(_ context.Context
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "softwareTimeUTC":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeUTC(ctx, field)
+			case "softwareTimeDate":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeDate(ctx, field)
+			case "softwareTimeStatus":
+				return ec.fieldContext_BrowseGalleryCard_softwareTimeStatus(ctx, field)
 			case "setID":
 				return ec.fieldContext_BrowseGalleryCard_setID(ctx, field)
 			case "slug":
@@ -67956,6 +69182,10 @@ func (ec *executionContext) fieldContext_Query_manageRuntimeSettings(_ context.C
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "galleryDetailLoadingMode":
+				return ec.fieldContext_ManageRuntimeSettings_galleryDetailLoadingMode(ctx, field)
+			case "mediaTimeBackfillEnabled":
+				return ec.fieldContext_ManageRuntimeSettings_mediaTimeBackfillEnabled(ctx, field)
 			case "libraryMonitorEnabled":
 				return ec.fieldContext_ManageRuntimeSettings_libraryMonitorEnabled(ctx, field)
 			case "settingsRevision":
@@ -69294,6 +70524,8 @@ func (ec *executionContext) fieldContext_Query_browseUISettings(_ context.Contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "galleryDetailLoadingMode":
+				return ec.fieldContext_BrowseUISettings_galleryDetailLoadingMode(ctx, field)
 			case "settingsRevision":
 				return ec.fieldContext_BrowseUISettings_settingsRevision(ctx, field)
 			case "galleryScrubberEnabled":
@@ -76705,13 +77937,27 @@ func (ec *executionContext) unmarshalInputRuntimeSettingsInput(ctx context.Conte
 		asMap["galleryCover1600Enabled"] = false
 	}
 
-	fieldsInOrder := [...]string{"libraryMonitorEnabled", "homeScope", "galleryCover1600Enabled", "galleryCardScrubberEnabled", "galleryDetailMediaFilterEnabled", "galleryCardControlsVisible", "mediaCardControlsVisible", "detailPersonalControlsVisible", "galleryAnimatedPlaybackLimit", "galleryAnimatedLockIntervalMS", "relatedLimit", "tagParentWeight", "tagMinimumScore", "tagMaximumDepth", "randomLimit", "randomStaticQuota", "randomGIFQuota", "randomVideoQuota", "randomGalleryRepeatDecay", "enhancedCacheMaximumBytes", "minimumFreeBytes", "minimumFreePercent", "automaticScanEnabled", "automaticScanOnStartup", "automaticScanIntervalMinutes", "automaticSchedulesSuspended", "dailyBackupEnabled", "dailyBackupRetention", "archiveMaxEntries", "archiveMaxEntryBytes", "archiveMaxTotalBytes", "archiveMaxCompressionRatio", "archiveMaxImagePixels", "videoHardwareMode", "videoHardwareFallbackEnabled", "videoHardwareDevice"}
+	fieldsInOrder := [...]string{"galleryDetailLoadingMode", "mediaTimeBackfillEnabled", "libraryMonitorEnabled", "homeScope", "galleryCover1600Enabled", "galleryCardScrubberEnabled", "galleryDetailMediaFilterEnabled", "galleryCardControlsVisible", "mediaCardControlsVisible", "detailPersonalControlsVisible", "galleryAnimatedPlaybackLimit", "galleryAnimatedLockIntervalMS", "relatedLimit", "tagParentWeight", "tagMinimumScore", "tagMaximumDepth", "randomLimit", "randomStaticQuota", "randomGIFQuota", "randomVideoQuota", "randomGalleryRepeatDecay", "enhancedCacheMaximumBytes", "minimumFreeBytes", "minimumFreePercent", "automaticScanEnabled", "automaticScanOnStartup", "automaticScanIntervalMinutes", "automaticSchedulesSuspended", "dailyBackupEnabled", "dailyBackupRetention", "archiveMaxEntries", "archiveMaxEntryBytes", "archiveMaxTotalBytes", "archiveMaxCompressionRatio", "archiveMaxImagePixels", "videoHardwareMode", "videoHardwareFallbackEnabled", "videoHardwareDevice"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
+		case "galleryDetailLoadingMode":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("galleryDetailLoadingMode"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GalleryDetailLoadingMode = data
+		case "mediaTimeBackfillEnabled":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mediaTimeBackfillEnabled"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MediaTimeBackfillEnabled = data
 		case "libraryMonitorEnabled":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("libraryMonitorEnabled"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -77452,6 +78698,21 @@ func (ec *executionContext) _BrowseGalleryCard(ctx context.Context, sel ast.Sele
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("BrowseGalleryCard")
+		case "softwareTimeUTC":
+			out.Values[i] = ec._BrowseGalleryCard_softwareTimeUTC(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "softwareTimeDate":
+			out.Values[i] = ec._BrowseGalleryCard_softwareTimeDate(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "softwareTimeStatus":
+			out.Values[i] = ec._BrowseGalleryCard_softwareTimeStatus(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "setID":
 			out.Values[i] = ec._BrowseGalleryCard_setID(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -77613,6 +78874,11 @@ func (ec *executionContext) _BrowseUISettings(ctx context.Context, sel ast.Selec
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("BrowseUISettings")
+		case "galleryDetailLoadingMode":
+			out.Values[i] = ec._BrowseUISettings_galleryDetailLoadingMode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "settingsRevision":
 			out.Values[i] = ec._BrowseUISettings_settingsRevision(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -78457,6 +79723,21 @@ func (ec *executionContext) _GalleryMember(ctx context.Context, sel ast.Selectio
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("GalleryMember")
+		case "captureTimeUTC":
+			out.Values[i] = ec._GalleryMember_captureTimeUTC(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "captureTimePrecision":
+			out.Values[i] = ec._GalleryMember_captureTimePrecision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "captureTimeZoneSource":
+			out.Values[i] = ec._GalleryMember_captureTimeZoneSource(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "itemUUID":
 			out.Values[i] = ec._GalleryMember_itemUUID(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -78546,6 +79827,16 @@ func (ec *executionContext) _GalleryMemberIndex(ctx context.Context, sel ast.Sel
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("GalleryMemberIndex")
+		case "timeEvidenceRevision":
+			out.Values[i] = ec._GalleryMemberIndex_timeEvidenceRevision(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "timeEvidenceStatus":
+			out.Values[i] = ec._GalleryMemberIndex_timeEvidenceStatus(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "setID":
 			out.Values[i] = ec._GalleryMemberIndex_setID(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -84624,6 +85915,16 @@ func (ec *executionContext) _ManageRuntimeSettings(ctx context.Context, sel ast.
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("ManageRuntimeSettings")
+		case "galleryDetailLoadingMode":
+			out.Values[i] = ec._ManageRuntimeSettings_galleryDetailLoadingMode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "mediaTimeBackfillEnabled":
+			out.Values[i] = ec._ManageRuntimeSettings_mediaTimeBackfillEnabled(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "libraryMonitorEnabled":
 			out.Values[i] = ec._ManageRuntimeSettings_libraryMonitorEnabled(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -85379,6 +86680,31 @@ func (ec *executionContext) _MediaHistoryEvent(ctx context.Context, sel ast.Sele
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "inputFormat":
+			out.Values[i] = ec._MediaHistoryEvent_inputFormat(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outputFormat":
+			out.Values[i] = ec._MediaHistoryEvent_outputFormat(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "rawParameters":
+			out.Values[i] = ec._MediaHistoryEvent_rawParameters(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "changed":
+			out.Values[i] = ec._MediaHistoryEvent_changed(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "detailsRedacted":
+			out.Values[i] = ec._MediaHistoryEvent_detailsRedacted(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -85573,6 +86899,65 @@ func (ec *executionContext) _MediaPage(ctx context.Context, sel ast.SelectionSet
 			}
 		case "totalPages":
 			out.Values[i] = ec._MediaPage_totalPages(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var mediaTimeProgressImplementors = []string{"MediaTimeProgress"}
+
+func (ec *executionContext) _MediaTimeProgress(ctx context.Context, sel ast.SelectionSet, obj *MediaTimeProgress) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, mediaTimeProgressImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("MediaTimeProgress")
+		case "total":
+			out.Values[i] = ec._MediaTimeProgress_total(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "checked":
+			out.Values[i] = ec._MediaTimeProgress_checked(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "partial":
+			out.Values[i] = ec._MediaTimeProgress_partial(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pending":
+			out.Values[i] = ec._MediaTimeProgress_pending(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "failed":
+			out.Values[i] = ec._MediaTimeProgress_failed(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -86427,6 +87812,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
+		case "mediaTimeProgress":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_mediaTimeProgress(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "homeGalleries":
 			field := field
 
@@ -93476,6 +94883,20 @@ func (ec *executionContext) marshalNMediaPage2ᚖgithubᚗcomᚋstashappᚋstash
 		return graphql.Null
 	}
 	return ec._MediaPage(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNMediaTimeProgress2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐMediaTimeProgress(ctx context.Context, sel ast.SelectionSet, v MediaTimeProgress) graphql.Marshaler {
+	return ec._MediaTimeProgress(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNMediaTimeProgress2ᚖgithubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐMediaTimeProgress(ctx context.Context, sel ast.SelectionSet, v *MediaTimeProgress) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._MediaTimeProgress(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNOnDemandResource2githubᚗcomᚋstashappᚋstashᚋinternalᚋproductapiᚐOnDemandResource(ctx context.Context, sel ast.SelectionSet, v OnDemandResource) graphql.Marshaler {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useIntl } from "react-intl";
 import type { MediaInformation, MediaMetadataEntry } from "./types";
+import { MediaHistoryTimeline } from "./MediaHistoryTimeline";
 
 const groups = ["FILE", "IMAGE", "CAMERA", "DATES", "DESCRIPTIVE", "EDITING", "VIDEO", "OTHER", "SENSITIVE"];
 const categories: Record<string, string[]> = { all: groups, file: ["FILE"], dates: ["DATES"], editing: ["EDITING"], image: ["IMAGE"], camera: ["CAMERA"], video: ["VIDEO"], descriptive: ["DESCRIPTIVE"], other: ["OTHER", "SENSITIVE"] };
@@ -33,7 +34,12 @@ export function MediaInformationPanel({ information, loading, error, historyEnab
     const records = merged.get(key) ?? []; records.push(e); merged.set(key, records);
   }
   const filtered = [...merged.values()].filter(records => categories[category].includes(groupOf(records[0])) && records.some(e => match([name(e),e.label,e.key,e.value,e.rawValue ?? "",e.source ?? ""])));
-  const filteredEvents = categories[category].includes("EDITING") && (sourceFilter === "all" || sourceFilter === "XMP") ? ordered.filter(e => match([e.software,e.action,t("action."+e.action),e.when,e.parameters])) : [];
+  const filteredEvents = categories[category].includes("EDITING") && (sourceFilter === "all" || sourceFilter === "XMP") ? ordered.filter(e => {
+    const conversion = e.action === "derived" || e.action === "converted";
+    const properties = ["operation", ...(conversion ? ["inputFormat", "outputFormat", "conversionTime", "conversionSoftware"] : ["eventTime", "eventSoftware"]),
+      ...(conversion || e.rawParameters ? ["originalDescription"] : []), ...(!conversion || e.changed ? ["changedScope"] : [])];
+    return match([e.software,e.action,t("action."+e.action),e.when,e.parameters,e.inputFormat ?? "",e.outputFormat ?? "",e.rawParameters ?? "",e.changed ?? "",...properties.map(t)]);
+  }) : [];
   const sourceName = (v?: string) => v === "FILESYSTEM" ? t("filesystem") : v === "ARCHIVE_ENTRY" ? t("archiveEntry") : v === "CGM" ? "" : v;
   async function copy(key: string,value: string) { try { await navigator.clipboard.writeText(value); setCopied(key); } catch { setCopied("failed"); } }
   const filterActive = category !== "all" || sourceFilter !== "all";
@@ -67,12 +73,7 @@ export function MediaInformationPanel({ information, loading, error, historyEnab
       return items.length || history ? <details className="media-metadata-section" key={group} open={["FILE","IMAGE","DATES","EDITING"].includes(group) || !!search || filterActive}>
         <summary>{groupTitle(group)}<small>{items.length + (history ? filteredEvents.length : 0)}</small></summary>
         {group !== "EDITING" ? renderRows(items) : null}
-        {history ? <><p className="media-metadata-note">{t(allEventsDated ? "timeOrder" : "sourceOrder")}</p><ol className="media-metadata-history">{filteredEvents.map(e => {
-          const conversion = e.action === "derived" || e.action === "converted";
-          const heading = <><span><strong>{t("action."+e.action)}</strong>{e.software ? <span>{e.software}</span> : null}</span><time>{e.when || t("unknownTime")}</time></>;
-          const detail = <div className="media-metadata-event-detail"><small>#{e.index} · XMP</small>{e.when && !e.timestamp ? <p>{t("unzoned")}</p> : null}{e.parameters ? <p>{e.parameters}</p> : null}<button type="button" onClick={() => void copy("history."+e.index,[e.action,e.when,e.software,e.parameters].filter(Boolean).join("\n"))}>{t(copied === "history."+e.index ? "copied" : "copy")}</button></div>;
-          return <li key={e.index}>{conversion ? <><header className="media-metadata-event-heading">{heading}</header>{detail}</> : <details><summary>{heading}</summary>{detail}</details>}</li>;
-        })}</ol></> : null}
+        {history ? <MediaHistoryTimeline events={filteredEvents} chronological={allEventsDated} copied={copied} onCopy={(key,value) => void copy(key,value)}/> : null}
         {group === "EDITING" ? <>{renderRows(items.filter(records=>records[0].visibilityKey !== "descriptive.software"))}{items.some(records=>records[0].visibilityKey === "descriptive.software") ? <details className="media-metadata-software"><summary>{t("declaredSoftware")}</summary><p className="media-metadata-note">{t("declaredSoftwareNote")}</p>{renderRows(items.filter(records=>records[0].visibilityKey === "descriptive.software"))}</details> : null}</> : null}
       </details> : null;
     })}

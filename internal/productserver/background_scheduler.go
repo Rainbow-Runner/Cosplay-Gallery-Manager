@@ -73,6 +73,7 @@ func (s *Server) runBackgroundScheduler(ctx context.Context) {
 			pending = s.runChangedSourceScans(ctx, now) || pending
 			pending = s.runVideoProbeBackfill(ctx, now) || pending
 			pending = s.runCaptureDateBackfill(ctx, now) || pending
+			pending = s.runMediaTimeBackfill(ctx, now) || pending
 			pending = s.runMediaAddedBackfill(ctx, now) || pending
 			p.lastWork = time.Now()
 			p.workAt = time.Time{}

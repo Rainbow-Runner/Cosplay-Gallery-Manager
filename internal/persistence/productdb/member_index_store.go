@@ -18,8 +18,8 @@ func (s *BrowseStore) GalleryMemberIndex(ctx context.Context, setID string, scop
 		return browse.GalleryMemberIndex{}, err
 	}
 	result := browse.GalleryMemberIndex{SetID: setID}
-	if err := s.db.QueryRowContext(ctx, `SELECT metadata_revision,scan_revision FROM galleries WHERE id=?`, galleryID).Scan(
-		&result.MetadataRevision, &result.ScanRevision); err != nil {
+	if err := s.db.QueryRowContext(ctx, `SELECT metadata_revision,scan_revision,time_evidence_revision FROM galleries WHERE id=?`, galleryID).Scan(
+		&result.MetadataRevision, &result.ScanRevision, &result.TimeEvidenceRevision); err != nil {
 		return browse.GalleryMemberIndex{}, err
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT item.item_uuid,item.media_kind,item.content_format,item.image_category,
@@ -88,5 +88,37 @@ func (s *BrowseStore) GalleryMemberIndex(ctx context.Context, setID string, scop
 			item.PreviewWidth, item.PreviewHeight = display.Width, display.Height
 		}
 	}
+	rows, err = s.db.QueryContext(ctx, `SELECT item.item_uuid,COALESCE(e.capture_at_utc,''),COALESCE(e.capture_precision,''),COALESCE(e.capture_zone_source,''),e.item_uuid,e.state FROM gallery_items item JOIN gallery_sources src ON src.id=item.source_id LEFT JOIN media_libraries lib ON lib.id=src.library_id LEFT JOIN item_media_times e ON e.item_uuid=item.item_uuid AND e.content_revision=item.content_revision AND e.profile=? AND e.timezone=COALESCE(lib.capture_timezone,'UTC') WHERE item.gallery_id=? AND item.excluded=0 AND item.availability_state='AVAILABLE' AND item.media_kind IN ('STATIC_IMAGE','VIDEO')`, MediaTimeProfile, galleryID)
+	if err != nil {
+		return result, err
+	}
+	byUUID := map[string]*browse.GalleryMember{}
+	for i := range result.Items {
+		byUUID[result.Items[i].ItemUUID] = &result.Items[i]
+	}
+	result.TimeEvidenceStatus = "COMPLETE"
+	for rows.Next() {
+		var uuid, stamp, precision, zone string
+		var found, state sql.NullString
+		if err = rows.Scan(&uuid, &stamp, &precision, &zone, &found, &state); err != nil {
+			rows.Close()
+			return result, err
+		}
+		if !found.Valid {
+			result.TimeEvidenceStatus = "PENDING"
+		} else if state.String == "PARTIAL" && result.TimeEvidenceStatus != "PENDING" {
+			result.TimeEvidenceStatus = "PARTIAL"
+		}
+		if item := byUUID[uuid]; item != nil {
+			item.CaptureTimeUTC = stamp
+			item.CaptureTimePrecision = precision
+			item.CaptureTimeZoneSource = zone
+		}
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return result, err
+	}
+	rows.Close()
 	return result, nil
 }

@@ -53,9 +53,7 @@ type PrimaryPlan struct {
 
 func PlanPrimary(kind gallery.MediaKind, format gallery.ContentFormat) (PrimaryPlan, error) {
 	switch {
-	case kind == gallery.MediaKindStaticImage && format == gallery.ContentFormatRAW:
-		return PrimaryPlan{Variant: VariantCard480, CacheTier: CacheBase, Static: true}, nil
-	case kind == gallery.MediaKindStaticImage && format == gallery.ContentFormatImage:
+	case kind == gallery.MediaKindStaticImage && (format == gallery.ContentFormatRAW || format == gallery.ContentFormatImage):
 		return PrimaryPlan{Variant: VariantCardDisplay960, CacheTier: CacheBase, Static: true}, nil
 	case kind == gallery.MediaKindAnimatedImage && format == gallery.ContentFormatImage:
 		return PrimaryPlan{Variant: VariantStaticPoster, CacheTier: CacheBase, Static: true}, nil

@@ -79,7 +79,9 @@ func (worker Worker) RunOne(ctx context.Context, owner string, lease time.Durati
 	}()
 	var processErr error
 	if job.Kind == mediaprocessing.JobItemTechnicalMetadata {
-		if job.Variant == productdb.CaptureDateVariant {
+		if job.Variant == productdb.MediaTimeVariant {
+			processErr = worker.processMediaTimes(processingContext, job)
+		} else if job.Variant == productdb.CaptureDateVariant {
 			processErr = worker.processCaptureDate(processingContext, job)
 		} else {
 			processErr = worker.processVideoProbe(processingContext, job, now)
@@ -421,6 +423,7 @@ func (worker Worker) processDerivative(ctx context.Context, job mediaprocessing.
 	}
 	if item.MediaKind == gallery.MediaKindStaticImage && (job.Variant == mediaprocessing.VariantCard480 || job.Variant == mediaprocessing.VariantCardDisplay960) {
 		worker.captureImageDuringDerivative(ctx, item, materialized.Path)
+		worker.mediaTimesDuringDerivative(ctx, item, materialized.Path, materialized.Validate, job)
 	}
 	request := mediaprocessing.GenerateRequest{ItemUUID: item.ItemUUID, MediaKind: item.MediaKind, ContentFormat: item.ContentFormat,
 		ContentRevision: item.ContentRevision, Variant: job.Variant, ProfileHash: job.ProfileHash, SourcePath: materialized.Path}

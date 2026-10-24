@@ -3,7 +3,7 @@ enum GallerySort { RECENTLY_ADDED NAME SHOOT_DATE RATING }
 enum CollectionType { ALBUM COSPLAY }
 enum ContentRating { NON_ADULT ADULT }
 enum ShootDatePrecision { DAY MONTH UNKNOWN }
-enum TimelineDate { SHOOT MEDIA_ADDED PUBLISH COMBINED }
+enum TimelineDate { SHOOT MEDIA_ADDED PUBLISH SOFTWARE COMBINED }
 enum MediaKind { STATIC_IMAGE ANIMATED_IMAGE VIDEO }
 enum ImageCategory { PHOTO SELFIE }
 enum ContentFormat { IMAGE VIDEO RAW }
@@ -51,6 +51,9 @@ type GalleryCover {
 type MediaCounts { photo: Int! selfie: Int! gif: Int! video: Int! }
 
 type BrowseGalleryCard {
+  softwareTimeUTC: String!
+  softwareTimeDate: String!
+  softwareTimeStatus: String!
   setID: ID!
   slug: String!
   title: String!
@@ -121,6 +124,9 @@ type GalleryTagEditResult {
 }
 
 type GalleryMember {
+  captureTimeUTC: String!
+  captureTimePrecision: String!
+  captureTimeZoneSource: String!
   itemUUID: ID!
   mediaKind: MediaKind!
   contentFormat: ContentFormat!
@@ -138,6 +144,8 @@ type GalleryMember {
 }
 
 type GalleryMemberIndex {
+  timeEvidenceRevision: Int64!
+  timeEvidenceStatus: String!
   setID: ID!
   metadataRevision: Int64!
   scanRevision: Int64!
@@ -164,6 +172,7 @@ type RandomMediaItem {
 }
 
 type BrowseUISettings {
+  galleryDetailLoadingMode: String!
   settingsRevision: Int64!
   galleryScrubberEnabled: Boolean!
   galleryCover1600Enabled: Boolean!
@@ -275,7 +284,19 @@ type MediaDetail {
 }
 type VideoTechnicalSummary { probeState: String! errorCode: String! container: String! durationSeconds: Float! width: Int! height: Int! frameRate: Float! videoCodec: String! audioCodec: String! }
 type MediaInformationEntry { key: String! visibilityKey: String! label: String! group: String! value: String! source: String! rawValue: String! timestamp: String! }
-type MediaHistoryEvent { index: Int! action: String! software: String! when: String! timestamp: String! parameters: String! }
+type MediaHistoryEvent {
+  index: Int!
+  action: String!
+  software: String!
+  when: String!
+  timestamp: String!
+  parameters: String!
+  inputFormat: String!
+  outputFormat: String!
+  rawParameters: String!
+  changed: String!
+  detailsRedacted: Boolean!
+}
 type MediaInformationSummary { state: String! errorCode: String! entries: [MediaInformationEntry!]! history: [MediaHistoryEvent!]! warnings: [String!]! truncated: Boolean! }
 
 type MediaPage {
@@ -411,6 +432,8 @@ input CreateMediaLibraryInput { name: String! rootPath: String! enabled: Boolean
 input CreateRecognitionRuleInput { libraryID: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }
 input UpdateRecognitionRuleInput { id: Int64! name: String! kind: String! enabled: Boolean! autoCreateDraft: Boolean! order: Int! pattern: String! fixedDepth: Int! }
 type ManageRuntimeSettings {
+  galleryDetailLoadingMode: String!
+  mediaTimeBackfillEnabled: Boolean!
   libraryMonitorEnabled: Boolean!
   settingsRevision: Int64! homeScope: BrowseScope! galleryCover1600Enabled: Boolean! galleryCardScrubberEnabled: Boolean! galleryDetailMediaFilterEnabled: Boolean!
   galleryCardControlsVisible: Boolean! mediaCardControlsVisible: Boolean! detailPersonalControlsVisible: Boolean!
@@ -453,6 +476,8 @@ type ManageVideoHardwareBackendStatus {
   errorCode: String!
 }
 input RuntimeSettingsInput {
+  galleryDetailLoadingMode: String
+  mediaTimeBackfillEnabled: Boolean
   libraryMonitorEnabled: Boolean
   homeScope: BrowseScope! galleryCover1600Enabled: Boolean! = false galleryCardScrubberEnabled: Boolean! galleryDetailMediaFilterEnabled: Boolean!
   galleryCardControlsVisible: Boolean! mediaCardControlsVisible: Boolean! detailPersonalControlsVisible: Boolean!
@@ -543,7 +568,10 @@ input SocialAccountInput { platformKey: String! label: String! handle: String! u
 input ReplaceTagParentInput { uuid: ID! position: String! }
 input ExpectedTagRevisionInput { uuid: ID! metadataRevision: Int64! }
 
+type MediaTimeProgress { total: Int! checked: Int! partial: Int! pending: Int! failed: Int! }
+
 type Query {
+  mediaTimeProgress: MediaTimeProgress!
   homeGalleries(page: Int!): HomeGalleryPage!
   browseGalleries(scope: BrowseScope!, page: Int!, sort: GallerySort!, collectionType: CollectionType): GalleryPage!
   timelineGalleries(scope: BrowseScope!, page: Int!, coserUUID: ID, date: TimelineDate! = SHOOT): GalleryPage!

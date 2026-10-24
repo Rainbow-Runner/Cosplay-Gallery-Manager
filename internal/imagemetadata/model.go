@@ -15,12 +15,17 @@ type Entry struct {
 }
 
 type HistoryEvent struct {
-	Index      int
-	Action     string
-	Software   string
-	When       string
-	Timestamp  string
-	Parameters string
+	Index           int
+	Action          string
+	Software        string
+	When            string
+	Timestamp       string
+	Parameters      string
+	InputFormat     string
+	OutputFormat    string
+	RawParameters   string
+	Changed         string
+	DetailsRedacted bool
 }
 
 type Result struct {

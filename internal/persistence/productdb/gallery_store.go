@@ -190,6 +190,27 @@ func (s *GalleryStore) UpdateMetadata(
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	current, err := findGallery(ctx, tx, id)
+	if err != nil {
+		return gallery.Gallery{}, err
+	}
+	if current.MetadataRevision != expectedRevision {
+		return gallery.Gallery{}, ErrMetadataRevisionConflict
+	}
+	current.Aliases, err = loadGalleryAliases(ctx, tx, id)
+	if err != nil {
+		return gallery.Gallery{}, err
+	}
+	unchanged, err := galleryMetadataUnchanged(ctx, tx, current, input)
+	if err != nil {
+		return gallery.Gallery{}, err
+	}
+	if unchanged {
+		if err := deriveGalleryBrowsable(ctx, tx, &current); err != nil {
+			return gallery.Gallery{}, err
+		}
+		return current, nil
+	}
 	if err := prepareGalleryTitleEdit(ctx, tx, id, &input); err != nil {
 		return gallery.Gallery{}, err
 	}

@@ -52,16 +52,7 @@ func (s *BrowseStore) SimilarImages(ctx context.Context, maxDistance int, mode s
 		return result, err
 	}
 	defer tx.Rollback()
-	from := ` FROM gallery_items item JOIN galleries gallery ON gallery.id=item.gallery_id
-		JOIN gallery_sources source ON source.id=item.source_id AND source.gallery_id=gallery.id
-		LEFT JOIN gallery_personal_states personal ON personal.gallery_id=gallery.id
-		LEFT JOIN media_derivatives derivative ON derivative.item_uuid=item.item_uuid
-		 AND derivative.content_revision=item.content_revision AND derivative.is_current=1 AND derivative.state='READY'
-		 AND derivative.variant=` + staticBaseVariantSQL("item.item_uuid") + `
-		LEFT JOIN cover_image_signatures sig ON sig.item_uuid=item.item_uuid AND sig.content_revision=item.content_revision
-		 AND sig.profile_hash=derivative.profile_hash AND sig.signature_version=?
-		WHERE ` + browseVisibleGalleryPredicate + ` AND item.media_kind='STATIC_IMAGE'
-		 AND item.availability_state='AVAILABLE' AND item.processing_state='READY' AND item.excluded=0`
+	from := similarImageBrowseFrom()
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*),COUNT(sig.item_uuid)`+from, coversimilarity.Version).Scan(&result.TotalImages, &result.HashedImages); err != nil {
 		return result, err
 	}
@@ -73,25 +64,8 @@ func (s *BrowseStore) SimilarImages(ctx context.Context, maxDistance int, mode s
 	}
 	var images []SimilarImage
 	for rows.Next() {
-		var image SimilarImage
-		var relative, h, v, p string
-		if err := rows.Scan(&image.ItemUUID, &image.galleryID, &image.GallerySetID, &image.GallerySlug, &image.GalleryTitle, &relative,
-			&image.fingerprint, &image.Resource.ContentRevision, &image.Resource.ProfileHash, &image.Resource.Variant, &image.Resource.MIMEType,
-			&h, &v, &p, &image.signature.Width, &image.signature.Height); err != nil {
-			rows.Close()
-			return result, err
-		}
-		image.Resource.ItemUUID = image.ItemUUID
-		image.FileName = path.Base(relative)
-		if image.signature.DHashH, err = coversimilarity.ParseHex(h); err != nil {
-			rows.Close()
-			return result, err
-		}
-		if image.signature.DHashV, err = coversimilarity.ParseHex(v); err != nil {
-			rows.Close()
-			return result, err
-		}
-		if image.signature.PHash, err = coversimilarity.ParseHex(p); err != nil {
+		image, err := scanSimilarImage(rows)
+		if err != nil {
 			rows.Close()
 			return result, err
 		}
@@ -108,6 +82,40 @@ func (s *BrowseStore) SimilarImages(ctx context.Context, maxDistance int, mode s
 	result.ComparedImages = len(images)
 	result.Complete = result.HashedImages <= similarImageLimit
 	return compareSimilarImages(ctx, images, maxDistance, mode, result, similarComparisonLimit)
+}
+
+// Both search modes share the exact same visibility, revision and profile gates.
+func similarImageBrowseFrom() string {
+	return ` FROM gallery_items item JOIN galleries gallery ON gallery.id=item.gallery_id
+		JOIN gallery_sources source ON source.id=item.source_id AND source.gallery_id=gallery.id
+		LEFT JOIN gallery_personal_states personal ON personal.gallery_id=gallery.id
+		LEFT JOIN media_derivatives derivative ON derivative.item_uuid=item.item_uuid
+		 AND derivative.content_revision=item.content_revision AND derivative.is_current=1 AND derivative.state='READY'
+		 AND derivative.variant=` + staticBaseVariantSQL("item.item_uuid") + `
+		LEFT JOIN cover_image_signatures sig ON sig.item_uuid=item.item_uuid AND sig.content_revision=item.content_revision
+		 AND sig.profile_hash=derivative.profile_hash AND sig.signature_version=?
+		WHERE ` + browseVisibleGalleryPredicate + ` AND item.media_kind='STATIC_IMAGE'
+		 AND item.availability_state='AVAILABLE' AND item.processing_state='READY' AND item.excluded=0`
+}
+
+func scanSimilarImage(rows *sql.Rows) (SimilarImage, error) {
+	var result SimilarImage
+	var relative, h, v, p string
+	err := rows.Scan(&result.ItemUUID, &result.galleryID, &result.GallerySetID, &result.GallerySlug, &result.GalleryTitle, &relative,
+		&result.fingerprint, &result.Resource.ContentRevision, &result.Resource.ProfileHash, &result.Resource.Variant, &result.Resource.MIMEType,
+		&h, &v, &p, &result.signature.Width, &result.signature.Height)
+	if err != nil {
+		return result, err
+	}
+	result.Resource.ItemUUID, result.FileName = result.ItemUUID, path.Base(relative)
+	if result.signature.DHashH, err = coversimilarity.ParseHex(h); err != nil {
+		return result, err
+	}
+	if result.signature.DHashV, err = coversimilarity.ParseHex(v); err != nil {
+		return result, err
+	}
+	result.signature.PHash, err = coversimilarity.ParseHex(p)
+	return result, err
 }
 
 // Seven disjoint pHash bands guarantee that hashes within six bits share at

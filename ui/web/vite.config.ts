@@ -18,6 +18,7 @@ export default defineConfig(() => {
       strictPort: true,
       proxy: {
         "/graphql": proxy,
+        "/browse/similar-images": proxy,
         "/session": proxy,
         "/setup/status": proxy,
         "/setup/complete": proxy,

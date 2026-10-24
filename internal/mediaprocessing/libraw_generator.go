@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/disintegration/imaging"
 	"github.com/stashapp/stash/internal/gallery"
@@ -14,12 +15,14 @@ import (
 
 // LibRawGenerator invokes the configured LibRaw dcraw-compatible executable
 // directly (never through a shell). RAW originals remain read-only and only a
-// bounded sRGB JPEG proxy is published.
-type LibRawGenerator struct{ Executable string }
+// bounded sRGB proxy is published. The foundation display is WebP; legacy
+// variants and the lightbox retain their existing JPEG encoding.
+type LibRawGenerator struct{ Executable, FFmpegExecutable string }
 
 func (generator LibRawGenerator) Supports(request GenerateRequest) bool {
 	return generator.Executable != "" && request.MediaKind == gallery.MediaKindStaticImage && request.ContentFormat == gallery.ContentFormatRAW &&
-		(request.Variant == VariantLightbox4096 || request.Variant == VariantCard480 || request.Variant == VariantCard960 || request.Variant == VariantCard1600)
+		(request.Variant == VariantLightbox4096 || request.Variant == VariantCard480 || request.Variant == VariantCard960 || request.Variant == VariantCard1600 ||
+			(request.Variant == VariantCardDisplay960 && generator.FFmpegExecutable != ""))
 }
 
 func (generator LibRawGenerator) Validate() error {
@@ -44,6 +47,11 @@ func (generator LibRawGenerator) Generate(ctx context.Context, request GenerateR
 	if !generator.Supports(request) {
 		return GenerateResult{}, errors.New("LibRaw generator does not support request")
 	}
+	if request.Variant == VariantCardDisplay960 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+	}
 	command := exec.CommandContext(ctx, generator.Executable, "-T", "-c", "-w", "-W", "-o", "1", "-q", "3", request.SourcePath)
 	stdout, err := command.StdoutPipe()
 	if err != nil {
@@ -62,6 +70,9 @@ func (generator LibRawGenerator) Generate(ctx context.Context, request GenerateR
 	}
 	if err := command.Wait(); err != nil {
 		return GenerateResult{}, fmt.Errorf("LibRaw decode failed: %w (%s)", err, stderr.String())
+	}
+	if request.Variant == VariantCardDisplay960 {
+		return encodeDisplayImage(ctx, generator.FFmpegExecutable, decoded, request.Variant, request.DestinationPath)
 	}
 	maximum := variantMaximum(request.Variant)
 	if decoded.Bounds().Dx() > maximum || decoded.Bounds().Dy() > maximum {

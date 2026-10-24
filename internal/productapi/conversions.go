@@ -36,6 +36,7 @@ func galleryPage(value browse.GalleryPage) *GalleryPage {
 
 func galleryCard(value browse.GalleryCard) *BrowseGalleryCard {
 	result := &BrowseGalleryCard{
+		SoftwareTimeUtc: value.SoftwareTimeUTC, SoftwareTimeDate: value.SoftwareTimeDate, SoftwareTimeStatus: value.SoftwareTimeStatus,
 		SetID: value.SetID, Slug: value.Slug, Title: value.Title, DisplayTitle: value.DisplayTitle,
 		CollectionType: CollectionType(value.CollectionType), ContentRating: ContentRating(value.ContentRating),
 		Cover: &GalleryCover{Kind: string(value.Cover.Kind), Revision: value.Cover.Revision, Managed: value.Cover.Managed,
@@ -124,7 +125,7 @@ func galleryDetail(value browse.GalleryDetail) *GalleryDetail {
 }
 
 func galleryMemberIndex(value browse.GalleryMemberIndex) *GalleryMemberIndex {
-	result := &GalleryMemberIndex{SetID: value.SetID, MetadataRevision: value.MetadataRevision, ScanRevision: value.ScanRevision}
+	result := &GalleryMemberIndex{TimeEvidenceRevision: value.TimeEvidenceRevision, TimeEvidenceStatus: value.TimeEvidenceStatus, SetID: value.SetID, MetadataRevision: value.MetadataRevision, ScanRevision: value.ScanRevision}
 	for _, item := range value.Items {
 		result.Items = append(result.Items, galleryMemberModel(item))
 	}
@@ -137,7 +138,7 @@ func galleryMemberModel(item browse.GalleryMember) *GalleryMember {
 		converted := ImageCategory(item.ImageCategory)
 		category = &converted
 	}
-	return &GalleryMember{ItemUUID: item.ItemUUID, MediaKind: MediaKind(item.MediaKind), ContentFormat: ContentFormat(item.ContentFormat),
+	return &GalleryMember{CaptureTimeUtc: item.CaptureTimeUTC, CaptureTimePrecision: item.CaptureTimePrecision, CaptureTimeZoneSource: item.CaptureTimeZoneSource, ItemUUID: item.ItemUUID, MediaKind: MediaKind(item.MediaKind), ContentFormat: ContentFormat(item.ContentFormat),
 		ImageCategory: category, Position: strconv.FormatInt(item.Position, 10), Caption: item.Caption,
 		ProcessingState: ProcessingState(item.ProcessingState), CardResource: resourceIdentity(item.CardResource), FallbackCardResource: resourceIdentity(item.FallbackCardResource),
 		LargeResource: resourceIdentity(item.LargeResource), PreviewWidth: item.PreviewWidth, PreviewHeight: item.PreviewHeight,
@@ -542,7 +543,7 @@ func manageDiscoverySnapshot(value productdb.DiscoverySnapshot) *ManageDiscovery
 }
 
 func manageRuntimeSettings(value settings.Runtime) *ManageRuntimeSettings {
-	return &ManageRuntimeSettings{SettingsRevision: value.Revision, HomeScope: BrowseScope(value.HomeScope), GalleryCover1600Enabled: value.GalleryCover1600Enabled, GalleryCardScrubberEnabled: value.GalleryCardScrubberEnabled,
+	return &ManageRuntimeSettings{GalleryDetailLoadingMode: value.GalleryDetailLoadingMode, MediaTimeBackfillEnabled: value.MediaTimeBackfillEnabled, SettingsRevision: value.Revision, HomeScope: BrowseScope(value.HomeScope), GalleryCover1600Enabled: value.GalleryCover1600Enabled, GalleryCardScrubberEnabled: value.GalleryCardScrubberEnabled,
 		GalleryDetailMediaFilterEnabled: value.GalleryDetailMediaFilterEnabled, GalleryCardControlsVisible: value.GalleryCardControlsVisible,
 		MediaCardControlsVisible: value.MediaCardControlsVisible, DetailPersonalControlsVisible: value.DetailPersonalControlsVisible,
 		GalleryAnimatedPlaybackLimit: value.GalleryAnimatedPlaybackLimit, GalleryAnimatedLockIntervalMs: value.GalleryAnimatedLockIntervalMS,

@@ -824,6 +824,13 @@ func (r *mutationResolver) UpdateRuntimeSettings(ctx context.Context, expectedSe
 		return nil, err
 	}
 	monitorEnabled := current.LibraryMonitorEnabled
+	loadingMode, backfillEnabled := current.GalleryDetailLoadingMode, current.MediaTimeBackfillEnabled
+	if input.GalleryDetailLoadingMode != nil {
+		loadingMode = *input.GalleryDetailLoadingMode
+	}
+	if input.MediaTimeBackfillEnabled != nil {
+		backfillEnabled = *input.MediaTimeBackfillEnabled
+	}
 	if input.LibraryMonitorEnabled != nil {
 		monitorEnabled = *input.LibraryMonitorEnabled
 	}
@@ -831,6 +838,7 @@ func (r *mutationResolver) UpdateRuntimeSettings(ctx context.Context, expectedSe
 		return nil, manageError(err)
 	}
 	value, err := r.Database.Settings().Update(ctx, expectedSettingsRevision, settings.Runtime{HomeScope: settings.HomeScope(input.HomeScope),
+		GalleryDetailLoadingMode: loadingMode, MediaTimeBackfillEnabled: backfillEnabled,
 		GalleryCover1600Enabled: input.GalleryCover1600Enabled, GalleryCardScrubberEnabled: input.GalleryCardScrubberEnabled, GalleryDetailMediaFilterEnabled: input.GalleryDetailMediaFilterEnabled,
 		GalleryCardControlsVisible: input.GalleryCardControlsVisible, MediaCardControlsVisible: input.MediaCardControlsVisible,
 		DetailPersonalControlsVisible: input.DetailPersonalControlsVisible, GalleryAnimatedPlaybackLimit: input.GalleryAnimatedPlaybackLimit,
@@ -1301,11 +1309,14 @@ func (r *mutationResolver) ReplaceGalleryRelations(ctx context.Context, setID st
 		}
 		converted.Tags = append(converted.Tags, productdb.ReplaceGalleryTagInput{TagUUID: tag.TagUUID, Position: position})
 	}
-	if err := r.Database.Galleries().ReplaceRelations(ctx, galleryID, expectedMetadataRevision, converted, time.Now()); err != nil {
+	changed, err := r.Database.Galleries().ReplaceRelationsIfChanged(ctx, galleryID, expectedMetadataRevision, converted, time.Now())
+	if err != nil {
 		r.auditManage(ctx, "GALLERY_RELATIONS_REPLACE", "GALLERY", setID, "GALLERY_RELATIONS_REPLACE_FAILED", err, map[string]any{"credit_count": len(converted.Credits), "cast_count": castCount, "tag_count": len(converted.Tags)})
 		return nil, manageError(err)
 	}
-	r.auditManage(ctx, "GALLERY_RELATIONS_REPLACE", "GALLERY", setID, "", nil, map[string]any{"credit_count": len(converted.Credits), "cast_count": castCount, "tag_count": len(converted.Tags)})
+	if changed {
+		r.auditManage(ctx, "GALLERY_RELATIONS_REPLACE", "GALLERY", setID, "", nil, map[string]any{"credit_count": len(converted.Credits), "cast_count": castCount, "tag_count": len(converted.Tags)})
+	}
 	return r.loadManageGalleryDetail(ctx, setID)
 }
 
@@ -1511,6 +1522,15 @@ func (r *mutationResolver) ResolveCoserManifest(ctx context.Context, coserUUID s
 	}
 	r.auditManage(ctx, "COSER_MANIFEST_RESOLVE", "COSER", coserUUID, "", nil, map[string]any{"choice_count": len(converted), "manifest_revision": state.ManifestRevision})
 	return r.manageCoserManifestState(ctx, state)
+}
+
+// MediaTimeProgress is the resolver for the mediaTimeProgress field.
+func (r *queryResolver) MediaTimeProgress(ctx context.Context) (*MediaTimeProgress, error) {
+	value, err := r.Database.MediaTimes().Progress(ctx)
+	if err != nil {
+		return nil, manageError(err)
+	}
+	return &MediaTimeProgress{Total: value.Total, Checked: value.Checked, Partial: value.Partial, Pending: value.Pending, Failed: value.Failed}, nil
 }
 
 // HomeGalleries is the resolver for the homeGalleries field.
@@ -1742,7 +1762,8 @@ func (r *queryResolver) MediaEmbeddedMetadata(ctx context.Context, itemUUID stri
 		result.Entries = append(result.Entries, &MediaInformationEntry{Key: entry.Key, VisibilityKey: entry.VisibilityKey, Label: entry.Label, Group: entry.Group, Value: entry.Value, Source: entry.Source, RawValue: entry.RawValue, Timestamp: entry.Timestamp})
 	}
 	for _, event := range value.History {
-		result.History = append(result.History, &MediaHistoryEvent{Index: event.Index, Action: event.Action, Software: event.Software, When: event.When, Timestamp: event.Timestamp, Parameters: event.Parameters})
+		result.History = append(result.History, &MediaHistoryEvent{Index: event.Index, Action: event.Action, Software: event.Software, When: event.When, Timestamp: event.Timestamp, Parameters: event.Parameters,
+			InputFormat: event.InputFormat, OutputFormat: event.OutputFormat, RawParameters: event.RawParameters, Changed: event.Changed, DetailsRedacted: event.DetailsRedacted})
 	}
 	return result, nil
 }
@@ -2282,6 +2303,7 @@ func (r *queryResolver) BrowseUISettings(ctx context.Context) (*BrowseUISettings
 		GalleryScrubberEnabled:        value.GalleryCardScrubberEnabled,
 		GalleryCover1600Enabled:       value.GalleryCover1600Enabled,
 		DetailMediaFilterEnabled:      value.GalleryDetailMediaFilterEnabled,
+		GalleryDetailLoadingMode:      value.GalleryDetailLoadingMode,
 		GalleryAnimatedPlaybackLimit:  value.GalleryAnimatedPlaybackLimit,
 		GalleryAnimatedLockIntervalMs: value.GalleryAnimatedLockIntervalMS,
 		CardFavoriteControlVisible:    value.GalleryCardControlsVisible,

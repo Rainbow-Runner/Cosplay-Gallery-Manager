@@ -1309,11 +1309,14 @@ func (r *mutationResolver) ReplaceGalleryRelations(ctx context.Context, setID st
 		}
 		converted.Tags = append(converted.Tags, productdb.ReplaceGalleryTagInput{TagUUID: tag.TagUUID, Position: position})
 	}
-	if err := r.Database.Galleries().ReplaceRelations(ctx, galleryID, expectedMetadataRevision, converted, time.Now()); err != nil {
+	changed, err := r.Database.Galleries().ReplaceRelationsIfChanged(ctx, galleryID, expectedMetadataRevision, converted, time.Now())
+	if err != nil {
 		r.auditManage(ctx, "GALLERY_RELATIONS_REPLACE", "GALLERY", setID, "GALLERY_RELATIONS_REPLACE_FAILED", err, map[string]any{"credit_count": len(converted.Credits), "cast_count": castCount, "tag_count": len(converted.Tags)})
 		return nil, manageError(err)
 	}
-	r.auditManage(ctx, "GALLERY_RELATIONS_REPLACE", "GALLERY", setID, "", nil, map[string]any{"credit_count": len(converted.Credits), "cast_count": castCount, "tag_count": len(converted.Tags)})
+	if changed {
+		r.auditManage(ctx, "GALLERY_RELATIONS_REPLACE", "GALLERY", setID, "", nil, map[string]any{"credit_count": len(converted.Credits), "cast_count": castCount, "tag_count": len(converted.Tags)})
+	}
 	return r.loadManageGalleryDetail(ctx, setID)
 }
 

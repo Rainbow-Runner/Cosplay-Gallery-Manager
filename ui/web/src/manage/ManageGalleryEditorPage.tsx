@@ -1,5 +1,5 @@
 import { useApolloClient, useMutation, useQuery } from "@apollo/client/react";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useIntl } from "react-intl";
 import { DisplayImagesPanel } from "./DisplayImagesPanel";
@@ -8,6 +8,7 @@ import { ADD_GALLERY_EXTERNAL_LINK, FORGET_GALLERY_ITEM, FORGET_MISSING_GALLERY_
 import { buildGalleryMediaFolderTree, flattenGalleryMediaFolders, galleryMediaFileName, galleryMediaGroupKey, galleryMediaParentPath, groupGalleryMedia, moveGalleryMediaFolderTreeNode, naturalFileNameCompare, type GalleryMediaFolder, type GalleryMediaFolderNode, type GalleryMediaGroup } from "./galleryMediaFolders";
 import { ManageEntitySelector } from "./ManageEntitySelector";
 import { ManageGalleryDeletePanel } from "./ManageGalleryDeletePanel";
+import { galleryMetadataInput, galleryMetadataKey, galleryRelationsInput, galleryRelationsKey } from "./galleryEditorChanges";
 import type { ManageGalleryCredit, ManageGalleryDetail, ManageGalleryFolderMatch, ManageGalleryItem, ManageGalleryManifestState, ManageGalleryTag } from "./types";
 
 const tabs = ["basic", "cast", "media", "source", "manifest"] as const;
@@ -27,7 +28,7 @@ export function ManageGalleryEditorPage() {
   const client = useApolloClient();
   const navigate = useNavigate();
   const { setID = "" } = useParams(); const [parameters, setParameters] = useSearchParams(); const tab = tabs.includes(parameters.get("tab") as typeof tabs[number]) ? parameters.get("tab") as typeof tabs[number] : "basic";
-  const query = useQuery<{ manageGallery: ManageGalleryDetail }>(MANAGE_GALLERY, { variables: { setID }, fetchPolicy: "network-only" }); const [save] = useMutation(UPDATE_GALLERY_METADATA); const [setState] = useMutation(SET_GALLERY_STATE);
+  const query = useQuery<{ manageGallery: ManageGalleryDetail }>(MANAGE_GALLERY, { variables: { setID }, fetchPolicy: "network-only" }); const [save, metadataState] = useMutation(UPDATE_GALLERY_METADATA); const [setState] = useMutation(SET_GALLERY_STATE);
   const [updateItem] = useMutation<{ updateGalleryItem: ManageGalleryDetail }>(UPDATE_GALLERY_ITEM);
   const [setExcluded] = useMutation<{ setGalleryItemExcluded: ManageGalleryDetail }>(SET_GALLERY_ITEM_EXCLUDED);
   const [forgetItem, forgetState] = useMutation<{ forgetGalleryItem: ManageGalleryDetail }>(FORGET_GALLERY_ITEM);
@@ -47,6 +48,8 @@ export function ManageGalleryEditorPage() {
   const [resolveManifest, resolveManifestState] = useMutation<{ resolveGalleryManifest: ManageGalleryManifestState }>(RESOLVE_GALLERY_MANIFEST);
   const [resolveCaptureDate, captureDateState] = useMutation<{ resolveGalleryCaptureDate: ManageGalleryDetail }>(RESOLVE_GALLERY_CAPTURE_DATE);
   const [draft, setDraft] = useState<ManageGalleryDetail | null>(null); const [message, setMessage] = useState("");
+  const metadataSaving = useRef(false), relationsSaving = useRef(false);
+  const [savingSection, setSavingSection] = useState<"metadata" | "relations" | null>(null);
   const [refreshingMatches, setRefreshingMatches] = useState(false);
   const [identityChoices, setIdentityChoices] = useState<Record<string, string>>({});
   const [excludeNewRootMedia, setExcludeNewRootMedia] = useState(true);
@@ -60,6 +63,9 @@ export function ManageGalleryEditorPage() {
   useEffect(() => { if (query.data) setDraft(query.data.manageGallery); }, [query.data]);
   if (!draft) return <main className="manage-page"><p>{query.error ? "Unable to load Gallery." : "Loading…"}</p></main>;
   const current = draft;
+  const saved = query.data?.manageGallery;
+  const metadataDirty = !!saved && galleryMetadataKey(current) !== galleryMetadataKey(saved);
+  const metadataValid = !!current.row.contentRating;
   const externalLinkValid = isAbsoluteHTTPURL(linkDraft.url);
   async function refreshMatches() {
     setRefreshingMatches(true); setMessage("");
@@ -69,10 +75,16 @@ export function ManageGalleryEditorPage() {
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to refresh matching suggestions"); }
     finally { setRefreshingMatches(false); }
   }
-  async function submit(event: FormEvent) { event.preventDefault(); setMessage(""); try { await save({ variables: { setID, expectedMetadataRevision: current.row.metadataRevision, input: {
-    title: current.row.title, ...(current.followSourceTitle === undefined ? {} : { followSourceTitle: current.followSourceTitle }), aliases: current.aliases, description: current.description, shootDate: current.shootDate, shootDatePrecision: current.shootDate ? current.shootDatePrecision : "UNKNOWN",
-    publishDate: current.publishDate, publishDatePrecision: current.publishDate ? current.publishDatePrecision : "UNKNOWN",
-    contentRating: current.row.contentRating || "NON_ADULT", photographerName: current.photographerName, studioName: current.studioName } } }); setMessage("Saved"); await query.refetch(); } catch { setMessage("Revision conflict or invalid metadata"); } }
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!metadataDirty || !metadataValid || metadataSaving.current || relationsSaving.current) return;
+    metadataSaving.current = true; setSavingSection("metadata"); setMessage("");
+    try {
+      await save({ variables: { setID, expectedMetadataRevision: current.row.metadataRevision, input: galleryMetadataInput(current) } });
+      await query.refetch(); setMessage("Saved");
+    } catch { setMessage("Revision conflict or invalid metadata"); }
+    finally { metadataSaving.current = false; setSavingSection(null); }
+  }
   async function transition(state: "DRAFT" | "ACTIVE" | "ARCHIVED") { setMessage(""); try { await setState({ variables: { setID, expectedMetadataRevision: current.row.metadataRevision, state } }); await query.refetch(); } catch (error) { setMessage(error instanceof Error ? error.message : "State transition blocked"); } }
   async function decideCaptureDate(decision: "KEEP_MANUAL" | "USE_EXTRACTED") { setMessage(""); try { const result=await resolveCaptureDate({variables:{setID,expectedMetadataRevision:current.row.metadataRevision,candidate:current.captureDateCandidate,decision}}); if(result.data)setDraft(result.data.resolveGalleryCaptureDate); setMessage("Capture date reviewed"); } catch(error) { setMessage(error instanceof Error ? error.message : "Capture date review failed"); } }
   function editItem(itemUUID: string, patch: Partial<ManageGalleryItem>) { setDraft({ ...current, items: current.items.map((item) => item.uuid === itemUUID ? { ...item, ...patch } : item) }); }
@@ -123,8 +135,7 @@ export function ManageGalleryEditorPage() {
   function editTag(index: number, patch: Partial<ManageGalleryTag>) { setDraft({ ...current, tags: current.tags.map((tag, position) => position === index ? { ...tag, ...patch } : tag) }); }
   const relationsValid = current.credits.every((credit) => credit.coserUUID && credit.cast.every((cast) => cast.characterUUID)) &&
     current.tags.every((tag) => tag.uuid);
-  const savedRelations = query.data?.manageGallery;
-  const unsavedRelations = !!savedRelations && (JSON.stringify(current.credits) !== JSON.stringify(savedRelations.credits) || JSON.stringify(current.tags) !== JSON.stringify(savedRelations.tags));
+  const unsavedRelations = !!saved && galleryRelationsKey(current) !== galleryRelationsKey(saved);
   const pendingIdentities = current.review?.identitySuggestions.filter((suggestion) => suggestion.status === "PENDING") || [];
   const reviewedIdentities = current.review?.identitySuggestions.filter((suggestion) => suggestion.status !== "PENDING") || [];
   function folderMatchApplied(match: ManageGalleryFolderMatch) {
@@ -166,22 +177,21 @@ export function ManageGalleryEditorPage() {
     }
   }
   async function saveRelations() {
+    if (!unsavedRelations || relationsSaving.current || metadataSaving.current) return;
     if (!relationsValid) {
       setMessage("Select an existing Coser, Character or Tag for every unfinished relation row");
       return;
     }
-    setMessage("");
+    relationsSaving.current = true; setSavingSection("relations"); setMessage("");
     try {
-      const result = await replaceRelations({ variables: { setID, expectedMetadataRevision: current.row.metadataRevision, input: {
-        credits: current.credits.map((credit, index) => ({ coserUUID: credit.coserUUID, position: String((index + 1) * 1024), cast: credit.cast.map((cast, castIndex) => ({ characterUUID: cast.characterUUID, position: String((castIndex + 1) * 1024) })) })),
-        tags: current.tags.map((tag, index) => ({ tagUUID: tag.uuid, position: String((index + 1) * 1024) })),
-      } } });
+      const result = await replaceRelations({ variables: { setID, expectedMetadataRevision: current.row.metadataRevision, input: galleryRelationsInput(current) } });
       if (!result.data) throw new Error("Server did not return the saved Gallery relations");
       setDraft(result.data.replaceGalleryRelations);
       const refreshed = await query.refetch();
       if (refreshed.data) setDraft(refreshed.data.manageGallery);
       setMessage("People, characters and tags saved");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Relation save failed"); }
+    finally { relationsSaving.current = false; setSavingSection(null); }
   }
   async function decideIdentity(suggestionID: string, accept: boolean, entityUUID: string) {
     if (unsavedRelations || identityState.loading) return;
@@ -321,9 +331,9 @@ export function ManageGalleryEditorPage() {
       <div className="span-2" aria-label="Media added time evidence"><p>Media added: {draft.mediaAddedStartUTC ? `${new Date(draft.mediaAddedStartUTC).toLocaleString()}${draft.mediaAddedEndUTC && draft.mediaAddedEndUTC !== draft.mediaAddedStartUTC ? ` – ${new Date(draft.mediaAddedEndUTC).toLocaleString()}` : ""}` : "No reliable static-image file time"} ({draft.mediaAddedStatus ?? "PENDING"})</p></div>
       {draft.captureDateReviewStatus === "PENDING" ? <div className="span-2" role="alert"><p>Manual shoot date {draft.shootDate} differs from extracted earliest date {draft.captureDateCandidate}. Review before changing the timeline date.</p><button type="button" disabled={captureDateState.loading} onClick={() => void decideCaptureDate("KEEP_MANUAL")}>Keep manual date</button><button type="button" disabled={captureDateState.loading} onClick={() => void decideCaptureDate("USE_EXTRACTED")}>Use extracted date</button></div> : null}
       {draft.captureDateReviewStatus === "KEEP_MANUAL" ? <p className="span-2">Extracted date {draft.captureDateCandidate} reviewed; manual date retained.</p> : null}
-      <label>Rating<select value={draft.row.contentRating || "NON_ADULT"} onChange={(event) => setDraft({ ...draft, row: { ...draft.row, contentRating: event.target.value as "NON_ADULT" | "ADULT" } })}><option value="NON_ADULT">NON_ADULT</option><option value="ADULT">ADULT</option></select></label>
+      <label>Rating<select value={draft.row.contentRating || ""} onChange={(event) => setDraft({ ...draft, row: { ...draft.row, contentRating: event.target.value as "NON_ADULT" | "ADULT" } })}><option value="" disabled>Select content rating…</option><option value="NON_ADULT">NON_ADULT</option><option value="ADULT">ADULT</option></select></label>
       <label>Photographer<input value={draft.photographerName} onChange={(event) => setDraft({ ...draft, photographerName: event.target.value })} /></label><label>Studio<input value={draft.studioName} onChange={(event) => setDraft({ ...draft, studioName: event.target.value })} /></label>
-      <footer className="span-2"><button type="submit">Save metadata</button></footer></form>
+      <footer className="span-2"><button type="submit" disabled={!metadataDirty || !metadataValid || savingSection !== null || metadataState.loading || relationState.loading}>{savingSection === "metadata" ? "Saving…" : "Save metadata"}</button></footer></form>
       <section className="manage-panel manage-external-links"><h3>Original source links</h3><p>HTTP(S) links are stored as quiet references only; the application never fetches their content.</p>
         {draft.externalLinks.length ? <ul>{draft.externalLinks.map((link) => <li key={link.uuid}><span>{link.type}</span><a href={link.url} target="_blank" rel="noreferrer">{link.label || link.url}</a></li>)}</ul> : <p>No external links.</p>}
         <form className="manage-inline-form" onSubmit={createExternalLink}><select aria-label="External link type" value={linkDraft.type} onChange={(event) => setLinkDraft({ ...linkDraft, type: event.target.value })}><option value="SOURCE">SOURCE</option><option value="PROFILE">PROFILE</option><option value="REFERENCE">REFERENCE</option></select><input aria-label="External link label" placeholder="Label" maxLength={100} value={linkDraft.label} onChange={(event) => setLinkDraft({ ...linkDraft, label: event.target.value })} /><input aria-label="External link URL" type="url" required placeholder="https://…" value={linkDraft.url} onChange={(event) => setLinkDraft({ ...linkDraft, url: event.target.value })} /><button disabled={!externalLinkValid || externalLinkState.loading} type="submit">Add link</button></form>
@@ -350,7 +360,7 @@ export function ManageGalleryEditorPage() {
       </div>
       <div className="manage-relation-block"><div className="manage-inline-toolbar"><h4>Direct tags</h4><button type="button" onClick={() => setDraft({ ...draft, tags: [...draft.tags, { uuid: "", name: "", position: "" }] })}>Add Tag</button></div>{draft.tags.map((tag, tagIndex) => <div className="manage-tag-row" key={`${tag.uuid}-${tagIndex}`}><ManageEntitySelector kind="TAG" label="Tag" uuid={tag.uuid} name={tag.name} assignableOnly onSelect={(entity) => editTag(tagIndex, { uuid: entity.uuid, name: entity.name })} /><button type="button" onClick={() => setDraft({ ...draft, tags: draft.tags.filter((_, index) => index !== tagIndex) })}>Remove</button></div>)}</div>
       {!relationsValid ? <p className="manage-error">Finish or remove every empty Coser, Character and Tag row before saving.</p> : null}
-      <div className="manage-panel-actions"><button type="button" disabled={!relationsValid || relationState.loading} onClick={saveRelations}>{relationState.loading ? "Saving…" : "Save all relations"}</button></div>
+      <div className="manage-panel-actions"><button type="button" disabled={!unsavedRelations || !relationsValid || savingSection !== null || relationState.loading || metadataState.loading} onClick={saveRelations}>{savingSection === "relations" ? "Saving…" : "Save all relations"}</button></div>
     </section> : null}
     {tab === "media" ? <section><div className="manage-inline-toolbar"><span>{draft.items.length} members · {draft.row.missingCount} missing · folder paths are relative to the Gallery root</span><label><input type="checkbox" checked={missingOnly} onChange={(event) => setMissingOnly(event.target.checked)} /> 仅显示缺失媒体 / Missing only</label>{draft.row.missingCount > 0 ? <button type="button" disabled={forgetMissingState.loading} onClick={forgetAllMissing}>{forgetMissingState.loading ? "Forgetting…" : "批量忘记缺失记录 / Forget all missing"}</button> : null}<button type="button" onClick={autoCover}>Reset cover to auto</button></div>
       {replacementMissing ? <section className="manage-panel"><h3>确认媒体替换 / Confirm media replacement</h3><p>旧记录保留UUID、Caption、排序、Exclude、收藏、评分及封面意图；仅采用新记录的路径和文件内容。此操作不会改动或删除源文件。</p><dl><dt>保留身份 / Keep</dt><dd><code>{replacementMissing.relativePath}</code></dd><dt>采用文件 / Adopt</dt><dd><select aria-label="Replacement media file" value={replacementItemUUID} onChange={(event) => setReplacementItemUUID(event.target.value)}><option value="">选择同类型、未编辑的可用媒体…</option>{replacementCandidates.map((item) => <option key={item.uuid} value={item.uuid}>{item.relativePath} · {item.byteSize.toLocaleString()} bytes</option>)}</select></dd></dl>{replacementCandidates.length ? <p>系统不会自动判断哪一项是高清替换；请依据文件路径人工确认。新记录如已有Caption、Exclude、收藏、评分或封面引用，后端会拒绝迁移。</p> : <p className="manage-error">没有同一媒体分组内可安全采用的未编辑项目。</p>}<div className="manage-panel-actions"><button type="button" onClick={() => { setReplacementMissingUUID(""); setReplacementItemUUID(""); }}>取消 / Cancel</button><button type="button" disabled={!replacementItemUUID || replaceMissingState.loading} onClick={confirmReplacement}>{replaceMissingState.loading ? "Replacing…" : "预览并确认 / Preview & confirm"}</button></div></section> : null}

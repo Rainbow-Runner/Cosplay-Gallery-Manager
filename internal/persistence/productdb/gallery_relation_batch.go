@@ -89,55 +89,90 @@ func (s *GalleryStore) ReplaceTags(ctx context.Context, galleryID, expectedRevis
 // relation confirms only a uniquely identified, exactly matching suggestion.
 // Ambiguous or unrelated evidence remains pending for explicit review.
 func (s *GalleryStore) ReplaceRelations(ctx context.Context, galleryID, expectedRevision int64, input ReplaceGalleryRelationsInput, now time.Time) error {
+	_, err := s.ReplaceRelationsIfChanged(ctx, galleryID, expectedRevision, input, now)
+	return err
+}
+
+// ReplaceRelationsIfChanged also lets the API avoid emitting a save audit for
+// an unchanged request. Revision and validation guards still precede comparison.
+func (s *GalleryStore) ReplaceRelationsIfChanged(ctx context.Context, galleryID, expectedRevision int64, input ReplaceGalleryRelationsInput, now time.Time) (bool, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer func() { _ = tx.Rollback() }()
-	if err := replaceGalleryRelationsTx(ctx, tx, galleryID, expectedRevision, input, now, true); err != nil {
-		return err
+	changed, err := replaceGalleryRelationsIfChangedTx(ctx, tx, galleryID, expectedRevision, input, now, true)
+	if err != nil || !changed {
+		return false, err
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // Automation resolves evidence in this same transaction as the relation save.
 func replaceGalleryRelationsTx(ctx context.Context, tx *sql.Tx, galleryID, expectedRevision int64, input ReplaceGalleryRelationsInput, now time.Time, reconcileSuggestions bool) error {
+	_, err := replaceGalleryRelationsIfChangedTx(ctx, tx, galleryID, expectedRevision, input, now, reconcileSuggestions)
+	return err
+}
+
+func replaceGalleryRelationsIfChangedTx(ctx context.Context, tx *sql.Tx, galleryID, expectedRevision int64, input ReplaceGalleryRelationsInput, now time.Time, reconcileSuggestions bool) (bool, error) {
 	if len(input.Credits) > 100 || len(input.Tags) > 200 {
-		return errors.New("Gallery relation limit exceeded")
+		return false, errors.New("Gallery relation limit exceeded")
 	}
 	current, err := findGallery(ctx, tx, galleryID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if current.MetadataRevision != expectedRevision {
-		return ErrMetadataRevisionConflict
+		return false, ErrMetadataRevisionConflict
 	}
+	seenCredits, creditPositions := map[string]bool{}, map[int64]bool{}
 	for _, credit := range input.Credits {
 		if credit.Position <= 0 || len(credit.Cast) > 100 {
-			return errors.New("invalid GalleryCredit relation")
+			return false, errors.New("invalid GalleryCredit relation")
 		}
+		if seenCredits[credit.CoserUUID] || creditPositions[credit.Position] {
+			return false, errors.New("duplicate GalleryCredit or position")
+		}
+		seenCredits[credit.CoserUUID], creditPositions[credit.Position] = true, true
 		if err := requireActivePortableKind(ctx, tx, credit.CoserUUID, portableid.KindCoser); err != nil {
-			return err
+			return false, err
 		}
+		seenCast, castPositions := map[string]bool{}, map[int64]bool{}
 		for _, cast := range credit.Cast {
 			if cast.Position <= 0 {
-				return errors.New("invalid GalleryCast position")
+				return false, errors.New("invalid GalleryCast position")
 			}
+			if seenCast[cast.CharacterUUID] || castPositions[cast.Position] {
+				return false, errors.New("duplicate GalleryCast or position")
+			}
+			seenCast[cast.CharacterUUID], castPositions[cast.Position] = true, true
 			if err := requireActivePortableKind(ctx, tx, cast.CharacterUUID, portableid.KindCharacter); err != nil {
-				return err
+				return false, err
 			}
 		}
 	}
+	seenTags, tagPositions := map[string]bool{}, map[int64]bool{}
 	for _, tag := range input.Tags {
 		if tag.Position <= 0 {
-			return errors.New("invalid GalleryTag position")
+			return false, errors.New("invalid GalleryTag position")
 		}
+		if seenTags[tag.TagUUID] || tagPositions[tag.Position] {
+			return false, errors.New("duplicate GalleryTag or position")
+		}
+		seenTags[tag.TagUUID], tagPositions[tag.Position] = true, true
 		if err := requireActivePortableKind(ctx, tx, tag.TagUUID, portableid.KindTag); err != nil {
-			return err
+			return false, err
 		}
 		if err := requireDirectAssignableTag(ctx, tx, tag.TagUUID); err != nil {
-			return err
+			return false, err
 		}
+	}
+	unchanged, err := galleryRelationsUnchanged(ctx, tx, galleryID, input)
+	if err != nil || unchanged {
+		return false, err
 	}
 	for _, statement := range []string{
 		`DELETE FROM gallery_cast WHERE gallery_id=?`,
@@ -145,39 +180,39 @@ func replaceGalleryRelationsTx(ctx context.Context, tx *sql.Tx, galleryID, expec
 		`DELETE FROM gallery_tags WHERE gallery_id=?`,
 	} {
 		if _, err := tx.ExecContext(ctx, statement, galleryID); err != nil {
-			return err
+			return false, err
 		}
 	}
 	for _, credit := range input.Credits {
 		result, err := tx.ExecContext(ctx, `INSERT INTO gallery_credits(gallery_id,coser_uuid,position) VALUES(?,?,?)`, galleryID, credit.CoserUUID, credit.Position)
 		if err != nil {
-			return err
+			return false, err
 		}
 		creditID, err := result.LastInsertId()
 		if err != nil {
-			return err
+			return false, err
 		}
 		for _, cast := range credit.Cast {
 			if _, err := tx.ExecContext(ctx, `INSERT INTO gallery_cast(gallery_id,gallery_credit_id,character_uuid,position) VALUES(?,?,?,?)`, galleryID, creditID, cast.CharacterUUID, cast.Position); err != nil {
-				return err
+				return false, err
 			}
 		}
 	}
 	for _, tag := range input.Tags {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO gallery_tags(gallery_id,tag_uuid,position) VALUES(?,?,?)`, galleryID, tag.TagUUID, tag.Position); err != nil {
-			return err
+			return false, err
 		}
 	}
 	if err := touchGalleryMetadata(ctx, tx, galleryID, expectedRevision, now); err != nil {
-		return err
+		return false, err
 	}
 	if reconcileSuggestions {
 		if err := reconcileSavedIdentitySuggestions(ctx, tx, galleryID, now); err != nil {
-			return err
+			return false, err
 		}
 	}
 	if err := demoteInvalidActiveGallery(ctx, tx, galleryID); err != nil {
-		return err
+		return false, err
 	}
-	return nil
+	return true, nil
 }

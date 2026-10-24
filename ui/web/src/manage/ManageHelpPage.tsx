@@ -155,7 +155,7 @@ export function ManageHelpPage() {
       </article>
       <article id="gallery-editing" className="manage-help-article">
         <header><h3>{f("manage.help.editing.title")}</h3></header>
-        {(["album", "sourceTitle", "navigation", "entities"] as const).map((topic) => <section key={topic} aria-labelledby={`help-editing-${topic}`}>
+        {(["album", "sourceTitle", "navigation", "gallerySaves", "entities"] as const).map((topic) => <section key={topic} aria-labelledby={`help-editing-${topic}`}>
           <h4 id={`help-editing-${topic}`}>{f(`manage.help.editing.${topic}.title`)}</h4>
           <p>{f(`manage.help.editing.${topic}.body`)}</p>
         </section>)}
